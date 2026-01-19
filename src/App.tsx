@@ -10,7 +10,7 @@ import { Notifications } from './components/Notifications';
 import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
 import { Calendar, Radio, PlusCircle, Bell, User, Rss } from 'lucide-react';
-import { Toaster } from 'sonner@2.0.3';
+import { Toaster } from 'sonner';
 import { supabase } from './utils/supabase/client';
 
 type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile';
@@ -222,7 +222,7 @@ export default function App() {
   // Handler to start or continue a conversation
   const handleStartConversation = (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => {
     // Check if conversation already exists (match by username first, then name - case insensitive)
-    const existingConv = conversations.find(conv => {
+    const existingConv = conversations.find((conv: Conversation) => {
       // If both have username, match by username (case-insensitive)
       if (conv.user.username && user.username) {
         return conv.user.username.toLowerCase().trim() === user.username.toLowerCase().trim();

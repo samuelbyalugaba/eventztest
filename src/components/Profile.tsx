@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Heart, Ticket, Bell, BellOff, Camera, Image as ImageIcon, Upload, Plus, Smile } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
@@ -45,7 +45,7 @@ interface Photo {
   eventName?: string;
 }
 
-const attendedEvents: Event[] = [
+const attendedEvents: ProfileEvent[] = [
   {
     id: 1,
     name: 'Summer Music Festival',
@@ -396,7 +396,7 @@ interface ProfileProps {
 
 export function Profile({ conversations, onStartConversation, onSendMessage, onLogout }: ProfileProps) {
   const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'photos' | 'videos' | 'saved'>('events');
-  const [savedEvents, setSavedEvents] = useState<Event[]>([]);
+  const [savedEvents, setSavedEvents] = useState<ProfileEvent[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [eventReminders, setEventReminders] = useState<Set<number>>(new Set());
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -415,7 +415,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onL
   const [selectedTicket, setSelectedTicket] = useState<TicketEvent | null>(null);
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ProfileEvent | null>(null);
 
   // Load saved events from localStorage
   useEffect(() => {
