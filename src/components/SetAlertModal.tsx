@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Bell, Clock, Calendar } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface SetAlertModalProps {
   event: {
@@ -8,7 +8,7 @@ interface SetAlertModalProps {
     name?: string;
     date: string;
     time?: string;
-    location: string;
+    location?: string;
   };
   onClose: () => void;
 }
