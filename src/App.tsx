@@ -271,7 +271,7 @@ export default function App() {
       read: true,
     };
 
-    setConversations(conversations.map(conv => {
+    setConversations(conversations.map((conv: Conversation) => {
       if (conv.id === conversationId) {
         return {
           ...conv,
