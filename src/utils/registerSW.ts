@@ -75,7 +75,7 @@ export const sendTestNotification = async () => {
         badge: '/icons/icon-72x72.png',
         vibrate: [200, 100, 200],
         tag: 'test-notification',
-      });
+      } as NotificationOptions);
     }
   }
 };

@@ -7,7 +7,7 @@ import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
 import { SetAlertModal } from './SetAlertModal';
 
-interface Event {
+interface ProfileEvent {
   id: number;
   name: string;
   date: string;
