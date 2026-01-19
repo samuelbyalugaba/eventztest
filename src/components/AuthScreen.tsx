@@ -117,7 +117,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 blur-xl opacity-30 animate-pulse"></div>
               <Video className="w-10 h-10 sm:w-12 sm:h-12 text-indigo-600 relative z-10" strokeWidth={2.5} />
             </div>
-            <h1 className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
+            <h1 className="text-4xl sm:text-5xl font-black text-indigo-600 tracking-tight">
               EVENTZ
             </h1>
           </div>
@@ -228,7 +228,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4 text-sm"
+                className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4 text-sm"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center gap-2">
