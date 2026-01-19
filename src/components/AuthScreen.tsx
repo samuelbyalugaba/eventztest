@@ -228,7 +228,8 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4 text-sm"
+                className="w-full font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4 text-sm"
+                style={{ backgroundColor: '#4f46e5', color: 'white' }}
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center gap-2">
