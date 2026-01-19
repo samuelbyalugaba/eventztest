@@ -107,50 +107,54 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
       {/* Hero Section */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12">
         {/* Logo & Branding */}
-        <div className="text-center mb-8 space-y-4">
+        <div className="text-center mb-8 space-y-3">
           <div className="flex items-center justify-center gap-3 mb-2">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#8A2BE2] via-[#00D1FF] to-[#FF3CAC] blur-xl opacity-40 animate-pulse"></div>
-              <Video className="w-12 h-12 text-[#8A2BE2] relative z-10" strokeWidth={2.5} />
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 blur-xl opacity-30 animate-pulse"></div>
+              <Video className="w-10 h-10 sm:w-12 sm:h-12 text-indigo-600 relative z-10" strokeWidth={2.5} />
             </div>
-            <h1 className="text-5xl font-black bg-gradient-to-r from-[#8A2BE2] via-[#00D1FF] to-[#FF3CAC] bg-clip-text text-transparent">
+            <h1 className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
               EVENTZ
             </h1>
           </div>
-          <p className="text-gray-600 text-lg font-medium">
-            The Netflix of Live Events
+          <p className="text-gray-600 text-base sm:text-lg font-medium">
+            The Ultimate Hub for Live Events
           </p>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-            <Sparkles className="w-4 h-4 text-[#FF3CAC]" />
-            <span>HD Live Streaming • Virtual Tickets • Multi-Camera</span>
+          <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-gray-500 bg-white/50 py-1 px-3 rounded-full mx-auto w-fit backdrop-blur-sm border border-white/50">
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-pink-500" />
+            <span>HD Live Streaming • Virtual Tickets</span>
           </div>
         </div>
 
         {/* Auth Card */}
-        <div className="w-full max-w-md">
-          <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-2xl">
+        <div className="w-full max-w-md relative">
+          {/* Decorative elements */}
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+          <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+
+          <div className="relative bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             {/* Tab Switcher */}
-            <div className="flex gap-2 mb-8 bg-gray-100 p-1 rounded-xl">
+            <div className="flex gap-1 mb-8 bg-gray-100/80 p-1.5 rounded-2xl">
               <button
                 onClick={() => setIsLogin(true)}
-                className={`flex-1 py-3 rounded-lg font-semibold transition-all ${
+                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   isLogin
-                    ? 'bg-gradient-to-r from-[#8A2BE2] to-[#00D1FF] text-white shadow-lg shadow-[#8A2BE2]/20'
-                    : 'text-gray-500 hover:text-gray-900'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
                 }`}
               >
                 Login
               </button>
               <button
                 onClick={() => setIsLogin(false)}
-                className={`flex-1 py-3 rounded-lg font-semibold transition-all ${
+                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   !isLogin
-                    ? 'bg-gradient-to-r from-[#8A2BE2] to-[#00D1FF] text-white shadow-lg shadow-[#8A2BE2]/20'
-                    : 'text-gray-500 hover:text-gray-900'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
                 }`}
               >
                 Sign Up
@@ -158,19 +162,19 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
             </div>
 
             {/* Form */}
-            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-5">
+            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-4">
               {/* Name Field (Signup Only) */}
               {!isLogin && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Full Name</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-600 ml-1">Full Name</label>
+                  <div className="relative group">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter your name"
-                      className="w-full bg-white border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#8A2BE2] focus:ring-2 focus:ring-[#8A2BE2]/20 transition-all"
+                      placeholder="John Doe"
+                      className="w-full bg-gray-50/50 border border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm"
                       disabled={isLoading}
                     />
                   </div>
@@ -178,38 +182,38 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
               )}
 
               {/* Email Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-600 ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="w-full bg-white border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#8A2BE2] focus:ring-2 focus:ring-[#8A2BE2]/20 transition-all"
+                    placeholder="name@example.com"
+                    className="w-full bg-gray-50/50 border border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm"
                     disabled={isLoading}
                   />
                 </div>
               </div>
 
               {/* Password Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-600 ml-1">Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={isLogin ? 'Enter your password' : 'Create a password (6+ characters)'}
-                    className="w-full bg-white border border-gray-300 rounded-xl pl-12 pr-12 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#8A2BE2] focus:ring-2 focus:ring-[#8A2BE2]/20 transition-all"
+                    placeholder="••••••••"
+                    className="w-full bg-gray-50/50 border border-gray-200 rounded-2xl pl-12 pr-12 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm"
                     disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showPassword ? (
                       <EyeOff className="w-5 h-5" />
@@ -224,22 +228,22 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-[#8A2BE2] via-[#00D1FF] to-[#FF3CAC] text-white font-bold py-4 rounded-xl hover:shadow-2xl hover:shadow-[#8A2BE2]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4 text-sm"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>{isLogin ? 'Signing in...' : 'Creating account...'}</span>
+                    <span>Processing...</span>
                   </div>
                 ) : (
-                  <span>{isLogin ? 'Login' : 'Create Account'}</span>
+                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
                 )}
               </button>
             </form>
 
             {/* Footer Text */}
             <p className="text-center text-sm text-gray-500 mt-6">
-              {isLogin ? "Don't have an account? " : 'Already have an account? '}
+              {isLogin ? "New to Eventz? " : 'Already have an account? '}
               <button
                 onClick={() => {
                   setIsLogin(!isLogin);
@@ -247,33 +251,14 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   setPassword('');
                   setName('');
                 }}
-                className="text-[#00D1FF] hover:text-[#8A2BE2] font-semibold transition-colors"
+                className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors"
               >
-                {isLogin ? 'Sign up' : 'Login'}
+                {isLogin ? 'Create account' : 'Sign in'}
               </button>
             </p>
           </div>
-
-          {/* Features Preview */}
-          <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-            <div className="space-y-1">
-              <div className="text-2xl">🎥</div>
-              <p className="text-xs text-gray-500 font-medium">HD Streaming</p>
-            </div>
-            <div className="space-y-1">
-              <div className="text-2xl">🎫</div>
-              <p className="text-xs text-gray-500 font-medium">Virtual Tickets</p>
-            </div>
-            <div className="space-y-1">
-              <div className="text-2xl">💬</div>
-              <p className="text-xs text-gray-500 font-medium">Live Chat</p>
-            </div>
-          </div>
         </div>
       </div>
-
-      {/* Bottom Gradient */}
-      <div className="h-1 bg-gradient-to-r from-[#8A2BE2] via-[#00D1FF] to-[#FF3CAC]"></div>
     </div>
   );
 }
