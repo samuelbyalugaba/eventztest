@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, Sparkles, Video } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface AuthScreenProps {
   onAuthSuccess: (accessToken: string, user: any) => void;
