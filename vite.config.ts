@@ -76,4 +76,9 @@
       open: true,
       host: true,
     },
+    preview: {
+      port: 4173,
+      open: true,
+      host: true,
+    },
   });
