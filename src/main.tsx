@@ -6,7 +6,11 @@ import "./index.css";
 import { registerServiceWorker } from "./utils/registerSW";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
-registerServiceWorker();
+try {
+  registerServiceWorker();
+} catch (e) {
+  console.error("SW Registration Failed:", e);
+}
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
