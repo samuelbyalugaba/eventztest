@@ -82,9 +82,14 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
           if (profile) setUserProfile(profile);
 
           // Load Follow Stats
-          const followers = await getFollowersCount(user.id);
-          const following = await getFollowingCount(user.id);
-          setFollowStats({ followers, following });
+          try {
+            const followers = await getFollowersCount(user.id);
+            const following = await getFollowingCount(user.id);
+            setFollowStats({ followers, following });
+          } catch (err) {
+            console.error('Error loading follow stats:', err);
+            // Default to 0 is already set in state
+          }
           
           // 2. Saved Events (from DB)
           await fetchSavedEvents(user.id);

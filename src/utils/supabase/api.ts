@@ -259,6 +259,32 @@ export const getOrganizerStats = async (userId: string) => {
   };
 };
 
+export const getPlatformStats = async () => {
+  const { count: activeUsers, error: usersError } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true });
+
+  if (usersError) throw usersError;
+
+  const { count: ticketsSold, error: ticketsError } = await supabase
+    .from('tickets')
+    .select('*', { count: 'exact', head: true });
+
+  if (ticketsError) throw ticketsError;
+
+  const { count: eventsHosted, error: eventsError } = await supabase
+    .from('events')
+    .select('*', { count: 'exact', head: true });
+
+  if (eventsError) throw eventsError;
+
+  return {
+    activeUsers: activeUsers || 0,
+    ticketsSold: ticketsSold || 0,
+    eventsHosted: eventsHosted || 0
+  };
+};
+
 // --- FOLLOWS ---
 
 export const getFollowersCount = async (userId: string) => {

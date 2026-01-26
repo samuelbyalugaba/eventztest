@@ -1,13 +1,34 @@
 import { Sparkles, Users, Zap, TrendingUp, CheckCircle, ArrowRight, Video, DollarSign, BarChart3, Globe, Shield, Headphones } from 'lucide-react';
 import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase/client';
-import { updateProfile } from '../utils/supabase/api';
+import { updateProfile, getPlatformStats } from '../utils/supabase/api';
 
 interface BecomeOrganizerProps {
   onComplete: () => void;
 }
 
 export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
+  const [stats, setStats] = useState({ activeUsers: 0, ticketsSold: 0, eventsHosted: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await getPlatformStats();
+        setStats(data);
+      } catch (error) {
+        console.error('Error fetching platform stats:', error);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M+';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K+';
+    return num.toString();
+  };
+
   const handleBecomeOrganizer = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -60,22 +81,22 @@ export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20 hover:bg-white/15 transition-all">
               <div className="flex flex-col items-center gap-2">
                 <Users className="w-7 h-7 text-white/90" />
-                <p className="text-white text-2xl">50K+</p>
+                <p className="text-white text-2xl">{formatNumber(stats.activeUsers)}</p>
                 <p className="text-white/80 text-xs leading-tight">Active Users</p>
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20 hover:bg-white/15 transition-all">
               <div className="flex flex-col items-center gap-2">
                 <TrendingUp className="w-7 h-7 text-white/90" />
-                <p className="text-white text-2xl">1.2M+</p>
+                <p className="text-white text-2xl">{formatNumber(stats.ticketsSold)}</p>
                 <p className="text-white/80 text-xs leading-tight">Tickets Sold</p>
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20 hover:bg-white/15 transition-all">
               <div className="flex flex-col items-center gap-2">
                 <Zap className="w-7 h-7 text-white/90" />
-                <p className="text-white text-2xl">98%</p>
-                <p className="text-white/80 text-xs leading-tight">Satisfaction</p>
+                <p className="text-white text-2xl">{formatNumber(stats.eventsHosted)}</p>
+                <p className="text-white/80 text-xs leading-tight">Events Hosted</p>
               </div>
             </div>
           </div>

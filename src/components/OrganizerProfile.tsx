@@ -52,30 +52,11 @@ interface OrganizerProfileProps {
   onMessage?: (organizer: { name: string; avatar: string; verified: boolean; isOrganizer: boolean; id?: string }) => void;
 }
 
-// Mock organizer data fallback
-const MOCK_ORGANIZERS_DATA: { [key: string]: OrganizerData } = {
-  'STR8 OUT VIBES': {
-    name: 'STR8 OUT VIBES',
-    bio: 'Premier music festival organizer and nightlife experience curator in Dar es Salaam.',
-    coverImage: 'https://images.unsplash.com/photo-1658046413536-6e5933dfd939?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&h=200&fit=crop',
-    location: 'Dar es Salaam, Tanzania',
-    totalEvents: 73,
-    followers: 28400,
-    verified: true,
-    rating: 4.9,
-    phone: '+255 754 123 456',
-    whatsapp: '+255754123456',
-    highlights: [],
-    photos: [],
-    upcomingEvents: []
-  }
-};
-
 export function OrganizerProfile({ organizerName, organizerId, onClose, onTicketPurchase, onMessage }: OrganizerProfileProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [organizerData, setOrganizerData] = useState<OrganizerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Additional state from old component
@@ -92,85 +73,84 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     const fetchOrganizerData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
 
-        if (organizerId) {
-          // 1. Fetch Profile
-          const profile = await getProfile(organizerId);
-          if (!profile) throw new Error('Organizer not found');
-
-          // 2. Fetch Stats
-          const stats = await getOrganizerStats(organizerId);
-
-          // 3. Fetch Events
-          const events = await getOrganizerEvents(organizerId);
-
-          // 4. Fetch Posts (as highlights/photos)
-          const posts = await getPosts({ authorId: organizerId });
-
-          // Map to component state
-          setOrganizerData({
-            id: profile.id,
-            name: profile.full_name || profile.username || 'Organizer',
-            bio: profile.bio || 'No bio available',
-            coverImage: profile.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
-            avatar: profile.avatar_url || 'https://via.placeholder.com/150',
-            location: profile.location || 'Tanzania',
-            totalEvents: stats.totalEvents,
-            followers: stats.followers,
-            verified: profile.verified || false,
-            rating: 5.0, // Placeholder as we don't have ratings yet
-            phone: profile.phone,
-            whatsapp: profile.phone, // Assuming phone is whatsapp for now
-            highlights: posts.slice(0, 5).map(p => ({
-              id: p.id,
-              image: p.image_urls?.[0] || '',
-              video: p.video_url,
-              title: p.content.substring(0, 20) + '...',
-              date: new Date(p.created_at).toLocaleDateString(),
-              attendees: p.likes_count || 0
-            })),
-            photos: posts.map((p, index) => ({
-              id: p.id,
-              image: p.image_urls?.[0] || '',
-              size: index % 3 === 0 ? 'large' : 'small',
-              eventName: p.content.substring(0, 15) + '...'
-            })),
-            upcomingEvents: events.filter((e: any) => new Date(e.date) >= new Date()).map((e: any) => ({
-              id: e.id,
-              title: e.title,
-              image: e.image_url,
-              date: new Date(e.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-              time: e.time.substring(0, 5),
-              location: e.location,
-              price: e.price_range
-            }))
-          });
-
-          // Check if following
-          if (user) {
-             const { data: followData } = await supabase
-               .from('follows')
-               .select('created_at')
-               .eq('follower_id', user.id)
-               .eq('following_id', organizerId)
-               .single();
-             setIsFollowing(!!followData);
-          }
-
-        } else {
-          // Fallback to mock data if no ID
-          const mockData = MOCK_ORGANIZERS_DATA[organizerName] || MOCK_ORGANIZERS_DATA['STR8 OUT VIBES'];
-          setOrganizerData({
-            ...mockData,
-            name: organizerName // Ensure name matches request
-          });
+        if (!organizerId) {
+          setError('Organizer ID is missing');
+          setLoading(false);
+          return;
         }
+
+        // 1. Fetch Profile
+        const profile = await getProfile(organizerId);
+        if (!profile) throw new Error('Organizer not found');
+
+        // 2. Fetch Stats
+        const stats = await getOrganizerStats(organizerId);
+
+        // 3. Fetch Events
+        const events = await getOrganizerEvents(organizerId);
+
+        // 4. Fetch Posts (as highlights/photos)
+        const posts = await getPosts({ authorId: organizerId });
+
+        // Map to component state
+        setOrganizerData({
+          id: profile.id,
+          name: profile.full_name || profile.username || 'Organizer',
+          bio: profile.bio || 'No bio available',
+          coverImage: profile.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
+          avatar: profile.avatar_url || 'https://via.placeholder.com/150',
+          location: profile.location || 'Tanzania',
+          totalEvents: stats.totalEvents,
+          followers: stats.followers,
+          verified: profile.verified || false,
+          rating: 5.0, // Placeholder as we don't have ratings yet
+          phone: profile.phone,
+          whatsapp: profile.phone, // Assuming phone is whatsapp for now
+          highlights: posts.slice(0, 5).map(p => ({
+            id: p.id,
+            image: p.image_urls?.[0] || '',
+            video: p.video_url,
+            title: p.content.substring(0, 20) + '...',
+            date: new Date(p.created_at).toLocaleDateString(),
+            attendees: p.likes_count || 0
+          })),
+          photos: posts.map((p, index) => ({
+            id: p.id,
+            image: p.image_urls?.[0] || '',
+            size: index % 3 === 0 ? 'large' : 'small',
+            eventName: p.content.substring(0, 15) + '...'
+          })),
+          upcomingEvents: events.filter((e: any) => new Date(e.date) >= new Date()).map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            image: e.image_url,
+            date: new Date(e.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+            time: e.time.substring(0, 5),
+            location: e.location,
+            price: e.price_range
+          }))
+        });
+
+        // Check if following
+        if (user) {
+            const { data: followData } = await supabase
+              .from('follows')
+              .select('created_at')
+              .eq('follower_id', user.id)
+              .eq('following_id', organizerId)
+              .single();
+            setIsFollowing(!!followData);
+        }
+
       } catch (error) {
         console.error('Error fetching organizer data:', error);
+        setError('Failed to load organizer profile');
         toast.error('Failed to load organizer profile');
       } finally {
         setLoading(false);
@@ -273,6 +253,26 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     return (
       <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+        <div className="bg-white rounded-xl p-6 max-w-sm w-full text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+             <X className="w-6 h-6 text-red-600" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Error</h3>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button 
+            onClick={onClose}
+            className="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
+          >
+            Close
+          </button>
+        </div>
       </div>
     );
   }
