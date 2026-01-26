@@ -5,13 +5,14 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.error('Missing Supabase environment variables. Please check your .env file or Vercel project settings.');
 }
 
 // Create a singleton Supabase client
+// Use fallback values to prevent app crash on load if env vars are missing
 export const supabase = createClient(
-  supabaseUrl,
-  supabaseKey,
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseKey || 'placeholder',
   {
     auth: {
       persistSession: true,

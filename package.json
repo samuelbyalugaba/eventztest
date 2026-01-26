@@ -59,7 +59,8 @@
       },
       "scripts": {
             "dev": "vite",
-    "build": "vite build",
-    "generate-icons": "node scripts/generate-icons.js"
+            "build": "vite build",
+            "preview": "vite preview",
+            "generate-icons": "node scripts/generate-icons.js"
       }
 }
