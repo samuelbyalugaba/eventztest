@@ -178,15 +178,15 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5 mt-2">
+          <form onSubmit={handleSubmit} className="space-y-6 mt-4">
             
             {/* Full Name (Signup only) */}
             {!isLogin && (
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700 ml-1">Full Name</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400 group-focus-within:text-indigo-600 transition-colors" />
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700 ml-1">Full Name</label>
+                <div className="relative">
+                  <div className="absolute top-0 bottom-0 left-0 w-12 flex items-center justify-center pointer-events-none text-gray-400">
+                    <User className="h-5 w-5" />
                   </div>
                   <input
                     name="fullName"
@@ -194,7 +194,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                     required
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    className="block w-full pl-11 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all outline-none"
+                    className="block w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all outline-none font-medium"
                     placeholder="John Doe"
                     disabled={isSubmitting}
                   />
@@ -203,11 +203,11 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
             )}
 
             {/* Email */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-gray-700 ml-1">Email Address</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-indigo-600 transition-colors" />
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700 ml-1">Email Address</label>
+              <div className="relative">
+                <div className="absolute top-0 bottom-0 left-0 w-12 flex items-center justify-center pointer-events-none text-gray-400">
+                  <Mail className="h-5 w-5" />
                 </div>
                 <input
                   name="email"
@@ -215,7 +215,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="block w-full pl-11 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all outline-none"
+                  className="block w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all outline-none font-medium"
                   placeholder="you@example.com"
                   disabled={isSubmitting}
                 />
@@ -223,11 +223,11 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
             </div>
 
             {/* Password */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-gray-700 ml-1">Password</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-indigo-600 transition-colors" />
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700 ml-1">Password</label>
+              <div className="relative">
+                <div className="absolute top-0 bottom-0 left-0 w-12 flex items-center justify-center pointer-events-none text-gray-400">
+                  <Lock className="h-5 w-5" />
                 </div>
                 <input
                   name="password"
@@ -235,14 +235,14 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="block w-full pl-11 pr-12 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all outline-none"
+                  className="block w-full h-12 pl-12 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all outline-none font-medium"
                   placeholder="••••••••"
                   disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  className="absolute top-0 bottom-0 right-0 w-12 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
