@@ -1,5 +1,5 @@
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import organizerProfileImg from 'figma:asset/f341912f973a7295b54e9b5936a0020cb0975622.png';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -10,7 +10,7 @@ import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, MoreVertical, Edit, TrendingUp } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, createEvent, getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents } from '../utils/supabase/api';
+import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents } from '../utils/supabase/api';
 
 interface OrganizerDashboardProps {
   onCreateEvent: () => void;
@@ -102,8 +102,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
       } catch (error) {
         console.error('Error loading organizer data:', error);
         toast.error('Failed to load dashboard data');
-      } finally {
-        setIsLoading(false);
       }
     };
 

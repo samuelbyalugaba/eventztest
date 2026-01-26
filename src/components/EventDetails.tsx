@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Bell, Send, Star } from 'lucide-react';
 import { OrganizerProfile } from './OrganizerProfile';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../App';
 import { PremiumSearchModal } from './PremiumSearchModal';
 import { UserProfileModal } from './UserProfileModal';
@@ -88,13 +88,13 @@ function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, onPurch
   ];
 
   const videosForViewer = [
-    ...(event.event_highlights?.filter(h => h.mediaType === 'video').map((highlight, index) => ({
-      id: index + 500,
+    ...(event.event_highlights?.filter(h => h.mediaType === 'video').map((highlight, _index) => ({
+      id: _index + 500,
       thumbnail: highlight.image || event.image_url,
       videoUrl: highlight.video || '',
       eventName: event.title,
     })) || []),
-    ...eventPosts.filter(p => p.video_url).map((post, index) => ({
+    ...eventPosts.filter(p => p.video_url).map((post, _index) => ({
       id: 2000 + post.id,
       thumbnail: post.image_urls?.[0] || '',
       views: post.views || 0,
@@ -187,13 +187,13 @@ function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, onPurch
               organizerName={event.organizer.full_name || 'Organizer'}
               organizerId={event.organizer_id || event.organizer.id}
               onClose={() => setShowOrganizerProfile(false)}
-              onMessage={(organizer) => {
+              onMessage={async (organizer) => {
                 setShowOrganizerProfile(false);
                 if (onStartConversation) {
-                  onStartConversation(organizer);
+                  await onStartConversation(organizer);
                 }
               }}
-              onTicketPurchase={onPurchaseTicket ? (ticket) => onPurchaseTicket(event) : undefined}
+              onTicketPurchase={onPurchaseTicket ? () => onPurchaseTicket(event) : undefined}
             />
           )}
           
@@ -576,18 +576,16 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
         ]);
         
         // Map saved status
-        const savedIds = new Set((savedEvents as ApiEvent[]).map(e => e.id));
-        const eventsWithSaved = allEvents.map(e => ({
+        const savedIds = new Set((savedEvents as any[]).map(e => e.id));
+        const eventsWithSaved = (allEvents as any[]).map(e => ({
           ...e,
           isSaved: savedIds.has(e.id)
         }));
         
-        setEvents(eventsWithSaved);
+        setEvents(eventsWithSaved as ApiEvent[]);
       } catch (error) {
         console.error('Error fetching events:', error);
         toast.error('Failed to load events');
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -631,16 +629,14 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
   const [normalTicketQuantity, setNormalTicketQuantity] = useState(1);
   const [normalTicketStep, setNormalTicketStep] = useState<'quantity' | 'details' | 'confirm'>('quantity');
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchCategory, setSearchCategory] = useState<'all' | 'events' | 'venues' | 'people'>('all');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showTierTicketModal, setShowTierTicketModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState<'Normal' | 'VIP' | 'VVIP' | null>(null);
   const [tierTicketQuantity, setTierTicketQuantity] = useState(1);
   const [tierTicketStep, setTierTicketStep] = useState<'tier' | 'quantity' | 'details' | 'confirm'>('tier');
   const [showMediaViewer, setShowMediaViewer] = useState(false);
-  const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
-  const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
+  const [mediaViewerIndex] = useState(0);
+  const [mediaViewerType] = useState<'photo' | 'video'>('photo');
   
   // Messaging state
   const [showMessages, setShowMessages] = useState(false);
@@ -671,12 +667,12 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
 
   // Convert event highlights to format expected by MediaViewer
   const photosForViewer = [
-    ...(selectedEvent?.event_highlights?.filter(h => h.mediaType === 'image').map((highlight, index) => ({
-      id: index,
+    ...(selectedEvent?.event_highlights?.filter(h => h.mediaType === 'image').map((highlight, _index) => ({
+      id: _index,
       url: highlight.image!,
       eventName: selectedEvent?.title || '',
     })) || []),
-    ...eventPosts.filter(p => p.image_urls && p.image_urls.length > 0).map((post, index) => ({
+    ...eventPosts.filter(p => p.image_urls && p.image_urls.length > 0).map((post, _index) => ({
       id: 1000 + post.id,
       url: post.image_urls[0],
       likes: post.likes_count || 0,
@@ -688,13 +684,13 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
   ];
 
   const videosForViewer = [
-    ...(selectedEvent?.event_highlights?.filter(h => h.mediaType === 'video').map((highlight, index) => ({
-      id: index + 500,
+    ...(selectedEvent?.event_highlights?.filter(h => h.mediaType === 'video').map((highlight, _index) => ({
+      id: _index + 500,
       thumbnail: highlight.image || selectedEvent.image_url,
       videoUrl: highlight.video || '',
       eventName: selectedEvent?.title || '',
     })) || []),
-    ...eventPosts.filter(p => p.video_url).map((post, index) => ({
+    ...eventPosts.filter(p => p.video_url).map((post, _index) => ({
       id: 2000 + post.id,
       thumbnail: post.image_urls?.[0] || '',
       duration: post.duration || '0:00',
@@ -708,16 +704,18 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
     }))
   ];
 
-  const handleStartConversationLocal = (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => {
+  const handleStartConversationLocal = async (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => {
     // Close user profile modal
     setSelectedUser(null);
     
     // Use the global conversation handler
-    const conversation = onStartConversation(user);
+    const conversation = await onStartConversation(user);
     
-    // Open the conversation
-    setActiveConversation(conversation);
-    setShowMessages(true);
+    if (conversation) {
+      // Open the conversation
+      setActiveConversation(conversation);
+      setShowMessages(true);
+    }
   };
 
   const handleSendMessage = () => {

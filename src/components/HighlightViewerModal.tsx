@@ -3,7 +3,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useState, useRef, useEffect } from 'react';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface HighlightViewerModalProps {
   highlight: {

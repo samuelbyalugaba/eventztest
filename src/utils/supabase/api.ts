@@ -186,6 +186,21 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
   return data;
 };
 
+export const checkUsernameUnique = async (username: string, currentUserId?: string) => {
+  let query = supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('username', username);
+
+  if (currentUserId) {
+    query = query.neq('id', currentUserId);
+  }
+
+  const { count, error } = await query;
+  if (error) throw error;
+  return count === 0;
+};
+
 // --- ORGANIZER STATS ---
 
 export const getOrganizerStats = async (userId: string) => {
@@ -439,6 +454,7 @@ export const getSavedEvents = async (userId: string) => {
   const { data, error } = await supabase
     .from('saved_events')
     .select(`
+      is_reminder,
       event:events (
         *,
         organizer:profiles(*)

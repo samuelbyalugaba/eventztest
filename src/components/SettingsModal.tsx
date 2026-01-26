@@ -1,20 +1,22 @@
 import { X, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { supabase, getProfile, updateProfile } from '../utils/supabase/api';
+import { supabase, getProfile, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
+
+type SettingsView = 'main' | 'profile' | 'notifications' | 'privacy' | 'help';
 
 interface SettingsModalProps {
   onClose: () => void;
   onLogout: () => Promise<void>;
+  initialView?: SettingsView;
 }
 
-type SettingsView = 'main' | 'profile' | 'notifications' | 'privacy' | 'help';
-
-export function SettingsModal({ onClose, onLogout }: SettingsModalProps) {
-  const [currentView, setCurrentView] = useState<SettingsView>('main');
+export function SettingsModal({ onClose, onLogout, initialView = 'main' }: SettingsModalProps) {
+  const [currentView, setCurrentView] = useState<SettingsView>(initialView);
   
   // Profile state
   const [profileData, setProfileData] = useState({
+    username: '',
     name: '',
     email: '',
     phone: '',
@@ -68,6 +70,7 @@ export function SettingsModal({ onClose, onLogout }: SettingsModalProps) {
               localStorage.removeItem('eventz-user-profile');
             } else {
               setProfileData({
+                username: profile.username || '',
                 name: profile.full_name || '',
                 email: profile.contact_email || user.email || '',
                 phone: profile.phone || '',
@@ -155,7 +158,18 @@ export function SettingsModal({ onClose, onLogout }: SettingsModalProps) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Check if username changed and is unique
+        const currentProfile = await getProfile(user.id);
+        if (profileData.username !== currentProfile?.username) {
+          const isUnique = await checkUsernameUnique(profileData.username, user.id);
+          if (!isUnique) {
+            toast.error('Username already taken');
+            return;
+          }
+        }
+
         await updateProfile(user.id, {
+          username: profileData.username,
           full_name: profileData.name,
           contact_email: profileData.email,
           phone: profileData.phone,

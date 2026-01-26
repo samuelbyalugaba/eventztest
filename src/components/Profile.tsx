@@ -26,6 +26,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [eventReminders, setEventReminders] = useState<Set<number>>(new Set());
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
   const [showOrganizerOnboarding, setShowOrganizerOnboarding] = useState(false);
   const [showSharePostModal, setShowSharePostModal] = useState(false);
   const [postCaption, setPostCaption] = useState('');
@@ -201,7 +202,14 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
           <div className="text-center mb-3">
             <div className="flex items-center justify-center gap-2 mb-1">
               <h1 className="text-gray-900">{userProfile?.full_name || 'Loading...'}</h1>
-              <button className="p-1.5 hover:bg-gray-100 rounded-full transition-colors group" title="Edit Profile">
+              <button 
+                onClick={() => {
+                  setSettingsInitialView('profile');
+                  setShowSettingsModal(true);
+                }}
+                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors group" 
+                title="Edit Profile"
+              >
                 <Edit2 className="w-4 h-4 text-gray-500 group-hover:text-purple-600 transition-colors" />
               </button>
             </div>
@@ -209,7 +217,19 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
             
             {/* Bio - Compact */}
             <p className="text-gray-700 text-sm max-w-md mx-auto leading-relaxed">
-              {userProfile?.bio || 'Music enthusiast & event lover 🎵 Always chasing the next great experience'}
+              {userProfile?.bio ? (
+                userProfile.bio
+              ) : (
+                <button 
+                  onClick={() => {
+                    setSettingsInitialView('profile');
+                    setShowSettingsModal(true);
+                  }}
+                  className="text-purple-600 hover:text-purple-700 font-medium"
+                >
+                  Edit bio
+                </button>
+              )}
             </p>
           </div>
 
@@ -882,6 +902,15 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
             </div>
           </div>
         </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <SettingsModal
+          onClose={() => setShowSettingsModal(false)}
+          onLogout={onLogout}
+          initialView={settingsInitialView}
+        />
       )}
 
       {/* Media Viewer */}

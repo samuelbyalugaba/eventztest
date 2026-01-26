@@ -1,5 +1,5 @@
 import { X, Eye, Users, Share2, TrendingUp, Calendar, MapPin, DollarSign, Ticket, Clock, Target, Activity, ArrowUp, ArrowDown, Download } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface EventAnalyticsModalProps {
   event: any;

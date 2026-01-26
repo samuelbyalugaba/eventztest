@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, Sparkles, Video } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { toast } from 'sonner';
 
 interface AuthScreenProps {
@@ -32,38 +31,43 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
     setIsLoading(true);
 
     try {
-      // Call backend signup endpoint
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-c3c04079/signup`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({ email, password, name }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Signup failed');
-      }
-
-      // After successful signup, sign in the user
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            name: name,
+          },
+        },
       });
 
-      if (signInError) {
-        throw new Error(signInError.message);
+      if (error) {
+        throw new Error(error.message);
       }
 
-      if (signInData.session?.access_token) {
+      if (data.session && data.user) {
+        // Create profile if session exists (RLS allows insert own profile)
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user.id,
+              email: email,
+              full_name: name,
+              username: email.split('@')[0] + Math.floor(Math.random() * 1000),
+              avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+            }
+          ]);
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
+
         toast.success(`Welcome to EVENTZ, ${name}! 🎉`);
-        onAuthSuccess(signInData.session.access_token, signInData.user);
+        onAuthSuccess(data.session.access_token, data.user);
+      } else if (data.user && !data.session) {
+        toast.success('Signup successful! Please check your email to confirm.');
+        setIsLogin(true);
       }
     } catch (err: any) {
       console.error('Signup error:', err);

@@ -3,7 +3,7 @@ import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Play, Ch
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../App';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, Event as ApiEvent, Profile } from '../utils/supabase/api';
 
 interface OrganizerData {

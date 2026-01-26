@@ -21,6 +21,7 @@ import {
   startConversation,
   markMessagesAsRead,
   subscribeToAllMessages,
+  getLiveStreams,
   Event
 } from './utils/supabase/api';
 
@@ -87,6 +88,7 @@ export default function App() {
 
   // Global messaging state
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [hasLiveEvents, setHasLiveEvents] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -221,6 +223,24 @@ export default function App() {
 
     fetchConversations();
   }, [isAuthenticated, currentUser]);
+
+  // Check for live events
+  useEffect(() => {
+    const checkLiveEvents = async () => {
+      try {
+        const streams = await getLiveStreams();
+        setHasLiveEvents(streams.length > 0);
+      } catch (error) {
+        console.error('Error checking live events:', error);
+      }
+    };
+
+    checkLiveEvents();
+    
+    // Poll every minute to update the indicator
+    const interval = setInterval(checkLiveEvents, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Subscribe to real-time messages
   useEffect(() => {
@@ -527,7 +547,9 @@ export default function App() {
               <Radio className="w-6 h-6" />
               <span className="text-xs">Live</span>
               {/* Live indicator dot */}
-              <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              {hasLiveEvents && (
+                <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('create')}

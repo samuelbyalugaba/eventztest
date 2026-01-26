@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../utils/supabase/client';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { X, Lock, Users, Heart, MessageCircle, Send, Volume2, VolumeX, Maximize, MoreVertical, Share2 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage } from '../utils/supabase/api';

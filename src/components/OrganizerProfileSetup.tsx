@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { User, Mail, Phone, MapPin, Globe, Instagram, Facebook, Twitter, ArrowRight, Building2, Mic2, Store, Users, Briefcase, Trophy, Check, Music, Wine, Coffee, UtensilsCrossed, Headphones, Radio, Mic, Heart, GraduationCap, School, Building, Church, Laptop, ShoppingBag, Plane, Film, Dumbbell, Activity, Flame, Target } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;

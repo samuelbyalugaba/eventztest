@@ -1,6 +1,6 @@
 import { X, Download, Share2, MapPin, Calendar, Clock, Ticket, Sparkles } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useEffect } from 'react';
 
 interface TicketEvent {

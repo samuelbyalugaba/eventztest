@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Heart, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, Post as ApiPost } from '../utils/supabase/api';
@@ -328,9 +328,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   };
 
+  /*
   const openPostDetail = (post: Post) => {
     setSelectedPost(post);
   };
+  */
 
   const closePostDetail = () => {
     setSelectedPost(null);
@@ -474,18 +476,20 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     setMessageText('');
   };
 
-  const handleStartConversationLocal = (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
+  const handleStartConversationLocal = async (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
     // Close post detail if open
     setSelectedPost(null);
     
     // Use the global conversation handler
-    const conversation = onStartConversation(user);
+    const conversation = await onStartConversation(user);
     
-    // Open the conversation
-    setActiveConversation(conversation);
-    setShowMessages(true);
+    if (conversation) {
+      // Open the conversation
+      setActiveConversation(conversation);
+      setShowMessages(true);
+    }
   };
 
   const handleOpenUserProfile = (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {

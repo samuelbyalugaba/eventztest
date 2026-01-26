@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, Building2, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3, X } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
@@ -179,10 +179,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     }
   };
 
-  const triggerFileUpload = () => {
-    document.getElementById('cover-image-input')?.click();
-  };
-
   const handleSaveDraft = async () => {
     setIsSubmitting(true);
     try {
@@ -246,7 +242,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         image_url: formData.coverImage || '',
         price_range: formData.price,
         organizer_id: user.id,
-        status: 'published',
+        status: 'published' as const,
       };
 
       if (isEditing && savedEventId) {
