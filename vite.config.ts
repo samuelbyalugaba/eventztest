@@ -59,7 +59,7 @@
       },
     },
     build: {
-      target: 'esnext',
+      target: ['es2015', 'edge88', 'firefox78', 'chrome87', 'safari14'],
       outDir: 'dist',
       rollupOptions: {
         output: {

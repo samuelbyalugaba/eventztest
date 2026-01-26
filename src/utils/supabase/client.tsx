@@ -8,6 +8,10 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('Missing Supabase environment variables. Please check your .env file or Vercel project settings.');
 }
 
+export const isSupabaseConfigured = () => {
+  return supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co';
+};
+
 // Create a singleton Supabase client
 // Use fallback values to prevent app crash on load if env vars are missing
 export const supabase = createClient(

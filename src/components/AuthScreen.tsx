@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Mail, Lock, User, Eye, EyeOff, Sparkles, Video } from 'lucide-react';
-import { supabase } from '../utils/supabase/client';
+import { useState, useEffect } from 'react';
+import { Mail, Lock, User, Eye, EyeOff, Sparkles, Video, AlertTriangle } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../utils/supabase/client';
 import { toast } from 'sonner';
 
 interface AuthScreenProps {
@@ -14,10 +14,26 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [configError, setConfigError] = useState(false);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setConfigError(true);
+      toast.error('Configuration Error: Database connection missing', {
+        description: 'Please check environment variables.',
+        duration: 10000,
+      });
+    }
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (configError) {
+      toast.error('Cannot sign up: Database configuration missing');
+      return;
+    }
+
     if (!email || !password || !name) {
       toast.error('Please fill in all fields');
       return;
@@ -80,6 +96,11 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (configError) {
+      toast.error('Cannot login: Database configuration missing');
+      return;
+    }
+
     if (!email || !password) {
       toast.error('Please fill in all fields');
       return;
@@ -141,6 +162,21 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
           <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
 
           <div className="relative bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            {configError && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-md">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-red-400" aria-hidden="true" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700">
+                      Application configuration missing. Please verify environment variables are set in your deployment settings.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Tab Switcher */}
             <div className="flex gap-1 mb-8 bg-gray-100/80 p-1.5 rounded-2xl">
               <button
