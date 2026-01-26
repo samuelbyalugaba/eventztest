@@ -1,409 +1,32 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Heart, Ticket, Bell, BellOff, Camera, Image as ImageIcon, Upload, Plus, Smile } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Heart, Ticket as TicketIcon, Bell, BellOff, Camera, Image as ImageIcon, Upload, Plus, Smile } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
 import { SetAlertModal } from './SetAlertModal';
+import { supabase } from '../utils/supabase/client';
+import { getEvents, getProfile, getUserTickets, getUserMedia, getSavedEvents, toggleReminder as toggleReminderApi, getFollowersCount, getFollowingCount, subscribeToSavedEvents, Profile as UserProfile, Event, Ticket, UserMedia } from '../utils/supabase/api';
 
-interface ProfileEvent {
-  id: number;
-  name: string;
-  date: string;
-  image: string;
-  location?: string;
-  category?: string;
-}
-
-interface TicketEvent {
-  id: number;
-  name: string;
-  date: string;
-  time: string;
-  location: string;
-  image: string;
-  category: string;
-  ticketType: string;
-  price: string;
-  qrCode: string;
-}
-
-interface VideoClip {
-  id: number;
-  thumbnail: string;
-  duration: string;
-  views: number;
-  likes?: number;
-  videoUrl: string;
-}
-
-interface Photo {
-  id: number;
-  url: string;
-  likes: number;
-  eventName?: string;
-}
-
-const attendedEvents: ProfileEvent[] = [
-  {
-    id: 1,
-    name: 'Summer Music Festival',
-    date: 'Jun 14, 2025',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=400&h=300&fit=crop',
-  },
-  {
-    id: 2,
-    name: 'Jazz Night at Hyatt',
-    date: 'Jun 15, 2025',
-    location: 'Zanzibar',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=400&h=300&fit=crop',
-  },
-  {
-    id: 3,
-    name: 'Rooftop Party Experience',
-    date: 'Jun 16, 2025',
-    location: 'Arusha',
-    category: 'Party',
-    image: 'https://images.unsplash.com/photo-1692275964898-922a80aaf398?w=400&h=300&fit=crop',
-  },
-  {
-    id: 4,
-    name: 'Afrobeat Concert',
-    date: 'Jun 20, 2025',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=300&fit=crop',
-  },
-  {
-    id: 5,
-    name: 'Tropical Beach Party',
-    date: 'May 28, 2025',
-    location: 'Zanzibar',
-    category: 'Party',
-    image: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400&h=300&fit=crop',
-  },
-  {
-    id: 6,
-    name: 'Electronic Dance Night',
-    date: 'May 15, 2025',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop',
-  },
-  {
-    id: 7,
-    name: 'Amapiano Live',
-    date: 'May 5, 2025',
-    location: 'Arusha',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=300&fit=crop',
-  },
-  {
-    id: 8,
-    name: 'Sunset Rooftop Vibes',
-    date: 'Apr 22, 2025',
-    location: 'Dar es Salaam',
-    category: 'Party',
-    image: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=300&fit=crop',
-  },
-  {
-    id: 9,
-    name: 'Bongo Flava Festival',
-    date: 'Apr 10, 2025',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
-  },
-  {
-    id: 10,
-    name: 'Nyama Choma Night',
-    date: 'Mar 28, 2025',
-    location: 'Arusha',
-    category: 'Food',
-    image: 'https://images.unsplash.com/photo-1675674683873-1232862e3c64?w=400&h=300&fit=crop',
-  },
-  {
-    id: 11,
-    name: 'Island Rhythm Bash',
-    date: 'Mar 15, 2025',
-    location: 'Zanzibar',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1607313029691-fa108ddf807d?w=400&h=300&fit=crop',
-  },
-  {
-    id: 12,
-    name: 'Vintage Space Festival',
-    date: 'Mar 5, 2025',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1605286232233-e448650f5914?w=400&h=300&fit=crop',
-  },
-  {
-    id: 13,
-    name: 'Coastal Chillout',
-    date: 'Feb 20, 2025',
-    location: 'Zanzibar',
-    category: 'Party',
-    image: 'https://images.unsplash.com/photo-1704830657561-a6a663931172?w=400&h=300&fit=crop',
-  },
-  {
-    id: 14,
-    name: 'Afro House Live',
-    date: 'Feb 10, 2025',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1751998689590-f7ae39d9d218?w=400&h=300&fit=crop',
-  },
-  {
-    id: 15,
-    name: 'New Year Celebration',
-    date: 'Jan 1, 2025',
-    location: 'Dar es Salaam',
-    category: 'Party',
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop',
-  },
-];
-
-const ticketEvents: TicketEvent[] = [
-  {
-    id: 1,
-    name: 'Summer Music Festival',
-    date: 'Jun 14, 2025',
-    time: '7:00 PM',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=400&h=300&fit=crop',
-    ticketType: 'General Admission',
-    price: 'TZS 15,000',
-    qrCode: 'https://images.unsplash.com/photo-1561264819-1ccc1c6e0ae9?w=400&h=400&fit=crop',
-  },
-  {
-    id: 2,
-    name: 'Jazz Night at Hyatt',
-    date: 'Jun 15, 2025',
-    time: '8:00 PM',
-    location: 'Zanzibar',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=400&h=300&fit=crop',
-    ticketType: 'VIP',
-    price: 'TZS 30,000',
-    qrCode: 'https://images.unsplash.com/photo-1692275964898-922a80aaf398?w=400&h=400&fit=crop',
-  },
-  {
-    id: 3,
-    name: 'Rooftop Party Experience',
-    date: 'Jun 16, 2025',
-    time: '9:00 PM',
-    location: 'Arusha',
-    category: 'Party',
-    image: 'https://images.unsplash.com/photo-1692275964898-922a80aaf398?w=400&h=300&fit=crop',
-    ticketType: 'General Admission',
-    price: 'TZS 10,000',
-    qrCode: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop',
-  },
-  {
-    id: 4,
-    name: 'Afrobeat Concert',
-    date: 'Jun 20, 2025',
-    time: '10:00 PM',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=300&fit=crop',
-    ticketType: 'VIP',
-    price: 'TZS 25,000',
-    qrCode: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=400&fit=crop',
-  },
-  {
-    id: 5,
-    name: 'Club Night',
-    date: 'Jun 21, 2025',
-    time: '11:00 PM',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=300&fit=crop',
-    ticketType: 'General Admission',
-    price: 'TZS 12,000',
-    qrCode: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=400&fit=crop',
-  },
-  {
-    id: 6,
-    name: 'Electronic Festival',
-    date: 'Jun 22, 2025',
-    time: '12:00 AM',
-    location: 'Arusha',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop',
-    ticketType: 'VIP',
-    price: 'TZS 40,000',
-    qrCode: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=400&fit=crop',
-  },
-  {
-    id: 7,
-    name: 'Indie Concert',
-    date: 'Jun 23, 2025',
-    time: '1:00 AM',
-    location: 'Zanzibar',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-    ticketType: 'General Admission',
-    price: 'TZS 18,000',
-    qrCode: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=400&fit=crop',
-  },
-  {
-    id: 8,
-    name: 'Outdoor Festival',
-    date: 'Jun 24, 2025',
-    time: '2:00 AM',
-    location: 'Dar es Salaam',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=300&fit=crop',
-    ticketType: 'VIP',
-    price: 'TZS 35,000',
-    qrCode: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=400&fit=crop',
-  },
-  {
-    id: 9,
-    name: 'Beach Party',
-    date: 'Jun 25, 2025',
-    time: '3:00 AM',
-    location: 'Zanzibar',
-    category: 'Party',
-    image: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=300&fit=crop',
-    ticketType: 'General Admission',
-    price: 'TZS 16,000',
-    qrCode: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=400&fit=crop',
-  },
-];
-
-const videoClips: VideoClip[] = [
-  {
-    id: 1,
-    thumbnail: 'https://images.unsplash.com/photo-1561264819-1ccc1c6e0ae9?w=400&h=400&fit=crop',
-    duration: '0:45',
-    views: 1234,
-    likes: 89,
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-  },
-  {
-    id: 2,
-    thumbnail: 'https://images.unsplash.com/photo-1692275964898-922a80aaf398?w=400&h=400&fit=crop',
-    duration: '1:20',
-    views: 2567,
-    likes: 156,
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-  },
-  {
-    id: 3,
-    thumbnail: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop',
-    duration: '0:58',
-    views: 890,
-    likes: 67,
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  },
-  {
-    id: 4,
-    thumbnail: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=400&fit=crop',
-    duration: '1:05',
-    views: 3421,
-    likes: 234,
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-  },
-  {
-    id: 5,
-    thumbnail: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=400&fit=crop',
-    duration: '2:15',
-    views: 5678,
-    likes: 412,
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-  },
-  {
-    id: 6,
-    thumbnail: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=400&fit=crop',
-    duration: '1:45',
-    views: 1890,
-    likes: 145,
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-  },
-];
-
-const photos: Photo[] = [
-  {
-    id: 1,
-    url: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=400&h=400&fit=crop',
-    likes: 245,
-    eventName: 'Summer Music Festival',
-  },
-  {
-    id: 2,
-    url: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=400&h=400&fit=crop',
-    likes: 189,
-    eventName: 'Jazz Night',
-  },
-  {
-    id: 3,
-    url: 'https://images.unsplash.com/photo-1692275964898-922a80aaf398?w=400&h=400&fit=crop',
-    likes: 321,
-    eventName: 'Rooftop Party',
-  },
-  {
-    id: 4,
-    url: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=400&fit=crop',
-    likes: 412,
-    eventName: 'Afrobeat Concert',
-  },
-  {
-    id: 5,
-    url: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=400&fit=crop',
-    likes: 267,
-    eventName: 'Club Night',
-  },
-  {
-    id: 6,
-    url: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=400&fit=crop',
-    likes: 534,
-    eventName: 'Electronic Festival',
-  },
-  {
-    id: 7,
-    url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=400&fit=crop',
-    likes: 198,
-    eventName: 'Indie Concert',
-  },
-  {
-    id: 8,
-    url: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=400&fit=crop',
-    likes: 389,
-    eventName: 'Outdoor Festival',
-  },
-  {
-    id: 9,
-    url: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=400&fit=crop',
-    likes: 445,
-    eventName: 'Beach Party',
-  },
-];
+const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"; // Generic event background
+const FALLBACK_AVATAR_IMAGE = "https://ui-avatars.com/api/?background=random&color=fff"; // Dynamic fallback base
 
 interface ProfileProps {
   conversations: any[];
   onStartConversation: (user: any) => any;
   onSendMessage: (conversationId: number, messageText: string) => void;
+  onMarkAsRead?: (conversationId: number) => void;
   onLogout: () => Promise<void>;
 }
 
-export function Profile({ conversations, onStartConversation, onSendMessage, onLogout }: ProfileProps) {
+export function Profile({ conversations, onStartConversation, onSendMessage, onMarkAsRead, onLogout }: ProfileProps) {
   const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'photos' | 'videos' | 'saved'>('events');
-  const [savedEvents, setSavedEvents] = useState<ProfileEvent[]>([]);
+  const [savedEvents, setSavedEvents] = useState<Event[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [eventReminders, setEventReminders] = useState<Set<number>>(new Set());
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showOrganizerOnboarding, setShowOrganizerOnboarding] = useState(false);
-  const [isOrganizer, setIsOrganizer] = useState(() => {
-    return localStorage.getItem('eventz-is-organizer') === 'true';
-  });
   const [showSharePostModal, setShowSharePostModal] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -412,70 +35,136 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onL
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
   const [showTicketViewer, setShowTicketViewer] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<TicketEvent | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<ProfileEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  
+  // Data states
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [attendedEvents, setAttendedEvents] = useState<Event[]>([]);
+  const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
+  const [photos, setPhotos] = useState<UserMedia[]>([]);
+  const [videoClips, setVideoClips] = useState<UserMedia[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
 
-  // Load saved events from localStorage
+  // Load all data
   useEffect(() => {
-    const saved = localStorage.getItem('eventz_saved_events');
-    if (saved) {
-      setSavedEvents(JSON.parse(saved));
-    }
-    
-    // Load reminders from localStorage
-    const reminders = localStorage.getItem('eventz_event_reminders');
-    if (reminders) {
-      setEventReminders(new Set(JSON.parse(reminders)));
-    }
-  }, []);
+    let savedEventsSubscription: any;
 
-  // Listen for storage changes
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem('eventz_saved_events');
-      if (saved) {
-        setSavedEvents(JSON.parse(saved));
-      }
-      
-      const reminders = localStorage.getItem('eventz_event_reminders');
-      if (reminders) {
-        setEventReminders(new Set(JSON.parse(reminders)));
+    const fetchSavedEvents = async (userId: string) => {
+      try {
+        const saved = await getSavedEvents(userId);
+        if (saved) {
+           setSavedEvents(saved);
+
+           const reminders = new Set<number>();
+           saved.forEach(e => {
+             if (e.hasReminder) reminders.add(e.id);
+           });
+           setEventReminders(reminders);
+        }
+      } catch (error) {
+        console.error('Error fetching saved events:', error);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('savedEventsUpdated', handleStorageChange);
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // 1. Profile
+          const profile = await getProfile(user.id);
+          if (profile) setUserProfile(profile);
+
+          // Load Follow Stats
+          const followers = await getFollowersCount(user.id);
+          const following = await getFollowingCount(user.id);
+          setFollowStats({ followers, following });
+          
+          // 2. Saved Events (from DB)
+          await fetchSavedEvents(user.id);
+
+          // Subscribe to saved events changes
+          savedEventsSubscription = subscribeToSavedEvents(user.id, () => {
+            fetchSavedEvents(user.id);
+          });
+
+          // 3. Tickets
+          const tickets = await getUserTickets(user.id);
+          if (tickets) {
+            setTicketEvents(tickets);
+            
+            // Derive Attended Events (Past Tickets)
+            const attended = tickets
+              .filter(t => {
+                if (!t.event?.date) return false;
+                const eventDate = new Date(t.event.date);
+                return !isNaN(eventDate.getTime()) && eventDate < new Date();
+              })
+              .map(t => t.event!)
+              .filter(e => !!e);
+            
+            // Deduplicate
+            const uniqueAttended = Array.from(new Map(attended.map(item => [item.id, item])).values());
+            setAttendedEvents(uniqueAttended);
+          }
+
+          // 4. Media
+          const media = await getUserMedia(user.id);
+          if (media) {
+             setPhotos(media.filter((m: any) => m.media_type === 'photo'));
+             setVideoClips(media.filter((m: any) => m.media_type === 'video'));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('savedEventsUpdated', handleStorageChange);
+      if (savedEventsSubscription) savedEventsSubscription.unsubscribe();
     };
   }, []);
 
   // Toggle reminder for saved events
-  const toggleReminder = (eventId: number, eventName: string) => {
+  const toggleReminder = async (eventId: number, eventName: string) => {
+    // Optimistic update
     const newReminders = new Set(eventReminders);
+    const isAdding = !newReminders.has(eventId);
     
-    if (newReminders.has(eventId)) {
-      // Remove reminder
-      newReminders.delete(eventId);
-      localStorage.setItem('eventz_event_reminders', JSON.stringify([...newReminders]));
-      setEventReminders(newReminders);
-      toast.success('Reminder removed', {
-        description: `You won't be notified about ${eventName}`,
-        duration: 2000,
-      });
-    } else {
-      // Add reminder
+    if (isAdding) {
       newReminders.add(eventId);
-      localStorage.setItem('eventz_event_reminders', JSON.stringify([...newReminders]));
-      setEventReminders(newReminders);
       toast.success('Reminder set! 🔔', {
         description: `We'll notify you before ${eventName}`,
         duration: 2000,
       });
+    } else {
+      newReminders.delete(eventId);
+      toast.success('Reminder removed', {
+        description: `You won't be notified about ${eventName}`,
+        duration: 2000,
+      });
+    }
+    setEventReminders(newReminders);
+
+    // API Call
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await toggleReminderApi(eventId, user.id);
+        }
+    } catch (error) {
+        console.error('Error toggling reminder:', error);
+        toast.error('Failed to update reminder');
+        // Revert on error
+        setEventReminders(eventReminders);
     }
   };
 
@@ -485,8 +174,8 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onL
       <div className="relative">
         {/* Cover Photo */}
         <div className="relative w-full h-32 overflow-hidden">
-          <img
-            src="https://i.ibb.co/HDY1fq6m/G-Cover.jpg"
+          <ImageWithFallback
+            src={userProfile?.cover_url || FALLBACK_COVER_IMAGE}
             alt="Cover"
             className="w-full h-full object-cover"
           />
@@ -500,8 +189,8 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onL
           {/* Profile Picture */}
           <div className="flex justify-center mb-4">
             <div className="relative">
-              <img
-                src="https://i.ibb.co/3559hRDP/G-Profile.jpg"
+              <ImageWithFallback
+                src={userProfile?.avatar_url || `${FALLBACK_AVATAR_IMAGE}&name=${encodeURIComponent(userProfile?.full_name || 'User')}`}
                 alt="Profile"
                 className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover"
               />
@@ -511,31 +200,31 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onL
           {/* Name and Edit Button */}
           <div className="text-center mb-3">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <h1 className="text-gray-900">George Mukulasi</h1>
+              <h1 className="text-gray-900">{userProfile?.full_name || 'Loading...'}</h1>
               <button className="p-1.5 hover:bg-gray-100 rounded-full transition-colors group" title="Edit Profile">
                 <Edit2 className="w-4 h-4 text-gray-500 group-hover:text-purple-600 transition-colors" />
               </button>
             </div>
-            <p className="text-gray-600 text-sm mb-2">@georgemukulasi</p>
+            <p className="text-gray-600 text-sm mb-2">@{userProfile?.username || 'user'}</p>
             
             {/* Bio - Compact */}
             <p className="text-gray-700 text-sm max-w-md mx-auto leading-relaxed">
-              Music enthusiast & event lover 🎵 Always chasing the next great experience
+              {userProfile?.bio || 'Music enthusiast & event lover 🎵 Always chasing the next great experience'}
             </p>
           </div>
 
           {/* Stats - Compact and Modern */}
           <div className="flex justify-center gap-8 mb-5 py-3 border-y border-gray-100">
             <div className="text-center">
-              <p className="text-gray-900">47</p>
+              <p className="text-gray-900">{attendedEvents.length}</p>
               <p className="text-gray-500 text-xs">Events</p>
             </div>
             <div className="text-center">
-              <p className="text-gray-900">2.4K</p>
+              <p className="text-gray-900">{followStats.followers}</p>
               <p className="text-gray-500 text-xs">Followers</p>
             </div>
             <div className="text-center">
-              <p className="text-gray-900">892</p>
+              <p className="text-gray-900">{followStats.following}</p>
               <p className="text-gray-500 text-xs">Following</p>
             </div>
           </div>
@@ -603,7 +292,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onL
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Ticket className="w-6 h-6" />
+              <TicketIcon className="w-6 h-6" />
               <span className="text-[11px]">Tickets</span>
             </button>
           </div>
@@ -854,7 +543,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onL
                   {/* QR Code Icon */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Ticket className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
+                      <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
                     </div>
                   </div>
                   {/* Hover Overlay */}

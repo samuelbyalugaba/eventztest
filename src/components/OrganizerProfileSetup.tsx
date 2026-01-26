@@ -245,7 +245,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
     setProfileData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!profileData.organizerName || !profileData.organizerType || !profileData.email || !profileData.phone) {
       toast.error('Please fill in all required fields', {
         description: 'Organizer name, type, email, and phone are required',
@@ -273,20 +273,40 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
       ? `${profileData.organizerType} - ${profileData.venueSubType}`
       : profileData.organizerType;
 
-    // Save organizer profile to localStorage with final combined type
-    const profileToSave = {
-      ...profileData,
-      organizerType: finalOrganizerType,
-    };
-    
-    localStorage.setItem('eventz-organizer-profile', JSON.stringify(profileToSave));
-    
-    toast.success('Profile setup complete! 🎉', {
-      description: 'You can now start creating events',
-      duration: 3000,
-    });
-    
-    onComplete();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error('You must be logged in to save your profile');
+        return;
+      }
+
+      // Save organizer profile to Supabase
+      await updateProfile(user.id, {
+        full_name: profileData.organizerName, // Using full_name for organizer name as per current usage
+        organizer_type: finalOrganizerType,
+        contact_email: profileData.email,
+        phone: profileData.phone,
+        location: profileData.location,
+        website: profileData.website,
+        bio: profileData.bio,
+        social_links: {
+          instagram: profileData.instagram,
+          facebook: profileData.facebook,
+          twitter: profileData.twitter,
+        }
+      });
+      
+      toast.success('Profile setup complete! 🎉', {
+        description: 'You can now start creating events',
+        duration: 3000,
+      });
+      
+      onComplete();
+    } catch (error) {
+      console.error('Error saving organizer profile:', error);
+      toast.error('Failed to save profile. Please try again.');
+    }
   };
 
   return (

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Play, ChevronLeft, MessageCircle, Phone } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../App';
 import { toast } from 'sonner@2.0.3';
+import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, Event as ApiEvent, Profile } from '../utils/supabase/api';
 
 interface OrganizerData {
+  id?: string;
   name: string;
   bio: string;
   coverImage: string;
@@ -44,16 +46,17 @@ interface OrganizerData {
 
 interface OrganizerProfileProps {
   organizerName: string;
+  organizerId?: string;
   onClose: () => void;
   onTicketPurchase?: (ticket: PurchasedTicket) => void;
-  onMessage?: (organizer: { name: string; avatar: string; verified: boolean; isOrganizer: boolean }) => void;
+  onMessage?: (organizer: { name: string; avatar: string; verified: boolean; isOrganizer: boolean; id?: string }) => void;
 }
 
-// Mock organizer data
-const organizersData: { [key: string]: OrganizerData } = {
+// Mock organizer data fallback
+const MOCK_ORGANIZERS_DATA: { [key: string]: OrganizerData } = {
   'STR8 OUT VIBES': {
     name: 'STR8 OUT VIBES',
-    bio: 'Premier music festival organizer and nightlife experience curator in Dar es Salaam. Specializing in themed parties and unforgettable nightlife experiences that bring together the best of Tanzanian entertainment culture.',
+    bio: 'Premier music festival organizer and nightlife experience curator in Dar es Salaam.',
     coverImage: 'https://images.unsplash.com/photo-1658046413536-6e5933dfd939?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
     avatar: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&h=200&fit=crop',
     location: 'Dar es Salaam, Tanzania',
@@ -63,523 +66,19 @@ const organizersData: { [key: string]: OrganizerData } = {
     rating: 4.9,
     phone: '+255 754 123 456',
     whatsapp: '+255754123456',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1658046413536-6e5933dfd939?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-        title: 'Summer Jungle',
-        date: 'Jan 1, 2025',
-        attendees: 5600,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1751998689590-f7ae39d9d218?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-        title: 'Music Fest',
-        date: 'Dec 15, 2024',
-        attendees: 8200,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1658046413536-6e5933dfd939?w=400&h=300&fit=crop', size: 'large', eventName: 'Summer Jungle' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1605286232233-e448650f5914?w=400&h=300&fit=crop', size: 'small', eventName: 'Music Fest' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1607313029691-fa108ddf807d?w=400&h=300&fit=crop', size: 'small', eventName: 'Beach Festival' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=400&h=300&fit=crop', size: 'small', eventName: 'Desert Party' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1751998689590-f7ae39d9d218?w=400&h=300&fit=crop', size: 'large', eventName: 'Night Vibes' },
-      { id: 6, image: 'https://images.unsplash.com/photo-1704830657561-a6a663931172?w=400&h=300&fit=crop', size: 'small', eventName: 'Club Night' },
-      { id: 7, image: 'https://images.unsplash.com/photo-1675674683873-1232862e3c64?w=400&h=300&fit=crop', size: 'small', eventName: 'Tropical Beats' },
-      { id: 8, image: 'https://images.unsplash.com/photo-1707296450219-2d9cc08bdef0?w=400&h=300&fit=crop', size: 'large', eventName: 'Sunset Sessions' },
-      { id: 9, image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop', size: 'small', eventName: 'Live Concert' },
-      { id: 10, image: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400&h=300&fit=crop', size: 'small', eventName: 'Dance Party' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Afro Beats Festival 2025',
-        image: 'https://images.unsplash.com/photo-1764050359179-517599dab87b?w=400&h=300&fit=crop',
-        date: '10 Jun',
-        time: '6:00 PM',
-        location: 'The Park',
-        price: 'TSh 15,000',
-      },
-      {
-        id: 2,
-        title: 'Island Rhythm Bash',
-        image: 'https://images.unsplash.com/photo-1605286232233-e448650f5914?w=400&h=300&fit=crop',
-        date: '12 Jun',
-        time: '8:00 PM',
-        location: 'The Club',
-        price: 'TSh 25,000',
-      },
-      {
-        id: 3,
-        title: 'Coastal Chillout',
-        image: 'https://images.unsplash.com/photo-1707296450219-2d9cc08bdef0?w=400&h=300&fit=crop',
-        date: '15 Jun',
-        time: '5:00 PM',
-        location: 'Coco Beach',
-        price: 'TSh 20,000',
-      },
-      {
-        id: 4,
-        title: 'Dune Dance Party',
-        image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=400&h=300&fit=crop',
-        date: '20 Jun',
-        time: '7:00 PM',
-        location: 'Desert View',
-        price: 'TSh 30,000',
-      },
-    ],
-  },
-  'WE OUTCHEA': {
-    name: 'WE OUTCHEA',
-    bio: 'Dar es Salaam\'s premier nightlife destination specializing in themed parties and unforgettable nightlife experiences. Creating vibrant atmospheres where music, culture, and entertainment come alive.',
-    coverImage: 'https://images.unsplash.com/photo-1704830657561-a6a663931172?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&h=200&fit=crop',
-    location: 'Dar es Salaam, Tanzania',
-    totalEvents: 89,
-    followers: 12300,
-    verified: true,
-    rating: 4.8,
-    phone: '+255 765 234 567',
-    whatsapp: '+255765234567',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1675674683873-1232862e3c64?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-        title: 'Tropical Nights Party',
-        date: 'Dec 10, 2024',
-        attendees: 3200,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1704830657561-a6a663931172?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-        title: 'Neon Glow Bash',
-        date: 'Nov 5, 2024',
-        attendees: 2800,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1675674683873-1232862e3c64?w=400&h=300&fit=crop', size: 'large', eventName: 'Tropical Nights Party' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1704830657561-a6a663931172?w=400&h=300&fit=crop', size: 'small', eventName: 'Neon Glow Bash' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=300&fit=crop', size: 'small', eventName: 'Saturday Night Fever' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1658046413536-6e5933dfd939?w=400&h=300&fit=crop', size: 'large', eventName: 'Urban Beats Night' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop', size: 'small', eventName: 'Themed Party' },
-      { id: 6, image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop', size: 'small', eventName: 'Weekend Vibes' },
-      { id: 7, image: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop', size: 'large', eventName: 'Dance Floor Night' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Masquerade Night - Themed Party',
-        image: 'https://images.unsplash.com/photo-1675674683873-1232862e3c64?w=400&h=300&fit=crop',
-        date: '28 Jun',
-        time: '10:00 PM',
-        location: 'WE OUTCHEA, Dar es Salaam',
-        price: 'TSh 15,000',
-      },
-    ],
-  },
-  'Wavuvi Camp': {
-    name: 'Wavuvi Camp',
-    bio: 'Iconic bar and restaurant on Dar es Salaam\'s coastline, renowned for legendary sunrise parties and electrifying live performances. Where the night transforms into unforgettable nightlife experiences by the ocean.',
-    coverImage: 'https://images.unsplash.com/photo-1588286840104-8957b019727f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=200&h=200&fit=crop',
-    location: 'Dar es Salaam, Tanzania',
-    totalEvents: 64,
-    followers: 8700,
-    verified: true,
-    rating: 5.0,
-    phone: '+255 776 345 678',
-    whatsapp: '+255776345678',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1588286840104-8957b019727f?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-        title: 'Sunrise Party 2024',
-        date: 'Dec 20, 2024',
-        attendees: 1450,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1704830657561-a6a663931172?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-        title: 'Live Band Weekend',
-        date: 'Nov 15, 2024',
-        attendees: 920,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1588286840104-8957b019727f?w=400&h=300&fit=crop', size: 'large', eventName: 'Sunrise Party 2024' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&h=300&fit=crop', size: 'small', eventName: 'Live Band Weekend' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop', size: 'small', eventName: 'Coastline Vibes' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400&h=300&fit=crop', size: 'large', eventName: 'Beach Sunset' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=400&h=300&fit=crop', size: 'small', eventName: 'Ocean Night' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Sunrise Beach Party',
-        image: 'https://images.unsplash.com/photo-1588286840104-8957b019727f?w=400&h=300&fit=crop',
-        date: '19 Jun',
-        time: '5:30 AM',
-        location: 'Wavuvi Camp, Dar es Salaam',
-        price: 'TSh 12,000',
-      },
-    ],
-  },
-  'Kidimbwi Club': {
-    name: 'Kidimbwi Club',
-    bio: 'Beachfront party destination and restaurant in Dar es Salaam, delivering exceptional nightlife party experiences. Where oceanfront dining meets high-energy entertainment in a tropical paradise setting.',
-    coverImage: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=200&h=200&fit=crop',
-    location: 'Dar es Salaam, Tanzania',
-    totalEvents: 156,
-    followers: 18900,
-    verified: true,
-    rating: 4.9,
-    phone: '+255 787 456 789',
-    whatsapp: '+255787456789',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-        title: 'Beachfront Sunset Party',
-        date: 'Dec 5, 2024',
-        attendees: 2890,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-        title: 'Oceanside Groove Night',
-        date: 'Nov 22, 2024',
-        attendees: 2150,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop', size: 'large', eventName: 'Beachfront Sunset Party' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=300&fit=crop', size: 'small', eventName: 'Oceanside Groove Night' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=300&fit=crop', size: 'small', eventName: 'Tropical Beach Night' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400&h=300&fit=crop', size: 'large', eventName: 'Oceanfront Party' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=400&h=300&fit=crop', size: 'small', eventName: 'Beachside Vibes' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Beach Nightlife Experience',
-        image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop',
-        date: '23 Jun',
-        time: '9:00 PM',
-        location: 'Kidimbwi Club, Dar es Salaam',
-        price: 'TSh 18,000',
-      },
-    ],
-  },
-  'Tiki Beach': {
-    name: 'Tiki Beach',
-    bio: 'Premier Zanzibar nightlife venue featuring epic live performances, themed parties, and immersive nightlife experiences. Where island paradise meets world-class entertainment under Zanzibar\'s starlit skies.',
-    coverImage: 'https://images.unsplash.com/photo-1707296450219-2d9cc08bdef0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=200&h=200&fit=crop',
-    location: 'Zanzibar, Tanzania',
-    totalEvents: 98,
-    followers: 22100,
-    verified: true,
-    rating: 4.9,
-    phone: '+255 773 567 890',
-    whatsapp: '+255773567890',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1707296450219-2d9cc08bdef0?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-        title: 'Paradise Beach Festival',
-        date: 'Jan 10, 2025',
-        attendees: 6700,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1704830657561-a6a663931172?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-        title: 'Sunset Sessions',
-        date: 'Dec 18, 2024',
-        attendees: 3900,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1707296450219-2d9cc08bdef0?w=400&h=300&fit=crop', size: 'large', eventName: 'Paradise Beach Festival' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1704830657561-a6a663931172?w=400&h=300&fit=crop', size: 'small', eventName: 'Sunset Sessions' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop', size: 'small', eventName: 'Island Paradise Night' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=400&h=300&fit=crop', size: 'large', eventName: 'Tiki Beach Party' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=400&h=300&fit=crop', size: 'small', eventName: 'Tropical Nights' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Zanzibar Beach Festival',
-        image: 'https://images.unsplash.com/photo-1707296450219-2d9cc08bdef0?w=400&h=300&fit=crop',
-        date: '7 Jul',
-        time: '2:00 PM',
-        location: 'Nungwi Beach',
-        price: 'Free',
-      },
-    ],
-  },
-  'Shanga': {
-    name: 'Shanga',
-    bio: 'Zanzibar\'s hotspot for electrifying live performances, themed nightlife parties, and unforgettable entertainment experiences. Where every night becomes a celebration of music, culture, and energy.',
-    coverImage: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=200&h=200&fit=crop',
-    location: 'Zanzibar, Tanzania',
-    totalEvents: 210,
-    followers: 31200,
-    verified: true,
-    rating: 4.8,
-    phone: '+255 784 678 901',
-    whatsapp: '+255784678901',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-        title: 'Live Afrobeat Night',
-        date: 'Dec 15, 2024',
-        attendees: 4500,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-        title: 'Themed Dance Party',
-        date: 'Nov 30, 2024',
-        attendees: 5200,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=400&h=300&fit=crop', size: 'large', eventName: 'Live Afrobeat Night' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=300&fit=crop', size: 'small', eventName: 'Themed Dance Party' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop', size: 'small', eventName: 'Beach Sunset Sessions' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=400&h=300&fit=crop', size: 'large', eventName: 'Zanzibar Music Festival' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=400&h=300&fit=crop', size: 'small', eventName: 'Island Vibes Night' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Island Vibes - Live Performance Night',
-        image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=400&h=300&fit=crop',
-        date: '15 Jun',
-        time: '10:00 PM',
-        location: 'Shanga, Zanzibar',
-        price: 'TSh 22,000',
-      },
-    ],
-  },
-  'Jambo Beach Party': {
-    name: 'Jambo Beach Party',
-    bio: 'Zanzibar\'s premier beach club featuring nightlife party experiences with Afro music, house music, and beachside entertainment. The ultimate destination for music lovers and party enthusiasts.',
-    coverImage: 'https://images.unsplash.com/photo-1764510377576-d2dd1cbd121d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=200&h=200&fit=crop',
-    location: 'Zanzibar, Tanzania',
-    totalEvents: 142,
-    followers: 19600,
-    verified: true,
-    rating: 4.7,
-    phone: '+255 755 789 012',
-    whatsapp: '+255755789012',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1764510377576-d2dd1cbd121d?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-        title: 'Beach Afro House Night',
-        date: 'Jan 5, 2025',
-        attendees: 2100,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1751998689590-f7ae39d9d218?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-        title: 'Full Moon Beach Party',
-        date: 'Dec 12, 2024',
-        attendees: 1800,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1764510377576-d2dd1cbd121d?w=400&h=300&fit=crop', size: 'large', eventName: 'Beach Afro House Night' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1751998689590-f7ae39d9d218?w=400&h=300&fit=crop', size: 'small', eventName: 'Full Moon Beach Party' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1571266028243-d220ee3118ca?w=400&h=300&fit=crop', size: 'small', eventName: 'Beachside Groove' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1530103043960-ef38714abb15?w=400&h=300&fit=crop', size: 'large', eventName: 'Tropical Beach Bash' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop', size: 'small', eventName: 'Afro Beats Night' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Afro House Beach Party',
-        image: 'https://images.unsplash.com/photo-1764510377576-d2dd1cbd121d?w=400&h=300&fit=crop',
-        date: '21 Jun',
-        time: '9:00 PM',
-        location: 'Jambo Beach Party, Zanzibar',
-        price: 'TSh 20,000',
-      },
-    ],
-  },
-  'Summer Jungle': {
-    name: 'Summer Jungle',
-    bio: 'Zanzibar\'s legendary bush club bringing nightlife party experiences with Afro music, house music, and outdoor festival vibes. Experience the wild side of island nightlife in nature\'s embrace.',
-    coverImage: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop',
-    location: 'Zanzibar, Tanzania',
-    totalEvents: 73,
-    followers: 28400,
-    verified: true,
-    rating: 4.9,
-    phone: '+255 766 890 123',
-    whatsapp: '+255766890123',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-        title: 'Jungle Festival 2024',
-        date: 'Dec 28, 2024',
-        attendees: 9500,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1605286232233-e448650f5914?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-        title: 'Sunset Music Fest',
-        date: 'Nov 18, 2024',
-        attendees: 7200,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=400&h=300&fit=crop', size: 'large', eventName: 'Jungle Festival 2024' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1605286232233-e448650f5914?w=400&h=300&fit=crop', size: 'small', eventName: 'Sunset Music Fest' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop', size: 'small', eventName: 'Jungle Nights' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop', size: 'large', eventName: 'Outdoor Festival' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=300&fit=crop', size: 'small', eventName: 'Bush Party' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Jungle Rhythms Night',
-        image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=400&h=300&fit=crop',
-        date: '14 Jun',
-        time: '9:00 PM',
-        location: 'Summer Jungle, Zanzibar',
-        price: 'TSh 20,000',
-      },
-    ],
-  },
-  'Elements': {
-    name: 'Elements',
-    bio: 'Dar es Salaam\'s iconic nightclub delivering premier nightlife party experiences with themed events and exceptional live performances. The pulse of the city\'s entertainment scene.',
-    coverImage: 'https://images.unsplash.com/photo-1762968286778-60e65336d5ca?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=200&h=200&fit=crop',
-    location: 'Dar es Salaam, Tanzania',
-    totalEvents: 187,
-    followers: 42300,
-    verified: true,
-    rating: 4.9,
-    phone: '+255 777 901 234',
-    whatsapp: '+255777901234',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1762968286778-60e65336d5ca?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-        title: 'Neon Nights Party',
-        date: 'Jan 15, 2025',
-        attendees: 3400,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-        title: 'Saturday Night Fever',
-        date: 'Dec 8, 2024',
-        attendees: 1900,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1762968286778-60e65336d5ca?w=400&h=300&fit=crop', size: 'large', eventName: 'Neon Nights Party' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=300&fit=crop', size: 'small', eventName: 'Saturday Night Fever' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400&h=300&fit=crop', size: 'small', eventName: 'Electric Vibes' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=400&h=300&fit=crop', size: 'large', eventName: 'Club Night' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1531545514256-b1400bc00f31?w=400&h=300&fit=crop', size: 'small', eventName: 'DJ Night' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Electric Nights - Themed Party',
-        image: 'https://images.unsplash.com/photo-1762968286778-60e65336d5ca?w=400&h=300&fit=crop',
-        date: '20 Jun',
-        time: '10:00 PM',
-        location: 'Elements Nightclub, Dar es Salaam',
-        price: 'TSh 25,000',
-      },
-    ],
-  },
-  'Vintage Space': {
-    name: 'Vintage Space',
-    bio: 'Dar es Salaam\'s premier fashion events and runway shows venue. Showcasing cutting-edge fashion, style, and creativity from Tanzania\'s most talented designers and fashion innovators.',
-    coverImage: 'https://images.unsplash.com/photo-1719935115623-4857df23f3c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    avatar: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=200&h=200&fit=crop',
-    location: 'Dar es Salaam, Tanzania',
-    totalEvents: 94,
-    followers: 16800,
-    verified: true,
-    rating: 4.8,
-    phone: '+255 788 012 345',
-    whatsapp: '+255788012345',
-    highlights: [
-      {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1719935115623-4857df23f3c6?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-        title: 'Tanzania Fashion Week',
-        date: 'Dec 22, 2024',
-        attendees: 1200,
-      },
-      {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=300&fit=crop',
-        video: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-        title: 'Designer Runway Show',
-        date: 'Nov 10, 2024',
-        attendees: 850,
-      },
-    ],
-    photos: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1719935115623-4857df23f3c6?w=400&h=300&fit=crop', size: 'large', eventName: 'Tanzania Fashion Week' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=300&fit=crop', size: 'small', eventName: 'Designer Runway Show' },
-      { id: 3, image: 'https://images.unsplash.com/photo-1578926288207-a90a5366759d?w=400&h=300&fit=crop', size: 'small', eventName: 'Fashion Showcase' },
-      { id: 4, image: 'https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=400&h=300&fit=crop', size: 'large', eventName: 'Runway Night' },
-      { id: 5, image: 'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=400&h=300&fit=crop', size: 'small', eventName: 'Style Event' },
-    ],
-    upcomingEvents: [
-      {
-        id: 1,
-        title: 'Swahili Fashion Week Showcase',
-        image: 'https://images.unsplash.com/photo-1719935115623-4857df23f3c6?w=400&h=300&fit=crop',
-        date: '12 Jun',
-        time: '7:00 PM',
-        location: 'Vintage Space, Dar es Salaam',
-        price: 'TSh 35,000',
-      },
-    ],
-  },
+    highlights: [],
+    photos: [],
+    upcomingEvents: []
+  }
 };
 
-export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onMessage }: OrganizerProfileProps) {
+export function OrganizerProfile({ organizerName, organizerId, onClose, onTicketPurchase, onMessage }: OrganizerProfileProps) {
   const [isFollowing, setIsFollowing] = useState(false);
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [organizerData, setOrganizerData] = useState<OrganizerData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Additional state from old component
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
@@ -588,15 +87,201 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [ticketStep, setTicketStep] = useState<'quantity' | 'details' | 'confirm'>('quantity');
   const [ticketFormData, setTicketFormData] = useState({ name: '', email: '' });
-  const organizer = organizersData[organizerName];
 
-  if (!organizer) {
-    return null;
+  useEffect(() => {
+    const fetchOrganizerData = async () => {
+      try {
+        setLoading(true);
+        
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUser(user);
+
+        if (organizerId) {
+          // 1. Fetch Profile
+          const profile = await getProfile(organizerId);
+          if (!profile) throw new Error('Organizer not found');
+
+          // 2. Fetch Stats
+          const stats = await getOrganizerStats(organizerId);
+
+          // 3. Fetch Events
+          const events = await getOrganizerEvents(organizerId);
+
+          // 4. Fetch Posts (as highlights/photos)
+          const posts = await getPosts({ authorId: organizerId });
+
+          // Map to component state
+          setOrganizerData({
+            id: profile.id,
+            name: profile.full_name || profile.username || 'Organizer',
+            bio: profile.bio || 'No bio available',
+            coverImage: profile.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
+            avatar: profile.avatar_url || 'https://via.placeholder.com/150',
+            location: profile.location || 'Tanzania',
+            totalEvents: stats.totalEvents,
+            followers: stats.followers,
+            verified: profile.verified || false,
+            rating: 5.0, // Placeholder as we don't have ratings yet
+            phone: profile.phone,
+            whatsapp: profile.phone, // Assuming phone is whatsapp for now
+            highlights: posts.slice(0, 5).map(p => ({
+              id: p.id,
+              image: p.image_urls?.[0] || '',
+              video: p.video_url,
+              title: p.content.substring(0, 20) + '...',
+              date: new Date(p.created_at).toLocaleDateString(),
+              attendees: p.likes_count || 0
+            })),
+            photos: posts.map((p, index) => ({
+              id: p.id,
+              image: p.image_urls?.[0] || '',
+              size: index % 3 === 0 ? 'large' : 'small',
+              eventName: p.content.substring(0, 15) + '...'
+            })),
+            upcomingEvents: events.filter((e: any) => new Date(e.date) >= new Date()).map((e: any) => ({
+              id: e.id,
+              title: e.title,
+              image: e.image_url,
+              date: new Date(e.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+              time: e.time.substring(0, 5),
+              location: e.location,
+              price: e.price_range
+            }))
+          });
+
+          // Check if following
+          if (user) {
+             const { data: followData } = await supabase
+               .from('follows')
+               .select('created_at')
+               .eq('follower_id', user.id)
+               .eq('following_id', organizerId)
+               .single();
+             setIsFollowing(!!followData);
+          }
+
+        } else {
+          // Fallback to mock data if no ID
+          const mockData = MOCK_ORGANIZERS_DATA[organizerName] || MOCK_ORGANIZERS_DATA['STR8 OUT VIBES'];
+          setOrganizerData({
+            ...mockData,
+            name: organizerName // Ensure name matches request
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching organizer data:', error);
+        toast.error('Failed to load organizer profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrganizerData();
+  }, [organizerName, organizerId]);
+
+  const handleFollow = async () => {
+    if (!currentUser) {
+      toast.error('Please login to follow organizers');
+      return;
+    }
+    
+    if (!organizerId) {
+      // Mock follow for legacy
+      setIsFollowing(!isFollowing);
+      toast.success(isFollowing ? 'Unfollowed' : 'Following');
+      return;
+    }
+
+    try {
+      if (isFollowing) {
+        const { error } = await supabase
+          .from('follows')
+          .delete()
+          .eq('follower_id', currentUser.id)
+          .eq('following_id', organizerId);
+        if (error) throw error;
+        setIsFollowing(false);
+        toast.success('Unfollowed');
+      } else {
+        const { error } = await supabase
+          .from('follows')
+          .insert({ follower_id: currentUser.id, following_id: organizerId });
+        if (error) throw error;
+        setIsFollowing(true);
+        toast.success('Following');
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      toast.error('Failed to update follow status');
+    }
+  };
+
+  const handleBuyTicket = async (event: any) => {
+    if (!currentUser) {
+      toast.error('Please login to buy tickets');
+      return;
+    }
+
+    try {
+      const quantity = ticketQuantity || 1;
+      const name = ticketFormData.name || currentUser.user_metadata?.full_name || 'Customer';
+      const email = ticketFormData.email || currentUser.email || 'email@example.com';
+
+      // Create tickets loop
+      for (let i = 0; i < quantity; i++) {
+          const ticketData = {
+            user_id: currentUser.id,
+            event_id: event.id,
+            ticket_number: `TKT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            barcode: `${Date.now()}-${i}`,
+            price: event.price,
+            purchase_date: new Date().toISOString(),
+            customer_name: name,
+            customer_email: email,
+            ticket_type: 'General Admission',
+            status: 'valid'
+          };
+          await createTicket(ticketData);
+      }
+
+      // UI Update
+      const purchasedTicket: PurchasedTicket = {
+        id: `temp-${Date.now()}`,
+        eventId: event.id,
+        eventName: event.title || event.name,
+        ticketType: 'General Admission',
+        quantity: quantity,
+        price: 0, 
+        purchaseDate: new Date().toISOString(),
+        qrCode: 'mock-qr-code'
+      };
+
+      if (onTicketPurchase) {
+        onTicketPurchase(purchasedTicket);
+      }
+      
+      toast.success('Ticket purchased successfully!');
+      setShowTicketModal(false);
+    } catch (error) {
+      console.error('Error purchasing ticket:', error);
+      toast.error('Failed to purchase ticket');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
+
+  if (!organizerData) return null;
 
   // Combine highlights and photos into a unified gallery for the combined layout
   const combinedGallery = [
-    ...organizer.highlights.map((h) => ({
+    ...organizerData.highlights.map((h) => ({
       id: `highlight-${h.id}`,
       image: h.image,
       video: h.video,
@@ -606,11 +291,11 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
       comments: Math.floor(Math.random() * 50) + 10,
       shares: Math.floor(Math.random() * 30) + 5,
     })),
-    ...organizer.photos.map((p) => ({
+    ...organizerData.photos.map((p) => ({
       id: `photo-${p.id}`,
       image: p.image,
       video: undefined,
-      title: p.eventName || `${organizer.name} Gallery`,
+      title: p.eventName || `${organizerData.name} Gallery`,
       mediaType: 'photo' as const,
       likes: Math.floor(Math.random() * 600) + 50,
       comments: Math.floor(Math.random() * 40) + 5,
@@ -633,8 +318,8 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
         {/* Hero Section with Cover */}
         <div className="relative h-52 rounded-t-3xl overflow-hidden">
           <ImageWithFallback
-            src={organizer.coverImage}
-            alt={organizer.name}
+            src={organizerData.coverImage}
+            alt={organizerData.name}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
@@ -655,13 +340,13 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
           {/* Organizer Name & Follow Button */}
           <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-white drop-shadow-lg">{organizer.name}</h2>
-              {organizer.verified && (
+              <h2 className="text-white drop-shadow-lg">{organizerData.name}</h2>
+              {organizerData.verified && (
                 <CheckCircle2 className="w-5 h-5 text-white fill-[#8A2BE2]" />
               )}
             </div>
             <button
-              onClick={() => setIsFollowing(!isFollowing)}
+              onClick={handleFollow}
               className={`px-6 py-2 rounded-full transition-all ${
                 isFollowing
                   ? 'bg-white/20 backdrop-blur-sm text-white border border-white/40'
@@ -680,16 +365,16 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
           <div className="grid grid-cols-2 gap-3 mb-6">
             {/* Events */}
             <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-3 text-center border border-gray-300 shadow-sm">
-              <div className="text-lg text-gray-900 font-bold">{organizer.totalEvents}</div>
+              <div className="text-lg text-gray-900 font-bold">{organizerData.totalEvents}</div>
               <div className="text-xs text-gray-600 font-semibold">Events</div>
             </div>
 
             {/* Followers */}
             <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-3 text-center border border-gray-300 shadow-sm">
               <div className="text-lg text-gray-900 font-bold">
-                {organizer.followers >= 1000 
-                  ? `${(organizer.followers / 1000).toFixed(1)}k` 
-                  : organizer.followers}
+                {organizerData.followers >= 1000 
+                  ? `${(organizerData.followers / 1000).toFixed(1)}k` 
+                  : organizerData.followers}
               </div>
               <div className="text-xs text-gray-600 font-semibold">Followers</div>
             </div>
@@ -700,10 +385,11 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
             onClick={() => {
               if (onMessage) {
                 onMessage({
-                  name: organizer.name,
-                  avatar: organizer.avatar,
-                  verified: organizer.verified,
+                  name: organizerData.name,
+                  avatar: organizerData.avatar,
+                  verified: organizerData.verified,
                   isOrganizer: true,
+                  id: organizerData.id
                 });
               }
             }}
@@ -714,18 +400,18 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
           </button>
 
           {/* Contact - Ultra Minimal Single Line */}
-          {organizer.phone && organizer.whatsapp && (
+          {organizerData.phone && organizerData.whatsapp && (
             <div className="mb-6 flex items-center justify-center gap-3 pb-3 border-b border-gray-100">
               <a 
-                href={`tel:${organizer.phone}`}
+                href={`tel:${organizerData.phone}`}
                 className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#8A2BE2] transition-colors"
               >
                 <Phone className="w-3.5 h-3.5" />
-                <span>{organizer.phone}</span>
+                <span>{organizerData.phone}</span>
               </a>
               <div className="w-px h-3 bg-gray-300"></div>
               <a 
-                href={`https://wa.me/${organizer.whatsapp}`}
+                href={`https://wa.me/${organizerData.whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 text-xs text-[#25D366] hover:text-[#128C7E] transition-colors"
@@ -742,7 +428,7 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
           {/* About */}
           <div className="mb-6">
             <h3 className="text-gray-900 mb-2">About</h3>
-            <p className="text-sm text-gray-600 leading-relaxed">{organizer.bio}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{organizerData.bio}</p>
           </div>
 
           {/* Event Highlights & Posts - COMBINED INSTAGRAM-STYLE GRID */}
@@ -796,7 +482,7 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
           <div>
             <h3 className="text-gray-900 mb-4">Upcoming Events</h3>
             <div className="space-y-4">
-              {organizer.upcomingEvents.map((event) => (
+              {organizerData.upcomingEvents.map((event) => (
                 <div key={event.id} className="flex gap-3">
                   {/* Event Image */}
                   <ImageWithFallback
@@ -1000,31 +686,14 @@ export function OrganizerProfile({ organizerName, onClose, onTicketPurchase, onM
                     <p className="text-sm text-gray-600">Email: {ticketFormData.email}</p>
                   </div>
                   <button
-                    onClick={() => {
-                      const ticket: PurchasedTicket = {
-                        eventName: selectedEvent.title,
-                        date: selectedEvent.date,
-                        time: selectedEvent.time,
-                        location: selectedEvent.location,
-                        price: selectedEvent.price,
-                      };
-                      toast.success(`Ticket for ${selectedEvent.title} purchased!`);
-                      // Add ticket to purchased tickets
-                      const currentTickets = JSON.parse(localStorage.getItem('purchasedTickets') || '[]');
-                      localStorage.setItem('purchasedTickets', JSON.stringify([...currentTickets, ticket]));
-                      if (onTicketPurchase) {
-                        onTicketPurchase(ticket);
-                      }
-                      setShowTicketModal(false);
-                    }}
-                    className="mt-4 bg-[#8A2BE2] text-white px-5 py-2 rounded-full text-sm hover:bg-[#7526c7] transition-colors"
+                    onClick={() => handleBuyTicket(selectedEvent)}
+                    className="mt-4 w-full bg-[#8A2BE2] text-white px-5 py-3 rounded-xl font-bold hover:bg-[#7526c7] transition-colors shadow-lg"
                   >
-                    Confirm Purchase
+                    Confirm & Pay
                   </button>
                 </div>
               )}
             </div>
-
           </div>
         </div>
       </div>

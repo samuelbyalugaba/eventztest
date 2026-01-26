@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { supabase } from '../utils/supabase/client';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { X, Lock, Users, Heart, MessageCircle, Send, Volume2, VolumeX, Maximize, MoreVertical, Share2 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
+import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage } from '../utils/supabase/api';
 
 interface LiveStreamViewerProps {
   stream: {
@@ -15,28 +17,19 @@ interface LiveStreamViewerProps {
     quality: 'HD' | '4K';
     isPaid?: boolean;
     price?: number;
+    playback_url?: string;
   };
   onClose: () => void;
   isUnlockedOverride?: boolean;
 }
 
-interface ChatMessage {
-  id: number;
-  user: string;
-  message: string;
-  timestamp: Date;
-}
-
 export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveStreamViewerProps) {
+  const [activeStream, setActiveStream] = useState(stream);
   const [isUnlocked, setIsUnlocked] = useState(!stream.isPaid || isUnlockedOverride);
   const [isMuted, setIsMuted] = useState(true);
   const [showChat, setShowChat] = useState(false); // Start with chat hidden
   const [chatMessage, setChatMessage] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 1, user: 'Sarah K.', message: 'This is amazing! 🔥', timestamp: new Date() },
-    { id: 2, user: 'Mike T.', message: 'Great quality stream!', timestamp: new Date() },
-    { id: 3, user: 'Lisa M.', message: 'Love the energy! ❤️', timestamp: new Date() },
-  ]);
+  const [messages, setMessages] = useState<StreamMessage[]>([]);
   const [reactions, setReactions] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -44,10 +37,67 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
   const [isBuffering, setIsBuffering] = useState(false);
 
   useEffect(() => {
+    setActiveStream(stream);
+  }, [stream]);
+
+  // Subscribe to real-time updates for viewer count and stream status
+  useEffect(() => {
+    const channel = supabase
+      .channel(`live_stream_updates:${stream.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'events',
+          filter: `id=eq.${stream.id}`
+        },
+        (payload) => {
+          const newData = payload.new;
+          if (newData.streaming) {
+            setActiveStream(prev => ({
+              ...prev,
+              viewers: newData.streaming.liveViewers || prev.viewers,
+              playback_url: newData.streaming.playback_url,
+              // We can also update other fields if needed
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [stream.id]);
+
+  useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Load initial messages
+  useEffect(() => {
+    if (isUnlocked) {
+      getStreamMessages(stream.id)
+        .then(setMessages)
+        .catch(console.error);
+    }
+  }, [stream.id, isUnlocked]);
+
+  // Subscribe to new messages
+  useEffect(() => {
+    if (!isUnlocked) return;
+
+    const subscription = subscribeToStreamMessages(stream.id, (newMessage) => {
+      setMessages((prev) => [...prev, newMessage]);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [stream.id, isUnlocked]);
 
   // Play video when unlocked
   useEffect(() => {
@@ -82,39 +132,24 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
     }
   }, [isMuted]);
 
-  // Simulate new messages coming in (only when unlocked)
-  useEffect(() => {
-    if (!isUnlocked) return;
-    
-    const interval = setInterval(() => {
-      const newMessage: ChatMessage = {
-        id: Date.now(),
-        user: `User${Math.floor(Math.random() * 1000)}`,
-        message: ['Amazing! 🎉', 'Great stream!', 'Love this! ❤️', '🔥🔥🔥'][Math.floor(Math.random() * 4)],
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev.slice(-20), newMessage]);
-    }, 8000);
+  // Messages are handled by subscription above
 
-    return () => clearInterval(interval);
-  }, [isUnlocked]);
 
   const handleUnlock = () => {
     setIsUnlocked(true);
     toast.success('Stream unlocked! Enjoy the show 🎉');
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!chatMessage.trim() || !isUnlocked) return;
     
-    const newMessage: ChatMessage = {
-      id: Date.now(),
-      user: 'You',
-      message: chatMessage,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, newMessage]);
-    setChatMessage('');
+    try {
+      await sendStreamMessage(stream.id, chatMessage);
+      setChatMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message');
+    }
   };
 
   const addReaction = () => {
@@ -125,8 +160,8 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
 
   const handleShare = async () => {
     const shared = await shareUtil({
-      title: stream.title,
-      text: `Watch ${stream.title} live on EVENTZ!\nViewing now: ${stream.viewers} people`,
+      title: activeStream.title,
+      text: `Watch ${activeStream.title} live on EVENTZ!\nViewing now: ${activeStream.viewers} people`,
       url: window.location.href,
     });
     
@@ -138,15 +173,7 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
 
   // Get appropriate video URL based on stream content
   const getVideoUrl = () => {
-    // Use different videos for different stream types
-    const videoUrls = [
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4'
-    ];
-    // Pick based on stream id for consistency
-    return videoUrls[stream.id % videoUrls.length];
+    return activeStream.playback_url || '';
   };
 
   return (
@@ -192,12 +219,25 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
               <source src={getVideoUrl()} type="video/mp4" />
             </video>
 
+            {/* Offline/No Stream Message */}
+            {isUnlocked && !getVideoUrl() && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black z-20">
+                <div className="text-center px-6">
+                  <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto mb-4">
+                    <VolumeX className="w-8 h-8 text-white/50" />
+                  </div>
+                  <h3 className="text-white text-xl mb-2">Stream Offline</h3>
+                  <p className="text-white/60 text-sm">The stream hasn't started or has ended.</p>
+                </div>
+              </div>
+            )}
+
             {/* Blurred Thumbnail (when locked) */}
             {!isUnlocked && (
               <>
                 <ImageWithFallback
-                  src={stream.thumbnail}
-                  alt={stream.title}
+                  src={activeStream.thumbnail}
+                  alt={activeStream.title}
                   className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 transition-all duration-500"
                 />
                 {/* Dimmed overlay for locked state */}
@@ -222,7 +262,7 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
                 </div>
 
                 {/* FREE Badge */}
-                {!stream.isPaid && (
+                {!activeStream.isPaid && (
                   <div className="px-3 py-1.5 rounded-full bg-green-500 shadow-lg">
                     <span className="text-white text-sm">FREE</span>
                   </div>
@@ -231,13 +271,13 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
                 {/* Viewers count */}
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md">
                   <Users className="w-4 h-4 text-white" />
-                  <span className="text-white text-sm">{stream.viewers.toLocaleString()}</span>
+                  <span className="text-white text-sm">{activeStream.viewers.toLocaleString()}</span>
                 </div>
               </div>
 
               {/* Quality Badge */}
               <div className="px-3 py-1.5 rounded-full bg-purple-600 shadow-lg">
-                <span className="text-white text-sm">{stream.quality}</span>
+                <span className="text-white text-sm">{activeStream.quality}</span>
               </div>
             </div>
 
@@ -259,7 +299,7 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
                     onClick={handleUnlock}
                     className="px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-2xl hover:scale-105 transition-all"
                   >
-                    Unlock Stream – TZS {stream.price?.toLocaleString()}
+                    Unlock Stream – TZS {activeStream.price?.toLocaleString()}
                   </button>
                 </div>
               </div>
@@ -269,8 +309,8 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5">
               <div className="flex items-end justify-between">
                 <div className="flex-1 pr-4">
-                  <h2 className="text-white text-xl mb-1 line-clamp-1">{stream.title}</h2>
-                  <p className="text-white/80 text-sm">{stream.host}</p>
+                  <h2 className="text-white text-xl mb-1 line-clamp-1">{activeStream.title}</h2>
+                  <p className="text-white/80 text-sm">{activeStream.host}</p>
                 </div>
 
                 {/* Video Controls */}
@@ -333,7 +373,9 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
                 {messages.map((msg) => (
                   <div key={msg.id} className="text-sm">
-                    <span className="text-purple-600">{msg.user}</span>
+                    <span className="text-purple-600 font-medium">
+                      {msg.user?.username || msg.user?.full_name || 'Anonymous'}
+                    </span>
                     <span className="text-gray-900 ml-2">{msg.message}</span>
                   </div>
                 ))}

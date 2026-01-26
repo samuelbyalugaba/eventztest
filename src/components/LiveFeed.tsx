@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, Play, Clock, Bell, Check, MapPin, Search, Lock, Unlock, CreditCard, X, CheckCircle2 } from 'lucide-react';
-import harmonizePoster from 'figma:asset/7b5f7bc419019da4329ccbf3dd742620e8e20c43.png';
+import { Filter, Play, Clock, Bell, Check, MapPin, Search, Lock, Unlock, X, CheckCircle2 } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { toast } from 'sonner';
+import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile } from '../utils/supabase/api';
+import { supabase } from '../utils/supabase/client';
+
+const harmonizePoster = 'https://via.placeholder.com/800x450';
 
 interface LiveStream {
   id: number;
@@ -15,12 +18,13 @@ interface LiveStream {
   scheduledTime?: string;
   countdown?: number; // minutes until start
   host: string;
-  quality: 'HD' | '4K';
+  quality: 'HD' | '4K' | 'SD';
   isPaid?: boolean;
   price?: number;
   location: string;
   country: string;
   countryFlag: string;
+  playback_url?: string;
 }
 
 const categories = [
@@ -209,197 +213,6 @@ const countries = [
   { id: 'Central African Republic', name: 'Central African Republic', flag: '🇨🇫' },
 ];
 
-const liveStreams: LiveStream[] = [
-  {
-    id: 1,
-    title: 'Summer Music Festival 2025 - Main Stage',
-    category: 'entertainment',
-    thumbnail: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=800&h=600&fit=crop',
-    isLive: true,
-    viewers: 12847,
-    host: 'Festival Productions',
-    quality: '4K',
-    location: 'Central Park',
-    country: 'United States',
-    countryFlag: 'figma:asset/flag-united-states-of-america.png',
-  },
-  {
-    id: 2,
-    title: 'Live Club Night - DJ Set from Ibiza',
-    category: 'entertainment',
-    thumbnail: harmonizePoster,
-    isLive: true,
-    viewers: 8234,
-    host: 'Pacha Ibiza',
-    quality: 'HD',
-    isPaid: true,
-    price: 15000,
-    location: 'Ibiza',
-    country: 'Spain',
-    countryFlag: 'figma:asset/flag-spain.png',
-  },
-  {
-    id: 3,
-    title: 'Tech Startup Pitch Competition Finals',
-    category: 'business & tech',
-    thumbnail: 'https://images.unsplash.com/photo-1762968286778-60e65336d5ca?w=800&h=600&fit=crop',
-    isLive: true,
-    viewers: 5623,
-    host: 'TechCrunch',
-    quality: 'HD',
-    location: 'Silicon Valley',
-    country: 'United States',
-    countryFlag: 'figma:asset/flag-united-states-of-america.png',
-  },
-  {
-    id: 4,
-    title: 'Afrobeat Live Concert - Zanzibar',
-    category: 'entertainment',
-    thumbnail: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=600&fit=crop',
-    isLive: true,
-    viewers: 9456,
-    host: 'Zanzibar Live',
-    quality: '4K',
-    isPaid: true,
-    price: 25000,
-    location: 'Zanzibar',
-    country: 'Tanzania',
-    countryFlag: 'figma:asset/flag-tanzania.png',
-  },
-  {
-    id: 5,
-    title: 'Digital Marketing Workshop',
-    category: 'education',
-    thumbnail: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop',
-    isLive: true,
-    viewers: 3421,
-    host: 'Marketing Academy',
-    quality: 'HD',
-    location: 'London',
-    country: 'United Kingdom',
-    countryFlag: 'figma:asset/flag-united-kingdom.png',
-  },
-  {
-    id: 12,
-    title: 'NBA Finals Game 7 - Live Watch Party',
-    category: 'sports & fitness',
-    thumbnail: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=600&fit=crop',
-    isLive: true,
-    viewers: 18562,
-    host: 'ESPN Sports Bar',
-    quality: '4K',
-    location: 'Los Angeles',
-    country: 'United States',
-    countryFlag: 'figma:asset/flag-united-states-of-america.png',
-  },
-  {
-    id: 13,
-    title: 'Broadway Musical Live Performance',
-    category: 'entertainment',
-    thumbnail: 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&h=600&fit=crop',
-    isLive: true,
-    viewers: 6734,
-    host: 'Broadway Theater',
-    quality: '4K',
-    isPaid: true,
-    price: 40000,
-    location: 'New York City',
-    country: 'United States',
-    countryFlag: 'figma:asset/flag-united-states-of-america.png',
-  },
-];
-
-const upcomingStreams: LiveStream[] = [
-  {
-    id: 6,
-    title: 'Championship Soccer Match - Live Commentary',
-    category: 'sports & fitness',
-    thumbnail: 'https://images.unsplash.com/photo-1764050359179-517599dab87b?w=800&h=600&fit=crop',
-    isLive: false,
-    scheduledTime: 'Today at 7:30 PM',
-    countdown: 45,
-    host: 'Sports Network',
-    quality: '4K',
-    location: 'Stadium',
-    country: 'United States',
-    countryFlag: 'figma:asset/flag-united-states-of-america.png',
-  },
-  {
-    id: 7,
-    title: 'Dar es Salaam Tech Summit - Keynote',
-    category: 'business & tech',
-    thumbnail: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=600&fit=crop',
-    isLive: false,
-    scheduledTime: 'Tomorrow at 9:00 AM',
-    countdown: 620,
-    host: 'Tanzania Tech Hub',
-    quality: 'HD',
-    location: 'Dar es Salaam',
-    country: 'Tanzania',
-    countryFlag: 'figma:asset/flag-tanzania.png',
-  },
-  {
-    id: 8,
-    title: 'Dubai Fashion Week - Runway Show',
-    category: 'entertainment',
-    thumbnail: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&h=600&fit=crop',
-    isLive: false,
-    scheduledTime: 'Tomorrow at 6:00 PM',
-    countdown: 1100,
-    host: 'Dubai Fashion Council',
-    quality: '4K',
-    isPaid: true,
-    price: 35000,
-    location: 'Dubai',
-    country: 'United Arab Emirates',
-    countryFlag: 'figma:asset/flag-united-arab-emirates.png',
-  },
-  {
-    id: 9,
-    title: 'Sunday Service - Live Worship',
-    category: 'religion',
-    thumbnail: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=800&h=600&fit=crop',
-    isLive: false,
-    scheduledTime: 'Sunday at 10:00 AM',
-    countdown: 1500,
-    host: 'City Church',
-    quality: 'HD',
-    location: 'Church',
-    country: 'United States',
-    countryFlag: 'figma:asset/flag-united-states-of-america.png',
-  },
-  {
-    id: 10,
-    title: 'Zanzibar Cultural Festival - Opening Ceremony',
-    category: 'culture',
-    thumbnail: 'https://images.unsplash.com/photo-1707296450219-2d9cc08bdef0?w=800&h=600&fit=crop',
-    isLive: false,
-    scheduledTime: 'Friday at 5:00 PM',
-    countdown: 3800,
-    host: 'Zanzibar Tourism Board',
-    quality: '4K',
-    location: 'Stone Town, Zanzibar',
-    country: 'Tanzania',
-    countryFlag: 'figma:asset/flag-tanzania.png',
-  },
-  {
-    id: 11,
-    title: 'Abu Dhabi Grand Prix - Pre-Race Coverage',
-    category: 'sports & fitness',
-    thumbnail: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800&h=600&fit=crop',
-    isLive: false,
-    scheduledTime: 'Saturday at 2:00 PM',
-    countdown: 2900,
-    host: 'Formula 1',
-    quality: '4K',
-    isPaid: true,
-    price: 45000,
-    location: 'Yas Marina Circuit',
-    country: 'United Arab Emirates',
-    countryFlag: 'figma:asset/flag-united-arab-emirates.png',
-  },
-];
-
 export function LiveFeed() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCountry, setSelectedCountry] = useState('Tanzania');
@@ -411,13 +224,81 @@ export function LiveFeed() {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [streamToUnlock, setStreamToUnlock] = useState<LiveStream | null>(null);
   const [unlockedStreams, setUnlockedStreams] = useState<Set<number>>(new Set());
-  const [recentCountries, setRecentCountries] = useState<string[]>(() => {
-    const stored = localStorage.getItem('eventz-recent-countries');
-    return stored ? JSON.parse(stored) : ['Tanzania', 'United Arab Emirates', 'United States'];
-  });
+  const [recentCountries, setRecentCountries] = useState<string[]>(['Tanzania', 'United Arab Emirates', 'United States']);
+  const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
+  const [upcomingStreams, setUpcomingStreams] = useState<LiveStream[]>([]);
+
+  useEffect(() => {
+    const fetchStreams = async () => {
+      try {
+        const live = await getLiveStreams();
+        if (live) setLiveStreams(live as unknown as LiveStream[]);
+        
+        const upcoming = await getUpcomingStreams();
+        if (upcoming) setUpcomingStreams(upcoming as unknown as LiveStream[]);
+      } catch (error) {
+        console.error('Error fetching streams:', error);
+      }
+    };
+    fetchStreams();
+  }, []);
+
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const profile = await getProfile(user.id);
+          
+          // Check for migration from localStorage
+          const localStored = localStorage.getItem('eventz-recent-countries');
+          
+          if (profile?.preferences?.recentCountries) {
+            setRecentCountries(profile.preferences.recentCountries);
+            // If we have data in Supabase, we can clear local storage to keep it clean
+            if (localStored) localStorage.removeItem('eventz-recent-countries');
+          } else if (localStored) {
+            // Migration: User has local data but no Supabase data
+            const countries = JSON.parse(localStored);
+            setRecentCountries(countries);
+            
+            // Save to Supabase
+            const currentPreferences = profile?.preferences || {};
+            await updateProfile(user.id, {
+              preferences: {
+                ...currentPreferences,
+                recentCountries: countries
+              }
+            });
+            
+            // Clear local storage after successful migration
+            localStorage.removeItem('eventz-recent-countries');
+          }
+        } else {
+          const stored = localStorage.getItem('eventz-recent-countries');
+          if (stored) {
+            setRecentCountries(JSON.parse(stored));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading preferences:', error);
+      }
+    };
+
+    loadPreferences();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      loadPreferences();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Save recent country when user selects one
-  const handleCountrySelect = (countryId: string) => {
+  const handleCountrySelect = async (countryId: string) => {
     setSelectedCountry(countryId);
     setShowLocationFilter(false);
     setLocationSearch('');
@@ -428,17 +309,42 @@ export function LiveFeed() {
     // Update recent countries (keep max 3, most recent first)
     const updated = [countryId, ...recentCountries.filter(c => c !== countryId)].slice(0, 3);
     setRecentCountries(updated);
-    localStorage.setItem('eventz-recent-countries', JSON.stringify(updated));
+    
+    // Save to Supabase if logged in, otherwise localStorage
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // We need to fetch current preferences first to not overwrite other fields if any (though currently only recentCountries)
+        // Or just update using jsonb_set logic if we had that exposed, but updateProfile does a merge at top level.
+        // But `preferences` is a jsonb column. Supabase update merges top-level columns.
+        // But for the jsonb value itself, it replaces it unless we handle it carefully.
+        // Assuming we just have recentCountries for now, replacing `preferences` object is fine.
+        // If we add more keys to preferences later, we should fetch first.
+        const profile = await getProfile(user.id);
+        const currentPreferences = profile?.preferences || {};
+        
+        await updateProfile(user.id, { 
+          preferences: { 
+            ...currentPreferences,
+            recentCountries: updated 
+          } 
+        });
+      } else {
+        localStorage.setItem('eventz-recent-countries', JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+    }
   };
 
   const filteredLiveStreams = liveStreams.filter(
-    stream => 
+    (stream: LiveStream) => 
       (selectedCategory === 'all' || stream.category === selectedCategory) &&
       (selectedCountry === 'all' || stream.country === selectedCountry)
   );
 
   const filteredUpcomingStreams = upcomingStreams.filter(
-    stream => 
+    (stream: LiveStream) => 
       (selectedCategory === 'all' || stream.category === selectedCategory) &&
       (selectedCountry === 'all' || stream.country === selectedCountry)
   );
@@ -545,7 +451,7 @@ export function LiveFeed() {
         {/* Live Now - Premium Cards */}
         {filteredLiveStreams.length > 0 && (
           <div className="space-y-5 mb-12">
-            {filteredLiveStreams.map((stream) => (
+            {filteredLiveStreams.map((stream: LiveStream) => (
               <div
                 key={stream.id}
                 onClick={() => handleStreamClick(stream)}
@@ -612,7 +518,7 @@ export function LiveFeed() {
             </div>
 
             <div className="space-y-3">
-              {filteredUpcomingStreams.map((stream) => (
+              {filteredUpcomingStreams.map((stream: LiveStream) => (
                 <div
                   key={stream.id}
                   className="relative overflow-hidden rounded-2xl bg-white hover:shadow-md transition-all cursor-pointer border border-gray-200"

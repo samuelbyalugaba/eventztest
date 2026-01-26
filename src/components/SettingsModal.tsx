@@ -1,6 +1,7 @@
 import { X, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { supabase, getProfile, updateProfile } from '../utils/supabase/api';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -14,11 +15,11 @@ export function SettingsModal({ onClose, onLogout }: SettingsModalProps) {
   
   // Profile state
   const [profileData, setProfileData] = useState({
-    name: 'Alex Johnson',
-    email: 'alex.johnson@gmail.com',
-    phone: '+255 712 345 678',
-    location: 'Dar es Salaam, Tanzania',
-    bio: 'Music lover and event enthusiast 🎵',
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    bio: '',
   });
 
   // Notifications state
@@ -40,22 +41,193 @@ export function SettingsModal({ onClose, onLogout }: SettingsModalProps) {
     showActivity: true,
   });
 
-  const handleSaveProfile = () => {
-    localStorage.setItem('eventz-user-profile', JSON.stringify(profileData));
-    toast.success('Profile updated successfully! ✅');
-    setCurrentView('main');
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const profile = await getProfile(user.id);
+          if (profile) {
+            // Profile Data Migration
+            const localProfile = localStorage.getItem('eventz-user-profile');
+            let profileUpdates: any = {};
+            let hasUpdates = false;
+
+            if (localProfile && !profile.full_name && !profile.phone) {
+              // Assume if name and phone are missing, we might want to migrate
+              const parsed = JSON.parse(localProfile);
+              setProfileData(parsed);
+              profileUpdates = {
+                full_name: parsed.name,
+                contact_email: parsed.email,
+                phone: parsed.phone,
+                location: parsed.location,
+                bio: parsed.bio
+              };
+              hasUpdates = true;
+              localStorage.removeItem('eventz-user-profile');
+            } else {
+              setProfileData({
+                name: profile.full_name || '',
+                email: profile.contact_email || user.email || '',
+                phone: profile.phone || '',
+                location: profile.location || '',
+                bio: profile.bio || '',
+              });
+              if (localProfile) localStorage.removeItem('eventz-user-profile');
+            }
+
+            // Notification Settings Migration
+            const localNotifications = localStorage.getItem('eventz-notifications');
+            if (profile.notification_settings) {
+              setNotifications(prev => ({
+                ...prev,
+                pushNotifications: profile.notification_settings?.pushNotifications ?? prev.pushNotifications,
+                emailNotifications: profile.notification_settings?.emailNotifications ?? prev.emailNotifications,
+                eventReminders: profile.notification_settings?.eventReminders ?? prev.eventReminders,
+                newEvents: profile.notification_settings?.newEvents ?? prev.newEvents,
+                promotions: profile.notification_settings?.promotions ?? prev.promotions,
+                socialActivity: profile.notification_settings?.socialActivity ?? prev.socialActivity,
+              }));
+              if (localNotifications) localStorage.removeItem('eventz-notifications');
+            } else if (localNotifications) {
+              const parsed = JSON.parse(localNotifications);
+              setNotifications(parsed);
+              profileUpdates.notification_settings = parsed;
+              hasUpdates = true;
+              localStorage.removeItem('eventz-notifications');
+            }
+
+            // Privacy Settings Migration
+            const localPrivacy = localStorage.getItem('eventz-privacy');
+            if (profile.privacy_settings) {
+              setPrivacy(prev => ({
+                ...prev,
+                profileVisibility: profile.privacy_settings?.profileVisibility || prev.profileVisibility,
+                showEmail: profile.privacy_settings?.showEmail ?? prev.showEmail,
+                showPhone: profile.privacy_settings?.showPhone ?? prev.showPhone,
+                allowMessages: profile.privacy_settings?.allowMessages ?? prev.allowMessages,
+                showActivity: profile.privacy_settings?.showActivity ?? prev.showActivity,
+              }));
+              if (localPrivacy) localStorage.removeItem('eventz-privacy');
+            } else if (localPrivacy) {
+              const parsed = JSON.parse(localPrivacy);
+              setPrivacy(parsed);
+              profileUpdates.privacy_settings = parsed;
+              hasUpdates = true;
+              localStorage.removeItem('eventz-privacy');
+            }
+
+            // Apply any migration updates
+            if (hasUpdates) {
+              await updateProfile(user.id, profileUpdates);
+            }
+          }
+        } else {
+          // Fallback to localStorage
+          const storedProfile = localStorage.getItem('eventz-user-profile');
+          if (storedProfile) setProfileData(JSON.parse(storedProfile));
+          
+          const storedNotifications = localStorage.getItem('eventz-notifications');
+          if (storedNotifications) setNotifications(JSON.parse(storedNotifications));
+
+          const storedPrivacy = localStorage.getItem('eventz-privacy');
+          if (storedPrivacy) setPrivacy(JSON.parse(storedPrivacy));
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+
+    loadSettings();
+
+    // Listen for auth changes to reload settings
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      loadSettings();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSaveProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await updateProfile(user.id, {
+          full_name: profileData.name,
+          contact_email: profileData.email,
+          phone: profileData.phone,
+          location: profileData.location,
+          bio: profileData.bio,
+        });
+      } else {
+        localStorage.setItem('eventz-user-profile', JSON.stringify(profileData));
+      }
+      toast.success('Profile updated successfully! ✅');
+      setCurrentView('main');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast.error('Failed to save profile');
+    }
   };
 
-  const handleSaveNotifications = () => {
-    localStorage.setItem('eventz-notifications', JSON.stringify(notifications));
-    toast.success('Notification preferences saved! 🔔');
-    setCurrentView('main');
+  const handleSaveNotifications = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const profile = await getProfile(user.id);
+        const currentSettings = profile?.notification_settings || {};
+        
+        await updateProfile(user.id, {
+          notification_settings: {
+            ...currentSettings,
+            ...notifications,
+            // Ensure required fields are present if they were missing in currentSettings
+            ticketSales: currentSettings.ticketSales ?? false,
+            streamAlerts: currentSettings.streamAlerts ?? false,
+            weeklyReport: currentSettings.weeklyReport ?? false,
+            marketingEmails: currentSettings.marketingEmails ?? false,
+            newFollowers: currentSettings.newFollowers ?? false,
+          }
+        });
+      } else {
+        localStorage.setItem('eventz-notifications', JSON.stringify(notifications));
+      }
+      toast.success('Notification preferences saved! 🔔');
+      setCurrentView('main');
+    } catch (error) {
+      console.error('Error saving notifications:', error);
+      toast.error('Failed to save notifications');
+    }
   };
 
-  const handleSavePrivacy = () => {
-    localStorage.setItem('eventz-privacy', JSON.stringify(privacy));
-    toast.success('Privacy settings updated! 🔒');
-    setCurrentView('main');
+  const handleSavePrivacy = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const profile = await getProfile(user.id);
+        const currentSettings = profile?.privacy_settings || {};
+
+        await updateProfile(user.id, {
+          privacy_settings: {
+            ...currentSettings,
+            ...privacy,
+            // Ensure required fields
+            showFollowers: currentSettings.showFollowers ?? true,
+            showStats: currentSettings.showStats ?? true,
+          }
+        });
+      } else {
+        localStorage.setItem('eventz-privacy', JSON.stringify(privacy));
+      }
+      toast.success('Privacy settings updated! 🔒');
+      setCurrentView('main');
+    } catch (error) {
+      console.error('Error saving privacy settings:', error);
+      toast.error('Failed to save privacy settings');
+    }
   };
 
   const handleLogout = async () => {

@@ -3,23 +3,29 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useState, useEffect, useRef } from 'react';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { supabase, toggleLikePost } from '../utils/supabase/api';
 
 interface Photo {
   id: number;
   url: string;
-  likes: number;
+  likes?: number;
   eventName?: string;
+  isPost?: boolean;
+  postId?: number;
+  isLiked?: boolean;
 }
 
 interface VideoClip {
   id: number;
   thumbnail: string;
-  duration: string;
-  views: number;
+  views?: number;
   likes?: number;
   videoUrl: string;
   eventName?: string;
+  isPost?: boolean;
+  postId?: number;
+  isLiked?: boolean;
 }
 
 interface MediaViewerProps {
@@ -49,11 +55,11 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
 
   useEffect(() => {
     if (type === 'photo') {
-      setLikes((currentMedia as Photo).likes);
+      setLikes((currentMedia as Photo).likes || 0);
     } else {
       setLikes((currentMedia as VideoClip).likes || 0);
     }
-    setIsLiked(false);
+    setIsLiked((currentMedia as any).isLiked || false);
   }, [currentIndex, currentMedia, type]);
 
   // Update progress bar for videos
@@ -132,7 +138,7 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, media.length, onClose, type, isPlaying]);
 
-  const toggleLike = () => {
+  const toggleLike = async () => {
     if (!isLiked) {
       setIsLiked(true);
       setLikes(likes + 1);
@@ -140,6 +146,27 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
     } else {
       setIsLiked(false);
       setLikes(likes - 1);
+    }
+
+    // Handle API call if it's a post
+    if (currentMedia.isPost && currentMedia.postId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        try {
+          await toggleLikePost(currentMedia.postId, user.id);
+        } catch (error) {
+          console.error('Error toggling like:', error);
+          // Revert optimistic update
+          if (!isLiked) {
+            setIsLiked(false);
+            setLikes(likes);
+          } else {
+            setIsLiked(true);
+            setLikes(likes);
+          }
+          toast.error('Failed to update like');
+        }
+      }
     }
   };
 
@@ -407,20 +434,22 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
         {/* Right Side Actions - TikTok Style */}
         <div className="absolute right-3 bottom-32 flex flex-col items-center gap-6 z-30">
           {/* Like */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleLike();
-            }}
-            className="flex flex-col items-center gap-1 transition-transform active:scale-90"
-          >
-            <Heart
-              className={`w-8 h-8 transition-all drop-shadow-lg ${
-                isLiked ? 'fill-[#FF3CAC] text-[#FF3CAC]' : 'text-white'
-              }`}
-            />
-            <span className="text-white text-xs font-bold drop-shadow-lg">{likes}</span>
-          </button>
+          {((currentMedia as any).isPost) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleLike();
+              }}
+              className="flex flex-col items-center gap-1 transition-transform active:scale-90"
+            >
+              <Heart
+                className={`w-8 h-8 transition-all drop-shadow-lg ${
+                  isLiked ? 'fill-[#FF3CAC] text-[#FF3CAC]' : 'text-white'
+                }`}
+              />
+              <span className="text-white text-xs font-bold drop-shadow-lg">{likes}</span>
+            </button>
+          )}
 
           {/* Share */}
           <button

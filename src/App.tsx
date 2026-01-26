@@ -6,12 +6,23 @@ import { CreateEvent } from './components/CreateEvent';
 import { BecomeOrganizer } from './components/BecomeOrganizer';
 import { OrganizerProfileSetup } from './components/OrganizerProfileSetup';
 import { OrganizerDashboard } from './components/OrganizerDashboard';
-import { Notifications } from './components/Notifications';
 import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
-import { Calendar, Radio, PlusCircle, Bell, User, Rss } from 'lucide-react';
+import { Calendar, Radio, PlusCircle, User, Rss } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { supabase } from './utils/supabase/client';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { 
+  getUserTickets, 
+  getProfile, 
+  getConversations, 
+  getMessages, 
+  sendMessage, 
+  startConversation,
+  markMessagesAsRead,
+  subscribeToAllMessages,
+  Event
+} from './utils/supabase/api';
 
 type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile';
 type OrganizerView = 'dashboard' | 'createEvent';
@@ -34,7 +45,7 @@ export interface PurchasedTicket {
 // Global messaging interfaces
 export interface Message {
   id: number;
-  senderId: number;
+  senderId: number; // 0 for current user, or specific ID
   text: string;
   timestamp: string;
   read: boolean;
@@ -48,6 +59,7 @@ export interface Conversation {
     avatar: string;
     verified: boolean;
     isOrganizer?: boolean;
+    id?: string; // Added ID to track real user ID
   };
   lastMessage: {
     text: string;
@@ -58,122 +70,23 @@ export interface Conversation {
   messages: Message[];
 }
 
-// Mock conversations data
-const initialConversations: Conversation[] = [
-  {
-    id: 1,
-    user: {
-      name: 'Jazz Events TZ',
-      username: '@jazzeventstz',
-      avatar: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&h=100&fit=crop',
-      verified: true,
-      isOrganizer: true,
-    },
-    lastMessage: {
-      text: 'Thank you for attending! Hope you enjoyed the show 🎷',
-      timestamp: '5m ago',
-      isRead: false,
-    },
-    unreadCount: 2,
-    messages: [
-      { id: 1, senderId: 1, text: 'Hey! Thanks for getting tickets to Jazz Night!', timestamp: '2:30 PM', read: true },
-      { id: 2, senderId: 0, text: 'Can\'t wait! What time does it start?', timestamp: '2:32 PM', read: true },
-      { id: 3, senderId: 1, text: 'Doors open at 7 PM, show starts at 8 PM sharp!', timestamp: '2:35 PM', read: true },
-      { id: 4, senderId: 1, text: 'Thank you for attending! Hope you enjoyed the show 🎷', timestamp: '10:45 PM', read: false },
-    ],
-  },
-  {
-    id: 2,
-    user: {
-      name: 'Sarah Mitchell',
-      username: '@sarahmitchell',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-      verified: false,
-    },
-    lastMessage: {
-      text: 'Are you going to the Amapiano Festival this weekend?',
-      timestamp: '1h ago',
-      isRead: true,
-    },
-    unreadCount: 0,
-    messages: [
-      { id: 1, senderId: 2, text: 'Hey! Saw you at the concert last night!', timestamp: 'Yesterday', read: true },
-      { id: 2, senderId: 0, text: 'Yes! It was amazing! 🎶', timestamp: 'Yesterday', read: true },
-      { id: 3, senderId: 2, text: 'Are you going to the Amapiano Festival this weekend?', timestamp: '1h ago', read: true },
-    ],
-  },
-  {
-    id: 3,
-    user: {
-      name: 'Dar Live Events',
-      username: '@darliveevents',
-      avatar: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100&h=100&fit=crop',
-      verified: true,
-      isOrganizer: true,
-    },
-    lastMessage: {
-      text: 'Your VIP tickets have been confirmed! 🎫',
-      timestamp: '3h ago',
-      isRead: true,
-    },
-    unreadCount: 0,
-    messages: [
-      { id: 1, senderId: 3, text: 'Hi! We noticed you\'re interested in VIP packages', timestamp: '5:20 PM', read: true },
-      { id: 2, senderId: 0, text: 'Yes! What\'s included in the VIP package?', timestamp: '5:25 PM', read: true },
-      { id: 3, senderId: 3, text: 'Front row seats, meet & greet, and exclusive merch!', timestamp: '5:27 PM', read: true },
-      { id: 4, senderId: 3, text: 'Your VIP tickets have been confirmed! 🎫', timestamp: '6:15 PM', read: true },
-    ],
-  },
-  {
-    id: 4,
-    user: {
-      name: 'Marcus Rodriguez',
-      username: '@marcusrodriguez',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-      verified: false,
-    },
-    lastMessage: {
-      text: 'Let me know if you need a ride to the venue',
-      timestamp: '1d ago',
-      isRead: true,
-    },
-    unreadCount: 0,
-    messages: [
-      { id: 1, senderId: 4, text: 'Yo! Got my tickets for Friday!', timestamp: 'Mon', read: true },
-      { id: 2, senderId: 0, text: 'Nice! Me too! 🔥', timestamp: 'Mon', read: true },
-      { id: 3, senderId: 4, text: 'Let me know if you need a ride to the venue', timestamp: 'Tue', read: true },
-    ],
-  },
-];
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('event');
-  const [isOrganizer, setIsOrganizer] = useState(() => {
-    // Clear localStorage for testing - remove this line later
-    localStorage.removeItem('eventz-is-organizer');
-    localStorage.removeItem('eventz-organizer-profile');
-    return localStorage.getItem('eventz-is-organizer') === 'true';
-  });
-  const [hasOrganizerProfile, setHasOrganizerProfile] = useState(() => {
-    return localStorage.getItem('eventz-organizer-profile') !== null;
-  });
+  const [isOrganizer, setIsOrganizer] = useState(false);
+  const [hasOrganizerProfile, setHasOrganizerProfile] = useState(false);
   const [organizerView, setOrganizerView] = useState<OrganizerView>('dashboard');
-  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
 
   // Ticket management state
-  const [purchasedTickets, setPurchasedTickets] = useState<PurchasedTicket[]>(() => {
-    const saved = localStorage.getItem('eventz-purchased-tickets');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [purchasedTickets, setPurchasedTickets] = useState<PurchasedTicket[]>([]);
 
   // Global messaging state
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -185,7 +98,6 @@ export default function App() {
           console.error('Session check error:', error);
           setIsAuthenticated(false);
         } else if (session?.access_token) {
-          setAccessToken(session.access_token);
           setCurrentUser(session.user);
           setIsAuthenticated(true);
         } else {
@@ -202,16 +114,181 @@ export default function App() {
     checkSession();
   }, []);
 
-  const handleAuthSuccess = (token: string, user: any) => {
-    setAccessToken(token);
+  const handleAuthSuccess = (_token: string, user: any) => {
     setCurrentUser(user);
     setIsAuthenticated(true);
   };
 
+  // Fetch tickets when authenticated
+  useEffect(() => {
+    const fetchTickets = async () => {
+      if (isAuthenticated && currentUser) {
+        try {
+          const tickets = await getUserTickets(currentUser.id);
+          const appTickets: PurchasedTicket[] = tickets.map(t => ({
+            id: t.id.toString(),
+            eventId: t.event_id,
+            eventTitle: t.event?.title || 'Unknown Event',
+            eventDate: t.event?.date || '',
+            eventLocation: t.event?.location || '',
+            ticketNumber: t.ticket_number,
+            barcode: t.barcode,
+            purchaseDate: t.purchase_date,
+            customerName: t.customer_name,
+            customerEmail: t.customer_email,
+            price: t.price,
+            ticketType: t.ticket_type as any,
+          }));
+          setPurchasedTickets(appTickets);
+        } catch (error) {
+          console.error('Error fetching tickets:', error);
+        }
+      } else {
+        setPurchasedTickets([]);
+      }
+    };
+
+    fetchTickets();
+  }, [isAuthenticated, currentUser]);
+
+  // Fetch user profile to determine organizer status
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (isAuthenticated && currentUser) {
+        try {
+          const profile = await getProfile(currentUser.id);
+          if (profile) {
+            setIsOrganizer(profile.is_organizer || false);
+            // Check if they have completed organizer profile setup (e.g. have an organizer type)
+            setHasOrganizerProfile(!!profile.organizer_type);
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+        }
+      }
+    };
+    fetchProfile();
+  }, [isAuthenticated, currentUser]);
+
+  // Fetch conversations when authenticated
+  useEffect(() => {
+    const fetchConversations = async () => {
+      if (isAuthenticated && currentUser) {
+        try {
+          const apiConvs = await getConversations(currentUser.id);
+          
+          const formattedConvs: Conversation[] = await Promise.all(apiConvs.map(async (c: any) => {
+            const otherUser = c.participant1_id === currentUser.id ? c.participant2 : c.participant1;
+            
+            // Fetch messages for this conversation
+            const msgs = await getMessages(c.id);
+            const formattedMsgs: Message[] = msgs.map((m: any) => ({
+              id: m.id,
+              senderId: m.sender_id === currentUser.id ? 0 : parseInt(m.sender_id) || 1, // Hack: 0 is current user, others are > 0. UI expects number IDs.
+              text: m.content,
+              timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              read: m.is_read
+            }));
+
+            return {
+              id: c.id,
+              user: {
+                id: otherUser?.id,
+                name: otherUser?.full_name || 'Unknown User',
+                username: otherUser?.username || '',
+                avatar: otherUser?.avatar_url || 'https://via.placeholder.com/150',
+                verified: otherUser?.verified || false,
+                isOrganizer: otherUser?.is_organizer || false,
+              },
+              lastMessage: {
+                text: c.last_message?.content || '',
+                timestamp: c.last_message ? new Date(c.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+                isRead: c.last_message?.is_read || false,
+              },
+              unreadCount: c.unread_count || 0,
+              messages: formattedMsgs
+            };
+          }));
+          
+          setConversations(formattedConvs);
+        } catch (error) {
+          console.error('Error fetching conversations:', error);
+        }
+      } else {
+        setConversations([]);
+      }
+    };
+
+    fetchConversations();
+  }, [isAuthenticated, currentUser]);
+
+  // Subscribe to real-time messages
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser) return;
+
+    const subscription = subscribeToAllMessages(async (newMessage) => {
+      // Avoid processing our own messages if we're optimistically updating (optional, but good for consistency)
+      // Actually, we might want to confirm the ID matches or replace the temp one. 
+      // For now, let's just process everything and assume optimistic updates handle their own duplicates if any,
+      // or we just rely on the server for incoming.
+      // Optimistic updates in handleSendMessage usually don't have the real DB ID immediately unless we wait.
+      // In handleSendMessage, we await sendMessage, so we have the real ID. 
+      // So we might get a duplicate here if we are not careful.
+      // Simple fix: Check if message with this ID already exists.
+
+      setConversations(prevConversations => {
+        const convIndex = prevConversations.findIndex(c => c.id === newMessage.conversation_id);
+        
+        if (convIndex >= 0) {
+          const conv = prevConversations[convIndex];
+          
+          // Check if message already exists (deduplication)
+          if (conv.messages.some(m => m.id === newMessage.id)) {
+            return prevConversations;
+          }
+
+          // Update existing conversation
+          const updatedConvs = [...prevConversations];
+          
+          const appMsg: Message = {
+             id: newMessage.id,
+             senderId: newMessage.sender_id === currentUser.id ? 0 : parseInt(newMessage.sender_id) || 1, 
+             text: newMessage.content,
+             timestamp: new Date(newMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+             read: newMessage.sender_id === currentUser.id ? true : false
+          };
+          
+          updatedConvs[convIndex] = {
+            ...conv,
+            messages: [...conv.messages, appMsg],
+            lastMessage: {
+              text: appMsg.text,
+              timestamp: 'Just now',
+              isRead: appMsg.read
+            },
+            unreadCount: newMessage.sender_id !== currentUser.id ? conv.unreadCount + 1 : conv.unreadCount
+          };
+          
+          // Move to top
+          updatedConvs.splice(convIndex, 1);
+          updatedConvs.unshift(updatedConvs[convIndex]);
+          
+          return updatedConvs;
+        } else {
+           // New conversation logic could go here (e.g. refetch all)
+           return prevConversations; 
+        }
+      });
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [isAuthenticated, currentUser]);
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      setAccessToken(null);
       setCurrentUser(null);
       setIsAuthenticated(false);
     } catch (err) {
@@ -220,71 +297,116 @@ export default function App() {
   };
 
   // Handler to start or continue a conversation
-  const handleStartConversation = (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => {
-    // Check if conversation already exists (match by username first, then name - case insensitive)
-    const existingConv = conversations.find((conv: Conversation) => {
-      // If both have username, match by username (case-insensitive)
+  const handleStartConversation = async (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => {
+    if (!currentUser) return;
+
+    // Check if conversation already exists in state
+    const existingConv = conversations.find((conv) => {
+      if (user.id && conv.user.id === user.id) return true;
       if (conv.user.username && user.username) {
         return conv.user.username.toLowerCase().trim() === user.username.toLowerCase().trim();
       }
-      // Otherwise match by name (case-insensitive, trimmed)
       return conv.user.name.toLowerCase().trim() === user.name.toLowerCase().trim();
     });
     
     if (existingConv) {
-      // Return existing conversation
       return existingConv;
-    } else {
-      // Create new conversation
-      const newConversation: Conversation = {
-        id: Date.now(),
-        user: {
-          name: user.name,
-          username: user.username || `@${user.name.toLowerCase().replace(/\s+/g, '')}`,
-          avatar: user.avatar,
-          verified: user.verified,
-          isOrganizer: user.isOrganizer,
-        },
-        lastMessage: {
-          text: 'Start a conversation...',
-          timestamp: 'Now',
-          isRead: true,
-        },
-        unreadCount: 0,
-        messages: [],
-      };
-      
-      setConversations([newConversation, ...conversations]);
-      return newConversation;
     }
+
+    // If we have a user ID, try to create/get conversation via API
+    if (user.id) {
+      try {
+        const apiConv = await startConversation(user.id);
+        
+        // Optimistically add to state or refetch
+        const newConversation: Conversation = {
+          id: apiConv.id,
+          user: {
+            id: user.id,
+            name: user.name,
+            username: user.username || `@${user.name.toLowerCase().replace(/\s+/g, '')}`,
+            avatar: user.avatar,
+            verified: user.verified,
+            isOrganizer: user.isOrganizer,
+          },
+          lastMessage: {
+            text: 'Start a conversation...',
+            timestamp: 'Now',
+            isRead: true,
+          },
+          unreadCount: 0,
+          messages: [],
+        };
+        
+        setConversations([newConversation, ...conversations]);
+        return newConversation;
+      } catch (error) {
+        console.error('Error starting conversation:', error);
+      }
+    }
+    
+    // Fallback for UI-only/mock users if needed (shouldn't happen with real data)
+    return null; 
   };
 
   // Handler to send a message
-  const handleSendMessage = (conversationId: number, messageText: string) => {
-    if (!messageText.trim()) return;
+  const handleSendMessage = async (conversationId: number, messageText: string) => {
+    if (!messageText.trim() || !currentUser) return;
 
-    const newMessage: Message = {
-      id: Date.now(),
-      senderId: 0, // Current user
-      text: messageText.trim(),
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      read: true,
-    };
+    try {
+      const sentMsg = await sendMessage(conversationId, messageText);
+      
+      const newMessage: Message = {
+        id: sentMsg.id,
+        senderId: 0, // Current user
+        text: sentMsg.content,
+        timestamp: new Date(sentMsg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        read: true,
+      };
 
-    setConversations(conversations.map((conv: Conversation) => {
-      if (conv.id === conversationId) {
-        return {
-          ...conv,
-          messages: [...conv.messages, newMessage],
-          lastMessage: {
-            text: newMessage.text,
-            timestamp: 'Just now',
-            isRead: true,
-          },
-        };
-      }
-      return conv;
-    }));
+      setConversations(conversations.map((conv) => {
+        if (conv.id === conversationId) {
+          return {
+            ...conv,
+            messages: [...conv.messages, newMessage],
+            lastMessage: {
+              text: newMessage.text,
+              timestamp: 'Just now',
+              isRead: true,
+            },
+          };
+        }
+        return conv;
+      }));
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  const handleMarkAsRead = async (conversationId: number) => {
+    if (!currentUser) return;
+
+    try {
+      // Optimistic update
+      setConversations(conversations.map(conv => {
+        if (conv.id === conversationId) {
+          return {
+            ...conv,
+            unreadCount: 0,
+            messages: conv.messages.map(m => ({ ...m, read: true })),
+            lastMessage: {
+              ...conv.lastMessage,
+              isRead: true
+            }
+          };
+        }
+        return conv;
+      }));
+
+      await markMessagesAsRead(conversationId, currentUser.id);
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
   };
 
   const handleBecomeOrganizer = () => {
@@ -301,7 +423,7 @@ export default function App() {
     setOrganizerView('createEvent');
   };
 
-  const handleEditEvent = (event: any) => {
+  const handleEditEvent = (event: Event) => {
     setEditingEvent(event);
     setOrganizerView('createEvent');
   };
@@ -312,9 +434,8 @@ export default function App() {
   };
 
   const handleTicketPurchase = (ticket: PurchasedTicket) => {
-    const updatedTickets = [...purchasedTickets, ticket];
+    const updatedTickets = [ticket, ...purchasedTickets];
     setPurchasedTickets(updatedTickets);
-    localStorage.setItem('eventz-purchased-tickets', JSON.stringify(updatedTickets));
   };
 
   // Show loading screen while checking auth
@@ -369,6 +490,7 @@ export default function App() {
             conversations={conversations}
             onStartConversation={handleStartConversation}
             onSendMessage={handleSendMessage}
+            onMarkAsRead={handleMarkAsRead}
             onLogout={handleLogout}
           />
         )}
@@ -376,11 +498,11 @@ export default function App() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4">
           <div className="flex justify-around items-center h-16">
             <button
               onClick={() => setActiveTab('event')}
-              className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
+              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'event' ? 'text-purple-600' : 'text-gray-500'
               }`}
             >
@@ -389,7 +511,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setActiveTab('feed')}
-              className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
+              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'feed' ? 'text-purple-600' : 'text-gray-500'
               }`}
             >
@@ -398,7 +520,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setActiveTab('live')}
-              className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors relative ${
+              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors relative ${
                 activeTab === 'live' ? 'text-purple-600' : 'text-gray-500'
               }`}
             >
@@ -409,7 +531,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setActiveTab('create')}
-              className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
+              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'create' ? 'text-purple-600' : 'text-gray-500'
               }`}
             >
@@ -418,7 +540,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
+              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'profile' ? 'text-purple-600' : 'text-gray-500'
               }`}
             >

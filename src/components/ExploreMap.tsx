@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
+import { getEvents } from '../utils/supabase/api';
+import { toast } from 'sonner';
 
 interface TrendingEvent {
   id: number;
@@ -23,73 +25,71 @@ interface WeekendEvent {
 
 const categories = ['All', 'Entertainment', 'Education', 'Culture', 'Religion', 'Business & Tech', 'Sports & Fitness'];
 
-const trendingEvents: TrendingEvent[] = [
-  {
-    id: 1,
-    title: 'Afro Sunset Drum Night',
-    category: 'cultural',
-    categoryLabel: 'CULTURAL',
-    image: 'https://images.unsplash.com/photo-1551752480-6ecf175fcd51?w=200&h=200&fit=crop',
-    time: 'Today · 7PM',
-    location: 'Zanzibar Beach Resort',
-  },
-  {
-    id: 2,
-    title: 'Young Innovators Startup Pitch',
-    category: 'startup',
-    categoryLabel: 'STARTUP',
-    image: 'https://images.unsplash.com/photo-1599592187465-6dc742367282?w=200&h=200&fit=crop',
-    time: 'Tomorrow · 10AM',
-    location: 'Dar Hub',
-  },
-  {
-    id: 3,
-    title: 'Friday Praise Worship',
-    category: 'religious',
-    categoryLabel: 'RELIGIOUS',
-    image: 'https://images.unsplash.com/photo-1629143935265-73c99997212e?w=200&h=200&fit=crop',
-    time: 'Friday · 6PM',
-    location: 'Canaan City Chapel',
-    hasJoinButton: true,
-  },
-  {
-    id: 4,
-    title: 'Secret House Party - Invite Only',
-    category: 'house party',
-    categoryLabel: 'HOUSE PARTY',
-    image: 'https://images.unsplash.com/photo-1582734073424-1cc142558946?w=200&h=200&fit=crop',
-    time: 'Tonight · Limited Slots',
-    location: 'House Party',
-  },
-];
-
-const weekendEvents: WeekendEvent[] = [
-  {
-    id: 1,
-    title: 'LIVE Performance Night',
-    category: 'Music',
-    image: 'https://images.unsplash.com/photo-1764805354913-953132e82086?w=800&h=600&fit=crop',
-    gradient: 'from-purple-500 to-pink-500',
-  },
-  {
-    id: 2,
-    title: 'Cultural Music Festival',
-    category: 'Cultural',
-    image: 'https://images.unsplash.com/photo-1764670085300-7951b9132433?w=800&h=600&fit=crop',
-    gradient: 'from-blue-500 to-cyan-500',
-  },
-  {
-    id: 3,
-    title: 'Fashion Exhibition',
-    category: 'Fashion',
-    image: 'https://images.unsplash.com/photo-1763950744089-451fa39fa5fd?w=800&h=600&fit=crop',
-    gradient: 'from-cyan-400 to-teal-400',
-  },
-];
-
 export function ExploreMap() {
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [trendingEvents, setTrendingEvents] = useState<TrendingEvent[]>([]);
+  const [weekendEvents, setWeekendEvents] = useState<WeekendEvent[]>([]);
+  const [recommendedEvents, setRecommendedEvents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEvents = async () => {
+      setIsLoading(true);
+      try {
+        const events = await getEvents();
+        if (events && events.length > 0) {
+          // Filter by category if selected
+          let filteredEvents = events;
+          if (selectedCategory !== 'All') {
+            filteredEvents = events.filter((e: any) => 
+              e.category.toLowerCase() === selectedCategory.toLowerCase()
+            );
+          }
+
+          // Map to Trending Format (take first 4)
+          setTrendingEvents(filteredEvents.slice(0, 4).map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            category: e.category,
+            categoryLabel: e.category.toUpperCase(),
+            image: e.image_url || 'https://via.placeholder.com/200',
+            time: `${new Date(e.date).toLocaleDateString(undefined, { weekday: 'short' })} · ${e.time}`,
+            location: e.location,
+            hasJoinButton: false
+          })));
+
+          // Map to Weekend Format (take next 3)
+          setWeekendEvents(filteredEvents.slice(4, 7).map((e: any, index: number) => ({
+            id: e.id,
+            title: e.title,
+            category: e.category,
+            image: e.image_url || 'https://via.placeholder.com/800',
+            gradient: index % 2 === 0 ? 'from-purple-500 to-pink-500' : 'from-blue-500 to-cyan-500'
+          })));
+
+          // Recommended (take next 2)
+          setRecommendedEvents(filteredEvents.slice(7, 9).map((e: any) => ({
+             id: e.id,
+             title: e.title,
+             category: e.category,
+             image: e.image_url || 'https://via.placeholder.com/300',
+             time: `${new Date(e.date).toLocaleDateString(undefined, { weekday: 'long' })} · ${e.time}`,
+          })));
+        } else {
+            setTrendingEvents([]);
+            setWeekendEvents([]);
+            setRecommendedEvents([]);
+        }
+      } catch (error) {
+        console.error('Error loading events:', error);
+        toast.error('Failed to load events');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadEvents();
+  }, [selectedCategory]);
 
   const getCategoryBadgeColor = (category: string) => {
     switch (category.toLowerCase()) {
@@ -105,6 +105,14 @@ export function ExploreMap() {
         return 'bg-gray-100 text-gray-700';
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -226,16 +234,22 @@ export function ExploreMap() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all cursor-pointer">
-              <div className="w-full h-32 rounded-lg bg-gradient-to-br from-orange-200 to-pink-200 mb-3"></div>
-              <h3 className="text-gray-900 mb-1">Art Gallery Opening</h3>
-              <p className="text-gray-600 text-sm">Saturday · 5PM</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all cursor-pointer">
-              <div className="w-full h-32 rounded-lg bg-gradient-to-br from-green-200 to-cyan-200 mb-3"></div>
-              <h3 className="text-gray-900 mb-1">Tech Meetup</h3>
-              <p className="text-gray-600 text-sm">Sunday · 2PM</p>
-            </div>
+            {recommendedEvents.map((event) => (
+              <div 
+                key={event.id}
+                className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all cursor-pointer"
+              >
+                <div className="w-full h-32 rounded-lg overflow-hidden mb-3">
+                   <ImageWithFallback
+                      src={event.image}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                    />
+                </div>
+                <h3 className="text-gray-900 mb-1 line-clamp-1">{event.title}</h3>
+                <p className="text-gray-600 text-sm">{event.time}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

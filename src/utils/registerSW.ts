@@ -86,20 +86,4 @@ export const isAppInstalled = () => {
          (window.navigator as any).standalone === true;
 };
 
-// Get install prompt status
-export const canShowInstallPrompt = () => {
-  // Check if already installed
-  if (isAppInstalled()) {
-    return false;
-  }
 
-  // Check if user dismissed recently
-  const dismissed = localStorage.getItem('eventz-pwa-dismissed');
-  if (dismissed) {
-    const dismissedDate = new Date(dismissed);
-    const daysSinceDismissed = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
-    return daysSinceDismissed >= 7;
-  }
-
-  return true;
-};

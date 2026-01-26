@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Download, X, Smartphone } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { supabase } from '../utils/supabase/client';
+import { getProfile, updateProfile } from '../utils/supabase/api';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -19,41 +21,79 @@ export function PWAInstallPrompt() {
       return;
     }
 
-    // Check if user has dismissed the prompt before
-    const dismissed = localStorage.getItem('eventz-pwa-dismissed');
-    if (dismissed) {
-      const dismissedDate = new Date(dismissed);
-      const daysSinceDismissed = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
-      
-      // Show again after 7 days
-      if (daysSinceDismissed < 7) {
-        return;
-      }
-    }
+    const checkDismissal = async () => {
+      let dismissed = localStorage.getItem('eventz-pwa-dismissed');
 
-    // Listen for the beforeinstallprompt event
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      // Check Supabase if user is logged in
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const profile = await getProfile(user.id);
+          
+          if (profile?.preferences?.pwaDismissed) {
+            dismissed = profile.preferences.pwaDismissed;
+            // Clear local storage if we have it in cloud to avoid sync issues
+            if (localStorage.getItem('eventz-pwa-dismissed')) {
+              localStorage.removeItem('eventz-pwa-dismissed');
+            }
+          } else if (dismissed) {
+            // Migration: User has local dismissal but not in cloud
+            const currentPreferences = profile?.preferences || {};
+            await updateProfile(user.id, {
+              preferences: {
+                ...currentPreferences,
+                pwaDismissed: dismissed
+              }
+            });
+            localStorage.removeItem('eventz-pwa-dismissed');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking PWA dismissal:', error);
+      }
+
+      if (dismissed) {
+        const dismissedDate = new Date(dismissed);
+        const daysSinceDismissed = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
+        
+        // Show again after 7 days
+        if (daysSinceDismissed < 7) {
+          return;
+        }
+      }
       
-      // Show prompt after 5 seconds
-      setTimeout(() => {
-        setShowPrompt(true);
-      }, 5000);
+      // Listen for the beforeinstallprompt event if not dismissed recently
+      const handleBeforeInstallPrompt = (e: Event) => {
+        e.preventDefault();
+        setDeferredPrompt(e as BeforeInstallPromptEvent);
+        
+        // Show prompt after 5 seconds
+        setTimeout(() => {
+          setShowPrompt(true);
+        }, 5000);
+      };
+
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      };
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    checkDismissal();
 
     // Listen for app installed event
-    window.addEventListener('appinstalled', () => {
+    const handleAppInstalled = () => {
       console.log('PWA installed');
       setIsInstalled(true);
       setShowPrompt(false);
       toast.success('EVENTZ installed successfully! 🎉');
-    });
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
@@ -80,9 +120,30 @@ export function PWAInstallPrompt() {
     setShowPrompt(false);
   };
 
-  const handleDismiss = () => {
+  const handleDismiss = async () => {
     setShowPrompt(false);
-    localStorage.setItem('eventz-pwa-dismissed', new Date().toISOString());
+    const dismissedDate = new Date().toISOString();
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const profile = await getProfile(user.id);
+        const currentPreferences = profile?.preferences || {};
+        
+        await updateProfile(user.id, {
+          preferences: {
+            ...currentPreferences,
+            pwaDismissed: dismissedDate
+          }
+        });
+      } else {
+        localStorage.setItem('eventz-pwa-dismissed', dismissedDate);
+      }
+    } catch (error) {
+      console.error('Error saving dismissal:', error);
+      // Fallback
+      localStorage.setItem('eventz-pwa-dismissed', dismissedDate);
+    }
   };
 
   // Don't show if already installed or no prompt available

@@ -1,18 +1,33 @@
 import { Sparkles, Users, Zap, TrendingUp, CheckCircle, ArrowRight, Video, DollarSign, BarChart3, Globe, Shield, Headphones } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { supabase } from '../utils/supabase/client';
+import { updateProfile } from '../utils/supabase/api';
 
 interface BecomeOrganizerProps {
   onComplete: () => void;
 }
 
 export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
-  const handleBecomeOrganizer = () => {
-    localStorage.setItem('eventz-is-organizer', 'true');
-    toast.success('Welcome to EVENTZ Organizers! 🎉', {
-      description: 'You can now create and manage events',
-      duration: 3000,
-    });
-    onComplete();
+  const handleBecomeOrganizer = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error('You must be logged in to become an organizer');
+        return;
+      }
+
+      await updateProfile(user.id, { is_organizer: true });
+      
+      toast.success('Welcome to EVENTZ Organizers! 🎉', {
+        description: 'You can now create and manage events',
+        duration: 3000,
+      });
+      onComplete();
+    } catch (error) {
+      console.error('Error becoming organizer:', error);
+      toast.error('Failed to update profile. Please try again.');
+    }
   };
 
   return (

@@ -6,45 +6,15 @@ import {
   Lock, 
   Video, 
   Shield,
-  Mail,
-  Phone,
-  MapPin,
-  Building2,
-  Globe,
   Camera,
-  Save,
-  Trash2,
-  LogOut,
-  Check,
-  Mic2,
-  Store,
-  Users,
-  Briefcase,
-  Trophy,
-  Music,
-  Wine,
-  Coffee,
-  UtensilsCrossed,
-  Headphones,
-  Radio,
-  Mic,
-  Heart,
-  GraduationCap,
-  School,
-  Building,
-  Church,
-  Laptop,
-  ShoppingBag,
-  Plane,
-  Film,
-  Dumbbell,
-  Activity,
-  Flame,
-  Target
+  Check
 } from 'lucide-react';
-import { useState } from 'react';
-import { toast } from 'sonner@2.0.3';
-import organizerProfileImg from 'figma:asset/f341912f973a7295b54e9b5936a0020cb0975622.png';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { supabase } from '../utils/supabase/client';
+import { updateProfile, getProfile } from '../utils/supabase/api';
+
+const organizerProfileImg = 'https://via.placeholder.com/150';
 
 interface OrganizerSettingsModalProps {
   onClose: () => void;
@@ -52,17 +22,16 @@ interface OrganizerSettingsModalProps {
 
 export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps) {
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'streaming' | 'payments' | 'privacy' | 'account'>('profile');
-  const organizerProfile = JSON.parse(localStorage.getItem('eventz-organizer-profile') || '{}');
 
   const [profileData, setProfileData] = useState({
-    organizerName: organizerProfile.organizerName || '',
-    organizerType: organizerProfile.organizerType || '',
-    venueSubType: organizerProfile.venueSubType || '',
-    email: organizerProfile.email || '',
-    phone: organizerProfile.phone || '',
-    location: organizerProfile.location || '',
-    bio: organizerProfile.bio || '',
-    website: organizerProfile.website || '',
+    organizerName: '',
+    organizerType: '',
+    venueSubType: '',
+    email: '',
+    phone: '',
+    location: '',
+    bio: '',
+    website: '',
   });
 
   const [notifications, setNotifications] = useState({
@@ -102,30 +71,138 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
     paymentMethod: 'bank',
   });
 
-  const handleSaveProfile = () => {
-    const updatedProfile = { ...organizerProfile, ...profileData };
-    localStorage.setItem('eventz-organizer-profile', JSON.stringify(updatedProfile));
-    toast.success('Profile updated successfully! ✅');
+  const [loading, setLoading] = useState(true);
+
+  if (loading) {
+     // Optional: Add a loading state or just return null
+  }
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const profile = await getProfile(user.id);
+          if (profile) {
+            // Parse organizer type and subtype
+            let type = profile.organizer_type || '';
+            let subType = '';
+            if (type.includes(' - ')) {
+              const parts = type.split(' - ');
+              type = parts[0];
+              subType = parts[1] || '';
+            }
+
+            setProfileData({
+              organizerName: profile.full_name || '',
+              organizerType: type,
+              venueSubType: subType,
+              email: profile.contact_email || user.email || '',
+              phone: profile.phone || '',
+              location: profile.location || '',
+              bio: profile.bio || '',
+              website: profile.website || '',
+            });
+
+            if (profile.notification_settings) setNotifications(profile.notification_settings);
+            if (profile.streaming_settings) setStreamingSettings(profile.streaming_settings);
+            if (profile.privacy_settings) setPrivacySettings(profile.privacy_settings);
+            if (profile.payment_settings) setPaymentData(profile.payment_settings);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast.error('Failed to load profile settings');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSaveProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const finalOrganizerType = profileData.venueSubType
+        ? `${profileData.organizerType} - ${profileData.venueSubType}`
+        : profileData.organizerType;
+
+      await updateProfile(user.id, {
+        full_name: profileData.organizerName,
+        organizer_type: finalOrganizerType,
+        contact_email: profileData.email,
+        phone: profileData.phone,
+        location: profileData.location,
+        bio: profileData.bio,
+        website: profileData.website,
+      });
+      toast.success('Profile updated successfully! ✅');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    }
   };
 
-  const handleSaveNotifications = () => {
-    localStorage.setItem('eventz-organizer-notifications', JSON.stringify(notifications));
-    toast.success('Notification preferences saved! 🔔');
+  const handleSaveNotifications = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await updateProfile(user.id, {
+        notification_settings: notifications
+      });
+      toast.success('Notification preferences saved! 🔔');
+    } catch (error) {
+      console.error('Error saving notifications:', error);
+      toast.error('Failed to save notification preferences');
+    }
   };
 
-  const handleSaveStreaming = () => {
-    localStorage.setItem('eventz-streaming-settings', JSON.stringify(streamingSettings));
-    toast.success('Streaming settings updated! 📹');
+  const handleSaveStreaming = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await updateProfile(user.id, {
+        streaming_settings: streamingSettings
+      });
+      toast.success('Streaming settings updated! 📹');
+    } catch (error) {
+      console.error('Error saving streaming settings:', error);
+      toast.error('Failed to save streaming settings');
+    }
   };
 
-  const handleSavePrivacy = () => {
-    localStorage.setItem('eventz-privacy-settings', JSON.stringify(privacySettings));
-    toast.success('Privacy settings updated! 🔒');
+  const handleSavePrivacy = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await updateProfile(user.id, {
+        privacy_settings: privacySettings
+      });
+      toast.success('Privacy settings updated! 🔒');
+    } catch (error) {
+      console.error('Error saving privacy settings:', error);
+      toast.error('Failed to save privacy settings');
+    }
   };
 
-  const handleSavePayment = () => {
-    localStorage.setItem('eventz-payment-settings', JSON.stringify(paymentData));
-    toast.success('Payment information saved securely! 💳');
+  const handleSavePayment = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await updateProfile(user.id, {
+        payment_settings: paymentData
+      });
+      toast.success('Payment information saved securely! 💳');
+    } catch (error) {
+      console.error('Error saving payment info:', error);
+      toast.error('Failed to save payment information');
+    }
   };
 
   const tabs = [

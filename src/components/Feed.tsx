@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Heart, MessageCircle, Share2, Bookmark, MoreVertical, Clock, MapPin, Ticket, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, Video, Flame, Zap, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { Heart, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '../utils/supabase/client';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, Post as ApiPost } from '../utils/supabase/api';
+
 import { UserProfileModal } from './UserProfileModal';
 import { Conversation, Message } from '../App';
 import { ShareModal } from './ShareModal';
@@ -52,6 +55,7 @@ interface Post {
   timestamp: string;
   likes: number;
   comments: Comment[];
+  comments_count?: number;
   shares: number;
   views?: number;
   isLiked: boolean;
@@ -72,379 +76,121 @@ interface Notification {
   read: boolean;
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: 1,
-    type: 'follower',
-    title: 'New Follower',
-    message: 'Sarah Mitchell started following you',
-    time: '10 minutes ago',
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-    read: false,
-  },
-  {
-    id: 2,
-    type: 'reminder',
-    title: 'Event Reminder',
-    message: 'Jazz Night Downtown starts in 2 hours. Don\'t forget!',
-    time: '2 hours ago',
-    image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=100&h=100&fit=crop',
-    read: false,
-  },
-  {
-    id: 3,
-    type: 'follower',
-    title: 'New Follower',
-    message: 'Marcus Rodriguez started following you',
-    time: '5 hours ago',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-    read: false,
-  },
-  {
-    id: 4,
-    type: 'update',
-    title: 'Event Update',
-    message: 'Summer Music Festival: New artist lineup announcement!',
-    time: '1 day ago',
-    image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=100&h=100&fit=crop',
-    read: true,
-  },
-  {
-    id: 5,
-    type: 'follower',
-    title: 'New Follower',
-    message: 'DJ Alex Thompson started following you',
-    time: '1 day ago',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
-    read: true,
-  },
-];
-
-const mockPosts: Post[] = [
-  {
-    id: 1,
-    user: {
-      name: 'Alice Johnson',
-      username: '@alicejohnson',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-      verified: true,
-      isOrganizer: false,
-    },
-    content: {
-      text: 'Excited to attend my first Summer Music Festival at the National Stadium! The lineup looks incredible. You have to hear it yourself when #eventslive',
-      image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=800&h=600&fit=crop',
-      hashtags: ['#eventslive'],
-    },
-    timestamp: '2h',
-    likes: 142,
-    comments: [],
-    shares: 8,
-    isLiked: false,
-    isSaved: false,
-    recommended: true,
-  },
-  {
-    id: 9,
-    user: {
-      name: 'Marcus Thompson',
-      username: '@marcusthompson',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-      verified: false,
-      isOrganizer: false,
-    },
-    content: {
-      text: 'What an incredible weekend at the Music & Arts Festival! 🎨🎵 Here are my favorite moments from the event. Swipe to see all the vibes! ✨',
-      images: [
-        'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=600&fit=crop',
-        'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800&h=600&fit=crop',
-        'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=600&fit=crop',
-        'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&h=600&fit=crop',
-      ],
-      hashtags: ['#MusicFestival', '#ArtsCulture', '#WeekendVibes'],
-    },
-    timestamp: '4h',
-    likes: 328,
-    comments: [],
-    shares: 45,
-    isLiked: true,
-    isSaved: false,
-  },
-  {
-    id: 7,
-    user: {
-      name: 'EVENTZ Official',
-      username: '@eventz',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
-      verified: true,
-      isOrganizer: true,
-    },
-    event: {
-      id: 7,
-      name: 'Afrobeat Live 2026',
-      date: 'Jan 10, 2026',
-      location: 'Diamond Platnumz Arena, DSM',
-      image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=600&fit=crop',
-      price: 'TZS 50,000',
-    },
-    content: {
-      text: '🔥 Relive the BEST moments from Afrobeat Live! Watch epic performances, backstage access, and crowd reactions. 5 exclusive clips from last night!',
-      hashtags: ['#AfrobeatLive', '#EventHighlights'],
-    },
-    timestamp: '3h',
-    likes: 892,
-    comments: [],
-    shares: 156,
-    views: 15420,
-    isLiked: false,
-    isSaved: false,
-    isHighlight: true,
-    totalHighlightViews: 15420,
-    highlights: [
-      {
-        id: 1,
-        thumbnail: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=600&fit=crop',
-        duration: '0:45',
-        title: 'Opening Performance',
-        views: 4230,
-      },
-      {
-        id: 2,
-        thumbnail: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=600&fit=crop',
-        duration: '1:12',
-        title: 'Crowd Goes Wild',
-        views: 5890,
-      },
-      {
-        id: 3,
-        thumbnail: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=600&fit=crop',
-        duration: '0:38',
-        title: 'Backstage Access',
-        views: 2150,
-      },
-      {
-        id: 4,
-        thumbnail: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=600&fit=crop',
-        duration: '1:05',
-        title: 'Epic DJ Set',
-        views: 3890,
-      },
-      {
-        id: 5,
-        thumbnail: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400&h=600&fit=crop',
-        duration: '0:52',
-        title: 'Finale Fireworks',
-        views: 6340,
-      },
-    ],
-  },
-  {
-    id: 2,
-    user: {
-      name: 'Aarya Desai',
-      username: '@aryadesai',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400',
-      verified: false,
-    },
-    content: {
-      text: 'Spent a beautiful afternoon at The Contemporary Home exhibit. The pastel trend is real and it\'s gorgeous! ✨ #ArtExhibit #HomeDecor',
-      image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&h=600&fit=crop',
-      hashtags: ['#ArtExhibit', '#HomeDecor'],
-    },
-    timestamp: '5h',
-    likes: 289,
-    comments: [],
-    shares: 15,
-    isLiked: false,
-    isSaved: false,
-    recommended: false,
-  },
-  {
-    id: 3,
-    user: {
-      name: 'Events Team',
-      username: '@eventsteam',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
-      verified: true,
-      isOrganizer: true,
-    },
-    event: {
-      id: 3,
-      name: 'Summer Music Festival 2024',
-      date: 'Feb 14, 2026',
-      time: '6:00 PM - 11:00 PM',
-      location: 'National Stadium, Dar es Salaam',
-      image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=800&h=600&fit=crop',
-      price: 'TZS 30,000',
-    },
-    content: {
-      text: 'Can\'t wait for the Annual Tech Innovation Expo! Join us to see the hottest startups and you will love it. So many amazing companies are showcasing this year. Meet you there!',
-      image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=600&fit=crop',
-      hashtags: ['#TechExpo', '#Innovation', '#Startups'],
-    },
-    timestamp: '8h',
-    likes: 567,
-    comments: [
-      {
-        id: 1,
-        user: {
-          name: 'Alex Rodriguez',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-        },
-        text: 'This looks absolutely amazing! Can\'t wait to grab my ticket. Are there still early bird tickets?',
-        timestamp: '2 hours ago',
-      },
-      {
-        id: 2,
-        user: {
-          name: 'Sarah Kim',
-          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-        },
-        text: 'The last event was fantastic. I\'m totally booking for this one.',
-        timestamp: '1 hour ago',
-      },
-    ],
-    shares: 34,
-    views: 2145,
-    isLiked: true,
-    isSaved: false,
-    recommended: false,
-  },
-  {
-    id: 4,
-    user: {
-      name: 'David Lee',
-      username: '@davidlee',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
-      verified: false,
-    },
-    content: {
-      text: 'Sunday morning coffee ritual at my favorite spot. The perfect way to start the week ahead. #SundayVibes #CoffeeLover',
-      image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&h=600&fit=crop',
-      hashtags: ['#SundayVibes', '#CoffeeLover'],
-    },
-    timestamp: '1d',
-    likes: 234,
-    comments: [],
-    shares: 12,
-    isLiked: false,
-    isSaved: false,
-    recommended: false,
-  },
-  {
-    id: 5,
-    user: {
-      name: 'Sarah Chen',
-      username: '@sarahchen',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400',
-      verified: true,
-    },
-    content: {
-      text: 'Great coffee shop visit with old friends! #eventslive',
-      image: 'https://images.unsplash.com/photo-1501492673258-26e617140c02?w=800&h=600&fit=crop',
-      hashtags: ['#eventslive'],
-    },
-    timestamp: '1d',
-    likes: 178,
-    comments: [],
-    shares: 5,
-    isLiked: false,
-    isSaved: false,
-    recommended: true,
-  },
-  {
-    id: 8,
-    user: {
-      name: 'Events Team',
-      username: '@eventsteam',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
-      verified: true,
-      isOrganizer: true,
-    },
-    event: {
-      id: 8,
-      name: 'Jazz Night Downtown',
-      date: 'Jan 6, 2026',
-      location: 'Downtown Jazz Club, DSM',
-      image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=800&h=600&fit=crop',
-      price: 'TZS 25,000',
-    },
-    content: {
-      text: '.sax Jazz Night was MAGICAL! Here are the top moments you missed - smooth vibes, incredible solos, and an unforgettable atmosphere.',
-      hashtags: ['#JazzNight', '#LiveMusic'],
-    },
-    timestamp: '1d',
-    likes: 523,
-    comments: [],
-    shares: 89,
-    views: 8740,
-    isLiked: false,
-    isSaved: false,
-    isHighlight: true,
-    totalHighlightViews: 8740,
-    highlights: [
-      {
-        id: 1,
-        thumbnail: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=400&h=600&fit=crop',
-        duration: '1:23',
-        title: 'Saxophone Solo',
-        views: 3120,
-      },
-      {
-        id: 2,
-        thumbnail: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=400&h=600&fit=crop',
-        duration: '0:58',
-        title: 'Piano Tribute',
-        views: 2340,
-      },
-      {
-        id: 3,
-        thumbnail: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=600&fit=crop',
-        duration: '1:45',
-        title: 'Full Band Jam',
-        views: 3280,
-      },
-    ],
-  },
-  {
-    id: 6,
-    user: {
-      name: 'Buki Jenard',
-      username: '@bukijenard',
-      avatar: 'https://i.ibb.co/3GrDQfJ/B-Profile.jpg',
-      verified: false,
-    },
-    content: {
-      text: 'Best night ever at the Afrobeat concert! The energy was incredible 🔥 #LiveMusic #Afrobeat',
-      image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=600&fit=crop',
-      hashtags: ['#LiveMusic', '#Afrobeat'],
-    },
-    timestamp: '2d',
-    likes: 445,
-    comments: [],
-    shares: 28,
-    isLiked: true,
-    isSaved: false,
-    recommended: false,
-  },
-];
-
 type FilterTab = 'all' | 'following' | 'organizers' | 'trending';
 
 interface FeedProps {
   conversations: Conversation[];
   onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => Conversation;
   onSendMessage: (conversationId: number, messageText: string) => void;
+  onMarkAsRead?: (conversationId: number) => void;
 }
 
-export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage }: FeedProps) {
-  const [posts, setPosts] = useState<Post[]>(mockPosts);
+export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage, onMarkAsRead }: FeedProps) {
+  const [posts, setPosts] = useState<Post[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUser(user);
+        
+        const data = await getPosts({ currentUserId: user?.id });
+        if (data && data.length > 0) {
+          const mappedPosts: Post[] = data.map((p: ApiPost) => ({
+            id: p.id,
+            user: {
+              name: p.user?.full_name || p.user?.username || 'Unknown User',
+              username: p.user?.username || '@unknown',
+              avatar: p.user?.avatar_url || 'https://via.placeholder.com/150',
+              verified: p.user?.verified || false,
+              isOrganizer: p.user?.is_organizer || false,
+            },
+            event: p.event ? {
+              id: p.event.id,
+              name: p.event.title,
+              date: p.event.date,
+              time: p.event.time,
+              location: p.event.location,
+              image: p.event.image_url,
+              price: p.event.price_range,
+            } : undefined,
+            content: {
+              text: p.content,
+              images: p.image_urls,
+              image: p.image_urls?.[0],
+              hashtags: p.hashtags,
+            },
+            timestamp: new Date(p.created_at).toLocaleDateString(),
+            likes: p.likes_count || 0,
+            comments: [], // Will load on expand
+            comments_count: p.comments_count || 0,
+            shares: 0,
+            views: p.views || 0,
+            isLiked: p.is_liked || false,
+            isSaved: p.is_saved || false,
+            recommended: false,
+            isHighlight: !!p.video_url,
+            highlights: p.video_url ? [{
+              id: p.id,
+              thumbnail: p.image_urls?.[0] || 'https://via.placeholder.com/300x500', // Vertical thumbnail fallback
+              duration: p.duration || '0:30',
+              title: p.content || 'Video Highlight',
+              views: p.views || 0,
+            }] : undefined,
+          }));
+          setPosts(mappedPosts);
+        } else {
+          setPosts([]);
+        }
+      } catch (error) {
+        console.error('Error loading posts:', error);
+        toast.error('Failed to load posts');
+        setPosts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadPosts();
+
+    const handlePostsUpdated = () => {
+      loadPosts();
+    };
+    window.addEventListener('postsUpdated', handlePostsUpdated);
+
+    return () => {
+      window.removeEventListener('postsUpdated', handlePostsUpdated);
+    };
+  }, []);
+
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [commentText, setCommentText] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showMessages, setShowMessages] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+
+  // Sync activeConversation with global conversations updates and mark as read
+  useEffect(() => {
+    if (activeConversation) {
+      const updatedConv = globalConversations.find(c => c.id === activeConversation.id);
+      if (updatedConv) {
+        // Only update if there are changes to messages or unread count
+        if (updatedConv.messages.length !== activeConversation.messages.length || 
+            updatedConv.unreadCount !== activeConversation.unreadCount) {
+          setActiveConversation(updatedConv);
+        }
+        
+        // Mark as read if needed
+        if (updatedConv.unreadCount > 0 && onMarkAsRead) {
+           onMarkAsRead(updatedConv.id);
+        }
+      }
+    }
+  }, [globalConversations, activeConversation, onMarkAsRead]);
+
   const [messageText, setMessageText] = useState('');
   const [selectedUserProfile, setSelectedUserProfile] = useState<{ name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -481,7 +227,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   };
 
-  const toggleLike = (postId: number, e?: React.MouseEvent) => {
+  const toggleLike = async (postId: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
     // Show thumbs up animation at click position
@@ -499,6 +245,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       }, 1000);
     }
     
+    // Optimistic update
     setPosts(posts.map(post => {
       if (post.id === postId) {
         const newIsLiked = !post.isLiked;
@@ -518,10 +265,21 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         likes: selectedPost.isLiked ? selectedPost.likes - 1 : selectedPost.likes + 1,
       });
     }
+
+    if (currentUser) {
+      try {
+        await toggleLikePost(postId, currentUser.id);
+      } catch (error) {
+        console.error('Error toggling like:', error);
+        toast.error('Failed to update like');
+      }
+    }
   };
 
-  const toggleSave = (postId: number, e?: React.MouseEvent) => {
+  const toggleSave = async (postId: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    
+    // Optimistic update
     setPosts(posts.map(post => {
       if (post.id === postId) {
         const newIsSaved = !post.isSaved;
@@ -539,6 +297,15 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         isSaved: !selectedPost.isSaved,
       });
     }
+
+    if (currentUser) {
+      try {
+        await toggleSavePost(postId, currentUser.id);
+      } catch (error) {
+        console.error('Error toggling save:', error);
+        toast.error('Failed to update saved post');
+      }
+    }
   };
 
   const sharePost = async (post: Post, e?: React.MouseEvent) => {
@@ -546,7 +313,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     
     const shared = await handleShare({
       title: `Check out this post from ${post.user.name}`,
-      text: post.content || 'Check out this amazing post on EVENTZ!',
+      text: post.content.text || 'Check out this amazing post on EVENTZ!',
       url: window.location.href,
     });
     
@@ -554,7 +321,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     if (!shared) {
       setShareModalData({
         title: `Post from ${post.user.name}`,
-        text: post.content || 'Check out this amazing post on EVENTZ!',
+        text: post.content.text || 'Check out this amazing post on EVENTZ!',
         url: window.location.href,
       });
       setShowShareModal(true);
@@ -567,7 +334,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
 
   const closePostDetail = () => {
     setSelectedPost(null);
-    setCommentText('');
   };
 
   const handleDoubleTap = (post: Post, e: React.MouseEvent) => {
@@ -580,66 +346,101 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       
       // Only like if not already liked
       if (!post.isLiked) {
-        // Show animation at tap position
-        setLikeAnimation({
+        toggleLike(post.id, e);
+      } else {
+        // If already liked, just show the animation again without API call
+         setLikeAnimation({
           show: true,
           x: e.clientX,
           y: e.clientY,
         });
         
-        // Hide animation after 1 second
         setTimeout(() => {
           setLikeAnimation({ show: false, x: 0, y: 0 });
         }, 1000);
-        
-        // Update the post to liked state
-        setPosts(posts.map(p => {
-          if (p.id === post.id) {
-            return {
-              ...p,
-              isLiked: true,
-              likes: p.likes + 1,
-            };
-          }
-          return p;
-        }));
       }
     }
     
     setLastTap(currentTime);
   };
 
-  const toggleComments = (postId: number, e: React.MouseEvent) => {
+  const toggleComments = async (postId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    setExpandedPostId(expandedPostId === postId ? null : postId);
+    
+    if (expandedPostId === postId) {
+      setExpandedPostId(null);
+      return;
+    }
+
+    setExpandedPostId(postId);
+    
+    // Load comments for this post
+    try {
+      const comments = await getPostComments(postId);
+      if (comments) {
+        setPosts(posts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: comments.map((c: any) => ({
+                id: c.id,
+                user: {
+                  name: c.user?.full_name || c.user?.username || 'Unknown',
+                  avatar: c.user?.avatar_url || 'https://via.placeholder.com/150',
+                },
+                text: c.text,
+                timestamp: new Date(c.created_at).toLocaleDateString(),
+              }))
+            };
+          }
+          return post;
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading comments:', error);
+      toast.error('Failed to load comments');
+    }
   };
 
-  const handlePostComment = (postId: number) => {
+  const handlePostComment = async (postId: number) => {
     const text = commentTexts[postId];
     if (!text || !text.trim()) return;
 
-    const newComment: Comment = {
-      id: Date.now(),
-      user: {
-        name: 'George Mukulasi',
-        avatar: 'https://i.ibb.co/3559hRDP/G-Profile.jpg',
-      },
-      text: text.trim(),
-      timestamp: 'Just now',
-    };
+    if (!currentUser) {
+      toast.error('Please sign in to comment');
+      return;
+    }
 
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          comments: [...post.comments, newComment],
-        };
-      }
-      return post;
-    }));
+    try {
+      const newCommentData = await createPostComment(postId, currentUser.id, text.trim());
+      
+      const newComment: Comment = {
+        id: newCommentData.id,
+        user: {
+          name: newCommentData.user?.full_name || newCommentData.user?.username || 'Unknown',
+          avatar: newCommentData.user?.avatar_url || 'https://via.placeholder.com/150',
+        },
+        text: newCommentData.text,
+        timestamp: 'Just now',
+      };
 
-    setCommentTexts({ ...commentTexts, [postId]: '' });
-    toast.success('Reply posted! 💬');
+      setPosts(posts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            comments: [...(post.comments || []), newComment],
+            comments_count: (post.comments_count || 0) + 1
+          };
+        }
+        return post;
+      }));
+
+      setCommentTexts({ ...commentTexts, [postId]: '' });
+      toast.success('Reply posted! 💬');
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      toast.error('Failed to post comment');
+    }
   };
 
   const handleSendMessage = () => {
@@ -1111,7 +912,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   {/* Add Comment Input */}
                   <div className="flex gap-3 items-start">
                     <img
-                      src="https://i.ibb.co/3559hRDP/G-Profile.jpg"
+                      src={currentUser?.user_metadata?.avatar_url || currentUser?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.email || 'User')}&background=random`}
                       alt="You"
                       className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
                     />
@@ -1175,7 +976,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           ))}
 
           {/* Empty State */}
-          {filteredPosts.length === 0 && (
+          {!isLoading && filteredPosts.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 px-6">
               <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center mb-4">
                 <Sparkles className="w-10 h-10 text-purple-600" />
@@ -1520,7 +1321,12 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                     .map((conversation) => (
                     <div
                       key={conversation.id}
-                      onClick={() => setActiveConversation(conversation)}
+                      onClick={() => {
+                        setActiveConversation(conversation);
+                        if (conversation.unreadCount > 0 && onMarkAsRead) {
+                          onMarkAsRead(conversation.id);
+                        }
+                      }}
                       className="px-5 py-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
                       <div className="flex items-start gap-3">

@@ -4,6 +4,8 @@ import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, Graduation
 import { toast } from 'sonner@2.0.3';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
+import { supabase } from '../utils/supabase/client';
+import { createEvent, updateEvent, uploadImage } from '../utils/supabase/api';
 
 interface EventForm {
   title: string;
@@ -24,24 +26,68 @@ interface CreateEventProps {
 
 export function CreateEvent({ onBack, event }: CreateEventProps) {
   const [formData, setFormData] = useState<EventForm>({
-    title: event?.title || 'Summer Music Festival 2025',
+    title: event?.title || '',
     category: event?.category || 'Entertainment',
-    subcategory: event?.subcategory || 'Live Performances',
-    date: event?.date || '2025-08-15',
-    time: event?.time || '18:00',
-    location: event?.location || 'Central Park, Dar es Salaam',
-    price: event?.price || 'TSh 50,000 - 150,000',
-    description: event?.description || 'Join us for the biggest music festival of the year! Featuring top artists, HD live streaming, and an unforgettable experience under the stars.',
-    coverImage: event?.coverImage || 'https://images.unsplash.com/photo-1709731191876-899e32264420?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb25jZXJ0JTIwc3RhZ2UlMjBsaWdodHN8ZW58MXx8fHwxNzY2OTAxMzcxfDA&ixlib=rb-4.1.0&q=80&w=1080',
+    subcategory: event?.subcategory || '',
+    date: event?.date || '',
+    time: event?.time || '',
+    location: event?.location || '',
+    price: event?.price_range || event?.price || '',
+    description: event?.description || '',
+    coverImage: event?.image_url || event?.coverImage || null,
   });
 
+  const [savedEventId, setSavedEventId] = useState<number | undefined>(event?.id);
+  const [currentStatus, setCurrentStatus] = useState<string>(event?.status || 'draft');
   const [showPreview, setShowPreview] = useState(false);
   const [showSuccessScreen, setShowSuccessScreen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const isEditing = !!event;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const isEditing = !!savedEventId;
 
-  // Get organizer profile from localStorage
-  const organizerProfile = JSON.parse(localStorage.getItem('eventz-organizer-profile') || '{}');
+  // Auto-save functionality
+  useEffect(() => {
+    const autoSave = async () => {
+      // Don't auto-save if no title (minimum requirement) or if submitting or if event is published
+      if (!formData.title || isSubmitting || currentStatus === 'published' || showSuccessScreen) return;
+
+      setIsAutoSaving(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const eventData = {
+          title: formData.title,
+          description: formData.description,
+          date: formData.date,
+          time: formData.time,
+          location: formData.location,
+          category: formData.category,
+          subcategory: formData.subcategory,
+          image_url: formData.coverImage || '',
+          price_range: formData.price,
+          organizer_id: user.id,
+          status: 'draft',
+        };
+
+        if (savedEventId) {
+          await updateEvent(savedEventId, eventData);
+        } else {
+          const newEvent = await createEvent(eventData);
+          setSavedEventId(newEvent.id);
+        }
+      } catch (error) {
+        console.error('Error auto-saving draft:', error);
+      } finally {
+        setIsAutoSaving(false);
+      }
+    };
+
+    const timeoutId = setTimeout(autoSave, 3000); // Auto-save after 3 seconds of inactivity
+    return () => clearTimeout(timeoutId);
+  }, [formData, savedEventId, isSubmitting, currentStatus, showSuccessScreen]);
 
   const categories = [
     { name: 'Entertainment', icon: Music, gradient: 'from-purple-600 to-pink-600' },
@@ -102,7 +148,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
@@ -117,17 +163,19 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         return;
       }
 
-      // Convert to base64 for persistent storage
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        handleInputChange('coverImage', base64String);
-        toast.success('Cover image uploaded! 📸');
-      };
-      reader.onerror = () => {
-        toast.error('Failed to upload image');
-      };
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      const toastId = toast.loading('Uploading image...');
+
+      try {
+        const publicUrl = await uploadImage(file, 'events');
+        handleInputChange('coverImage', publicUrl);
+        toast.success('Cover image uploaded! 📸', { id: toastId });
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        toast.error('Failed to upload image', { id: toastId });
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -135,46 +183,104 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     document.getElementById('cover-image-input')?.click();
   };
 
-  const handleSaveDraft = () => {
-    toast.success('Event saved as draft! 📝', {
-      description: 'You can continue editing later',
-    });
+  const handleSaveDraft = async () => {
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please sign in to save drafts');
+        return;
+      }
+
+      const eventData = {
+        title: formData.title || 'Untitled Draft',
+        description: formData.description,
+        date: formData.date,
+        time: formData.time,
+        location: formData.location,
+        category: formData.category,
+        subcategory: formData.subcategory,
+        image_url: formData.coverImage || '',
+        price_range: formData.price,
+        organizer_id: user.id,
+        status: 'draft',
+      };
+
+      if (isEditing && savedEventId) {
+        await updateEvent(savedEventId, eventData);
+        setCurrentStatus('draft');
+        toast.success('Draft updated! 📝');
+      } else {
+        const newEvent = await createEvent(eventData);
+        setSavedEventId(newEvent.id);
+        setCurrentStatus('draft');
+        toast.success('Draft saved! 📝', {
+          description: 'You can continue editing later',
+        });
+      }
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast.error('Failed to save draft');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handlePublish = () => {
-    if (isEditing) {
-      // Update existing event
-      toast.success('Event updated successfully! ✏️', {
-        description: 'Your changes have been saved',
-      });
-      
-      const existingEvents = JSON.parse(localStorage.getItem('eventz-published-events') || '[]');
-      const updatedEvents = existingEvents.map((e: any) => 
-        e.id === event.id ? { ...event, ...formData } : e
-      );
-      localStorage.setItem('eventz-published-events', JSON.stringify(updatedEvents));
-      
-      if (onBack) onBack();
-    } else {
-      // Create new event
-      toast.success('Event published successfully! 🎉', {
-        description: 'Your event is now live on EVENTZ',
-      });
-      setShowSuccessScreen(true);
-      
-      // Save published event to localStorage
-      const publishedEvent = {
-        id: Date.now(),
-        ...formData,
-        publishedAt: new Date().toISOString(),
-        organizerName: organizerProfile.organizerName,
-        views: 0,
-        interested: 0,
-        shares: 0,
+  const handlePublish = async () => {
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please sign in to publish events');
+        return;
+      }
+
+      const eventData = {
+        title: formData.title,
+        description: formData.description,
+        date: formData.date,
+        time: formData.time,
+        location: formData.location,
+        category: formData.category,
+        subcategory: formData.subcategory,
+        image_url: formData.coverImage || '',
+        price_range: formData.price,
+        organizer_id: user.id,
+        status: 'published',
       };
-      
-      const existingEvents = JSON.parse(localStorage.getItem('eventz-published-events') || '[]');
-      localStorage.setItem('eventz-published-events', JSON.stringify([publishedEvent, ...existingEvents]));
+
+      if (isEditing && savedEventId) {
+        // Update existing event
+        await updateEvent(savedEventId, eventData);
+        setCurrentStatus('published');
+        
+        toast.success('Event updated successfully! ✏️', {
+          description: 'Your changes have been saved',
+        });
+        
+        // Dispatch update event
+        window.dispatchEvent(new Event('eventsUpdated'));
+        
+        if (onBack) onBack();
+      } else {
+        // Create new event
+        const newEvent = await createEvent(eventData);
+        setSavedEventId(newEvent.id);
+        setCurrentStatus('published');
+
+        toast.success('Event published successfully! 🎉', {
+          description: 'Your event is now live on EVENTZ',
+        });
+        setShowSuccessScreen(true);
+        
+        // Dispatch update event
+        window.dispatchEvent(new Event('eventsUpdated'));
+      }
+    } catch (error) {
+      console.error('Error publishing event:', error);
+      toast.error('Failed to publish event');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -296,56 +402,50 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               View Dashboard
             </button>
           </div>
-
-          {/* Create Another Event */}
-          <button
-            onClick={() => {
-              setShowSuccessScreen(false);
-              setFormData({
-                title: '',
-                category: '',
-                subcategory: '',
-                date: '',
-                time: '',
-                location: '',
-                price: '',
-                description: '',
-                coverImage: null,
-              });
-            }}
-            className="w-full mt-4 px-6 py-4 text-gray-600 hover:text-purple-600 transition-colors text-sm"
-          >
-            + Create Another Event
-          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 via-white to-purple-50 min-h-screen pb-24">
-      {/* Organizer Header */}
-      <div className="bg-[#8A2BE2] px-6 py-8 shadow-lg">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4">
-            {/* Back Button - Show when editing or onBack is provided */}
-            {(isEditing || onBack) && (
-              <button
-                onClick={onBack}
-                className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center hover:bg-white/30 transition-all"
-              >
-                <ArrowLeft className="w-6 h-6 text-white" />
-              </button>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Header */}
+      <div className="bg-white sticky top-0 z-10 px-4 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-6 h-6 text-gray-900" />
+          </button>
+          <h1 className="text-xl font-bold text-gray-900">
+            {isEditing ? 'Edit Event' : 'Create Event'}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowPreview(true)}
+            className="p-2 text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+          >
+            <Eye className="w-6 h-6" />
+          </button>
+          <button 
+            onClick={handlePublish}
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-70"
+          >
+            {isSubmitting ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : isAutoSaving ? (
+              <div className="flex items-center gap-2">
+                 <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                 <span className="text-xs">Saving...</span>
+              </div>
+            ) : (
+              <Save className="w-4 h-4" />
             )}
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <p className="text-white/80 text-xs mb-1">{isEditing ? 'Editing Event' : 'Organizing as'}</p>
-              <h1 className="text-white text-2xl">{isEditing ? formData.title : organizerProfile.organizerName || 'Organizer'}</h1>
-              <p className="text-white/90 text-sm">{organizerProfile.organizerType || 'Event Organizer'}</p>
-            </div>
-          </div>
+            {isEditing ? 'Save' : 'Publish'}
+          </button>
         </div>
       </div>
 
@@ -550,13 +650,14 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               <span className="text-sm font-medium truncate">Back</span>
             </button>
           )}
-          <button
+          {/* Save Draft button removed until backend support is added */}
+          {/* <button
             onClick={handleSaveDraft}
             className="flex-1 flex items-center justify-center gap-1.5 border-2 border-gray-300 text-gray-700 py-3 rounded-xl hover:bg-gray-50 transition-colors min-w-0"
           >
             <Save className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="text-sm font-medium truncate">Save</span>
-          </button>
+          </button> */}
           <button
             onClick={() => setShowPreview(!showPreview)}
             className="flex-1 flex items-center justify-center gap-1.5 border-2 border-cyan-500 text-cyan-600 py-3 rounded-xl hover:bg-cyan-50 transition-colors min-w-0"

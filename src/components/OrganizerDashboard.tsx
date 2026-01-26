@@ -6,9 +6,11 @@ import { createPortal } from 'react-dom';
 import { EventAnalyticsModal } from './EventAnalyticsModal';
 import { HighlightViewerModal } from './HighlightViewerModal';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
-import { ShareModal } from './ShareModal';
+import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, MoreVertical, Edit, TrendingUp } from 'lucide-react';
+import { supabase } from '../utils/supabase/client';
+import { getEvents, createEvent, getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents } from '../utils/supabase/api';
 
 interface OrganizerDashboardProps {
   onCreateEvent: () => void;
@@ -16,18 +18,112 @@ interface OrganizerDashboardProps {
 }
 
 export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDashboardProps) {
-  const organizerProfile = JSON.parse(localStorage.getItem('eventz-organizer-profile') || '{}');
+  const [organizerProfile, setOrganizerProfile] = useState<any>({});
   const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
+  const [draftEvents, setDraftEvents] = useState<any[]>([]);
   const [selectedEventForAnalytics, setSelectedEventForAnalytics] = useState<any>(null);
   const [selectedHighlight, setSelectedHighlight] = useState<any>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [organizerPosts, setOrganizerPosts] = useState<any[]>([]);
+  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'published' | 'drafts'>('published');
+  const [stats, setStats] = useState({
+    totalEvents: 0,
+    followers: 0,
+    totalViews: 0,
+    revenue: 0,
+    liveStreams: 0,
+    ticketsSold: 0
+  });
 
-  // Load published events from localStorage
+  // Load published events and profile from Supabase
   useEffect(() => {
-    const events = JSON.parse(localStorage.getItem('eventz-published-events') || '[]');
-    setPublishedEvents(events);
+    const loadOrganizerData = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Load profile
+        const profile = await getProfile(user.id);
+        if (profile) {
+          setOrganizerProfile({
+            organizerName: profile.full_name || profile.username || 'Organizer',
+            organizerType: profile.organizer_type || 'Event Organizer',
+            location: profile.location || 'Location not set',
+            ...profile
+          });
+        }
+
+        // Load stats
+        const statsData = await getOrganizerStats(user.id);
+        setStats(statsData);
+
+        // Load events
+        const userEvents = await getOrganizerEvents(user.id);
+        if (userEvents) {
+          const published = userEvents.filter((e: any) => e.status === 'published' || !e.status);
+          const drafts = userEvents.filter((e: any) => e.status === 'draft');
+
+          const mapEvent = (e: any) => ({
+             ...e,
+             coverImage: e.image_url || e.coverImage, // Map image_url to coverImage
+             price: e.price_range || e.price // Map price_range to price
+          });
+
+          setPublishedEvents(published.map(mapEvent));
+          setDraftEvents(drafts.map(mapEvent));
+        }
+
+        // Load posts (highlights)
+        const userPosts = await getPosts({ currentUserId: user.id, authorId: user.id });
+        if (userPosts) {
+          setOrganizerPosts(userPosts.map((p: any) => ({
+             id: p.id,
+             type: 'post',
+             mediaType: p.image_urls && p.image_urls.length > 0 ? 'image' : 'text',
+             title: p.content ? p.content.substring(0, 30) + '...' : 'New Post',
+             description: p.content,
+             image: p.image_urls ? p.image_urls[0] : 'https://via.placeholder.com/300',
+             likes: p.likes_count || 0,
+             comments: p.comments_count || 0,
+             shares: 0,
+             timestamp: new Date(p.created_at).toLocaleDateString(),
+             isLiked: p.is_liked
+          })));
+        }
+
+      } catch (error) {
+        console.error('Error loading organizer data:', error);
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadOrganizerData();
+    
+    // Listen for updates
+    const handleEventsUpdated = () => {
+      loadOrganizerData();
+    };
+    const handlePostsUpdated = () => {
+      loadOrganizerData();
+    };
+
+    window.addEventListener('eventsUpdated', handleEventsUpdated);
+    window.addEventListener('postsUpdated', handlePostsUpdated);
+    
+    return () => {
+      window.removeEventListener('eventsUpdated', handleEventsUpdated);
+      window.removeEventListener('postsUpdated', handlePostsUpdated);
+    };
   }, []);
 
   // Helper function to format numbers with k notation
@@ -38,104 +134,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
     return num.toString();
   };
 
-  // Mock data - in real app this would come from backend
-  const stats = {
-    totalEvents: publishedEvents.length,
-    followers: 3847,
-    totalViews: publishedEvents.reduce((sum, e) => sum + (e.views || 0), 0),
-    revenue: 0,
-    liveStreams: 0,
-    ticketsSold: 0,
-  };
-
-  const recentEvents = [
-    // Empty for new organizers
-  ];
-
-  // Mock highlights/posts data
-  const highlights = [
-    {
-      id: 1,
-      type: 'event',
-      mediaType: 'image' as 'image' | 'video',
-      title: 'Harmonize Live in Concert',
-      description: 'Amazing turnout with over 5,000 attendees! Thank you to everyone who joined us. The energy was incredible!',
-      image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=600&fit=crop',
-      likes: 342,
-      comments: 28,
-      shares: 15,
-      timestamp: '2 hours ago',
-      isLiked: false
-    },
-    {
-      id: 2,
-      type: 'stream',
-      mediaType: 'video' as 'image' | 'video',
-      title: 'Live Stream Highlights',
-      description: 'Peak viewers: 2.5k | Stream duration: 3h 45m | HD Quality maintained throughout',
-      image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&h=600&fit=crop',
-      video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      likes: 189,
-      comments: 12,
-      shares: 8,
-      timestamp: '1 day ago',
-      isLiked: false
-    },
-    {
-      id: 3,
-      type: 'announcement',
-      mediaType: 'image' as 'image' | 'video',
-      title: 'New Event Coming Soon',
-      description: 'Get ready for our biggest event yet! Early bird tickets available from next week.',
-      image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=600&fit=crop',
-      likes: 256,
-      comments: 34,
-      shares: 22,
-      timestamp: '3 days ago',
-      isLiked: false
-    },
-    {
-      id: 4,
-      type: 'behind-the-scenes',
-      mediaType: 'video' as 'image' | 'video',
-      title: 'Behind the Scenes',
-      description: 'Check out what goes into making an amazing show! Setup, soundcheck, and more.',
-      image: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&h=600&fit=crop',
-      video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      likes: 421,
-      comments: 56,
-      shares: 31,
-      timestamp: '5 days ago',
-      isLiked: false
-    },
-    {
-      id: 5,
-      type: 'recap',
-      mediaType: 'image' as 'image' | 'video',
-      title: 'Last Night Was Epic!',
-      description: 'Thank you to everyone who came out! Here are some of the best moments.',
-      image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&h=600&fit=crop',
-      likes: 512,
-      comments: 67,
-      shares: 43,
-      timestamp: '1 week ago',
-      isLiked: false
-    },
-    {
-      id: 6,
-      type: 'teaser',
-      mediaType: 'video' as 'image' | 'video',
-      title: 'Event Teaser - Coming Soon',
-      description: 'Something big is coming... Stay tuned for the official announcement!',
-      image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=600&fit=crop',
-      video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      likes: 678,
-      comments: 89,
-      shares: 54,
-      timestamp: '2 weeks ago',
-      isLiked: false
-    }
-  ];
+  const highlights = organizerPosts.length > 0 ? organizerPosts : [];
 
   const handleShare = async (highlight: typeof highlights[0]) => {
     const shared = await shareUtil({
@@ -155,19 +154,38 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
     }
   };
 
-  const handleLike = (highlightId: number) => {
-    const updatedHighlights = highlights.map(highlight => {
-      if (highlight.id === highlightId) {
-        return {
-          ...highlight,
-          isLiked: !highlight.isLiked,
-          likes: highlight.isLiked ? highlight.likes - 1 : highlight.likes + 1
-        };
-      }
-      return highlight;
-    });
-    setSelectedHighlight(updatedHighlights.find(h => h.id === highlightId));
-    toast.success('Liked!');
+  const handleLike = async (highlightId: number) => {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            toast.error('Please sign in to like posts');
+            return;
+        }
+
+        // Optimistic update
+        const updatedPosts = organizerPosts.map(post => {
+            if (post.id === highlightId) {
+                return {
+                    ...post,
+                    isLiked: !post.isLiked,
+                    likes: post.isLiked ? post.likes - 1 : post.likes + 1
+                };
+            }
+            return post;
+        });
+        setOrganizerPosts(updatedPosts);
+        
+        // Find if this is a like or unlike action based on previous state
+        const post = organizerPosts.find(p => p.id === highlightId);
+        if (post) {
+            await toggleLikePost(highlightId, user.id);
+            toast.success(post.isLiked ? 'Unliked' : 'Liked!');
+        }
+    } catch (error) {
+        console.error('Error toggling like:', error);
+        toast.error('Failed to update like');
+        // Revert on error - re-fetch or revert state
+    }
   };
 
   return (
@@ -186,6 +204,24 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         document.body
       )}
 
+      {/* Create Post Modal */}
+      <CreatePostModal
+        isOpen={showCreatePostModal}
+        onClose={() => setShowCreatePostModal(false)}
+        onPostCreated={() => {
+          // The component listens to eventsUpdated, but let's also manually trigger a reload or rely on the event if the modal emits one?
+          // The modal calls onPostCreated. We should reload posts.
+          // loadOrganizerData is inside useEffect, we can't call it directly easily unless we extract it or use a trigger state.
+          // But wait, the useEffect listens to 'eventsUpdated'. Does CreatePostModal emit it?
+          // CreatePostModal calls createPost API.
+          // Let's check CreatePostModal again. It calls onPostCreated callback.
+          // In OrganizerDashboard, we can use window.dispatchEvent(new Event('eventsUpdated')) or just trigger a reload.
+          // Actually, OrganizerDashboard has a listener for 'eventsUpdated'.
+          // So if we dispatch it here, it will reload.
+          window.dispatchEvent(new Event('eventsUpdated'));
+        }}
+      />
+
       <div className="bg-gray-50 min-h-screen pb-24">
         {/* Professional Header - Solid Purple */}
         <div className="bg-[#8A2BE2] px-6 py-12 shadow-sm border-b border-gray-200">
@@ -194,7 +230,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm overflow-hidden relative">
                   <img 
-                    src={organizerProfileImg}
+                    src={organizerProfile.avatar_url || organizerProfileImg}
                     alt="Organizer Profile"
                     className="w-full h-full object-cover"
                   />
@@ -227,21 +263,33 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             {/* Combined Stats Card - Professional Minimal Layout */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center gap-5">
-                <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 self-start">
                   <BarChart3 className="w-7 h-7 text-[#8A2BE2]" />
                 </div>
-                <div className="flex-1 grid grid-cols-3 gap-8">
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-8">
                   <div>
                     <p className="text-gray-500 text-sm mb-1">Followers</p>
-                    <p className="text-gray-900 text-2xl">{formatNumber(stats.followers)}</p>
+                    <p className="text-gray-900 text-2xl font-semibold">{formatNumber(stats.followers)}</p>
                   </div>
                   <div>
                     <p className="text-gray-500 text-sm mb-1">Events</p>
-                    <p className="text-gray-900 text-2xl">{stats.totalEvents}</p>
+                    <p className="text-gray-900 text-2xl font-semibold">{stats.totalEvents}</p>
                   </div>
                   <div>
                     <p className="text-gray-500 text-sm mb-1">Views</p>
-                    <p className="text-gray-900 text-2xl">{formatNumber(stats.totalViews)}</p>
+                    <p className="text-gray-900 text-2xl font-semibold">{formatNumber(stats.totalViews)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm mb-1">Tickets Sold</p>
+                    <p className="text-gray-900 text-2xl font-semibold">{formatNumber(stats.ticketsSold)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm mb-1">Revenue</p>
+                    <p className="text-gray-900 text-2xl font-semibold">TSh {formatNumber(stats.revenue)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm mb-1">Live Streams</p>
+                    <p className="text-gray-900 text-2xl font-semibold">{stats.liveStreams}</p>
                   </div>
                 </div>
               </div>
@@ -279,7 +327,10 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-gray-900 text-xl">Event Highlights & Posts</h2>
-                <button className="text-[#8A2BE2] hover:text-[#7825d4] text-sm flex items-center gap-1.5">
+                <button 
+                  onClick={() => setShowCreatePostModal(true)}
+                  className="text-[#8A2BE2] hover:text-[#7825d4] text-sm flex items-center gap-1.5"
+                >
                   <PlusCircle className="w-4 h-4" />
                   <span>Create Post</span>
                 </button>
@@ -364,7 +415,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                   <span className="text-green-600 text-xs bg-green-50 px-2 py-1 rounded-full">+0%</span>
                 </div>
                 <p className="text-gray-600 text-sm mb-1">Total Revenue</p>
-                <p className="text-gray-900 text-2xl">TSh 0</p>
+                <p className="text-gray-900 text-2xl">TSh {formatNumber(stats.revenue)}</p>
               </div>
 
               {/* Tickets Sold */}
@@ -467,26 +518,61 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
               </button>
             </div>
 
-            {publishedEvents.length === 0 ? (
+            <div className="flex gap-6 mb-6 border-b border-gray-200">
+              <button 
+                className={`pb-3 text-sm font-medium transition-colors relative ${
+                  activeTab === 'published' 
+                    ? 'text-[#8A2BE2]' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                onClick={() => setActiveTab('published')}
+              >
+                Published ({publishedEvents.length})
+                {activeTab === 'published' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8A2BE2] rounded-t-full"></div>
+                )}
+              </button>
+              <button 
+                className={`pb-3 text-sm font-medium transition-colors relative ${
+                  activeTab === 'drafts' 
+                    ? 'text-[#8A2BE2]' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                onClick={() => setActiveTab('drafts')}
+              >
+                Drafts ({draftEvents.length})
+                {activeTab === 'drafts' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8A2BE2] rounded-t-full"></div>
+                )}
+              </button>
+            </div>
+
+            {(activeTab === 'published' ? publishedEvents : draftEvents).length === 0 ? (
               <div className="bg-white rounded-lg p-16 border border-gray-200 text-center shadow-sm">
                 <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Calendar className="w-10 h-10 text-[#8A2BE2]" />
                 </div>
-                <h3 className="text-gray-900 text-xl mb-2">No Events Yet</h3>
+                <h3 className="text-gray-900 text-xl mb-2">
+                  {activeTab === 'published' ? 'No Events Yet' : 'No Drafts'}
+                </h3>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Start creating amazing events with HD live streaming and reach thousands of people worldwide.
+                  {activeTab === 'published' 
+                    ? "Start creating amazing events with HD live streaming and reach thousands of people worldwide."
+                    : "You don't have any saved drafts."}
                 </p>
-                <button
-                  onClick={onCreateEvent}
-                  className="bg-[#8A2BE2] text-white px-8 py-3.5 rounded-lg hover:bg-[#7825d4] transition-all inline-flex items-center gap-2.5 mx-auto"
-                >
-                  <PlusCircle className="w-5 h-5" />
-                  <span>Create Your First Event</span>
-                </button>
+                {activeTab === 'published' && (
+                  <button
+                    onClick={onCreateEvent}
+                    className="bg-[#8A2BE2] text-white px-8 py-3.5 rounded-lg hover:bg-[#7825d4] transition-all inline-flex items-center gap-2.5 mx-auto"
+                  >
+                    <PlusCircle className="w-5 h-5" />
+                    <span>Create Your First Event</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {publishedEvents.map((event) => (
+                {(activeTab === 'published' ? publishedEvents : draftEvents).map((event) => (
                   <div key={event.id} className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-lg transition-all group">
                     {/* Event Image */}
                     <div className="relative h-52 overflow-hidden bg-gradient-to-br from-purple-600 to-pink-600">
