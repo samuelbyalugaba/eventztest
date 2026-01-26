@@ -4,8 +4,9 @@
   import path from 'path';
 
   export default defineConfig({
-    plugins: [react()],
-    resolve: {
+  plugins: [react()],
+  base: '/',
+  resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
         'vaul@1.1.2': 'vaul',
