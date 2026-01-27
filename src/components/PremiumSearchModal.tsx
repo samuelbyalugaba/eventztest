@@ -1,7 +1,6 @@
 import { X, Search, TrendingUp, Clock, MapPin, Calendar, Users, Music, Building2, User } from 'lucide-react';
-import { useState } from 'react';
-import luchyRanksAvatar from 'figma:asset/74606642c7f231741bf6c70f7f2129f3e732666c.png';
-import bukiJenardAvatar from 'figma:asset/02485972c54a6bf7f7c04171917ba9e94f4cda51.png';
+import { useState, useEffect } from 'react';
+import { searchProfiles, Profile } from '../utils/supabase/api';
 
 interface PremiumSearchModalProps {
   onClose: () => void;
@@ -13,99 +12,39 @@ interface PremiumSearchModalProps {
 export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSelect }: PremiumSearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState<'all' | 'events' | 'venues' | 'people'>('all');
+  const [peopleResults, setPeopleResults] = useState<Profile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Mock recent searches
-  const recentSearches = [
-    'Summer Music Festival',
-    'Jazz Night',
-    'Business Networking',
-  ];
+  // Mock recent searches - can be replaced with local storage later
+  const recentSearches: string[] = [];
 
-  // Mock trending searches
-  const trendingSearches = [
-    { query: 'Concerts', icon: '🎵', count: '2.3k' },
-    { query: 'Club Nights', icon: '🎉', count: '1.8k' },
-    { query: 'Workshops', icon: '📚', count: '1.2k' },
-    { query: 'Food Festivals', icon: '🍕', count: '956' },
-  ];
+  // Mock trending searches - removed or fetch from API if available
+  const trendingSearches: any[] = [];
 
-  // Mock venue suggestions
-  const venues = [
-    { name: 'Mlimani City', type: 'Mall', location: 'Dar es Salaam', icon: '🏢' },
-    { name: 'Hyatt Regency', type: 'Hotel', location: 'Dar es Salaam', icon: '🏨' },
-    { name: 'The Slow Leopard', type: 'Lounge', location: 'Dar es Salaam', icon: '🍸' },
-    { name: 'Level 8', type: 'Club', location: 'Dar es Salaam', icon: '🎊' },
-  ];
+  // Mock venue suggestions - removed
+  const venues: any[] = [];
 
-  // Mock people suggestions with real names
-  const people = [
-    { 
-      name: 'Brian George', 
-      type: 'Organizer', 
-      followers: '18.5k', 
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-      verified: true,
-      location: 'Dar es Salaam',
-    },
-    { 
-      name: 'Buki Jenard', 
-      type: 'Attendee', 
-      followers: '2.8k', 
-      avatar: 'https://i.ibb.co/3GrDQfJ/B-Profile.jpg',
-      verified: false,
-      location: 'Dar es Salaam',
-      aliases: ['Luchy Ranks'], // Alternative names
-    },
-    { 
-      name: 'Luchy Ranks', 
-      type: 'Attendee', 
-      followers: '2.8k', 
-      avatar: 'https://i.ibb.co/NdFdCBzD/L-profile.jpg',
-      verified: false,
-      location: 'Dar es Salaam',
-      aliases: ['Buki Jenard'], // Alternative names
-    },
-    { 
-      name: 'Sarah Johnson', 
-      type: 'Organizer', 
-      followers: '12.5k', 
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-      verified: true,
-      location: 'Atlanta',
-    },
-    { 
-      name: 'Michael Chen', 
-      type: 'Performer', 
-      followers: '24.3k', 
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
-      verified: true,
-      location: 'New York',
-    },
-    { 
-      name: 'Emma Williams', 
-      type: 'Organizer', 
-      followers: '8.2k', 
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400',
-      verified: false,
-      location: 'Zanzibar',
-    },
-    { 
-      name: 'David Martinez', 
-      type: 'Attendee', 
-      followers: '3.1k', 
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
-      verified: false,
-      location: 'Atlanta',
-    },
-    { 
-      name: 'Amani Hassan', 
-      type: 'Performer', 
-      followers: '15.7k', 
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400',
-      verified: true,
-      location: 'Dar es Salaam',
-    },
-  ];
+  useEffect(() => {
+    const searchPeople = async () => {
+      if (searchQuery.trim().length < 2) {
+        setPeopleResults([]);
+        return;
+      }
+      
+      setIsSearching(true);
+      try {
+        const results = await searchProfiles(searchQuery);
+        setPeopleResults(results || []);
+      } catch (error) {
+        console.error('Error searching profiles:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchPeople, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   // Filter events based on search query
   const filteredEvents = events.filter(event => 
@@ -115,16 +54,7 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
     event.subcategory.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 5);
 
-  // Filter people based on search query
-  const filteredPeople = people.filter(person => {
-    const searchLower = searchQuery.toLowerCase();
-    const nameMatch = person.name.toLowerCase().includes(searchLower);
-    const typeMatch = person.type.toLowerCase().includes(searchLower);
-    const locationMatch = person.location.toLowerCase().includes(searchLower);
-    const aliasMatch = person.aliases?.some(alias => alias.toLowerCase().includes(searchLower)) || false;
-    
-    return nameMatch || typeMatch || locationMatch || aliasMatch;
-  }).slice(0, 5);
+  const filteredPeople = peopleResults;
 
   const categories = [
     { id: 'all', name: 'All', icon: '🔍' },
@@ -187,111 +117,15 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
         {/* Content */}
         <div className="px-6 py-6 max-w-4xl mx-auto">
           {searchQuery === '' ? (
-            <>
-              {/* Recent Searches */}
-              {recentSearches.length > 0 && (
-                <div className="mb-8">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Clock className="w-5 h-5 text-gray-400" />
-                    <h3 className="text-gray-900">Recent Searches</h3>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {recentSearches.map((search, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSearchQuery(search)}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                      >
-                        {search}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Trending Searches */}
-              <div className="mb-8">
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="w-5 h-5 text-purple-600" />
-                  <h3 className="text-gray-900">Trending Now</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {trendingSearches.map((trend, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSearchQuery(trend.query)}
-                      className="flex items-center gap-3 p-4 bg-purple-50 rounded-xl hover:shadow-md transition-all border border-purple-100"
-                    >
-                      <span className="text-2xl">{trend.icon}</span>
-                      <div className="flex-1 text-left">
-                        <p className="text-gray-900">{trend.query}</p>
-                        <p className="text-purple-600 text-xs">{trend.count} searches</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mb-6">
+                <Search className="w-10 h-10 text-purple-600" />
               </div>
-
-              {/* Popular Venues */}
-              {(searchCategory === 'all' || searchCategory === 'venues') && (
-                <div className="mb-8">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Building2 className="w-5 h-5 text-cyan-600" />
-                    <h3 className="text-gray-900">Popular Venues</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {venues.map((venue, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSearchQuery(venue.name)}
-                        className="w-full flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-cyan-300 hover:shadow-md transition-all"
-                      >
-                        <div className="w-12 h-12 bg-cyan-100 rounded-xl flex items-center justify-center text-2xl">
-                          {venue.icon}
-                        </div>
-                        <div className="flex-1 text-left">
-                          <p className="text-gray-900">{venue.name}</p>
-                          <p className="text-gray-500 text-sm">{venue.type} • {venue.location}</p>
-                        </div>
-                        <MapPin className="w-5 h-5 text-gray-400" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Suggested People/Organizers */}
-              {(searchCategory === 'all' || searchCategory === 'people') && (
-                <div className="mb-8">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Users className="w-5 h-5 text-pink-600" />
-                    <h3 className="text-gray-900">Event Organizers</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {filteredPeople.map((person, index) => (
-                      <button
-                        key={index}
-                        onClick={() => onPersonSelect && onPersonSelect(person)}
-                        className="w-full flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-pink-300 hover:shadow-md transition-all"
-                      >
-                        <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl">
-                          <img 
-                            src={person.avatar} 
-                            alt={person.name}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <p className="text-gray-900">{person.name}</p>
-                          <p className="text-gray-500 text-sm">{person.type} • {person.followers} followers</p>
-                        </div>
-                        <User className="w-5 h-5 text-gray-400" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Search Eventz</h3>
+              <p className="text-gray-500 max-w-xs">
+                Find events, organizers, and people in your community.
+              </p>
+            </div>
           ) : (
             <>
               {/* Search Results - People */}
@@ -302,9 +136,9 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                     <p className="text-gray-500 text-sm">{filteredPeople.length} found</p>
                   </div>
                   <div className="space-y-3">
-                    {filteredPeople.map((person, index) => (
+                    {filteredPeople.map((person) => (
                       <button
-                        key={index}
+                        key={person.id}
                         onClick={() => {
                           onPersonSelect && onPersonSelect(person);
                           onClose();
@@ -313,21 +147,24 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                       >
                         <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                           <img 
-                            src={person.avatar} 
-                            alt={person.name}
+                            src={person.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff'} 
+                            alt={person.full_name || person.username}
                             className="w-full h-full object-cover"
                           />
                         </div>
                         <div className="flex-1 text-left">
                           <div className="flex items-center gap-2">
-                            <p className="text-gray-900">{person.name}</p>
+                            <p className="text-gray-900">{person.full_name || person.username}</p>
                             {person.verified && (
                               <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                               </svg>
                             )}
                           </div>
-                          <p className="text-gray-500 text-sm">{person.type} • {person.location} • {person.followers} followers</p>
+                          <p className="text-gray-500 text-sm">
+                            {person.is_organizer ? (person.organizer_type || 'Organizer') : 'User'} 
+                            {person.location && ` • ${person.location}`}
+                          </p>
                         </div>
                       </button>
                     ))}

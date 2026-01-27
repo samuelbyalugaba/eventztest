@@ -3,7 +3,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Bell, Send, Star } from 'lucide-react';
 import { OrganizerProfile } from './OrganizerProfile';
 import { toast } from 'sonner';
-import { PurchasedTicket, Conversation, Message } from '../App';
+import { PurchasedTicket, Conversation, Message } from '../types';
 import { PremiumSearchModal } from './PremiumSearchModal';
 import { UserProfileModal } from './UserProfileModal';
 import { SetAlertModal } from './SetAlertModal';
@@ -13,9 +13,6 @@ import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
 import { getEvents, getSavedEvents, toggleSaveEvent, createTicket, getEventAttendees, getPosts, Event as ApiEvent } from '../utils/supabase/api';
-
-const harmonizePoster = "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop";
-const hennessyPoster = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop";
 
 interface EventDetailModalProps {
   event: ApiEvent;
@@ -472,7 +469,7 @@ function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, onPurch
                 {recentAttendees.length > 0 ? recentAttendees.slice(0, 4).map((attendee, idx) => (
                   <ImageWithFallback
                     key={idx}
-                    src={attendee.avatar_url || 'https://via.placeholder.com/100'}
+                    src={attendee.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff'}
                     alt={attendee.full_name || 'Attendee'}
                     className="w-10 h-10 rounded-full border-2 border-white object-cover"
                   />
@@ -554,7 +551,7 @@ interface EventDetailsProps {
   onTicketPurchase: (ticket: PurchasedTicket) => void;
   purchasedTickets: PurchasedTicket[];
   conversations: Conversation[];
-  onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => Conversation;
+  onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
   onSendMessage: (conversationId: number, messageText: string) => void;
 }
 
@@ -796,8 +793,8 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
       }
 
       // Generate ticket
-      const ticketNumber = `EVT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      const barcode = Math.random().toString().substr(2, 20);
+      const ticketNumber = `EVT-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
+      const barcode = crypto.randomUUID();
       const price = eventToPurchase.streaming?.virtualPrice || eventToPurchase.price_range;
       
       const ticketData = {
@@ -893,8 +890,8 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
       // Generate tickets for each quantity
       const tickets: PurchasedTicket[] = [];
       for (let i = 0; i < normalTicketQuantity; i++) {
-        const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-        const barcode = Math.random().toString().substr(2, 20);
+        const ticketNumber = `TKT-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
+        const barcode = crypto.randomUUID();
         
         const ticketData = {
           user_id: user.id,
@@ -968,8 +965,8 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
       // Generate tickets for each quantity
       const tickets: PurchasedTicket[] = [];
       for (let i = 0; i < tierTicketQuantity; i++) {
-        const ticketNumber = `${selectedTier.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-        const barcode = Math.random().toString().substr(2, 20);
+        const ticketNumber = `${selectedTier.toUpperCase()}-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
+        const barcode = crypto.randomUUID();
         
         const ticketData = {
           user_id: user.id,

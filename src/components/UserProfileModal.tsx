@@ -77,17 +77,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
   const photosForViewer = user.photos?.map((photo, index) => ({
     id: photo.id,
     url: photo.image,
-    likes: Math.floor(Math.random() * 500) + 50,
+    likes: 0,
     eventName: `Event ${index + 1}`,
-  })) || [];
-
-  const videosForViewer = user.photos?.slice(0, 6).map((photo, index) => ({
-    id: photo.id,
-    thumbnail: photo.image,
-    duration: `${Math.floor(Math.random() * 3) + 1}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
-    views: Math.floor(Math.random() * 10000) + 500,
-    likes: Math.floor(Math.random() * 500) + 50,
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
   })) || [];
 
   return (
@@ -388,54 +379,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <p className="text-gray-500 text-sm">No photos to show</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Videos Tab */}
-            {activeTab === 'videos' && (
-              <div>
-                {user.photos && user.photos.length > 0 ? (
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-gray-900">Videos</h3>
-                      <span className="text-gray-500 text-sm">{Math.min(user.photos.length, 6)} videos</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {user.photos.slice(0, 6).map((photo) => (
-                        <div 
-                          key={photo.id} 
-                          className="relative aspect-video rounded-xl overflow-hidden cursor-pointer group"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMediaViewerIndex(user.photos!.indexOf(photo));
-                            setMediaViewerType('video');
-                            setShowMediaViewer(true);
-                          }}
-                        >
-                          <ImageWithFallback
-                            src={photo.image}
-                            alt={`Video ${photo.id}`}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors"></div>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                              <Play className="w-4 h-4 text-purple-600 ml-0.5" />
-                            </div>
-                          </div>
-                          <div className="absolute bottom-2 right-2 bg-black/70 px-2 py-0.5 rounded text-white text-xs">
-                            {Math.floor(Math.random() * 3) + 1}:{Math.floor(Math.random() * 60).toString().padStart(2, '0')}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">No videos to show</p>
                   </div>
                 )}
               </div>

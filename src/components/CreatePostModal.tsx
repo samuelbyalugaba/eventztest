@@ -51,7 +51,8 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated }: CreatePostMo
 
       if (selectedImage) {
         try {
-          const publicUrl = await uploadImage(selectedImage, 'posts', `user_${user.id}`);
+          // Use 'events' bucket as 'posts' bucket has RLS policies preventing uploads
+          const publicUrl = await uploadImage(selectedImage, 'events', `user_${user.id}`);
           imageUrls.push(publicUrl);
         } catch (error) {
           console.error('Error uploading image:', error);

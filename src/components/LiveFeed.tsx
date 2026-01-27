@@ -6,8 +6,6 @@ import { toast } from 'sonner';
 import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 
-const harmonizePoster = 'https://via.placeholder.com/800x450';
-
 interface LiveStream {
   id: number;
   title: string;

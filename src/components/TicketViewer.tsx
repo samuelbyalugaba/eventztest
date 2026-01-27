@@ -158,15 +158,9 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
                 <div className="w-32 h-32 bg-white rounded-2xl p-2 shadow-lg">
                   <div className="w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
                     {/* QR Code Placeholder - In production, use a real QR code library */}
-                    <div className="grid grid-cols-8 gap-0.5 p-2">
-                      {[...Array(64)].map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-2 h-2 ${
-                            Math.random() > 0.5 ? 'bg-black' : 'bg-transparent'
-                          }`}
-                        />
-                      ))}
+                    <div className="flex flex-col items-center justify-center p-4 bg-white/50 rounded-lg">
+                      <QrCode className="w-16 h-16 text-purple-900/80 mb-2" />
+                      <p className="text-[10px] text-purple-900/60 font-mono font-bold tracking-wider">SCAN ENTRY</p>
                     </div>
                   </div>
                 </div>

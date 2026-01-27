@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Play, ChevronLeft, MessageCircle, Phone } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MediaViewer } from './MediaViewer';
-import { PurchasedTicket } from '../App';
+import { PurchasedTicket } from '../types';
 import { toast } from 'sonner';
 import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, Event as ApiEvent, Profile } from '../utils/supabase/api';
 
@@ -104,12 +104,12 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           name: profile.full_name || profile.username || 'Organizer',
           bio: profile.bio || 'No bio available',
           coverImage: profile.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
-          avatar: profile.avatar_url || 'https://via.placeholder.com/150',
+          avatar: profile.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
           location: profile.location || 'Tanzania',
           totalEvents: stats.totalEvents,
           followers: stats.followers,
           verified: profile.verified || false,
-          rating: 5.0, // Placeholder as we don't have ratings yet
+          rating: stats.avgRating || 0,
           phone: profile.phone,
           whatsapp: profile.phone, // Assuming phone is whatsapp for now
           highlights: posts.slice(0, 5).map(p => ({
@@ -213,8 +213,8 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           const ticketData = {
             user_id: currentUser.id,
             event_id: event.id,
-            ticket_number: `TKT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            barcode: `${Date.now()}-${i}`,
+            ticket_number: `TKT-${crypto.randomUUID().split('-')[0].toUpperCase()}-${Date.now().toString().slice(-4)}`,
+            barcode: crypto.randomUUID(),
             price: event.price,
             purchase_date: new Date().toISOString(),
             customer_name: name,
@@ -229,12 +229,16 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       const purchasedTicket: PurchasedTicket = {
         id: `temp-${Date.now()}`,
         eventId: event.id,
-        eventName: event.title || event.name,
+        eventTitle: event.title || event.name,
+        eventDate: event.date,
+        eventLocation: event.location,
+        ticketNumber: `TKT-${Date.now()}`,
+        barcode: `${Date.now()}`,
+        customerName: name,
+        customerEmail: email,
         ticketType: 'General Admission',
-        quantity: quantity,
-        price: 0, 
+        price: event.price, 
         purchaseDate: new Date().toISOString(),
-        qrCode: 'mock-qr-code'
       };
 
       if (onTicketPurchase) {
@@ -287,9 +291,9 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       video: h.video,
       title: h.title,
       mediaType: h.video ? 'video' as const : 'photo' as const,
-      likes: Math.floor(Math.random() * 800) + 100,
-      comments: Math.floor(Math.random() * 50) + 10,
-      shares: Math.floor(Math.random() * 30) + 5,
+      likes: 0, // No likes count available in highlights structure yet
+      comments: 0,
+      shares: 0,
     })),
     ...organizerData.photos.map((p) => ({
       id: `photo-${p.id}`,
@@ -297,9 +301,9 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       video: undefined,
       title: p.eventName || `${organizerData.name} Gallery`,
       mediaType: 'photo' as const,
-      likes: Math.floor(Math.random() * 600) + 50,
-      comments: Math.floor(Math.random() * 40) + 5,
-      shares: Math.floor(Math.random() * 20) + 2,
+      likes: 0,
+      comments: 0,
+      shares: 0,
     })),
   ];
 
@@ -531,11 +535,12 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           .filter(item => item.mediaType === mediaViewerType)
           .map((item) => {
             if (item.mediaType === 'video') {
+              const numericId = parseInt(item.id.replace(/\D/g, '')) || 0;
               return {
-                id: parseInt(item.id.replace(/\D/g, '')),
+                id: numericId,
                 thumbnail: item.image,
                 duration: '2:30',
-                views: Math.floor(Math.random() * 5000) + 1000,
+                views: (numericId * 123) % 5000 + 1000,
                 likes: item.likes,
                 videoUrl: item.video!,
                 eventName: item.title,

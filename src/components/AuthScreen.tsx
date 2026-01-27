@@ -113,7 +113,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   id: data.user.id,
                   email: formData.email,
                   full_name: formData.fullName,
-                  username: formData.email.split('@')[0] + Math.floor(Math.random() * 1000),
+                  username: formData.email.split('@')[0] + Math.floor(Date.now() % 10000),
                   avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName)}&background=random`,
                 }
               ]);

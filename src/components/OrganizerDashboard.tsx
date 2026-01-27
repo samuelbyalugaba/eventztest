@@ -11,6 +11,7 @@ import { handleShare as shareUtil } from '../utils/share';
 import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, MoreVertical, Edit, TrendingUp } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents } from '../utils/supabase/api';
+import { ShareModal } from './ShareModal';
 
 interface OrganizerDashboardProps {
   onCreateEvent: () => void;
@@ -29,7 +30,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [isLoading, setIsLoading] = useState(true);
   const [organizerPosts, setOrganizerPosts] = useState<any[]>([]);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'published' | 'drafts'>('published');
+  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'tickets' | 'analytics'>('overview');
   const [stats, setStats] = useState({
     totalEvents: 0,
     followers: 0,
@@ -42,11 +43,11 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   // Load published events and profile from Supabase
   useEffect(() => {
     const loadOrganizerData = async () => {
-      setIsLoading(true);
+      // setIsLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          setIsLoading(false);
+          // setIsLoading(false);
           return;
         }
 
@@ -90,7 +91,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
              mediaType: p.image_urls && p.image_urls.length > 0 ? 'image' : 'text',
              title: p.content ? p.content.substring(0, 30) + '...' : 'New Post',
              description: p.content,
-             image: p.image_urls ? p.image_urls[0] : 'https://via.placeholder.com/300',
+             image: p.image_urls ? p.image_urls[0] : 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
              likes: p.likes_count || 0,
              comments: p.comments_count || 0,
              shares: 0,

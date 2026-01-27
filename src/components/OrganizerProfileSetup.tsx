@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { User, Mail, Phone, MapPin, Globe, Instagram, Facebook, Twitter, ArrowRight, Building2, Mic2, Store, Users, Briefcase, Trophy, Check, Music, Wine, Coffee, UtensilsCrossed, Headphones, Radio, Mic, Heart, GraduationCap, School, Building, Church, Laptop, ShoppingBag, Plane, Film, Dumbbell, Activity, Flame, Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '../utils/supabase/client';
+import { updateProfile } from '../utils/supabase/api';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;

@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { updateProfile, getProfile } from '../utils/supabase/api';
 
-const organizerProfileImg = 'https://via.placeholder.com/150';
+const FALLBACK_AVATAR = "https://ui-avatars.com/api/?background=random&color=fff";
 
 interface OrganizerSettingsModalProps {
   onClose: () => void;
@@ -265,7 +265,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   <div className="flex items-center gap-6">
                     <div className="relative">
                       <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100">
-                        <img src={organizerProfileImg} alt="Profile" className="w-full h-full object-cover" />
+                        <img src={profileData.avatarUrl || FALLBACK_AVATAR} alt="Profile" className="w-full h-full object-cover" />
                       </div>
                       <button className="absolute bottom-0 right-0 w-7 h-7 bg-[#8A2BE2] rounded-full flex items-center justify-center text-white hover:bg-[#7825d4]">
                         <Camera className="w-4 h-4" />

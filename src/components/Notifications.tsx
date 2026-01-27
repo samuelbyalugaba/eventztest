@@ -1,10 +1,10 @@
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Bell, Calendar, Ticket, UserPlus } from 'lucide-react';
-import { PurchasedTicket } from '../App';
+import { PurchasedTicket } from '../types';
 import { useState } from 'react';
 
 interface Notification {
-  id: number;
+  id: string | number;
   type: 'reminder' | 'update' | 'ticket' | 'follower';
   title: string;
   message: string;
@@ -18,62 +18,7 @@ interface Notification {
   };
 }
 
-const notifications: Notification[] = [
-  {
-    id: 1,
-    type: 'follower',
-    title: 'New Follower',
-    message: 'Sarah Mitchell started following you',
-    time: '10 minutes ago',
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-    read: false,
-  },
-  {
-    id: 2,
-    type: 'reminder',
-    title: 'Event Reminder',
-    message: 'Jazz Night Downtown starts in 2 hours. Don\'t forget!',
-    time: '2 hours ago',
-    image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=100&h=100&fit=crop',
-    read: false,
-  },
-  {
-    id: 3,
-    type: 'follower',
-    title: 'New Follower',
-    message: 'Marcus Rodriguez started following you',
-    time: '5 hours ago',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-    read: false,
-  },
-  {
-    id: 4,
-    type: 'update',
-    title: 'Event Update',
-    message: 'Summer Music Festival: New artist lineup announcement!',
-    time: '1 day ago',
-    image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=100&h=100&fit=crop',
-    read: true,
-  },
-  {
-    id: 5,
-    type: 'follower',
-    title: 'New Follower',
-    message: 'DJ Alex Thompson started following you',
-    time: '1 day ago',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
-    read: true,
-  },
-  {
-    id: 6,
-    type: 'reminder',
-    title: 'Ticket Reminder',
-    message: 'Only 3 days left to get tickets for Beach House Party',
-    time: '3 days ago',
-    image: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=100&h=100&fit=crop',
-    read: true,
-  },
-];
+const notifications: Notification[] = [];
 
 interface NotificationsProps {
   purchasedTickets: PurchasedTicket[];
@@ -99,7 +44,7 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
 
   // Convert purchased tickets to notifications
   const ticketNotifications: Notification[] = purchasedTickets.map((ticket) => ({
-    id: parseInt(ticket.id.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000),
+    id: ticket.id,
     type: 'ticket' as const,
     title: 'Virtual Ticket Purchased ✅',
     message: `Your virtual ticket for ${ticket.eventTitle} has been confirmed!`,
@@ -113,7 +58,19 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
   }));
 
   // Combine all notifications
-  const allNotifications = [...ticketNotifications, ...notifications].sort((a, b) => b.id - a.id);
+  const allNotifications = [...ticketNotifications, ...notifications].sort((a, b) => {
+    // Sort by ID if both are numbers (legacy), otherwise use string comparison or time if available
+    if (typeof a.id === 'number' && typeof b.id === 'number') {
+      return b.id - a.id;
+    }
+    // Fallback to time-based sorting if available
+    const timeA = new Date(a.time).getTime();
+    const timeB = new Date(b.time).getTime();
+    if (!isNaN(timeA) && !isNaN(timeB)) {
+      return timeB - timeA;
+    }
+    return String(b.id).localeCompare(String(a.id));
+  });
 
   // Filter notifications based on active filter
   const filteredNotifications = allNotifications.filter((notification) => {

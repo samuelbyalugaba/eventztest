@@ -6,7 +6,7 @@ import { supabase } from '../utils/supabase/client';
 import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, Post as ApiPost } from '../utils/supabase/api';
 
 import { UserProfileModal } from './UserProfileModal';
-import { Conversation, Message } from '../App';
+import { Conversation, Message } from '../types';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 
@@ -80,7 +80,7 @@ type FilterTab = 'all' | 'following' | 'organizers' | 'trending';
 
 interface FeedProps {
   conversations: Conversation[];
-  onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => Conversation;
+  onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
   onSendMessage: (conversationId: number, messageText: string) => void;
   onMarkAsRead?: (conversationId: number) => void;
 }
@@ -105,7 +105,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             user: {
               name: p.user?.full_name || p.user?.username || 'Unknown User',
               username: p.user?.username || '@unknown',
-              avatar: p.user?.avatar_url || 'https://via.placeholder.com/150',
+              avatar: p.user?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
               verified: p.user?.verified || false,
               isOrganizer: p.user?.is_organizer || false,
             },
@@ -136,7 +136,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             isHighlight: !!p.video_url,
             highlights: p.video_url ? [{
               id: p.id,
-              thumbnail: p.image_urls?.[0] || 'https://via.placeholder.com/300x500', // Vertical thumbnail fallback
+              thumbnail: p.image_urls?.[0] || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', // Vertical thumbnail fallback
               duration: p.duration || '0:30',
               title: p.content || 'Video Highlight',
               views: p.views || 0,
@@ -168,7 +168,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
 
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications] = useState<Notification[]>([]);
   const [showMessages, setShowMessages] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
 
@@ -388,7 +388,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 id: c.id,
                 user: {
                   name: c.user?.full_name || c.user?.username || 'Unknown',
-                  avatar: c.user?.avatar_url || 'https://via.placeholder.com/150',
+                  avatar: c.user?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
                 },
                 text: c.text,
                 timestamp: new Date(c.created_at).toLocaleDateString(),
@@ -420,7 +420,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         id: newCommentData.id,
         user: {
           name: newCommentData.user?.full_name || newCommentData.user?.username || 'Unknown',
-          avatar: newCommentData.user?.avatar_url || 'https://via.placeholder.com/150',
+          avatar: newCommentData.user?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
         },
         text: newCommentData.text,
         timestamp: 'Just now',

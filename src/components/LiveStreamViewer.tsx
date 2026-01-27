@@ -12,9 +12,9 @@ interface LiveStreamViewerProps {
     id: number;
     title: string;
     thumbnail: string;
-    viewers: number;
+    viewers?: number;
     host: string;
-    quality: 'HD' | '4K';
+    quality: 'HD' | '4K' | 'SD';
     isPaid?: boolean;
     price?: number;
     playback_url?: string;

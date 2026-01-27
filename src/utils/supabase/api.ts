@@ -201,6 +201,18 @@ export const checkUsernameUnique = async (username: string, currentUserId?: stri
   return count === 0;
 };
 
+export const searchProfiles = async (query: string) => {
+  if (!query) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+    .limit(10);
+
+  if (error) throw error;
+  return data;
+};
+
 // --- ORGANIZER STATS ---
 
 export const getOrganizerStats = async (userId: string) => {
@@ -428,20 +440,37 @@ export const deleteEvent = async (id: number) => {
 
 export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'posts', path?: string) => {
   const fileExt = file.name.split('.').pop();
-  const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+  const fileName = `${crypto.randomUUID()}_${Date.now()}.${fileExt}`;
   const filePath = path ? `${path}/${fileName}` : fileName;
 
-  const { error: uploadError } = await supabase.storage
-    .from(bucket)
-    .upload(filePath, file);
+  const tryUpload = async (targetBucket: 'events' | 'avatars' | 'posts') => {
+    const { error: uploadError } = await supabase.storage
+      .from(targetBucket)
+      .upload(filePath, file);
 
-  if (uploadError) throw uploadError;
+    if (uploadError) throw uploadError;
 
-  const { data: { publicUrl } } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(filePath);
+    const { data: { publicUrl } } = supabase.storage
+      .from(targetBucket)
+      .getPublicUrl(filePath);
 
-  return publicUrl;
+    return publicUrl;
+  };
+
+  try {
+    return await tryUpload(bucket);
+  } catch (error: any) {
+    if (
+      bucket === 'posts' &&
+      error &&
+      typeof error.message === 'string' &&
+      (error.message.toLowerCase().includes('bucket not found') || 
+       error.message.toLowerCase().includes('row-level security policy'))
+    ) {
+      return await tryUpload('events');
+    }
+    throw error;
+  }
 };
 
 // --- TICKETS ---

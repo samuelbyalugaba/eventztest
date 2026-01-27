@@ -52,7 +52,7 @@ export function ExploreMap() {
             title: e.title,
             category: e.category,
             categoryLabel: e.category.toUpperCase(),
-            image: e.image_url || 'https://via.placeholder.com/200',
+            image: e.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
             time: `${new Date(e.date).toLocaleDateString(undefined, { weekday: 'short' })} · ${e.time}`,
             location: e.location,
             hasJoinButton: false
@@ -63,7 +63,7 @@ export function ExploreMap() {
             id: e.id,
             title: e.title,
             category: e.category,
-            image: e.image_url || 'https://via.placeholder.com/800',
+            image: e.image_url || 'https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=800&q=80',
             gradient: index % 2 === 0 ? 'from-purple-500 to-pink-500' : 'from-blue-500 to-cyan-500'
           })));
 
@@ -72,7 +72,7 @@ export function ExploreMap() {
              id: e.id,
              title: e.title,
              category: e.category,
-             image: e.image_url || 'https://via.placeholder.com/300',
+             image: e.image_url || 'https://images.unsplash.com/photo-1459749411177-8c4750bb0e8f?w=800&q=80',
              time: `${new Date(e.date).toLocaleDateString(undefined, { weekday: 'long' })} · ${e.time}`,
           })));
         } else {

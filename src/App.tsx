@@ -24,52 +24,10 @@ import {
   getLiveStreams,
   Event
 } from './utils/supabase/api';
+import { PurchasedTicket, Message, Conversation } from './types';
 
 type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile';
 type OrganizerView = 'dashboard' | 'createEvent';
-
-export interface PurchasedTicket {
-  id: string;
-  eventId: number;
-  eventTitle: string;
-  eventDate: string;
-  eventLocation: string;
-  ticketNumber: string;
-  barcode: string;
-  purchaseDate: string;
-  customerName: string;
-  customerEmail: string;
-  price: string;
-  ticketType?: 'Normal' | 'VIP' | 'VVIP';
-}
-
-// Global messaging interfaces
-export interface Message {
-  id: number;
-  senderId: number; // 0 for current user, or specific ID
-  text: string;
-  timestamp: string;
-  read: boolean;
-}
-
-export interface Conversation {
-  id: number;
-  user: {
-    name: string;
-    username: string;
-    avatar: string;
-    verified: boolean;
-    isOrganizer?: boolean;
-    id?: string; // Added ID to track real user ID
-  };
-  lastMessage: {
-    text: string;
-    timestamp: string;
-    isRead: boolean;
-  };
-  unreadCount: number;
-  messages: Message[];
-}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('event');
@@ -198,7 +156,7 @@ export default function App() {
                 id: otherUser?.id,
                 name: otherUser?.full_name || 'Unknown User',
                 username: otherUser?.username || '',
-                avatar: otherUser?.avatar_url || 'https://via.placeholder.com/150',
+                avatar: otherUser?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
                 verified: otherUser?.verified || false,
                 isOrganizer: otherUser?.is_organizer || false,
               },

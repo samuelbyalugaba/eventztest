@@ -1,20 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Heart, Ticket as TicketIcon, Bell, BellOff, Camera, Image as ImageIcon, Upload, Plus, Smile } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Heart, Ticket as TicketIcon, Bell, BellOff, Camera, Image as ImageIcon, Upload, Plus, Smile, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
 import { SetAlertModal } from './SetAlertModal';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getProfile, getUserTickets, getUserMedia, getSavedEvents, toggleReminder as toggleReminderApi, getFollowersCount, getFollowingCount, subscribeToSavedEvents, Profile as UserProfile, Event, Ticket, UserMedia } from '../utils/supabase/api';
+import { getEvents, getProfile, getUserTickets, getUserMedia, getSavedEvents, toggleReminder as toggleReminderApi, getFollowersCount, getFollowingCount, subscribeToSavedEvents, createPost, uploadImage, Profile as UserProfile, Event, Ticket, UserMedia } from '../utils/supabase/api';
 
 const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"; // Generic event background
 const FALLBACK_AVATAR_IMAGE = "https://ui-avatars.com/api/?background=random&color=fff"; // Dynamic fallback base
 
 interface ProfileProps {
   conversations: any[];
-  onStartConversation: (user: any) => any;
+  onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<any> | any;
   onSendMessage: (conversationId: number, messageText: string) => void;
   onMarkAsRead?: (conversationId: number) => void;
   onLogout: () => Promise<void>;
@@ -49,6 +49,11 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
   const [videoClips, setVideoClips] = useState<UserMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
+  
+  // Upload states
+  const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load all data
   useEffect(() => {
@@ -171,6 +176,95 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
         toast.error('Failed to update reminder');
         // Revert on error
         setEventReminders(eventReminders);
+    }
+  };
+
+  // Clear state when modal opens
+  useEffect(() => {
+    if (showSharePostModal) {
+      setSelectedFiles([]);
+      setFilesToUpload([]);
+      setPostCaption('');
+      // Reset file input if it exists
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [showSharePostModal]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      
+      // Validate file type based on postType
+      if (postType === 'photo' && !file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      
+      if (postType === 'video' && !file.type.startsWith('video/')) {
+        toast.error('Please select a video file');
+        return;
+      }
+
+      setFilesToUpload([file]);
+      const url = URL.createObjectURL(file);
+      setSelectedFiles([url]);
+    }
+  };
+
+  const handleSharePost = async () => {
+    if (filesToUpload.length === 0) {
+      toast.error('Please select a file to upload');
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error('You must be logged in to post');
+        return;
+      }
+
+      // 1. Upload file
+      const file = filesToUpload[0];
+      // Use 'events' bucket as 'posts' bucket has RLS policies preventing uploads
+      const publicUrl = await uploadImage(file, 'events');
+
+      // 2. Create post
+      await createPost({
+        content: postCaption,
+        image_urls: postType === 'photo' ? [publicUrl] : [],
+        video_url: postType === 'video' ? publicUrl : undefined,
+        hashtags: [],
+        user_id: user.id
+      });
+
+      toast.success('Post shared successfully! 🎉', {
+        description: 'Your event moment has been shared with your followers',
+      });
+
+      // Cleanup
+      setShowSharePostModal(false);
+      setPostType(null);
+      setSelectedFiles([]);
+      setFilesToUpload([]);
+      setPostCaption('');
+      
+      // Refresh media
+      const media = await getUserMedia(user.id);
+      if (media) {
+         setPhotos(media.filter((m: any) => m.media_type === 'photo'));
+         setVideoClips(media.filter((m: any) => m.media_type === 'video'));
+      }
+
+    } catch (error) {
+      console.error('Error sharing post:', error);
+      toast.error('Failed to share post');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -732,16 +826,28 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={() => {
-            setShowSharePostModal(false);
-            setPostType(null);
-            setSelectedFiles([]);
-            setPostCaption('');
+            if (!isUploading) {
+              setShowSharePostModal(false);
+              setPostType(null);
+              setSelectedFiles([]);
+              setFilesToUpload([]);
+              setPostCaption('');
+            }
           }}
         >
           <div 
             className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept={postType === 'photo' ? 'image/*' : 'video/*'}
+              onChange={handleFileSelect}
+            />
+
             {/* Header */}
             <div className="relative px-6 py-5 border-b border-gray-200 bg-purple-50">
               <div className="flex items-center justify-between">
@@ -757,12 +863,16 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                 
                 <button 
                   onClick={() => {
-                    setShowSharePostModal(false);
-                    setPostType(null);
-                    setSelectedFiles([]);
-                    setPostCaption('');
+                    if (!isUploading) {
+                      setShowSharePostModal(false);
+                      setPostType(null);
+                      setSelectedFiles([]);
+                      setFilesToUpload([]);
+                      setPostCaption('');
+                    }
                   }}
                   className="p-2 hover:bg-white/80 rounded-full transition-colors"
+                  disabled={isUploading}
                 >
                   <X className="w-6 h-6 text-gray-600" />
                 </button>
@@ -781,10 +891,9 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                     <button
                       onClick={() => {
                         setPostType('photo');
-                        // Simulate file selection
                         setTimeout(() => {
-                          setSelectedFiles(['https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=800&h=600&fit=crop']);
-                        }, 300);
+                          fileInputRef.current?.click();
+                        }, 0);
                       }}
                       className="group relative overflow-hidden rounded-2xl p-8 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 transition-all hover:shadow-lg hover:scale-105 active:scale-95"
                     >
@@ -804,10 +913,9 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                     <button
                       onClick={() => {
                         setPostType('video');
-                        // Simulate file selection
                         setTimeout(() => {
-                          setSelectedFiles(['https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=600&fit=crop']);
-                        }, 300);
+                          fileInputRef.current?.click();
+                        }, 0);
                       }}
                       className="group relative overflow-hidden rounded-2xl p-8 bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 transition-all hover:shadow-lg hover:scale-105 active:scale-95"
                     >
@@ -823,8 +931,6 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                       <div className="absolute inset-0 bg-gradient-to-br from-pink-600/0 to-pink-600/5 group-hover:from-pink-600/5 group-hover:to-pink-600/10 transition-all"></div>
                     </button>
                   </div>
-
-                  <p className="text-gray-500 text-xs text-center mt-6">Upload from your event memories</p>
                 </div>
               ) : (
                 /* Post Creation Form */
@@ -878,28 +984,34 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                   <div className="flex gap-3 pt-2">
                     <button
                       onClick={() => {
-                        setPostType(null);
-                        setSelectedFiles([]);
-                        setPostCaption('');
+                        if (!isUploading) {
+                          setPostType(null);
+                          setSelectedFiles([]);
+                          setFilesToUpload([]);
+                          setPostCaption('');
+                        }
                       }}
-                      className="flex-1 px-6 py-3.5 rounded-xl border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all"
+                      className="flex-1 px-6 py-3.5 rounded-xl border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isUploading}
                     >
                       Back
                     </button>
                     <button
-                      onClick={() => {
-                        toast.success('Post shared successfully! 🎉', {
-                          description: 'Your event moment has been shared with your followers',
-                        });
-                        setShowSharePostModal(false);
-                        setPostType(null);
-                        setSelectedFiles([]);
-                        setPostCaption('');
-                      }}
-                      className="flex-1 bg-[#8A2BE2] text-white px-6 py-3.5 rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+                      onClick={handleSharePost}
+                      disabled={isUploading}
+                      className="flex-1 bg-[#8A2BE2] text-white px-6 py-3.5 rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:scale-100 disabled:active:scale-100 disabled:cursor-wait"
                     >
-                      <Upload className="w-5 h-5" />
-                      Share Post
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Posting...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-5 h-5" />
+                          Share Post
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
