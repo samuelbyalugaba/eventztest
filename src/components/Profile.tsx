@@ -582,8 +582,8 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                   <div key={event.id} className="flex gap-4 bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group">
                     <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
                       <ImageWithFallback
-                        src={event.image}
-                        alt={event.name}
+                        src={event.image_url}
+                        alt={event.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
@@ -593,7 +593,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-gray-900 text-sm mb-1 line-clamp-2">{event.name}</h4>
+                      <h4 className="text-gray-900 text-sm mb-1 line-clamp-2">{event.title}</h4>
                       <div className="flex items-center gap-2 text-gray-500 text-xs">
                         <Calendar className="w-3 h-3" />
                         <span>{event.date}</span>
@@ -603,14 +603,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedEvent({
-                          id: event.id,
-                          name: event.name,
-                          date: event.date,
-                          image: event.image,
-                          location: event.location || 'Location TBA',
-                          category: event.category || 'Event',
-                        });
+                        setSelectedEvent(event);
                         setShowSetAlertModal(true);
                       }}
                       className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
@@ -647,13 +640,13 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                   className="relative aspect-square cursor-pointer group"
                 >
                   <ImageWithFallback
-                    src={ticket.image}
+                    src={ticket.event?.image_url || FALLBACK_COVER_IMAGE}
                     alt={`Ticket ${ticket.id}`}
                     className="w-full h-full object-cover"
                   />
                   {/* Ticket Type Badge */}
                   <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
-                    {ticket.ticketType}
+                    {ticket.ticket_type}
                   </div>
                   {/* Price Badge */}
                   <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
@@ -744,8 +737,8 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                     >
                       <div className="relative w-full h-56 rounded-2xl overflow-hidden mb-3 shadow-md hover:shadow-xl transition-all duration-300">
                         <ImageWithFallback
-                          src={event.image}
-                          alt={event.name}
+                          src={event.image_url}
+                          alt={event.title}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                         
@@ -759,7 +752,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                         
                         {/* Event Info */}
                         <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <p className="text-white mb-1 line-clamp-2 leading-snug">{event.name}</p>
+                          <p className="text-white mb-1 line-clamp-2 leading-snug">{event.title}</p>
                           <div className="flex items-center gap-2 text-white/90 text-xs">
                             <Calendar className="w-3.5 h-3.5" />
                             <span>{event.date}</span>

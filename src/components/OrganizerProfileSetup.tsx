@@ -382,7 +382,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
             <p className="text-gray-500 text-sm mb-4">Select the category that best describes you</p>
             
             {/* Premium Card Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {organizerTypes.map((type) => {
                 const Icon = type.icon;
                 const isSelected = profileData.organizerType === type.name;
@@ -392,35 +392,35 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                     key={type.id}
                     type="button"
                     onClick={() => handleInputChange('organizerType', type.name)}
-                    className={`relative border-2 rounded-xl p-4 text-left transition-all hover:shadow-lg ${
+                    className={`relative border-2 rounded-xl p-3 sm:p-4 transition-all hover:shadow-lg ${
                       isSelected 
                         ? 'border-[#8A2BE2] bg-purple-50 shadow-md scale-[1.02]' 
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-3">
                       {/* Minimal Black & White Icon */}
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
+                      <div className={`w-12 h-12 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
                         isSelected 
                           ? 'bg-[#8A2BE2] shadow-md' 
                           : 'bg-gray-100 border border-gray-200'
                       }`}>
-                        <Icon className={`w-6 h-6 transition-colors ${
+                        <Icon className={`w-6 h-6 sm:w-6 sm:h-6 transition-colors ${
                           isSelected ? 'text-white' : 'text-gray-700'
                         }`} />
                       </div>
                       
                       {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-gray-900 mb-1">{type.name}</h3>
-                        <p className="text-gray-600 text-xs leading-relaxed">{type.description}</p>
+                      <div className="flex-1 min-w-0 w-full text-left sm:text-center">
+                        <h3 className="text-gray-900 mb-0.5 sm:mb-1 text-base font-medium">{type.name}</h3>
+                        <p className="text-gray-600 text-xs leading-relaxed line-clamp-2">{type.description}</p>
                       </div>
                       
                       {/* Selected Indicator */}
                       {isSelected && (
-                        <div className="absolute top-3 right-3">
-                          <div className="w-6 h-6 bg-[#8A2BE2] rounded-full flex items-center justify-center shadow-md">
-                            <Check className="w-4 h-4 text-white" />
+                        <div className="absolute top-3 right-3 sm:top-3 sm:right-3">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#8A2BE2] rounded-full flex items-center justify-center shadow-md">
+                            <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                           </div>
                         </div>
                       )}
@@ -450,8 +450,8 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                   </div>
                 </div>
                 
-                {/* Premium 2x2 Grid Cards */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                {/* Premium Vertical Stack (Mobile) / Grid (Desktop) Cards */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
                   {venueSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -461,54 +461,58 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-5 text-center transition-all duration-300 ${
+                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-105 ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-pink-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        {/* Icon Container */}
-                        <div className={`relative w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-3 transition-all duration-300 ${
-                          isSelected 
-                            ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
-                            : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-pink-100 group-hover:to-purple-100'
-                        }`}>
-                          <Icon className={`w-10 h-10 transition-all duration-300 ${
-                            isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-pink-600 group-hover:scale-110'
-                          }`} />
-                          
-                          {/* Animated Pulse Ring on hover (non-selected only) */}
-                          {!isSelected && (
-                            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <div className="absolute inset-0 rounded-2xl border-2 border-pink-400 animate-ping"></div>
-                              <div className="absolute inset-0 rounded-2xl border-2 border-purple-400"></div>
-                            </div>
-                          )}
+                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
+                          {/* Icon Container */}
+                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                            isSelected 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-pink-100 group-hover:to-purple-100'
+                          }`}>
+                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                              isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-pink-600 group-hover:scale-110'
+                            }`} />
+                            
+                            {/* Animated Pulse Ring on hover (non-selected only) */}
+                            {!isSelected && (
+                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400"></div>
+                              </div>
+                            )}
 
-                          {/* Sparkle Effect on selected */}
-                          {isSelected && (
-                            <>
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
-                              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
-                            </>
-                          )}
+                            {/* Sparkle Effect on selected */}
+                            {isSelected && (
+                              <>
+                                <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-yellow-300 rounded-full animate-pulse"></div>
+                                <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
+                              </>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            {/* Name */}
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                              isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-pink-600'
+                            }`}>
+                              {subType.name}
+                            </h4>
+                            
+                            {/* Description */}
+                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                          </div>
                         </div>
-                        
-                        {/* Name */}
-                        <h4 className={`mb-1.5 transition-all duration-300 ${
-                          isSelected ? 'text-[#8A2BE2] scale-105' : 'text-gray-900 group-hover:text-pink-600'
-                        }`}>
-                          {subType.name}
-                        </h4>
-                        
-                        {/* Description */}
-                        <p className="text-gray-500 text-xs leading-relaxed">{subType.description}</p>
                         
                         {/* Selected Checkmark Badge */}
                         {isSelected && (
-                          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 animate-fadeIn">
-                            <div className="w-8 h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-4 ring-white">
-                              <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
+                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}
@@ -561,7 +565,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
                   {artistSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -571,48 +575,52 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-5 text-center transition-all duration-300 ${
+                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-105 ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-purple-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        <div className={`relative w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-3 transition-all duration-300 ${
-                          isSelected 
-                            ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
-                            : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
-                        }`}>
-                          <Icon className={`w-10 h-10 transition-all duration-300 ${
-                            isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
-                          }`} />
-                          
-                          {!isSelected && (
-                            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
-                              <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
-                            </div>
-                          )}
+                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
+                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                            isSelected 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
+                          }`}>
+                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                              isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
+                            }`} />
+                            
+                            {!isSelected && (
+                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
+                              </div>
+                            )}
 
-                          {isSelected && (
-                            <>
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
-                              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
-                            </>
-                          )}
+                            {isSelected && (
+                              <>
+                                <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-yellow-300 rounded-full animate-pulse"></div>
+                                <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
+                              </>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                              isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
+                            }`}>
+                              {subType.name}
+                            </h4>
+                            
+                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                          </div>
                         </div>
                         
-                        <h4 className={`mb-1.5 transition-all duration-300 ${
-                          isSelected ? 'text-[#8A2BE2] scale-105' : 'text-gray-900 group-hover:text-purple-600'
-                        }`}>
-                          {subType.name}
-                        </h4>
-                        
-                        <p className="text-gray-500 text-xs leading-relaxed">{subType.description}</p>
-                        
                         {isSelected && (
-                          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 animate-fadeIn">
-                            <div className="w-8 h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-4 ring-white">
-                              <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
+                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}
@@ -663,7 +671,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
                   {organizationSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -673,48 +681,52 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-5 text-center transition-all duration-300 ${
+                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-105 ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-purple-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        <div className={`relative w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-3 transition-all duration-300 ${
-                          isSelected 
-                            ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
-                            : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
-                        }`}>
-                          <Icon className={`w-10 h-10 transition-all duration-300 ${
-                            isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
-                          }`} />
-                          
-                          {!isSelected && (
-                            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
-                              <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
-                            </div>
-                          )}
+                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
+                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                            isSelected 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
+                          }`}>
+                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                              isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
+                            }`} />
+                            
+                            {!isSelected && (
+                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
+                              </div>
+                            )}
 
-                          {isSelected && (
-                            <>
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
-                              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
-                            </>
-                          )}
+                            {isSelected && (
+                              <>
+                                <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-yellow-300 rounded-full animate-pulse"></div>
+                                <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
+                              </>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                              isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
+                            }`}>
+                              {subType.name}
+                            </h4>
+                            
+                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                          </div>
                         </div>
                         
-                        <h4 className={`mb-1.5 transition-all duration-300 ${
-                          isSelected ? 'text-[#8A2BE2] scale-105' : 'text-gray-900 group-hover:text-purple-600'
-                        }`}>
-                          {subType.name}
-                        </h4>
-                        
-                        <p className="text-gray-500 text-xs leading-relaxed">{subType.description}</p>
-                        
                         {isSelected && (
-                          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 animate-fadeIn">
-                            <div className="w-8 h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-4 ring-white">
-                              <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
+                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}
@@ -765,7 +777,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
                   {businessSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -775,48 +787,52 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-5 text-center transition-all duration-300 ${
+                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-105 ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-purple-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        <div className={`relative w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-3 transition-all duration-300 ${
-                          isSelected 
-                            ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
-                            : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
-                        }`}>
-                          <Icon className={`w-10 h-10 transition-all duration-300 ${
-                            isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
-                          }`} />
-                          
-                          {!isSelected && (
-                            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
-                              <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
-                            </div>
-                          )}
+                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
+                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                            isSelected 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
+                          }`}>
+                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                              isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
+                            }`} />
+                            
+                            {!isSelected && (
+                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
+                              </div>
+                            )}
 
-                          {isSelected && (
-                            <>
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
-                              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
-                            </>
-                          )}
+                            {isSelected && (
+                              <>
+                                <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-yellow-300 rounded-full animate-pulse"></div>
+                                <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
+                              </>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                              isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
+                            }`}>
+                              {subType.name}
+                            </h4>
+                            
+                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                          </div>
                         </div>
                         
-                        <h4 className={`mb-1.5 transition-all duration-300 ${
-                          isSelected ? 'text-[#8A2BE2] scale-105' : 'text-gray-900 group-hover:text-purple-600'
-                        }`}>
-                          {subType.name}
-                        </h4>
-                        
-                        <p className="text-gray-500 text-xs leading-relaxed">{subType.description}</p>
-                        
                         {isSelected && (
-                          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 animate-fadeIn">
-                            <div className="w-8 h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-4 ring-white">
-                              <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
+                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}
@@ -867,7 +883,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
                   {sportsSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -877,48 +893,52 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-5 text-center transition-all duration-300 ${
+                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-105 ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-purple-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        <div className={`relative w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-3 transition-all duration-300 ${
-                          isSelected 
-                            ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
-                            : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
-                        }`}>
-                          <Icon className={`w-10 h-10 transition-all duration-300 ${
-                            isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
-                          }`} />
-                          
-                          {!isSelected && (
-                            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
-                              <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
-                            </div>
-                          )}
+                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
+                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                            isSelected 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
+                          }`}>
+                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                              isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
+                            }`} />
+                            
+                            {!isSelected && (
+                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
+                              </div>
+                            )}
 
-                          {isSelected && (
-                            <>
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse"></div>
-                              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
-                            </>
-                          )}
+                            {isSelected && (
+                              <>
+                                <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-yellow-300 rounded-full animate-pulse"></div>
+                                <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-cyan-300 rounded-full animate-pulse delay-75"></div>
+                              </>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                              isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
+                            }`}>
+                              {subType.name}
+                            </h4>
+                            
+                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                          </div>
                         </div>
                         
-                        <h4 className={`mb-1.5 transition-all duration-300 ${
-                          isSelected ? 'text-[#8A2BE2] scale-105' : 'text-gray-900 group-hover:text-purple-600'
-                        }`}>
-                          {subType.name}
-                        </h4>
-                        
-                        <p className="text-gray-500 text-xs leading-relaxed">{subType.description}</p>
-                        
                         {isSelected && (
-                          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 animate-fadeIn">
-                            <div className="w-8 h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-4 ring-white">
-                              <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
+                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}

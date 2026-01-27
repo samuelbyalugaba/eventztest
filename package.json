@@ -1,8 +1,12 @@
 {
-      "name": "Event Details Prototype",
+      "name": "eventz",
       "version": "0.1.0",
       "private": true,
       "dependencies": {
+            "@capacitor/android": "^8.0.1",
+            "@capacitor/cli": "^8.0.1",
+            "@capacitor/core": "^8.0.1",
+            "@capacitor/ios": "^8.0.1",
             "@radix-ui/react-accordion": "^1.2.3",
             "@radix-ui/react-alert-dialog": "^1.1.6",
             "@radix-ui/react-aspect-ratio": "^1.1.2",
@@ -51,6 +55,7 @@
             "vaul": "^1.1.2"
       },
       "devDependencies": {
+            "@capacitor/assets": "^3.0.5",
             "@types/node": "^20.10.0",
             "@types/react": "^18.3.27",
             "@types/react-dom": "^18.3.7",
@@ -62,6 +67,10 @@
             "dev": "vite",
             "build": "vite build",
             "preview": "vite preview",
-            "generate-icons": "node scripts/generate-icons.js"
+            "generate-icons": "node scripts/generate-icons.js",
+    "generate-native-assets": "capacitor-assets generate",
+    "cap:sync": "npm run build && npx cap sync",
+            "cap:open:android": "npx cap open android",
+            "cap:open:ios": "npx cap open ios"
       }
 }

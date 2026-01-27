@@ -371,7 +371,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           <p className="text-gray-600 text-xs">What type of venue do you operate?</p>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           {[
                             { id: 'club', name: 'Club', icon: Music, description: 'Nightclub & dance' },
                             { id: 'bar', name: 'Bar', icon: Wine, description: 'Bar & pub' },
@@ -386,39 +386,41 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                                 key={subType.id}
                                 type="button"
                                 onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`relative border-2 rounded-xl p-4 text-center transition-all min-h-[110px] flex flex-col items-center justify-center ${
+                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
                                   isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md'
+                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
+                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
                                 }`}
                               >
-                                <div className="flex flex-col items-center justify-center w-full">
-                                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-2.5 transition-all ${
+                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
+                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
                                     isSelected 
                                       ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200'
+                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
                                   }`}>
-                                    <Icon className={`w-7 h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600'
+                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
+                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
                                     }`} />
                                   </div>
                                   
-                                  <h4 className={`text-sm font-semibold mb-1 ${
-                                    isSelected ? 'text-[#8A2BE2]' : 'text-gray-900'
-                                  }`}>
-                                    {subType.name}
-                                  </h4>
-                                  
-                                  <p className="text-gray-500 text-xs">{subType.description}</p>
-                                </div>
-                                
-                                {isSelected && (
-                                  <div className="absolute top-2 right-2">
-                                    <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                      <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                    </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
+                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
+                                    }`}>
+                                      {subType.name}
+                                    </h4>
+                                    
+                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                                   </div>
-                                )}
+                                  
+                                  {isSelected && (
+                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
+                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
+                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </button>
                             );
                           })}
@@ -439,7 +441,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           <p className="text-gray-600 text-xs">What type of performer are you?</p>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           {[
                             { id: 'dj', name: 'DJ', icon: Headphones, description: 'DJ & electronic' },
                             { id: 'band', name: 'Live Band', icon: Music, description: 'Band & musicians' },
@@ -454,39 +456,41 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                                 key={subType.id}
                                 type="button"
                                 onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`relative border-2 rounded-xl p-4 text-center transition-all min-h-[110px] flex flex-col items-center justify-center ${
+                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
                                   isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md'
+                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
+                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
                                 }`}
                               >
-                                <div className="flex flex-col items-center justify-center w-full">
-                                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-2.5 transition-all ${
+                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
+                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
                                     isSelected 
                                       ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200'
+                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
                                   }`}>
-                                    <Icon className={`w-7 h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600'
+                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
+                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
                                     }`} />
                                   </div>
                                   
-                                  <h4 className={`text-sm font-semibold mb-1 ${
-                                    isSelected ? 'text-[#8A2BE2]' : 'text-gray-900'
-                                  }`}>
-                                    {subType.name}
-                                  </h4>
-                                  
-                                  <p className="text-gray-500 text-xs">{subType.description}</p>
-                                </div>
-                                
-                                {isSelected && (
-                                  <div className="absolute top-2 right-2">
-                                    <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                      <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                    </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
+                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
+                                    }`}>
+                                      {subType.name}
+                                    </h4>
+                                    
+                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                                   </div>
-                                )}
+                                  
+                                  {isSelected && (
+                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
+                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
+                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </button>
                             );
                           })}
@@ -507,7 +511,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           <p className="text-gray-600 text-xs">What type of organization are you?</p>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           {[
                             { id: 'nonprofit', name: 'Non-Profit', icon: Heart, description: 'NGO & charity' },
                             { id: 'education', name: 'Educational', icon: GraduationCap, description: 'University & school' },
@@ -522,39 +526,41 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                                 key={subType.id}
                                 type="button"
                                 onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`relative border-2 rounded-xl p-4 text-center transition-all min-h-[110px] flex flex-col items-center justify-center ${
+                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
                                   isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md'
+                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
+                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
                                 }`}
                               >
-                                <div className="flex flex-col items-center justify-center w-full">
-                                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-2.5 transition-all ${
+                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
+                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
                                     isSelected 
                                       ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200'
+                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
                                   }`}>
-                                    <Icon className={`w-7 h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600'
+                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
+                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
                                     }`} />
                                   </div>
                                   
-                                  <h4 className={`text-sm font-semibold mb-1 ${
-                                    isSelected ? 'text-[#8A2BE2]' : 'text-gray-900'
-                                  }`}>
-                                    {subType.name}
-                                  </h4>
-                                  
-                                  <p className="text-gray-500 text-xs">{subType.description}</p>
-                                </div>
-                                
-                                {isSelected && (
-                                  <div className="absolute top-2 right-2">
-                                    <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                      <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                    </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
+                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
+                                    }`}>
+                                      {subType.name}
+                                    </h4>
+                                    
+                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                                   </div>
-                                )}
+                                  
+                                  {isSelected && (
+                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
+                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
+                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </button>
                             );
                           })}
@@ -575,7 +581,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           <p className="text-gray-600 text-xs">What type of business are you?</p>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           {[
                             { id: 'tech', name: 'Tech Company', icon: Laptop, description: 'Software & tech' },
                             { id: 'retail', name: 'Retail Brand', icon: ShoppingBag, description: 'Store & retail' },
@@ -590,39 +596,41 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                                 key={subType.id}
                                 type="button"
                                 onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`relative border-2 rounded-xl p-4 text-center transition-all min-h-[110px] flex flex-col items-center justify-center ${
+                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
                                   isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md'
+                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
+                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
                                 }`}
                               >
-                                <div className="flex flex-col items-center justify-center w-full">
-                                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-2.5 transition-all ${
+                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
+                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
                                     isSelected 
                                       ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200'
+                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
                                   }`}>
-                                    <Icon className={`w-7 h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600'
+                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
+                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
                                     }`} />
                                   </div>
                                   
-                                  <h4 className={`text-sm font-semibold mb-1 ${
-                                    isSelected ? 'text-[#8A2BE2]' : 'text-gray-900'
-                                  }`}>
-                                    {subType.name}
-                                  </h4>
-                                  
-                                  <p className="text-gray-500 text-xs">{subType.description}</p>
-                                </div>
-                                
-                                {isSelected && (
-                                  <div className="absolute top-2 right-2">
-                                    <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                      <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                    </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
+                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
+                                    }`}>
+                                      {subType.name}
+                                    </h4>
+                                    
+                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                                   </div>
-                                )}
+                                  
+                                  {isSelected && (
+                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
+                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
+                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </button>
                             );
                           })}
@@ -643,7 +651,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           <p className="text-gray-600 text-xs">What type of sports/fitness provider are you?</p>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           {[
                             { id: 'gym', name: 'Gym/Fitness', icon: Dumbbell, description: 'Gym & fitness' },
                             { id: 'sports', name: 'Sports Club', icon: Trophy, description: 'Sports team' },
@@ -658,39 +666,41 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                                 key={subType.id}
                                 type="button"
                                 onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`relative border-2 rounded-xl p-4 text-center transition-all min-h-[110px] flex flex-col items-center justify-center ${
+                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
                                   isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md'
+                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
+                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
                                 }`}
                               >
-                                <div className="flex flex-col items-center justify-center w-full">
-                                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-2.5 transition-all ${
+                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
+                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
                                     isSelected 
                                       ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200'
+                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
                                   }`}>
-                                    <Icon className={`w-7 h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600'
+                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
+                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
                                     }`} />
                                   </div>
                                   
-                                  <h4 className={`text-sm font-semibold mb-1 ${
-                                    isSelected ? 'text-[#8A2BE2]' : 'text-gray-900'
-                                  }`}>
-                                    {subType.name}
-                                  </h4>
-                                  
-                                  <p className="text-gray-500 text-xs">{subType.description}</p>
-                                </div>
-                                
-                                {isSelected && (
-                                  <div className="absolute top-2 right-2">
-                                    <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                      <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                    </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
+                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
+                                    }`}>
+                                      {subType.name}
+                                    </h4>
+                                    
+                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                                   </div>
-                                )}
+                                  
+                                  {isSelected && (
+                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
+                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
+                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </button>
                             );
                           })}
