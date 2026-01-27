@@ -1,53 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Video, Play, MessageCircle } from 'lucide-react';
 import { MediaViewer } from './MediaViewer';
+import { getOrganizerStats, getOrganizerEvents, getPosts, getUserTickets, followUser, unfollowUser, isFollowing as checkIsFollowing, getProfile, supabase, type Event, type Post, type Profile } from '../utils/supabase/api';
 
 interface UserProfile {
+  id: string;
   name: string;
   type: 'Organizer' | 'Attendee' | 'Performer';
-  followers: string;
-  following: string;
-  eventsHosted?: number;
-  eventsAttended?: number;
   avatar: string;
-  coverImage: string;
-  bio: string;
-  location: string;
   verified: boolean;
-  joinedDate: string;
-  email?: string;
-  phone?: string;
-  instagram?: string;
-  twitter?: string;
-  upcomingEvents?: {
-    id: number;
-    title: string;
-    date: string;
-    time?: string;
-    image: string;
-    attendees: number;
-    location?: string;
-    price?: string;
-  }[];
-  stats?: {
-    totalEvents: number;
-    totalAttendees: number;
-    avgRating: number;
-    reviewsCount: number;
-  };
-  highlights?: {
-    id: number;
-    image: string;
-    title: string;
-    date: string;
-    attendees: number;
-  }[];
-  photos?: {
-    id: number;
-    image: string;
-    size: 'small' | 'large';
-  }[];
+  // Optional fields for backward compatibility or direct passing
+  coverImage?: string;
+  bio?: string;
+  followers?: number;
 }
 
 interface UserProfileModalProps {
@@ -66,20 +32,120 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
 
-  const handleFollow = () => {
-    setIsFollowing(!isFollowing);
-    if (onFollow) {
-      onFollow();
+  // Real data state
+  const [stats, setStats] = useState<{ totalEvents: number; followers: number } | null>(null);
+  const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
+  const [attendedEvents, setAttendedEvents] = useState<any[]>([]);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        setCurrentUser(authUser);
+
+        // Fetch full profile details
+        const profileData = await getProfile(user.id);
+        setProfile(profileData);
+
+        if (authUser) {
+           const following = await checkIsFollowing(authUser.id, user.id);
+           setIsFollowing(following);
+        }
+
+        if (user.type === 'Organizer' || (profileData && profileData.is_organizer)) {
+          // Fetch organizer stats and events
+          const [statsData, eventsData] = await Promise.all([
+            getOrganizerStats(user.id),
+            getOrganizerEvents(user.id)
+          ]);
+          setStats(statsData);
+          setOrganizerEvents(eventsData || []);
+        } else {
+          // Fetch attendee data (tickets -> attended events)
+          const tickets = await getUserTickets(user.id);
+          setAttendedEvents(tickets?.map(t => t.event).filter(Boolean) || []);
+        }
+
+        // Fetch posts for photos/videos tab
+        const postsData = await getPosts({ authorId: user.id });
+        setUserPosts(postsData || []);
+
+      } catch (error) {
+        console.error('Error fetching user profile data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user.id) {
+      fetchData();
+    }
+  }, [user.id, user.type]);
+
+  const handleFollow = async () => {
+    if (!currentUser) return;
+    
+    const newStatus = !isFollowing;
+    setIsFollowing(newStatus);
+    
+    try {
+      if (newStatus) {
+        await followUser(currentUser.id, user.id);
+      } else {
+        await unfollowUser(currentUser.id, user.id);
+      }
+      
+      // Update stats locally
+      if (stats) {
+        setStats({
+          ...stats,
+          followers: stats.followers + (newStatus ? 1 : -1)
+        });
+      }
+
+      if (onFollow) {
+        onFollow();
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      setIsFollowing(!newStatus);
     }
   };
 
+  // Derived data
+  const photos = userPosts.filter(p => p.image_urls && p.image_urls.length > 0);
+  const videos = userPosts.filter(p => p.video_url);
+
+  const upcomingEvents = organizerEvents.filter(e => new Date(e.date) >= new Date());
+  const pastEvents = organizerEvents.filter(e => new Date(e.date) < new Date());
+
   // Convert photos to format expected by MediaViewer
-  const photosForViewer = user.photos?.map((photo, index) => ({
-    id: photo.id,
-    url: photo.image,
-    likes: 0,
-    eventName: `Event ${index + 1}`,
-  })) || [];
+  const photosForViewer = photos.flatMap((post) => 
+    post.image_urls.map((url, idx) => ({
+      id: post.id * 100 + idx,
+      url: url,
+      likes: post.likes_count || 0,
+      eventName: post.event?.title || 'Post',
+      isPost: true,
+      postId: post.id,
+      isLiked: post.is_liked
+    }))
+  );
+
+  const videosForViewer = videos.map((post) => ({
+    id: post.id,
+    url: post.video_url!,
+    likes: post.likes_count || 0,
+    eventName: post.event?.title || 'Post',
+    isPost: true,
+    postId: post.id,
+    isLiked: post.is_liked
+  }));
 
   return (
     <>
@@ -90,8 +156,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
           {/* Hero Section with Cover */}
           <div className="relative h-52 rounded-t-3xl overflow-hidden">
             <ImageWithFallback
-              src={user.coverImage}
-              alt={user.name}
+              src={profile?.cover_url || user.coverImage || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200'}
+              alt={profile?.full_name || user.name}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
@@ -112,8 +178,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
             {/* User Name & Follow Button */}
             <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <h2 className="text-white drop-shadow-lg">{user.name}</h2>
-                {user.verified && (
+                <h2 className="text-white drop-shadow-lg">{profile?.full_name || user.name}</h2>
+                {(profile?.verified ?? user.verified) && (
                   <CheckCircle2 className="w-5 h-5 text-white fill-[#8A2BE2]" />
                 )}
               </div>
@@ -138,16 +204,18 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
               {/* Events/Followers */}
               <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-3 text-center border border-gray-300 shadow-sm">
                 <div className="text-lg text-gray-900 font-bold">
-                  {user.type === 'Organizer' ? user.eventsHosted : user.eventsAttended || 0}
+                  {loading ? '-' : ((user.type === 'Organizer' || profile?.is_organizer) ? (stats?.totalEvents || 0) : attendedEvents.length)}
                 </div>
                 <div className="text-xs text-gray-600 font-semibold">
-                  {user.type === 'Organizer' ? 'Events' : 'Events Attended'}
+                  {(user.type === 'Organizer' || profile?.is_organizer) ? 'Events' : 'Events Attended'}
                 </div>
               </div>
 
               {/* Followers */}
               <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-3 text-center border border-gray-300 shadow-sm">
-                <div className="text-lg text-gray-900 font-bold">{user.followers}</div>
+                <div className="text-lg text-gray-900 font-bold">
+                  {loading ? '-' : (stats?.followers || user.followers || 0)}
+                </div>
                 <div className="text-xs text-gray-600 font-semibold">Followers</div>
               </div>
             </div>
@@ -166,7 +234,13 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
             {/* About */}
             <div className="mb-6">
               <h3 className="text-gray-900 mb-2">About</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{user.bio}</p>
+              <p className="text-sm text-gray-600 leading-relaxed">{profile?.bio || user.bio || 'No bio available'}</p>
+              {profile?.location && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
+                  <MapPin className="w-4 h-4" />
+                  <span>{profile.location}</span>
+                </div>
+              )}
             </div>
 
             {/* Modern Tab Navigation */}
@@ -213,21 +287,21 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
             {activeTab === 'events' && (
               <div>
                 {/* Past Event Highlights - For Organizers */}
-                {user.type === 'Organizer' && user.highlights && user.highlights.length > 0 && (
+                {(user.type === 'Organizer' || profile?.is_organizer) && pastEvents.length > 0 && (
                   <div className="mb-6">
                     <h3 className="text-gray-900 mb-3">Past Event Highlights</h3>
                     <div className="grid grid-cols-2 gap-3">
-                      {user.highlights.map((highlight) => (
-                        <div key={highlight.id} className="relative rounded-2xl overflow-hidden h-32 group cursor-pointer">
+                      {pastEvents.slice(0, 4).map((event) => (
+                        <div key={event.id} className="relative rounded-2xl overflow-hidden h-32 group cursor-pointer">
                           <ImageWithFallback
-                            src={highlight.image}
-                            alt={highlight.title}
+                            src={event.image_url}
+                            alt={event.title}
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                           <div className="absolute bottom-2 left-2 right-2">
-                            <p className="text-white text-xs drop-shadow-lg">{highlight.title}</p>
-                            <p className="text-white/80 text-[10px]">{highlight.date}</p>
+                            <p className="text-white text-xs drop-shadow-lg line-clamp-1">{event.title}</p>
+                            <p className="text-white/80 text-[10px]">{event.date}</p>
                           </div>
                         </div>
                       ))}
@@ -236,47 +310,49 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                 )}
 
                 {/* Event Memories - For Attendees */}
-                {user.type === 'Attendee' && user.highlights && user.highlights.length > 0 && (
+                {(user.type === 'Attendee' && !profile?.is_organizer) && attendedEvents.length > 0 && (
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-gray-900">Events Attended</h3>
-                      <span className="text-gray-500 text-sm">{user.highlights.length} events</span>
+                      <span className="text-gray-500 text-sm">{attendedEvents.length} events</span>
                     </div>
                     <div className="space-y-3">
-                      {user.highlights.slice(0, showAllEvents ? user.highlights.length : 6).map((highlight) => (
-                        <div key={highlight.id} className="flex gap-3 bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group">
+                      {attendedEvents.slice(0, showAllEvents ? attendedEvents.length : 6).map((event) => (
+                        <div key={event.id} className="flex gap-3 bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group">
                           <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
                             <ImageWithFallback
-                              src={highlight.image}
-                              alt={highlight.title}
+                              src={event.image_url}
+                              alt={event.title}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-gray-900 text-sm mb-1 line-clamp-1">{highlight.title}</h4>
+                            <h4 className="text-gray-900 text-sm mb-1 line-clamp-1">{event.title}</h4>
                             <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
                               <Calendar className="w-3 h-3" />
-                              <span>{highlight.date}</span>
+                              <span>{event.date}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-500 text-xs">
-                              <Users className="w-3 h-3" />
-                              <span>{highlight.attendees.toLocaleString()} attended</span>
-                            </div>
+                            {event.attendees && (
+                              <div className="flex items-center gap-2 text-gray-500 text-xs">
+                                <Users className="w-3 h-3" />
+                                <span>{event.attendees.toLocaleString()} attended</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
                     
                     {/* View All / Show Less Button */}
-                    {user.highlights.length > 6 && (
+                    {attendedEvents.length > 6 && (
                       <div className="mt-4">
                         <button
                           onClick={() => setShowAllEvents(!showAllEvents)}
                           className="w-full bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-600 py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group border border-purple-200"
                         >
                           <span className="font-medium">
-                            {showAllEvents ? 'Show Less' : `View All ${user.highlights.length} Events`}
+                            {showAllEvents ? 'Show Less' : `View All ${attendedEvents.length} Events`}
                           </span>
                           <svg
                             className={`w-5 h-5 transition-transform duration-300 ${showAllEvents ? 'rotate-180' : ''}`}
@@ -293,15 +369,15 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                 )}
 
                 {/* Upcoming Events - Only for Organizers */}
-                {user.type === 'Organizer' && user.upcomingEvents && user.upcomingEvents.length > 0 && (
+                {(user.type === 'Organizer' || profile?.is_organizer) && upcomingEvents.length > 0 && (
                   <div>
                     <h3 className="text-gray-900 mb-4">Upcoming Events</h3>
                     <div className="space-y-4">
-                      {user.upcomingEvents.map((event) => (
+                      {upcomingEvents.map((event) => (
                         <div key={event.id} className="flex gap-3">
                           {/* Event Image */}
                           <ImageWithFallback
-                            src={event.image}
+                            src={event.image_url}
                             alt={event.title}
                             className="w-24 h-24 rounded-2xl object-cover flex-shrink-0"
                           />
@@ -334,7 +410,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                 )}
 
                 {/* Empty State */}
-                {(!user.highlights || user.highlights.length === 0) && (!user.upcomingEvents || user.upcomingEvents.length === 0) && (
+                {(((user.type === 'Organizer' || profile?.is_organizer) && pastEvents.length === 0 && upcomingEvents.length === 0) || ((user.type === 'Attendee' && !profile?.is_organizer) && attendedEvents.length === 0)) && (
                   <div className="text-center py-12">
                     <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-gray-500 text-sm">No events to show</p>
@@ -346,31 +422,42 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
             {/* Photos Tab */}
             {activeTab === 'photos' && (
               <div>
-                {user.photos && user.photos.length > 0 ? (
+                {photos.length > 0 ? (
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-gray-900">Photos</h3>
-                      <span className="text-gray-500 text-sm">{user.photos.length} photos</span>
+                      <span className="text-gray-500 text-sm">{photos.length} photos</span>
                     </div>
                     <div className="grid grid-cols-3 gap-1">
-                      {user.photos.map((photo) => (
-                        <div 
-                          key={photo.id} 
-                          className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMediaViewerIndex(user.photos!.indexOf(photo));
-                            setMediaViewerType('photo');
-                            setShowMediaViewer(true);
-                          }}
-                        >
-                          <ImageWithFallback
-                            src={photo.image}
-                            alt={`Photo ${photo.id}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
+                      {photos.map((post) => {
+                        const imageUrl = post.image_urls[0];
+                        return (
+                          <div 
+                            key={post.id} 
+                            className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const idx = photosForViewer.findIndex(p => Math.floor(p.id / 100) === post.id);
+                              setMediaViewerIndex(idx >= 0 ? idx : 0);
+                              setMediaViewerType('photo');
+                              setShowMediaViewer(true);
+                            }}
+                          >
+                            <ImageWithFallback
+                              src={imageUrl}
+                              alt={`Photo ${post.id}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {post.image_urls.length > 1 && (
+                              <div className="absolute top-1 right-1 bg-black/50 rounded-full p-1">
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
@@ -384,12 +471,58 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
               </div>
             )}
 
+            {/* Videos Tab */}
+            {activeTab === 'videos' && (
+              <div>
+                {videos.length > 0 ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-gray-900">Videos</h3>
+                      <span className="text-gray-500 text-sm">{videos.length} videos</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {videos.map((post, idx) => (
+                        <div 
+                          key={post.id} 
+                          className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative group"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMediaViewerIndex(idx);
+                            setMediaViewerType('video');
+                            setShowMediaViewer(true);
+                          }}
+                        >
+                          <video 
+                            src={post.video_url} 
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+                            <div className="w-8 h-8 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center">
+                              <Play className="w-4 h-4 text-white fill-current" />
+                            </div>
+                          </div>
+                          <div className="absolute bottom-1 right-1 bg-black/60 px-1.5 py-0.5 rounded text-[10px] text-white font-medium">
+                            {post.duration || '0:00'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No videos to show</p>
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
         </div>
       </div>
       
       {/* Media Viewer - Rendered completely outside modal DOM */}
-      {showMediaViewer && user.photos && (
+      {showMediaViewer && (
         <MediaViewer
           media={mediaViewerType === 'photo' ? photosForViewer : videosForViewer}
           initialIndex={mediaViewerIndex}

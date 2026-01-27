@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { User, Mail, Phone, MapPin, Globe, Instagram, Facebook, Twitter, ArrowRight, Building2, Mic2, Store, Users, Briefcase, Trophy, Check, Music, Wine, Coffee, UtensilsCrossed, Headphones, Radio, Mic, Heart, GraduationCap, School, Building, Church, Laptop, ShoppingBag, Plane, Film, Dumbbell, Activity, Flame, Target } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../utils/supabase/client';
-import { updateProfile } from '../utils/supabase/api';
+import { updateProfile, supabase } from '../utils/supabase/api';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;
@@ -314,21 +313,21 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
   return (
     <div className="bg-purple-50 min-h-screen pb-24">
       {/* Header */}
-      <div className="bg-[#8A2BE2] px-6 py-8 shadow-lg">
+      <div className="bg-[#8A2BE2] px-4 py-6 shadow-lg">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-white" />
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+              <Building2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-white text-2xl">Setup Your Organizer Profile</h1>
-              <p className="text-white/90 text-sm">Tell us about your organization</p>
+              <h1 className="text-white text-lg sm:text-2xl font-bold">Setup Your Profile</h1>
+              <p className="text-white/90 text-xs sm:text-sm">Tell us about your organization</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="px-6 py-6 max-w-4xl mx-auto">
+      <div className="px-3 py-4 max-w-4xl mx-auto">
         {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
@@ -434,24 +433,24 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
           {/* Premium Venue Sub-Type Selection - Appears when Venue is selected */}
           {profileData.organizerType === 'Venue' && (
             <div className="mb-5">
-              <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 rounded-2xl p-6 border-2 border-pink-200 shadow-lg">
+              <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 rounded-2xl p-4 sm:p-6 border-2 border-pink-200 shadow-lg">
                 {/* Header with Icon */}
-                <div className="mb-5">
+                <div className="mb-4 sm:mb-5">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-12 h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
-                      <Store className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
+                      <Store className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
                     <div>
-                      <label className="block text-gray-900">
+                      <label className="block text-gray-900 text-sm sm:text-base font-medium">
                         Venue Type <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-gray-600 text-sm">What type of venue do you operate?</p>
+                      <p className="text-gray-600 text-xs sm:text-sm">What type of venue do you operate?</p>
                     </div>
                   </div>
                 </div>
                 
                 {/* Premium Vertical Stack (Mobile) / Grid (Desktop) Cards */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
                   {venueSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -461,28 +460,28 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
+                        className={`group relative border-2 sm:border-3 rounded-xl sm:rounded-2xl p-2 sm:p-5 transition-all duration-300 h-full ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-lg sm:shadow-2xl scale-[1.02] ring-2 sm:ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-pink-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
+                        <div className="flex flex-col items-center gap-2 sm:gap-3 text-center">
                           {/* Icon Container */}
-                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                          <div className={`relative w-10 h-10 sm:w-20 sm:h-20 flex-shrink-0 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 ${
                             isSelected 
-                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md sm:shadow-lg shadow-purple-300/60' 
                               : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-pink-100 group-hover:to-purple-100'
                           }`}>
-                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                            <Icon className={`w-5 h-5 sm:w-10 sm:h-10 transition-all duration-300 ${
                               isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-pink-600 group-hover:scale-110'
                             }`} />
                             
                             {/* Animated Pulse Ring on hover (non-selected only) */}
                             {!isSelected && (
-                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400 animate-ping"></div>
-                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400"></div>
+                              <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-pink-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-purple-400"></div>
                               </div>
                             )}
 
@@ -495,24 +494,24 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                             )}
                           </div>
                           
-                          <div className="flex-1 min-w-0">
+                          <div className="w-full">
                             {/* Name */}
-                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-xs sm:text-base font-medium transition-all duration-300 ${
                               isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-pink-600'
                             }`}>
                               {subType.name}
                             </h4>
                             
-                            {/* Description */}
-                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                            {/* Description - Hidden on mobile */}
+                            <p className="hidden sm:block text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                           </div>
                         </div>
                         
                         {/* Selected Checkmark Badge */}
                         {isSelected && (
-                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
-                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
+                          <div className="absolute top-1 right-1 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-4 h-4 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-1 sm:ring-4 ring-white">
+                              <Check className="w-2 h-2 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}
@@ -528,15 +527,15 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
 
                 {/* Enhanced Preview Badge */}
                 {profileData.venueSubType && (
-                  <div className="mt-4 p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
+                  <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
-                        <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                      <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
+                        <Check className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={3} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
-                        <p className="text-[#8A2BE2] flex items-center gap-2">
-                          <Store className="w-4 h-4" />
+                        <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
+                        <p className="text-[#8A2BE2] flex items-center gap-2 text-sm sm:text-base">
+                          <Store className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           <span>Venue - {profileData.venueSubType}</span>
                         </p>
                       </div>
@@ -550,22 +549,22 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
           {/* Artist/Performer Sub-Type Selection */}
           {profileData.organizerType === 'Artist / Performer' && (
             <div className="mb-5">
-              <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl p-6 border-2 border-purple-200 shadow-lg">
-                <div className="mb-5">
+              <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl p-4 sm:p-6 border-2 border-purple-200 shadow-lg">
+                <div className="mb-4 sm:mb-5">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-12 h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
-                      <Mic2 className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
+                      <Mic2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
                     <div>
-                      <label className="block text-gray-900">
+                      <label className="block text-gray-900 text-sm sm:text-base font-medium">
                         Artist Type <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-gray-600 text-sm">What type of performer are you?</p>
+                      <p className="text-gray-600 text-xs sm:text-sm">What type of performer are you?</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
                   {artistSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -575,26 +574,26 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
+                        className={`group relative border-2 sm:border-3 rounded-xl sm:rounded-2xl p-2 sm:p-5 transition-all duration-300 h-full ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-lg sm:shadow-2xl scale-[1.02] ring-2 sm:ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-purple-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
-                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                        <div className="flex flex-col items-center gap-2 sm:gap-3 text-center">
+                          <div className={`relative w-10 h-10 sm:w-20 sm:h-20 flex-shrink-0 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 ${
                             isSelected 
-                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md sm:shadow-lg shadow-purple-300/60' 
                               : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
                           }`}>
-                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                            <Icon className={`w-5 h-5 sm:w-10 sm:h-10 transition-all duration-300 ${
                               isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
                             }`} />
                             
                             {!isSelected && (
-                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
-                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
+                              <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-purple-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-pink-400"></div>
                               </div>
                             )}
 
@@ -606,21 +605,21 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                             )}
                           </div>
                           
-                          <div className="flex-1 min-w-0">
-                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                          <div className="w-full">
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-xs sm:text-base font-medium transition-all duration-300 ${
                               isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
                             }`}>
                               {subType.name}
                             </h4>
                             
-                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                            <p className="hidden sm:block text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                           </div>
                         </div>
                         
                         {isSelected && (
-                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
-                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
+                          <div className="absolute top-1 right-1 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-4 h-4 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-1 sm:ring-4 ring-white">
+                              <Check className="w-2 h-2 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}
@@ -634,15 +633,15 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                 </div>
 
                 {profileData.venueSubType && profileData.organizerType === 'Artist / Performer' && (
-                  <div className="mt-4 p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
+                  <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
-                        <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                      <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
+                        <Check className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={3} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
-                        <p className="text-[#8A2BE2] flex items-center gap-2">
-                          <Mic2 className="w-4 h-4" />
+                        <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
+                        <p className="text-[#8A2BE2] flex items-center gap-2 text-sm sm:text-base">
+                          <Mic2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           <span>Artist / Performer - {profileData.venueSubType}</span>
                         </p>
                       </div>
@@ -656,22 +655,22 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
           {/* Organization/Institution Sub-Type Selection */}
           {profileData.organizerType === 'Organization / Institution' && (
             <div className="mb-5">
-              <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl p-6 border-2 border-purple-200 shadow-lg">
-                <div className="mb-5">
+              <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl p-4 sm:p-6 border-2 border-purple-200 shadow-lg">
+                <div className="mb-4 sm:mb-5">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-12 h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
-                      <Users className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
+                      <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
                     <div>
-                      <label className="block text-gray-900">
+                      <label className="block text-gray-900 text-sm sm:text-base font-medium">
                         Organization Type <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-gray-600 text-sm">What type of organization are you?</p>
+                      <p className="text-gray-600 text-xs sm:text-sm">What type of organization are you?</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
                   {organizationSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -681,26 +680,26 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
+                        className={`group relative border-2 sm:border-3 rounded-xl sm:rounded-2xl p-2 sm:p-5 transition-all duration-300 h-full ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-lg sm:shadow-2xl scale-[1.02] ring-2 sm:ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-purple-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
-                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                        <div className="flex flex-col items-center gap-2 sm:gap-3 text-center">
+                          <div className={`relative w-10 h-10 sm:w-20 sm:h-20 flex-shrink-0 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 ${
                             isSelected 
-                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md sm:shadow-lg shadow-purple-300/60' 
                               : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
                           }`}>
-                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                            <Icon className={`w-5 h-5 sm:w-10 sm:h-10 transition-all duration-300 ${
                               isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
                             }`} />
                             
                             {!isSelected && (
-                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
-                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
+                              <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-purple-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-pink-400"></div>
                               </div>
                             )}
 
@@ -712,21 +711,21 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                             )}
                           </div>
                           
-                          <div className="flex-1 min-w-0">
-                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                          <div className="w-full">
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-xs sm:text-base font-medium transition-all duration-300 ${
                               isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
                             }`}>
                               {subType.name}
                             </h4>
                             
-                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                            <p className="hidden sm:block text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                           </div>
                         </div>
                         
                         {isSelected && (
-                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
-                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
+                          <div className="absolute top-1 right-1 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-4 h-4 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-1 sm:ring-4 ring-white">
+                              <Check className="w-2 h-2 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}
@@ -740,15 +739,15 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                 </div>
 
                 {profileData.venueSubType && profileData.organizerType === 'Organization / Institution' && (
-                  <div className="mt-4 p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
+                  <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
-                        <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                      <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
+                        <Check className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={3} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
-                        <p className="text-[#8A2BE2] flex items-center gap-2">
-                          <Users className="w-4 h-4" />
+                        <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
+                        <p className="text-[#8A2BE2] flex items-center gap-2 text-sm sm:text-base">
+                          <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           <span>Organization / Institution - {profileData.venueSubType}</span>
                         </p>
                       </div>
@@ -762,22 +761,22 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
           {/* Business/Corporate Sub-Type Selection */}
           {profileData.organizerType === 'Business / Corporate' && (
             <div className="mb-5">
-              <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl p-6 border-2 border-purple-200 shadow-lg">
-                <div className="mb-5">
+              <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl p-4 sm:p-6 border-2 border-purple-200 shadow-lg">
+                <div className="mb-4 sm:mb-5">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-12 h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
-                      <Briefcase className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
+                      <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
                     <div>
-                      <label className="block text-gray-900">
+                      <label className="block text-gray-900 text-sm sm:text-base font-medium">
                         Business Type <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-gray-600 text-sm">What type of business are you?</p>
+                      <p className="text-gray-600 text-xs sm:text-sm">What type of business are you?</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
                   {businessSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -787,26 +786,26 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
+                        className={`group relative border-2 sm:border-3 rounded-xl sm:rounded-2xl p-2 sm:p-5 transition-all duration-300 h-full ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-lg sm:shadow-2xl scale-[1.02] ring-2 sm:ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-purple-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
-                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                        <div className="flex flex-col items-center gap-2 sm:gap-3 text-center">
+                          <div className={`relative w-10 h-10 sm:w-20 sm:h-20 flex-shrink-0 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 ${
                             isSelected 
-                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md sm:shadow-lg shadow-purple-300/60' 
                               : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
                           }`}>
-                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                            <Icon className={`w-5 h-5 sm:w-10 sm:h-10 transition-all duration-300 ${
                               isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
                             }`} />
                             
                             {!isSelected && (
-                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
-                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
+                              <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-purple-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-pink-400"></div>
                               </div>
                             )}
 
@@ -818,21 +817,21 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                             )}
                           </div>
                           
-                          <div className="flex-1 min-w-0">
-                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                          <div className="w-full">
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-xs sm:text-base font-medium transition-all duration-300 ${
                               isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
                             }`}>
                               {subType.name}
                             </h4>
                             
-                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                            <p className="hidden sm:block text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                           </div>
                         </div>
                         
                         {isSelected && (
-                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
-                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
+                          <div className="absolute top-1 right-1 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-4 h-4 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-1 sm:ring-4 ring-white">
+                              <Check className="w-2 h-2 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}
@@ -846,15 +845,15 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                 </div>
 
                 {profileData.venueSubType && profileData.organizerType === 'Business / Corporate' && (
-                  <div className="mt-4 p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
+                  <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
-                        <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                      <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
+                        <Check className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={3} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
-                        <p className="text-[#8A2BE2] flex items-center gap-2">
-                          <Briefcase className="w-4 h-4" />
+                        <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
+                        <p className="text-[#8A2BE2] flex items-center gap-2 text-sm sm:text-base">
+                          <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           <span>Business / Corporate - {profileData.venueSubType}</span>
                         </p>
                       </div>
@@ -868,22 +867,22 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
           {/* Sports Club/Fitness Provider Sub-Type Selection */}
           {profileData.organizerType === 'Sports Club / Fitness Provider' && (
             <div className="mb-5">
-              <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl p-6 border-2 border-purple-200 shadow-lg">
-                <div className="mb-5">
+              <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl p-4 sm:p-6 border-2 border-purple-200 shadow-lg">
+                <div className="mb-4 sm:mb-5">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-12 h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
-                      <Trophy className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#8A2BE2] rounded-xl flex items-center justify-center shadow-md">
+                      <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
                     <div>
-                      <label className="block text-gray-900">
+                      <label className="block text-gray-900 text-sm sm:text-base font-medium">
                         Sports/Fitness Type <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-gray-600 text-sm">What type of sports/fitness provider are you?</p>
+                      <p className="text-gray-600 text-xs sm:text-sm">What type of sports/fitness provider are you?</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
                   {sportsSubTypes.map((subType) => {
                     const Icon = subType.icon;
                     const isSelected = profileData.venueSubType === subType.name;
@@ -893,26 +892,26 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         key={subType.id}
                         type="button"
                         onClick={() => handleInputChange('venueSubType', subType.name)}
-                        className={`group relative border-3 rounded-2xl p-3 sm:p-5 transition-all duration-300 ${
+                        className={`group relative border-2 sm:border-3 rounded-xl sm:rounded-2xl p-2 sm:p-5 transition-all duration-300 h-full ${
                           isSelected 
-                            ? 'border-[#8A2BE2] bg-white shadow-2xl scale-[1.02] ring-4 ring-purple-200/50' 
+                            ? 'border-[#8A2BE2] bg-white shadow-lg sm:shadow-2xl scale-[1.02] ring-2 sm:ring-4 ring-purple-200/50' 
                             : 'border-white bg-white/80 hover:border-purple-300 hover:bg-white hover:shadow-xl hover:scale-[1.02]'
                         }`}
                       >
-                        <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center">
-                          <div className={`relative w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 rounded-2xl flex items-center justify-center sm:mx-auto sm:mb-3 transition-all duration-300 ${
+                        <div className="flex flex-col items-center gap-2 sm:gap-3 text-center">
+                          <div className={`relative w-10 h-10 sm:w-20 sm:h-20 flex-shrink-0 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 ${
                             isSelected 
-                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-lg shadow-purple-300/60' 
+                              ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md sm:shadow-lg shadow-purple-300/60' 
                               : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
                           }`}>
-                            <Icon className={`w-6 h-6 sm:w-10 sm:h-10 transition-all duration-300 ${
+                            <Icon className={`w-5 h-5 sm:w-10 sm:h-10 transition-all duration-300 ${
                               isSelected ? 'text-white scale-110' : 'text-gray-600 group-hover:text-purple-600 group-hover:scale-110'
                             }`} />
                             
                             {!isSelected && (
-                              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 animate-ping"></div>
-                                <div className="absolute inset-0 rounded-2xl border-2 border-pink-400"></div>
+                              <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-purple-400 animate-ping"></div>
+                                <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-pink-400"></div>
                               </div>
                             )}
 
@@ -924,21 +923,21 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                             )}
                           </div>
                           
-                          <div className="flex-1 min-w-0">
-                            <h4 className={`mb-0.5 sm:mb-1.5 text-base font-medium transition-all duration-300 ${
+                          <div className="w-full">
+                            <h4 className={`mb-0.5 sm:mb-1.5 text-xs sm:text-base font-medium transition-all duration-300 ${
                               isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
                             }`}>
                               {subType.name}
                             </h4>
                             
-                            <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
+                            <p className="hidden sm:block text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
                           </div>
                         </div>
                         
                         {isSelected && (
-                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-2 sm:ring-4 ring-white">
-                              <Check className="w-3 h-3 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
+                          <div className="absolute top-1 right-1 sm:top-auto sm:right-auto sm:-bottom-3 sm:left-1/2 sm:translate-y-0 sm:-translate-x-1/2 animate-fadeIn">
+                            <div className="w-4 h-4 sm:w-8 sm:h-8 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-lg shadow-purple-400/60 ring-1 sm:ring-4 ring-white">
+                              <Check className="w-2 h-2 sm:w-5 sm:h-5 text-white" strokeWidth={3} />
                             </div>
                           </div>
                         )}
@@ -952,15 +951,15 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                 </div>
 
                 {profileData.venueSubType && profileData.organizerType === 'Sports Club / Fitness Provider' && (
-                  <div className="mt-4 p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
+                  <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white border-2 border-purple-300 rounded-xl shadow-md animate-fadeIn">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
-                        <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                      <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-xl flex items-center justify-center shadow-lg">
+                        <Check className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={3} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
-                        <p className="text-[#8A2BE2] flex items-center gap-2">
-                          <Trophy className="w-4 h-4" />
+                        <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5">Your organizer type will be saved as:</p>
+                        <p className="text-[#8A2BE2] flex items-center gap-2 text-sm sm:text-base">
+                          <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           <span>Sports Club / Fitness Provider - {profileData.venueSubType}</span>
                         </p>
                       </div>
@@ -972,8 +971,8 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
           )}
 
           {/* Email */}
-          <div className="mb-5">
-            <label className="block text-gray-900 mb-2">
+          <div className="mb-3 sm:mb-5">
+            <label className="block text-gray-900 mb-1.5 sm:mb-2 text-sm sm:text-base">
               Email Address <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -983,14 +982,14 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                 value={profileData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 placeholder="contact@yourorganization.com"
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                className="w-full pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-sm sm:text-base"
               />
             </div>
           </div>
 
           {/* Phone */}
-          <div className="mb-5">
-            <label className="block text-gray-900 mb-2">
+          <div className="mb-3 sm:mb-5">
+            <label className="block text-gray-900 mb-1.5 sm:mb-2 text-sm sm:text-base">
               Phone Number <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -1000,14 +999,14 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                 value={profileData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 placeholder="+255 123 456 789"
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                className="w-full pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-sm sm:text-base"
               />
             </div>
           </div>
 
           {/* Location */}
           <div>
-            <label className="block text-gray-900 mb-2">
+            <label className="block text-gray-900 mb-1.5 sm:mb-2 text-sm sm:text-base">
               Location <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -1017,19 +1016,19 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                 value={profileData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 placeholder="e.g., Dar es Salaam, Tanzania"
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                className="w-full pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-sm sm:text-base"
               />
             </div>
           </div>
         </div>
 
         {/* Optional Fields Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-gray-900 text-lg mb-4">Optional Information</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-gray-900 text-base sm:text-lg mb-3 sm:mb-4">Optional Information</h2>
 
           {/* Website */}
-          <div className="mb-5">
-            <label className="block text-gray-900 mb-2">Website</label>
+          <div className="mb-3 sm:mb-5">
+            <label className="block text-gray-900 mb-1.5 sm:mb-2 text-sm sm:text-base">Website</label>
             <div className="relative">
               <Globe className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -1037,15 +1036,15 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                 value={profileData.website}
                 onChange={(e) => handleInputChange('website', e.target.value)}
                 placeholder="https://yourwebsite.com"
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                className="w-full pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-sm sm:text-base"
               />
             </div>
           </div>
 
           {/* Social Media */}
-          <div className="mb-5">
-            <label className="block text-gray-900 mb-3">Social Media</label>
-            <div className="space-y-3">
+          <div className="mb-3 sm:mb-5">
+            <label className="block text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">Social Media</label>
+            <div className="space-y-2 sm:space-y-3">
               {/* Instagram */}
               <div className="relative">
                 <Instagram className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-pink-500" />
@@ -1054,7 +1053,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                   value={profileData.instagram}
                   onChange={(e) => handleInputChange('instagram', e.target.value)}
                   placeholder="Instagram username"
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                  className="w-full pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-sm sm:text-base"
                 />
               </div>
 
@@ -1066,7 +1065,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                   value={profileData.facebook}
                   onChange={(e) => handleInputChange('facebook', e.target.value)}
                   placeholder="Facebook page"
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                  className="w-full pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-sm sm:text-base"
                 />
               </div>
 
@@ -1078,7 +1077,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                   value={profileData.twitter}
                   onChange={(e) => handleInputChange('twitter', e.target.value)}
                   placeholder="Twitter/X username"
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                  className="w-full pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-sm sm:text-base"
                 />
               </div>
             </div>
@@ -1086,27 +1085,27 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
 
           {/* Bio */}
           <div>
-            <label className="block text-gray-900 mb-2">About Your Organization</label>
+            <label className="block text-gray-900 mb-1.5 sm:mb-2 text-sm sm:text-base">About Your Organization</label>
             <textarea
               value={profileData.bio}
               onChange={(e) => handleInputChange('bio', e.target.value)}
               placeholder="Tell people about your organization, what events you organize, and what makes you unique..."
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all resize-none"
+              className="w-full px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all resize-none text-sm sm:text-base"
             />
           </div>
         </div>
 
         {/* Continue Button */}
-        <div className="sticky bottom-20 bg-purple-50 py-4">
+        <div className="sticky bottom-4 sm:bottom-20 bg-purple-50 py-2 sm:py-4">
           <button
             onClick={handleSubmit}
-            className="w-full bg-[#8A2BE2] text-white py-4 rounded-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2"
+            className="w-full bg-[#8A2BE2] text-white py-3 sm:py-4 rounded-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2"
           >
-            <span>Continue to Create Event</span>
-            <ArrowRight className="w-5 h-5" />
+            <span className="text-sm sm:text-base font-medium">Continue to Create Event</span>
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-          <p className="text-center text-gray-500 text-xs mt-3">
+          <p className="text-center text-gray-500 text-[10px] sm:text-xs mt-2 sm:mt-3">
             You can edit this information later in your profile settings
           </p>
         </div>

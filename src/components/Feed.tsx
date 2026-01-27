@@ -31,6 +31,7 @@ interface HighlightClip {
 interface Post {
   id: number;
   user: {
+    id: string;
     name: string;
     username: string;
     avatar: string;
@@ -103,6 +104,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           const mappedPosts: Post[] = data.map((p: ApiPost) => ({
             id: p.id,
             user: {
+              id: p.user.id,
               name: p.user?.full_name || p.user?.username || 'Unknown User',
               username: p.user?.username || '@unknown',
               avatar: p.user?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
@@ -192,7 +194,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   }, [globalConversations, activeConversation, onMarkAsRead]);
 
   const [messageText, setMessageText] = useState('');
-  const [selectedUserProfile, setSelectedUserProfile] = useState<{ name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean } | null>(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
   const [messageSearch, setMessageSearch] = useState('');
@@ -492,7 +494,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   };
 
-  const handleOpenUserProfile = (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
+  const handleOpenUserProfile = (user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setSelectedUserProfile(user);
   };
@@ -728,27 +730,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 </div>
               )}
 
-              {/* Image - Rounded Inside Card (only for non-highlight posts) */}
-              {post.content.image && !post.isHighlight && (
-                <div className="px-4 pb-4">
-                  <div 
-                    className="relative rounded-xl overflow-hidden cursor-pointer"
-                    onClick={() => setFullScreenImage({ images: [post.content.image!], currentIndex: 0, postId: post.id })}
-                  >
-                    <ImageWithFallback
-                      src={post.content.image}
-                      alt="Post"
-                      className="w-full aspect-[16/10] object-cover"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Image Carousel - Multiple Images */}
+              {/* Image Carousel - Images & Videos */}
               {post.content.images && post.content.images.length > 0 && !post.isHighlight && (
                 <div className="px-4 pb-4">
                   <div className="relative rounded-xl overflow-hidden group">
-                    {/* Current Image with Touch Handling */}
+                    {/* Current Image/Video with Touch Handling */}
                     <div 
                       className="relative select-none"
                       onTouchStart={(e) => {
@@ -779,18 +765,25 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                             });
                           }
                         } else if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
-                          setFullScreenImage({ 
-                            images: post.content.images!, 
-                            currentIndex: carouselIndexes[post.id] || 0,
-                            postId: post.id 
-                          });
+                          // Only open fullscreen if it's not a video or if it's a tap on non-interactive area
+                          // For now, let's allow fullscreen for images only
+                          const currentUrl = post.content.images?.[carouselIndexes[post.id] || 0];
+                          if (!isVideo(currentUrl)) {
+                            setFullScreenImage({ 
+                              images: post.content.images!, 
+                              currentIndex: carouselIndexes[post.id] || 0,
+                              postId: post.id 
+                            });
+                          }
                         }
                         
                         setImageTouchStart(null);
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!('ontouchstart' in window)) {
+                        // For mouse clicks
+                        const currentUrl = post.content.images![carouselIndexes[post.id] || 0];
+                        if (!('ontouchstart' in window) && !currentUrl.match(/\.(mp4|webm|ogg|mov)$/i)) {
                           setFullScreenImage({ 
                             images: post.content.images!, 
                             currentIndex: carouselIndexes[post.id] || 0,
@@ -799,11 +792,20 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                         }
                       }}
                     >
-                      <ImageWithFallback
-                        src={post.content.images[carouselIndexes[post.id] || 0]}
-                        alt={`Post image ${(carouselIndexes[post.id] || 0) + 1}`}
-                        className="w-full aspect-[16/10] object-cover pointer-events-none"
-                      />
+                      {post.content.images[carouselIndexes[post.id] || 0].match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                        <video
+                          src={post.content.images[carouselIndexes[post.id] || 0]}
+                          className="w-full aspect-[16/10] object-cover"
+                          controls
+                          playsInline
+                        />
+                      ) : (
+                        <ImageWithFallback
+                          src={post.content.images[carouselIndexes[post.id] || 0]}
+                          alt={`Post image ${(carouselIndexes[post.id] || 0) + 1}`}
+                          className="w-full aspect-[16/10] object-cover pointer-events-none"
+                        />
+                      )}
                       
                       {/* Image Counter Badge */}
                       <div className="absolute top-3 left-3 bg-[#8A2BE2]/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-medium pointer-events-none">
@@ -1918,64 +1920,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       {selectedUserProfile && (
         <UserProfileModal
           user={{
+            id: selectedUserProfile.id,
             name: selectedUserProfile.name,
             type: selectedUserProfile.isOrganizer ? 'Organizer' : 'Attendee',
-            followers: '2.8k',
-            following: '1.2k',
-            eventsHosted: selectedUserProfile.isOrganizer ? 24 : undefined,
-            eventsAttended: !selectedUserProfile.isOrganizer ? 156 : undefined,
             avatar: selectedUserProfile.avatar,
-            coverImage: selectedUserProfile.name === 'Buki Jenard' 
-              ? 'https://i.ibb.co/F2wGf9R/B-Cover.jpg' 
-              : selectedUserProfile.name === 'Luchy Ranks' 
-              ? 'https://i.ibb.co/k2Jg34Nv/L-cover.jpg' 
-              : 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200',
-            bio: selectedUserProfile.isOrganizer 
-              ? 'Professional event organizer specializing in creating unforgettable experiences. Passionate about bringing people together through music, culture, and celebration.' 
-              : 'Event enthusiast and social butterfly. Love discovering new experiences and meeting amazing people!',
-            location: 'Dar es Salaam',
             verified: selectedUserProfile.verified,
-            joinedDate: 'January 2023',
-            email: selectedUserProfile.name.toLowerCase().replace(' ', '.') + '@eventz.com',
-            phone: '+255 712 345 678',
-            instagram: selectedUserProfile.name.toLowerCase().replace(' ', ''),
-            twitter: selectedUserProfile.name.toLowerCase().replace(' ', '_'),
-            highlights: selectedUserProfile.isOrganizer ? [
-              {
-                id: 1,
-                image: 'https://images.unsplash.com/photo-1658046413536-6e5933dfd939?w=400&h=300&fit=crop',
-                title: 'Summer Festival 2024',
-                date: 'Dec 15, 2024',
-                attendees: 4500,
-              },
-              {
-                id: 2,
-                image: 'https://images.unsplash.com/photo-1751998689590-f7ae39d9d218?w=400&h=300&fit=crop',
-                title: 'New Year Bash',
-                date: 'Jan 1, 2025',
-                attendees: 5200,
-              },
-            ] : [
-              {
-                id: 1,
-                image: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400&h=300&fit=crop',
-                title: 'Afrobeat Festival',
-                date: 'Nov 20, 2024',
-                attendees: 3200,
-              },
-              {
-                id: 2,
-                image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop',
-                title: 'Jazz Night Live',
-                date: 'Dec 8, 2024',
-                attendees: 1800,
-              },
-            ],
-            photos: [
-              { id: 1, image: 'https://images.unsplash.com/photo-1658046413536-6e5933dfd939?w=400&h=300&fit=crop', size: 'large' as const },
-              { id: 2, image: 'https://images.unsplash.com/photo-1605286232233-e448650f5914?w=400&h=300&fit=crop', size: 'small' as const },
-              { id: 3, image: 'https://images.unsplash.com/photo-1607313029691-fa108ddf807d?w=400&h=300&fit=crop', size: 'small' as const },
-            ],
           }}
           onClose={() => setSelectedUserProfile(null)}
           onFollow={() => {

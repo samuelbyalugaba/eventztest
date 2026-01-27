@@ -230,8 +230,8 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
 
       // 1. Upload file
       const file = filesToUpload[0];
-      // Use 'events' bucket as 'posts' bucket has RLS policies preventing uploads
-      const publicUrl = await uploadImage(file, 'events');
+      // Use 'posts' bucket - api.ts handles fallback to 'events' if needed
+      const publicUrl = await uploadImage(file, 'posts');
 
       // 2. Create post
       await createPost({

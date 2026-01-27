@@ -1,4 +1,5 @@
 import { 
+  // Icons
   X, 
   User, 
   Bell, 
@@ -7,7 +8,32 @@ import {
   Video, 
   Shield,
   Camera,
-  Check
+  Check,
+  Mic2,
+  Store,
+  Trophy,
+  Wine,
+  Coffee,
+  UtensilsCrossed,
+  Headphones,
+  Mic,
+  Music,
+  Users,
+  Briefcase,
+  Radio,
+  Heart,
+  GraduationCap,
+  Church,
+  Laptop,
+  ShoppingBag,
+  Plane,
+  Film,
+  Dumbbell,
+  Activity,
+  Target,
+  Mail,
+  Phone,
+  Globe
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -32,6 +58,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
     location: '',
     bio: '',
     website: '',
+    avatarUrl: '', // Added avatarUrl to fix type error
   });
 
   const [notifications, setNotifications] = useState({
@@ -102,6 +129,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
               location: profile.location || '',
               bio: profile.bio || '',
               website: profile.website || '',
+              avatarUrl: profile.avatar_url || '',
             });
 
             if (profile.notification_settings) setNotifications(profile.notification_settings);
