@@ -431,14 +431,14 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
               <div key={event.id} className="flex gap-4 bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group">
                 <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
                   <ImageWithFallback
-                    src={event.image}
-                    alt={event.name}
+                    src={event.image_url}
+                    alt={event.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-gray-900 text-sm mb-1 line-clamp-1">{event.name}</h4>
+                  <h4 className="text-gray-900 text-sm mb-1 line-clamp-1">{event.title}</h4>
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
                     <Calendar className="w-3 h-3" />
                     <span>{event.date}</span>

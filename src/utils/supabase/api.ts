@@ -267,7 +267,8 @@ export const getOrganizerStats = async (userId: string) => {
     totalViews,
     ticketsSold,
     revenue,
-    liveStreams
+    liveStreams,
+    avgRating: 0 // Placeholder until we have a ratings system
   };
 };
 

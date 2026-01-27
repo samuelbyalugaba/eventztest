@@ -286,7 +286,8 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   // Combine highlights and photos into a unified gallery for the combined layout
   const combinedGallery = [
     ...organizerData.highlights.map((h) => ({
-      id: `highlight-${h.id}`,
+      id: h.id, // Use number ID for MediaViewer compatibility
+      uniqueId: `highlight-${h.id}`, // Unique ID for key
       image: h.image,
       video: h.video,
       title: h.title,
@@ -294,9 +295,14 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       likes: 0, // No likes count available in highlights structure yet
       comments: 0,
       shares: 0,
+      // MediaViewer compatibility
+      url: h.image,
+      thumbnail: h.image,
+      videoUrl: h.video || '',
     })),
     ...organizerData.photos.map((p) => ({
-      id: `photo-${p.id}`,
+      id: p.id, // Use number ID for MediaViewer compatibility
+      uniqueId: `photo-${p.id}`, // Unique ID for key
       image: p.image,
       video: undefined,
       title: p.eventName || `${organizerData.name} Gallery`,
@@ -304,6 +310,10 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       likes: 0,
       comments: 0,
       shares: 0,
+      // MediaViewer compatibility
+      url: p.image,
+      thumbnail: p.image,
+      videoUrl: '',
     })),
   ];
 
@@ -535,22 +545,25 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           .filter(item => item.mediaType === mediaViewerType)
           .map((item) => {
             if (item.mediaType === 'video') {
-              const numericId = parseInt(item.id.replace(/\D/g, '')) || 0;
               return {
-                id: numericId,
-                thumbnail: item.image,
+                id: item.id,
+                thumbnail: item.thumbnail,
                 duration: '2:30',
-                views: (numericId * 123) % 5000 + 1000,
+                views: (item.id * 123) % 5000 + 1000,
                 likes: item.likes,
-                videoUrl: item.video!,
+                videoUrl: item.videoUrl,
                 eventName: item.title,
+                isPost: true,
+                postId: item.id
               };
             } else {
               return {
-                id: parseInt(item.id.replace(/\D/g, '')),
-                url: item.image,
+                id: item.id,
+                url: item.url,
                 likes: item.likes,
                 eventName: item.title,
+                isPost: true,
+                postId: item.id
               };
             }
           })}
