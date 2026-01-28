@@ -450,7 +450,7 @@ export default function App() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto pb-20">
         {activeTab === 'event' && <EventDetails onTicketPurchase={handleTicketPurchase} purchasedTickets={purchasedTickets} conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} />}
-        {activeTab === 'feed' && <Feed conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} />}
+        {activeTab === 'feed' && <Feed conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} onMarkAsRead={handleMarkAsRead} />}
         {activeTab === 'live' && <LiveFeed />}
         {activeTab === 'create' && (
           !isOrganizer ? (
@@ -465,10 +465,6 @@ export default function App() {
         )}
         {activeTab === 'profile' && (
           <Profile
-            conversations={conversations}
-            onStartConversation={handleStartConversation}
-            onSendMessage={handleSendMessage}
-            onMarkAsRead={handleMarkAsRead}
             onLogout={handleLogout}
           />
         )}

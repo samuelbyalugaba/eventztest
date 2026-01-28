@@ -25,7 +25,6 @@ interface UserProfileModalProps {
 
 export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserProfileModalProps) {
   const [isFollowing, setIsFollowing] = useState(false);
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [activeTab, setActiveTab] = useState<'events' | 'photos' | 'videos'>('events');
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
@@ -73,6 +72,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
 
         // Fetch posts for photos/videos tab
         const postsData = await getPosts({ authorId: user.id });
+        console.log('Fetched user posts for modal:', postsData);
         setUserPosts(postsData || []);
 
       } catch (error) {
@@ -139,7 +139,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
 
   const videosForViewer = videos.map((post) => ({
     id: post.id,
-    url: post.video_url!,
+    thumbnail: post.image_urls?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
+    videoUrl: post.video_url!,
     likes: post.likes_count || 0,
     eventName: post.event?.title || 'Post',
     isPost: true,
@@ -495,14 +496,22 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                           <video 
                             src={post.video_url} 
                             className="w-full h-full object-cover"
+                            muted
+                            playsInline
+                            loop
+                            onMouseOver={(e) => e.currentTarget.play()}
+                            onMouseOut={(e) => {
+                              e.currentTarget.pause();
+                              e.currentTarget.currentTime = 0;
+                            }}
                           />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+                          <div className="absolute bottom-1 right-1 bg-black/60 px-1.5 py-0.5 rounded text-[10px] text-white font-medium pointer-events-none">
+                            {post.duration || '0:00'}
+                          </div>
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                             <div className="w-8 h-8 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center">
                               <Play className="w-4 h-4 text-white fill-current" />
                             </div>
-                          </div>
-                          <div className="absolute bottom-1 right-1 bg-black/60 px-1.5 py-0.5 rounded text-[10px] text-white font-medium">
-                            {post.duration || '0:00'}
                           </div>
                         </div>
                       ))}

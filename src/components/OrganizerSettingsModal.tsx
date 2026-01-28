@@ -33,12 +33,13 @@ import {
   Target,
   Mail,
   Phone,
-  Globe
+  Globe,
+  AtSign
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { updateProfile, getProfile } from '../utils/supabase/api';
+import { updateProfile, getProfile, checkUsernameUnique } from '../utils/supabase/api';
 
 const FALLBACK_AVATAR = "https://ui-avatars.com/api/?background=random&color=fff";
 
@@ -50,6 +51,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'streaming' | 'payments' | 'privacy' | 'account'>('profile');
 
   const [profileData, setProfileData] = useState({
+    username: '',
     organizerName: '',
     organizerType: '',
     venueSubType: '',
@@ -121,6 +123,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
             }
 
             setProfileData({
+              username: profile.username || '',
               organizerName: profile.full_name || '',
               organizerType: type,
               venueSubType: subType,
@@ -153,11 +156,22 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Check username uniqueness if changed
+      const currentProfile = await getProfile(user.id);
+      if (profileData.username !== currentProfile?.username) {
+        const isUnique = await checkUsernameUnique(profileData.username, user.id);
+        if (!isUnique) {
+          toast.error('Username already taken');
+          return;
+        }
+      }
+
       const finalOrganizerType = profileData.venueSubType
         ? `${profileData.organizerType} - ${profileData.venueSubType}`
         : profileData.organizerType;
 
       await updateProfile(user.id, {
+        username: profileData.username,
         full_name: profileData.organizerName,
         organizer_type: finalOrganizerType,
         contact_email: profileData.email,
@@ -311,6 +325,20 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <h4 className="text-gray-900 font-medium mb-6">Personal Information</h4>
                   <div className="space-y-5">
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-2">Username</label>
+                      <div className="relative">
+                        <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={profileData.username}
+                          onChange={(e) => setProfileData({ ...profileData, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
+                          className="w-full pl-10 pr-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
+                          placeholder="username"
+                        />
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-2">Organizer Name</label>
                       <input

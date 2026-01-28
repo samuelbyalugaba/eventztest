@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, Post as ApiPost } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, Post as ApiPost } from '../utils/supabase/api';
 
 import { UserProfileModal } from './UserProfileModal';
 import { Conversation, Message } from '../types';
@@ -25,6 +25,7 @@ interface HighlightClip {
   thumbnail: string;
   duration: string;
   title: string;
+  videoUrl?: string;
   views: number;
 }
 
@@ -86,6 +87,11 @@ interface FeedProps {
   onMarkAsRead?: (conversationId: number) => void;
 }
 
+const isVideo = (url?: string) => {
+  if (!url) return false;
+  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+};
+
 export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage, onMarkAsRead }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
@@ -104,7 +110,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           const mappedPosts: Post[] = data.map((p: ApiPost) => ({
             id: p.id,
             user: {
-              id: p.user.id,
+              id: p.user?.id || 'unknown',
               name: p.user?.full_name || p.user?.username || 'Unknown User',
               username: p.user?.username || '@unknown',
               avatar: p.user?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
@@ -141,6 +147,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               thumbnail: p.image_urls?.[0] || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', // Vertical thumbnail fallback
               duration: p.duration || '0:30',
               title: p.content || 'Video Highlight',
+              videoUrl: p.video_url,
               views: p.views || 0,
             }] : undefined,
           }));
@@ -212,6 +219,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [rewindAnimation, setRewindAnimation] = useState<{ show: boolean; direction: 'left' | 'right' } | null>(null);
   const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [imageTouchStart, setImageTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [showChatMenu, setShowChatMenu] = useState(false);
   
   const unreadCount = notifications.filter((n) => !n.read).length;
   const unreadMessagesCount = globalConversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
@@ -476,6 +484,34 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
 
     // Clear the input field
     setMessageText('');
+  };
+
+  const handleDeleteChat = async () => {
+    if (!activeConversation) return;
+    
+    try {
+      await deleteConversation(activeConversation.id);
+      setActiveConversation(null);
+      setShowMessages(false);
+      toast.success('Chat deleted');
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      toast.error('Failed to delete chat');
+    }
+  };
+
+  const handleMarkAsUnread = async () => {
+    if (!activeConversation || !currentUser) return;
+    
+    try {
+      await markConversationAsUnread(activeConversation.id, currentUser.id);
+      setActiveConversation(null);
+      setShowMessages(false);
+      toast.success('Marked as unread');
+    } catch (error) {
+      console.error('Error marking as unread:', error);
+      toast.error('Failed to mark as unread');
+    }
   };
 
   const handleStartConversationLocal = async (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
@@ -1400,7 +1436,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                       <ArrowLeft className="w-5 h-5 text-white" />
                     </button>
                     
-                    <div className="relative">
+                    <div 
+                      className="relative cursor-pointer"
+                      onClick={(e) => handleOpenUserProfile({ ...activeConversation.user, id: activeConversation.user.id || '' }, e)}
+                    >
                       <img
                         src={activeConversation.user.avatar}
                         alt={activeConversation.user.name}
@@ -1413,9 +1452,12 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
+                    <div 
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={(e) => handleOpenUserProfile({ ...activeConversation.user, id: activeConversation.user.id || '' }, e)}
+                    >
                       <div className="flex items-center gap-1.5">
-                        <h3 className="text-white font-bold truncate">
+                        <h3 className="text-white font-bold truncate hover:underline">
                           {activeConversation.user.name}
                         </h3>
                         {activeConversation.user.verified && (
@@ -1427,6 +1469,40 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                         )}
                       </div>
                       <p className="text-white/80 text-xs">{activeConversation.user.username}</p>
+                    </div>
+
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowChatMenu(!showChatMenu)}
+                        className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                      >
+                        <MoreVertical className="w-5 h-5 text-white" />
+                      </button>
+
+                      {showChatMenu && (
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                          <button
+                            onClick={() => {
+                              handleMarkAsUnread();
+                              setShowChatMenu(false);
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                          >
+                            <Mail className="w-4 h-4" />
+                            Mark as Unread
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleDeleteChat();
+                              setShowChatMenu(false);
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-gray-100"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete Chat
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <button
@@ -1651,7 +1727,9 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             {/* Video Element */}
             <video
               id="highlight-video"
+              src={playingVideo.clips[playingVideo.clipIndex].videoUrl}
               autoPlay
+              controls
               muted
               playsInline
               loop
@@ -1665,9 +1743,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   // Autoplay failed, user will need to tap to play
                 });
               }}
-            >
-              <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
-            </video>
+            />
 
             {/* Play/Pause Icon - Center (Shows briefly when tapped) */}
             <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity ${

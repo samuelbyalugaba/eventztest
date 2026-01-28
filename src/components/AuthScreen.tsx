@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, Video, Loader2, AlertCircle } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../utils/supabase/client';
+import { checkUsernameUnique } from '../utils/supabase/api';
 import { toast } from 'sonner';
 
 interface AuthScreenProps {
@@ -106,6 +107,27 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
         if (data.user) {
           // Create user profile
           if (data.session) {
+            // Generate unique username
+            const baseUsername = formData.fullName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            let finalUsername = baseUsername;
+            let isUnique = await checkUsernameUnique(finalUsername);
+            
+            if (!isUnique) {
+              let counter = 1;
+              while (counter <= 10) {
+                const candidate = `${baseUsername}${counter}`;
+                if (await checkUsernameUnique(candidate)) {
+                  finalUsername = candidate;
+                  isUnique = true;
+                  break;
+                }
+                counter++;
+              }
+              if (!isUnique) {
+                 finalUsername = `${baseUsername}${Math.floor(Date.now() % 10000)}`;
+              }
+            }
+
             const { error: profileError } = await supabase
               .from('profiles')
               .insert([
@@ -113,7 +135,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   id: data.user.id,
                   email: formData.email,
                   full_name: formData.fullName,
-                  username: formData.email.split('@')[0] + Math.floor(Date.now() % 10000),
+                  username: finalUsername,
                   avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName)}&background=random`,
                 }
               ]);

@@ -1,33 +1,29 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Heart, Ticket as TicketIcon, Bell, BellOff, Camera, Image as ImageIcon, Upload, Plus, Smile, Loader2 } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Bell, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
 import { SetAlertModal } from './SetAlertModal';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getProfile, getUserTickets, getUserMedia, getSavedEvents, toggleReminder as toggleReminderApi, getFollowersCount, getFollowingCount, subscribeToSavedEvents, createPost, uploadImage, Profile as UserProfile, Event, Ticket, UserMedia } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, toggleReminder as toggleReminderApi, Profile as UserProfile, Event, Ticket, UserMedia, Post } from '../utils/supabase/api';
 
 const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"; // Generic event background
 const FALLBACK_AVATAR_IMAGE = "https://ui-avatars.com/api/?background=random&color=fff"; // Dynamic fallback base
 
 interface ProfileProps {
-  conversations: any[];
-  onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<any> | any;
-  onSendMessage: (conversationId: number, messageText: string) => void;
-  onMarkAsRead?: (conversationId: number) => void;
   onLogout: () => Promise<void>;
 }
 
-export function Profile({ conversations, onStartConversation, onSendMessage, onMarkAsRead, onLogout }: ProfileProps) {
+export function Profile({ onLogout }: ProfileProps) {
   const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'photos' | 'videos' | 'saved'>('events');
   const [savedEvents, setSavedEvents] = useState<Event[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [eventReminders, setEventReminders] = useState<Set<number>>(new Set());
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
-  const [showOrganizerOnboarding, setShowOrganizerOnboarding] = useState(false);
+  // const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
+  // const [showOrganizerOnboarding, setShowOrganizerOnboarding] = useState(false);
   const [showSharePostModal, setShowSharePostModal] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -45,8 +41,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [attendedEvents, setAttendedEvents] = useState<Event[]>([]);
   const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
-  const [photos, setPhotos] = useState<UserMedia[]>([]);
-  const [videoClips, setVideoClips] = useState<UserMedia[]>([]);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   
@@ -54,6 +49,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const savedEventsSubscriptionRef = useRef<any>(null);
 
   // Load all data
   useEffect(() => {
@@ -100,7 +96,7 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
           await fetchSavedEvents(user.id);
 
           // Subscribe to saved events changes
-          savedEventsSubscription = subscribeToSavedEvents(user.id, () => {
+          savedEventsSubscriptionRef.current = subscribeToSavedEvents(user.id, () => {
             fetchSavedEvents(user.id);
           });
 
@@ -124,11 +120,10 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
             setAttendedEvents(uniqueAttended);
           }
 
-          // 4. Media
-          const media = await getUserMedia(user.id);
-          if (media) {
-             setPhotos(media.filter((m: any) => m.media_type === 'photo'));
-             setVideoClips(media.filter((m: any) => m.media_type === 'video'));
+          // 4. Posts (for Photos & Videos)
+          const posts = await getPosts({ authorId: user.id });
+          if (posts) {
+             setUserPosts(posts);
           }
         }
       } catch (error) {
@@ -140,7 +135,8 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
     loadData();
 
     return () => {
-      if (savedEventsSubscription) savedEventsSubscription.unsubscribe();
+      if (savedEventsSubscriptionRef.current) savedEventsSubscriptionRef.current.unsubscribe?.();
+      savedEventsSubscriptionRef.current = null;
     };
   }, []);
 
@@ -253,11 +249,10 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
       setFilesToUpload([]);
       setPostCaption('');
       
-      // Refresh media
-      const media = await getUserMedia(user.id);
-      if (media) {
-         setPhotos(media.filter((m: any) => m.media_type === 'photo'));
-         setVideoClips(media.filter((m: any) => m.media_type === 'video'));
+      // Refresh posts
+      const updatedPosts = await getPosts({ authorId: user.id });
+      if (updatedPosts) {
+         setUserPosts(updatedPosts);
       }
 
     } catch (error) {
@@ -267,6 +262,34 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
       setIsUploading(false);
     }
   };
+
+  // Derive media from posts
+  const photos = userPosts.flatMap(p => 
+    (p.image_urls || []).map((url, idx) => ({
+      id: p.id * 1000 + idx,
+      url,
+      likes: p.likes_count || 0,
+      eventName: p.content,
+      isPost: true,
+      postId: p.id,
+      isLiked: p.has_liked
+    }))
+  );
+
+  const videoClips = userPosts
+    .filter(p => p.video_url)
+    .map(p => ({
+      id: p.id,
+      thumbnail: p.image_urls?.[0] || FALLBACK_COVER_IMAGE,
+      videoUrl: p.video_url!,
+      views: 0,
+      likes: p.likes_count || 0,
+      eventName: p.content,
+      isPost: true,
+      postId: p.id,
+      isLiked: p.has_liked,
+      duration: '0:30'
+    }));
 
   return (
     <div className="bg-white min-h-screen pb-20">
@@ -534,17 +557,24 @@ export function Profile({ conversations, onStartConversation, onSendMessage, onM
                   }}
                   className="relative aspect-square cursor-pointer group"
                 >
-                  <ImageWithFallback
-                    src={video.thumbnail}
-                    alt={`Video ${video.id}`}
+                  <video
+                    src={video.videoUrl}
                     className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    loop
+                    onMouseOver={(e) => e.currentTarget.play()}
+                    onMouseOut={(e) => {
+                      e.currentTarget.pause();
+                      e.currentTarget.currentTime = 0;
+                    }}
                   />
                   {/* Duration Badge */}
-                  <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
+                  <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px] pointer-events-none">
                     {video.duration}
                   </div>
                   {/* Hover Stats */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                     <div className="flex flex-col items-center gap-1 text-white text-xs">
                       <div className="flex items-center gap-1">
                         <Play className="w-3 h-3" />

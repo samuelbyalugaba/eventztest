@@ -325,7 +325,8 @@ export const followUser = async (followerId: string, followingId: string) => {
     .from('follows')
     .insert({ follower_id: followerId, following_id: followingId });
 
-  if (error) throw error;
+  // Ignore unique constraint violation (already following)
+  if (error && error.code !== '23505') throw error;
 };
 
 export const unfollowUser = async (followerId: string, followingId: string) => {
@@ -588,6 +589,38 @@ export const subscribeToSavedEvents = (userId: string, callback: () => void) => 
       }
     )
     .subscribe();
+};
+
+export const deleteConversation = async (conversationId: number) => {
+  const { error } = await supabase
+    .from('conversations')
+    .delete()
+    .eq('id', conversationId);
+
+  if (error) throw error;
+};
+
+export const markConversationAsUnread = async (conversationId: number, userId: string) => {
+  // Find the last message sent by the OTHER person
+  const { data: lastMessage } = await supabase
+    .from('messages')
+    .select('id')
+    .eq('conversation_id', conversationId)
+    .neq('sender_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (lastMessage) {
+    const { error } = await supabase
+      .from('messages')
+      .update({ is_read: false })
+      .eq('id', lastMessage.id);
+
+    if (error) throw error;
+    return true;
+  }
+  return false;
 };
 
 // --- USER MEDIA ---
@@ -1033,6 +1066,8 @@ export const markMessagesAsRead = async (conversationId: number, userId: string)
 
   if (error) throw error;
 };
+
+
 
 export const subscribeToMessages = (conversationId: number, callback: (message: Message) => void) => {
   return supabase

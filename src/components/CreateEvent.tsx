@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -44,7 +44,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  // const [isUploading, setIsUploading] = useState(false);
   const isEditing = !!savedEventId;
 
   // Auto-save functionality
@@ -69,7 +69,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           image_url: formData.coverImage || '',
           price_range: formData.price,
           organizer_id: user.id,
-          status: 'draft',
+          status: 'draft' as const,
         };
 
         if (savedEventId) {
@@ -163,7 +163,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         return;
       }
 
-      setIsUploading(true);
       const toastId = toast.loading('Uploading image...');
 
       try {
@@ -173,12 +172,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       } catch (error) {
         console.error('Error uploading image:', error);
         toast.error('Failed to upload image', { id: toastId });
-      } finally {
-        setIsUploading(false);
       }
     }
   };
 
+  /*
   const handleSaveDraft = async () => {
     setIsSubmitting(true);
     try {
@@ -199,7 +197,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         image_url: formData.coverImage || '',
         price_range: formData.price,
         organizer_id: user.id,
-        status: 'draft',
+        status: 'draft' as const,
       };
 
       if (isEditing && savedEventId) {
@@ -221,6 +219,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       setIsSubmitting(false);
     }
   };
+  */
 
   const handlePublish = async () => {
     setIsSubmitting(true);
@@ -272,9 +271,9 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         // Dispatch update event
         window.dispatchEvent(new Event('eventsUpdated'));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error publishing event:', error);
-      toast.error('Failed to publish event');
+      toast.error(`Failed to publish event: ${error.message || 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }

@@ -124,8 +124,9 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
             <video
               ref={videoRef}
               src={highlight.video}
+              onClick={togglePlayPause}
               autoPlay
-              loop
+              controls
               muted={isMuted}
               playsInline
               preload="auto"
