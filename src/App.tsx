@@ -468,6 +468,21 @@ export default function App() {
     }
   };
 
+  const handleDeleteConversation = async (conversationId: number) => {
+    try {
+      // Optimistic update
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
+      
+      await deleteConversation(conversationId);
+      toast.success('Conversation deleted');
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      toast.error('Failed to delete conversation');
+      // Refresh to restore state if failed
+      loadConversations();
+    }
+  };
+
   const handleBecomeOrganizer = () => {
     setIsOrganizer(true);
   };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MessageSquare, ArrowLeft, PlusCircle } from 'lucide-react';
+import { Search, MessageSquare, ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Conversation } from '../types';
 import { searchProfiles } from '../utils/supabase/api';
@@ -10,9 +10,10 @@ interface ChatListProps {
   onStartNewChat?: (user: { id: string; name: string; avatar: string; username: string; verified: boolean }) => void;
   onClose: () => void;
   onlineUsers?: { id: string; name: string; avatar: string; username: string }[];
+  onDeleteConversation?: (conversationId: number) => void;
 }
 
-export function ChatList({ conversations, onSelectConversation, onStartNewChat, onClose, onlineUsers = [] }: ChatListProps) {
+export function ChatList({ conversations, onSelectConversation, onStartNewChat, onClose, onlineUsers = [], onDeleteConversation }: ChatListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -184,11 +185,24 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
                         }`}>
                           {conv.lastMessage.text || 'No messages yet'}
                         </p>
-                        {(conv.unreadCount || 0) > 0 && (
-                          <div className="min-w-[20px] h-5 bg-blue-600 rounded-full flex items-center justify-center px-1.5">
-                            <span className="text-[10px] font-bold text-white">{conv.unreadCount}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {(conv.unreadCount || 0) > 0 && (
+                            <div className="min-w-[20px] h-5 bg-blue-600 rounded-full flex items-center justify-center px-1.5">
+                              <span className="text-[10px] font-bold text-white">{conv.unreadCount}</span>
+                            </div>
+                          )}
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Are you sure you want to delete this conversation?')) {
+                                onDeleteConversation?.(conv.id);
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

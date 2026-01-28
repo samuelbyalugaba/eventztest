@@ -86,7 +86,7 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage, onMarkAsRead, onlineUsers = [] }: FeedProps) {
+export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage, onMarkAsRead, onlineUsers = [], onDeleteConversation }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -1406,6 +1406,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             }}
             onClose={() => setShowMessages(false)}
             onlineUsers={onlineUsers}
+            onDeleteConversation={onDeleteConversation}
           />
         ) : (
           <ChatDetail 
