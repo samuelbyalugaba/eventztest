@@ -565,7 +565,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       {/* Main Feed View */}
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
         {/* Unique Header Design */}
-        <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 transition-all">
+        <div className={`bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 transition-all ${showMessages || showNotifications || selectedPost ? 'z-0' : 'z-50'}`}>
           <div className="px-4 pt-5 pb-4">
             {/* Brand Section */}
             <div className="flex items-center justify-between mb-5">
@@ -1110,7 +1110,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
 
       {/* Post Detail - Unique Bottom Sheet Style */}
       {selectedPost && (
-        <div className="fixed inset-0 bg-white z-50 overflow-y-auto pb-20">
+        <div className="fixed inset-0 bg-white z-[60] overflow-y-auto pb-20">
           {/* Unique Detail Header */}
           <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-lg border-b border-gray-100">
             <div className="px-4 py-4">
