@@ -1,0 +1,563 @@
+import { useState, useEffect } from 'react';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Bell, Send, Star } from 'lucide-react';
+import { OrganizerProfile } from './OrganizerProfile';
+import { toast } from 'sonner';
+import { SetAlertModal } from './SetAlertModal';
+import { MediaViewer } from './MediaViewer';
+import { ShareModal } from './ShareModal';
+import { handleShare } from '../utils/share';
+import { supabase } from '../utils/supabase/client';
+import { getEventAttendees, getPosts, toggleSaveEvent, Event as ApiEvent } from '../utils/supabase/api';
+
+export interface EventDetailModalProps {
+  event: ApiEvent;
+  onClose: () => void;
+  hasTicket: (eventId: number) => boolean;
+  onPurchaseTicket: (event: ApiEvent) => void;
+  onPurchaseNormalTicket: (event: ApiEvent) => void;
+  onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => void;
+}
+
+const locations = [
+  { id: 'all', name: 'All Locations', flag: '🌍' },
+  { id: 'atlanta', name: 'Atlanta, USA', flag: '🇺🇸' },
+  { id: 'dar', name: 'Dar es Salaam, Tanzania', flag: '🇹🇿' },
+  { id: 'zanzibar', name: 'Zanzibar, Tanzania', flag: '🇹🇿' },
+  { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
+];
+
+export function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation }: EventDetailModalProps) {
+  const [isSaved, setIsSaved] = useState(event.isSaved || false);
+  const [recentAttendees, setRecentAttendees] = useState<any[]>([]);
+  const [eventPosts, setEventPosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchAttendees = async () => {
+      try {
+        const attendees = await getEventAttendees(event.id);
+        setRecentAttendees(attendees || []);
+      } catch (error) {
+        console.error('Error fetching attendees:', error);
+      }
+    };
+    fetchAttendees();
+
+    const loadEventPosts = async () => {
+      try {
+          const { data: { user } } = await supabase.auth.getUser();
+          const posts = await getPosts({ currentUserId: user?.id, eventId: event.id });
+          setEventPosts(posts || []);
+      } catch (err) {
+          console.error('Error loading event posts:', err);
+      }
+    };
+    loadEventPosts();
+  }, [event.id]);
+
+  const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [showMediaViewer, setShowMediaViewer] = useState(false);
+  const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
+  const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
+
+  // Convert event highlights to format expected by MediaViewer
+  const photosForViewer = [
+    ...(event.event_highlights?.filter(h => h.mediaType === 'image').map((highlight, index) => ({
+      id: index,
+      url: highlight.image || event.image_url,
+      eventName: event.title,
+    })) || []),
+    ...eventPosts.filter(p => p.image_urls && p.image_urls.length > 0).map((post, index) => ({
+      id: 1000 + post.id,
+      url: post.image_urls[0],
+      likes: post.likes_count || 0,
+      eventName: event.title,
+      isPost: true,
+      postId: post.id,
+      isLiked: post.is_liked || false
+    }))
+  ];
+
+  const videosForViewer = [
+    ...(event.event_highlights?.filter(h => h.mediaType === 'video').map((highlight, _index) => ({
+      id: _index + 500,
+      thumbnail: highlight.image || event.image_url,
+      videoUrl: highlight.video || '',
+      eventName: event.title,
+    })) || []),
+    ...eventPosts.filter(p => p.video_url).map((post, _index) => ({
+      id: 2000 + post.id,
+      thumbnail: post.image_urls?.[0] || '',
+      views: post.views || 0,
+      likes: post.likes_count || 0,
+      videoUrl: post.video_url,
+      eventName: event.title,
+      isPost: true,
+      postId: post.id,
+      isLiked: post.is_liked || false
+    }))
+  ];
+
+  // Handle save/unsave event
+  const handleToggleSave = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please sign in to save events');
+        return;
+      }
+
+      const newSavedState = !isSaved;
+      // Optimistic update
+      setIsSaved(newSavedState);
+      
+      const saved = await toggleSaveEvent(event.id, user.id);
+      
+      // Verify server state matches optimistic update
+      if (saved !== newSavedState) {
+        setIsSaved(saved);
+      }
+
+      // Dispatch event to update Profile
+      window.dispatchEvent(new Event('savedEventsUpdated'));
+
+      toast.success(saved ? 'Event saved!' : 'Event removed from saved', {
+        description: saved ? 'View in your profile under Saved Events' : 'Check your profile to see all saved events',
+        duration: 2000,
+      });
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('savedEventsUpdated'));
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      setIsSaved(!isSaved); // Revert on error
+      toast.error('Failed to update saved status');
+    }
+  };
+
+  // Share function - uses native share API or fallback modal
+  const handleShareEvent = async () => {
+    const shared = await handleShare({
+      title: event.title,
+      text: `${event.date} at ${event.location}\nPrice: ${event.price_range}`,
+      url: window.location.href,
+    });
+    
+    // If native share not available, show custom modal
+    if (!shared) {
+      setShowShareModal(true);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
+      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl animate-in slide-in-from-bottom max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Cover Image with Overlays */}
+        <div className="relative w-full h-96">
+          <ImageWithFallback
+            src={event.image_url}
+            alt={event.title}
+            className="w-full h-full object-cover rounded-t-3xl"
+          />
+          
+          {/* Organizer Badge */}
+          {event.organizer && (
+            <button
+              onClick={() => setShowOrganizerProfile(true)}
+              className="absolute top-4 left-4 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg z-20 hover:bg-white transition-all cursor-pointer group"
+            >
+              <p className="text-gray-900 text-sm group-hover:text-[#8A2BE2] transition-colors">by {event.organizer.full_name || 'Organizer'}</p>
+            </button>
+          )}
+          
+          {/* Organizer Profile Modal */}
+          {showOrganizerProfile && event.organizer && (
+            <OrganizerProfile
+              organizerName={event.organizer.full_name || 'Organizer'}
+              organizerId={event.organizer_id || event.organizer.id}
+              onClose={() => setShowOrganizerProfile(false)}
+              onMessage={async (organizer) => {
+                setShowOrganizerProfile(false);
+                if (onStartConversation) {
+                  await onStartConversation(organizer);
+                }
+              }}
+              onTicketPurchase={onPurchaseTicket ? () => onPurchaseTicket(event) : undefined}
+            />
+          )}
+          
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all shadow-lg z-20"
+          >
+            <X className="w-5 h-5 text-gray-900" />
+          </button>
+          
+          {/* Minimal gradient overlay - poster fully visible */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent rounded-t-3xl"></div>
+        </div>
+
+        <div className="px-6 py-6">
+          {/* Event Title with Action Buttons - Professional Layout */}
+          <div className="mb-6 pb-4 border-b border-gray-100">
+            <div className="flex items-start justify-between gap-4">
+              <h2 className="text-gray-900 text-lg flex-1">{event.title}</h2>
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleToggleSave}
+                  className={`p-2 border rounded-lg transition-all ${
+                    isSaved 
+                      ? 'bg-purple-50 border-purple-600 text-purple-600' 
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                  title={isSaved ? 'Unsave event' : 'Save event'}
+                >
+                  <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-purple-600' : ''}`} />
+                </button>
+                <button 
+                  onClick={handleShareEvent}
+                  className="p-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  title="Share event"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Event Details Section - Professional Layout Below Image */}
+          <div className="mb-6 space-y-4">
+            {/* Date & Time */}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-gray-600 text-sm">Date & Time</p>
+                <p className="text-gray-900">{event.date}</p>
+                <p className="text-gray-700 text-sm">{event.time}</p>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-gray-600 text-sm">Location</p>
+                <p className="text-gray-900">{event.location}</p>
+                <p className="text-gray-700 text-sm">{locations.find(l => l.id === event.city)?.name}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* About the Event */}
+          <div className="mb-6">
+            <h2 className="text-gray-900 mb-3">About the Event</h2>
+            <p className="text-gray-700 leading-relaxed">{event.description}</p>
+          </div>
+
+          {/* Event Photos & Highlights */}
+          {event.event_highlights && event.event_highlights.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-gray-900 mb-3">Event Photos & Highlights</h2>
+              <div className="grid grid-cols-3 gap-2">
+                {event.event_highlights.map((highlight, idx) => (
+                  <div 
+                    key={idx} 
+                    className="group relative overflow-hidden rounded-lg bg-gray-100 aspect-square cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (highlight.mediaType === 'video') {
+                        const videoIndex = event.event_highlights!.filter(h => h.mediaType === 'video').findIndex(h => h === highlight);
+                        setMediaViewerIndex(videoIndex);
+                        setMediaViewerType('video');
+                      } else {
+                        const photoIndex = event.event_highlights!.filter(h => h.mediaType === 'image').findIndex(h => h === highlight);
+                        setMediaViewerIndex(photoIndex);
+                        setMediaViewerType('photo');
+                      }
+                      setShowMediaViewer(true);
+                    }}
+                  >
+                    {highlight.mediaType === 'video' ? (
+                      <>
+                        {highlight.video?.includes('youtube.com') || highlight.video?.includes('youtu.be') ? (
+                          <iframe
+                            src={highlight.video}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            style={{ border: 'none', pointerEvents: 'none' }}
+                          />
+                        ) : (
+                          <>
+                            <video
+                              src={highlight.video}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow-md group-hover:bg-white transition-colors">
+                                <Play className="w-3 h-3 text-gray-900 ml-0.5" fill="currentColor" />
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <ImageWithFallback
+                        src={highlight.image!}
+                        alt={highlight.caption}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+
+
+          {/* Price & Attendees Info */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Ticket Price</p>
+                <p className="text-gray-900">{event.price_range}</p>
+              </div>
+              <div className="flex items-center gap-2 text-purple-600">
+                <Users className="w-5 h-5" />
+                <span className="text-sm">{(event.attendees || 0).toLocaleString()} attending</span>
+              </div>
+            </div>
+          </div>
+
+          {/* HD Live Streaming Section - CORE DIFFERENTIATOR */}
+          {event.streaming?.available ? (
+            <div className="mb-6 border-2 border-gradient-to-r from-purple-500 to-cyan-500 rounded-2xl overflow-hidden bg-gradient-to-br from-purple-50 via-white to-cyan-50">
+              {/* Streaming Header */}
+              <div className="bg-gradient-to-r from-purple-600 to-cyan-500 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                      <Tv className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-white mb-1">HD Live Streaming Available</h2>
+                      <p className="text-white/90 text-sm">Watch from anywhere in the world</p>
+                    </div>
+                  </div>
+                  {event.streaming.isLive && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-red-500 rounded-full animate-pulse">
+                      <Radio className="w-4 h-4 text-white" />
+                      <span className="text-white text-sm">LIVE</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-5">
+                {/* Live Viewer Count */}
+                {event.streaming.isLive && event.streaming.liveViewers && event.streaming.liveViewers > 0 && (
+                  <div className="flex items-center gap-2 mb-4 p-3 bg-purple-100 rounded-lg">
+                    <Eye className="w-5 h-5 text-purple-600" />
+                    <span className="text-purple-900">{event.streaming.liveViewers.toLocaleString()} people watching now</span>
+                  </div>
+                )}
+
+                {/* Streaming Quality & Price */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="p-4 bg-white rounded-xl border border-purple-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                        <Tv className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-gray-900">Quality</span>
+                    </div>
+                    <p className="text-purple-600">{event.streaming.quality} Streaming</p>
+                  </div>
+                  
+                  <div className="p-4 bg-white rounded-xl border border-cyan-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
+                        <DollarSign className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-gray-900">Virtual Ticket</span>
+                    </div>
+                    <p className="text-cyan-600">{event.streaming.virtualPrice}</p>
+                  </div>
+                </div>
+
+                {/* Streaming Features */}
+                {event.streaming.features && event.streaming.features.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-gray-900 mb-3">Streaming Features</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {event.streaming.features.map((feature, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-gray-700">
+                          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                          <span className="text-sm">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Replay Availability */}
+                {event.streaming.replayAvailable && (
+                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg mb-4">
+                    <Play className="w-5 h-5 text-pink-600" />
+                    <span className="text-gray-900">Replay available for 48 hours after event</span>
+                  </div>
+                )}
+
+                {/* Virtual Ticket CTA */}
+                {hasTicket(event.id) ? (
+                  <div className="w-full bg-green-500 text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>Ticket Purchased ✓</span>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => onPurchaseTicket(event)}
+                    className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white py-4 rounded-xl hover:from-purple-700 hover:to-cyan-600 transition-all flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    <Tv className="w-5 h-5" />
+                    <span>Get Virtual Ticket - {event.streaming.virtualPrice}</span>
+                  </button>
+                )}
+
+                {/* Info Badge */}
+                <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                  <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">i</div>
+                  <p>You'll receive an email with your unique access link immediately after purchase.</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Regular Ticket Section */
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-gray-900">Get Tickets</h3>
+                {event.ticketsSold && event.ticketsSold > 100 && (
+                  <span className="text-orange-500 text-sm font-medium animate-pulse">Selling fast! 🔥</span>
+                )}
+              </div>
+              
+              <div className="space-y-3">
+                {/* Standard Ticket */}
+                <button
+                  onClick={() => onPurchaseNormalTicket(event)}
+                  className="w-full bg-white border-2 border-purple-100 rounded-xl p-4 flex items-center justify-between hover:border-purple-600 transition-all shadow-sm hover:shadow-md group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
+                      <TicketIcon className="w-5 h-5 text-purple-600 group-hover:text-white" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-gray-900 font-medium">Standard Entry</p>
+                      <p className="text-gray-500 text-xs">General admission access</p>
+                    </div>
+                  </div>
+                  <span className="text-purple-600 font-bold">{event.price_range}</span>
+                </button>
+                
+                {/* VIP Ticket Option - If applicable */}
+                {event.vipPrice && (
+                  <button
+                    onClick={() => onPurchaseTicket(event)}
+                    className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-all transform hover:scale-[1.02]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-white font-medium">VIP Experience</p>
+                        <p className="text-gray-400 text-xs">Premium access & perks</p>
+                      </div>
+                    </div>
+                    <span className="text-yellow-400 font-bold">{event.vipPrice}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Organizer Actions */}
+          <div className="flex gap-3">
+            <button 
+              onClick={() => {
+                if (event.organizer && onStartConversation) {
+                  onStartConversation(event.organizer);
+                  onClose();
+                } else {
+                  toast.error('Cannot contact organizer');
+                }
+              }}
+              className="flex-1 bg-white border border-gray-200 text-gray-900 py-4 rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span>Contact Organizer</span>
+            </button>
+            <button 
+              onClick={() => setShowAlertModal(true)}
+              className="bg-pink-500 text-white py-4 px-6 rounded-xl hover:bg-pink-600 transition-colors flex items-center justify-center"
+            >
+              <Bell className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Alert Modal */}
+        {showAlertModal && (
+          <SetAlertModal
+            event={{
+              title: event.title,
+              date: event.date,
+              time: event.time,
+              location: event.location,
+            }}
+            onClose={() => setShowAlertModal(false)}
+          />
+        )}
+
+        {/* Media Viewer - Rendered outside modal for engaging photo/video viewing */}
+        {showMediaViewer && event.event_highlights && (
+          <MediaViewer
+            media={mediaViewerType === 'photo' ? photosForViewer : videosForViewer}
+            initialIndex={mediaViewerIndex}
+            onClose={() => setShowMediaViewer(false)}
+            type={mediaViewerType}
+          />
+        )}
+
+        {/* Share Modal */}
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          title={event.title}
+          text={`${event.date} at ${event.location}\nPrice: ${event.price_range}`}
+          url={window.location.href}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Icon component helper
+function TicketIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+    </svg>
+  );
+}

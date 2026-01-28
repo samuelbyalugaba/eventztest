@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { EventCard } from './EventCard';
 import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Bell, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
@@ -609,43 +610,12 @@ export function Profile({ onLogout }: ProfileProps) {
                   <span className="text-gray-500 text-sm">{savedEvents.length} saved</span>
                 </div>
                 {savedEvents.map((event) => (
-                  <div key={event.id} className="flex gap-4 bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group">
-                    <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                      <ImageWithFallback
-                        src={event.image_url}
-                        alt={event.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                      {/* Saved Badge */}
-                      <div className="absolute top-1 right-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center shadow-md">
-                        <Bookmark className="w-2.5 h-2.5 text-white fill-white" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-gray-900 text-sm mb-1 line-clamp-2">{event.title}</h4>
-                      <div className="flex items-center gap-2 text-gray-500 text-xs">
-                        <Calendar className="w-3 h-3" />
-                        <span>{event.date}</span>
-                      </div>
-                    </div>
-                    {/* Reminder Bell Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedEvent(event);
-                        setShowSetAlertModal(true);
-                      }}
-                      className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                        eventReminders.has(event.id)
-                          ? 'bg-purple-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                      title={eventReminders.has(event.id) ? 'Manage reminder' : 'Set reminder'}
-                    >
-                      <Bell className={`w-4 h-4 ${eventReminders.has(event.id) ? 'fill-white' : ''}`} />
-                    </button>
-                  </div>
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={(e) => setSelectedEvent(e)}
+                    className="border border-gray-100 hover:shadow-md transition-all"
+                  />
                 ))}
               </div>
             )}
@@ -825,6 +795,21 @@ export function Profile({ onLogout }: ProfileProps) {
             }
           `}} />
         </div>
+      )}
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          hasTicket={(id) => ticketEvents.some(t => t.event_id === id)}
+          onPurchaseTicket={() => {
+             toast.info("Please go to Events page to purchase tickets");
+          }}
+          onPurchaseNormalTicket={() => {
+             toast.info("Please go to Events page to purchase tickets");
+          }}
+        />
       )}
 
       {/* Settings Modal */}

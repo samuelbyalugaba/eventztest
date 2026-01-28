@@ -406,26 +406,32 @@ export const getEventAttendees = async (eventId: number, limit = 5) => {
   return data.map((t: any) => t.user).filter((u: any) => !!u);
 };
 
-export const createEvent = async (event: Omit<Event, 'id' | 'created_at' | 'organizer'>) => {
+export const createEvent = async (eventData: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => {
   const { data, error } = await supabase
     .from('events')
-    .insert(event)
+    .insert(eventData)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error creating event:', error);
+    throw error;
+  }
   return data;
 };
 
-export const updateEvent = async (id: number, updates: Partial<Event>) => {
+export const updateEvent = async (eventId: number, eventData: Partial<Event>) => {
   const { data, error } = await supabase
     .from('events')
-    .update(updates)
-    .eq('id', id)
+    .update(eventData)
+    .eq('id', eventId)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error updating event:', error);
+    throw error;
+  }
   return data;
 };
 
@@ -462,14 +468,17 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
   try {
     return await tryUpload(bucket);
   } catch (error: any) {
+    // Fallback logic for both posts and events buckets
     if (
-      bucket === 'posts' &&
+      (bucket === 'posts' || bucket === 'events') &&
       error &&
       typeof error.message === 'string' &&
       (error.message.toLowerCase().includes('bucket not found') || 
        error.message.toLowerCase().includes('row-level security policy'))
     ) {
-      return await tryUpload('events');
+      // Try the other bucket
+      const fallbackBucket = bucket === 'posts' ? 'events' : 'posts';
+      return await tryUpload(fallbackBucket);
     }
     throw error;
   }
