@@ -4,7 +4,8 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
 import { toast } from 'sonner';
-import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, Event as ApiEvent, Profile } from '../utils/supabase/api';
+import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, Event as ApiEvent, Profile } from '../utils/supabase/api';
+import { UserListModal } from './UserListModal';
 
 interface OrganizerData {
   id?: string;
@@ -41,6 +42,7 @@ interface OrganizerData {
     time: string;
     location: string;
     price: string;
+    attendees?: number;
   }[];
 }
 
@@ -58,6 +60,26 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Followers Modal State
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [followersList, setFollowersList] = useState<any[]>([]);
+  const [loadingFollowers, setLoadingFollowers] = useState(false);
+
+  const handleShowFollowers = async () => {
+    if (!organizerId) return;
+    setShowFollowersModal(true);
+    setLoadingFollowers(true);
+    try {
+      const followers = await getFollowers(organizerId);
+      setFollowersList(followers);
+    } catch (err) {
+      console.error('Error fetching followers:', err);
+      toast.error('Failed to load followers');
+    } finally {
+      setLoadingFollowers(false);
+    }
+  };
 
   // Additional state from old component
   const [showMediaViewer, setShowMediaViewer] = useState(false);
@@ -104,7 +126,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           name: profile.full_name || profile.username || 'Organizer',
           bio: profile.bio || 'No bio available',
           coverImage: profile.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
-          avatar: profile.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
+          avatar: profile.avatar_url || '',
           location: profile.location || 'Tanzania',
           totalEvents: stats.totalEvents,
           followers: stats.followers,
@@ -133,7 +155,8 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             date: new Date(e.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
             time: e.time.substring(0, 5),
             location: e.location,
-            price: e.price_range
+            price: e.price_range,
+            attendees: e.attendees || e.interested || 0
           }))
         });
 
@@ -384,7 +407,10 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             </div>
 
             {/* Followers */}
-            <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-3 text-center border border-gray-300 shadow-sm">
+            <div 
+              className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-3 text-center border border-gray-300 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handleShowFollowers}
+            >
               <div className="text-lg text-gray-900 font-bold">
                 {organizerData.followers >= 1000 
                   ? `${(organizerData.followers / 1000).toFixed(1)}k` 
@@ -508,26 +534,35 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                   {/* Event Details */}
                   <div className="flex-1 flex flex-col justify-between py-1">
                     <div>
-                      <h4 className="text-gray-900 mb-2 line-clamp-2">{event.title}</h4>
-                      <div className="space-y-1">
+                      <h4 className="text-gray-900 mb-2 line-clamp-2 font-medium">{event.title}</h4>
+                      <div className="space-y-1.5">
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <Calendar className="w-4 h-4 flex-shrink-0" />
+                          <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                           <span>{event.date} • {event.time}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <MapPin className="w-4 h-4 flex-shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
                           <span className="line-clamp-1">{event.location}</span>
                         </div>
+                        {event.attendees && event.attendees > 0 && (
+                          <div className="flex items-center gap-1.5 text-sm text-[#8A2BE2] font-medium">
+                            <Users className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>{event.attendees} Attending</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <button className="self-start mt-2 bg-[#8A2BE2] text-white px-5 py-2 rounded-full text-sm hover:bg-[#7526c7] transition-colors"
-                      onClick={() => {
-                        setSelectedEvent(event);
-                        setShowTicketModal(true);
-                      }}
-                    >
-                      Get Ticket
-                    </button>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-gray-900 font-semibold text-sm">{event.price}</span>
+                      <button className="bg-[#8A2BE2] text-white px-4 py-1.5 rounded-full text-xs font-medium hover:bg-[#7526c7] transition-colors"
+                        onClick={() => {
+                          setSelectedEvent(event);
+                          setShowTicketModal(true);
+                        }}
+                      >
+                        Get Ticket
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -537,6 +572,15 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         </div>
       </div>
     </div>
+
+    {/* Followers Modal */}
+    <UserListModal 
+      isOpen={showFollowersModal}
+      onClose={() => setShowFollowersModal(false)}
+      title="Followers"
+      users={followersList}
+      loading={loadingFollowers}
+    />
 
     {/* Media Viewer - Rendered outside modal for engaging photo viewing */}
     {showMediaViewer && (
@@ -566,7 +610,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                 postId: item.id
               };
             }
-          })}
+          }) as any}
         initialIndex={mediaViewerIndex}
         onClose={() => setShowMediaViewer(false)}
         type={mediaViewerType}

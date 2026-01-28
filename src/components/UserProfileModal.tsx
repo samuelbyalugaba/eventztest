@@ -178,15 +178,27 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
 
             {/* User Name & Follow Button */}
             <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h2 className="text-white drop-shadow-lg">{profile?.full_name || user.name}</h2>
-                {(profile?.verified ?? user.verified) && (
-                  <CheckCircle2 className="w-5 h-5 text-white fill-[#8A2BE2]" />
-                )}
+              <div className="flex items-center gap-3">
+                 <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/50">
+                    <ImageWithFallback 
+                       src={avatarUrl}
+                       alt={profile?.full_name || user.name}
+                       className="w-full h-full object-cover"
+                    />
+                 </div>
+                 <div>
+                    <h2 className="text-white font-bold drop-shadow-lg text-lg leading-tight">{profile?.full_name || user.name}</h2>
+                    {(profile?.verified ?? user.verified) && (
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-white fill-[#8A2BE2]" />
+                        <span className="text-white/80 text-xs">Verified</span>
+                      </div>
+                    )}
+                 </div>
               </div>
               <button
                 onClick={handleFollow}
-                className={`px-6 py-2 rounded-full transition-all ${
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
                   isFollowing
                     ? 'bg-white/20 backdrop-blur-sm text-white border border-white/40'
                     : 'bg-white text-gray-900'

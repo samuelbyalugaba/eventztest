@@ -22,6 +22,8 @@ import {
   markMessagesAsRead,
   subscribeToAllMessages,
   getLiveStreams,
+  getMutualFollows,
+  subscribeToOnlineUsers,
   Event
 } from './utils/supabase/api';
 import { PurchasedTicket, Message, Conversation } from './types';
@@ -47,6 +49,7 @@ export default function App() {
   // Global messaging state
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [hasLiveEvents, setHasLiveEvents] = useState(false);
+  const [onlineFriends, setOnlineFriends] = useState<any[]>([]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -156,7 +159,7 @@ export default function App() {
                 id: otherUser?.id,
                 name: otherUser?.full_name || 'Unknown User',
                 username: otherUser?.username || '',
-                avatar: otherUser?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
+                avatar: otherUser?.avatar_url,
                 verified: otherUser?.verified || false,
                 isOrganizer: otherUser?.is_organizer || false,
               },
@@ -261,6 +264,47 @@ export default function App() {
 
     return () => {
       subscription.unsubscribe();
+    };
+  }, [isAuthenticated, currentUser]);
+
+  // Online Friends & Presence
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser) {
+      setOnlineFriends([]);
+      return;
+    }
+
+    let channel: any;
+
+    const setupPresence = async () => {
+      try {
+        // 1. Get mutual friends
+        const friends = await getMutualFollows(currentUser.id);
+        
+        // 2. Subscribe to presence
+        channel = subscribeToOnlineUsers(currentUser.id, (onlineIds) => {
+          // Filter friends who are online
+          const online = friends.filter((friend: any) => onlineIds.includes(friend.id));
+          
+          // Map to the format expected by ChatList
+          const formattedOnline = online.map((f: any) => ({
+            id: f.id,
+            name: f.full_name,
+            username: f.username,
+            avatar: f.avatar_url
+          }));
+          
+          setOnlineFriends(formattedOnline);
+        });
+      } catch (error) {
+        console.error('Error setting up presence:', error);
+      }
+    };
+
+    setupPresence();
+
+    return () => {
+      if (channel) channel.unsubscribe();
     };
   }, [isAuthenticated, currentUser]);
 
@@ -487,7 +531,7 @@ export default function App() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto pb-20">
         {activeTab === 'event' && <EventDetails onTicketPurchase={handleTicketPurchase} purchasedTickets={purchasedTickets} conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} />}
-        {activeTab === 'feed' && <Feed conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} onMarkAsRead={handleMarkAsRead} />}
+        {activeTab === 'feed' && <Feed conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} onMarkAsRead={handleMarkAsRead} onlineUsers={onlineFriends} />}
         {activeTab === 'live' && <LiveFeed />}
         {activeTab === 'create' && (
           !isOrganizer ? (

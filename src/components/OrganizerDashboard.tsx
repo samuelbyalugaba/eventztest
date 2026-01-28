@@ -10,8 +10,9 @@ import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, MoreVertical, Edit, TrendingUp } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents } from '../utils/supabase/api';
+import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers } from '../utils/supabase/api';
 import { ShareModal } from './ShareModal';
+import { UserListModal } from './UserListModal';
 
 interface OrganizerDashboardProps {
   onCreateEvent: () => void;
@@ -39,6 +40,28 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
     liveStreams: 0,
     ticketsSold: 0
   });
+
+  // Followers Modal State
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [followersList, setFollowersList] = useState<any[]>([]);
+  const [loadingFollowers, setLoadingFollowers] = useState(false);
+
+  const handleShowFollowers = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    setShowFollowersModal(true);
+    setLoadingFollowers(true);
+    try {
+      const followers = await getFollowers(user.id);
+      setFollowersList(followers);
+    } catch (err) {
+      console.error('Error fetching followers:', err);
+      toast.error('Failed to load followers');
+    } finally {
+      setLoadingFollowers(false);
+    }
+  };
 
   // Load published events and profile from Supabase
   useEffect(() => {
@@ -225,8 +248,8 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         {/* Professional Header - Solid Purple */}
         <div className="bg-[#8A2BE2] px-6 py-12 shadow-sm border-b border-gray-200">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm overflow-hidden relative">
                   <img 
                     src={organizerProfile.avatar_url || organizerProfileImg}
@@ -244,7 +267,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 w-full md:w-auto">
                 {/* Premium Go Live Button - Optimized for iPhone 16 (392x852) */}
                 <button className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-xl hover:shadow-xl hover:shadow-red-500/30 transition-all group relative overflow-hidden min-w-[110px] flex-shrink-0">
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
@@ -261,12 +284,15 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
 
             {/* Combined Stats Card - Professional Minimal Layout */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="flex items-center gap-5">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
                 <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 self-start">
                   <BarChart3 className="w-7 h-7 text-[#8A2BE2]" />
                 </div>
-                <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-8">
-                  <div>
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-8 w-full">
+                  <div 
+                    onClick={handleShowFollowers}
+                    className="cursor-pointer hover:opacity-70 transition-opacity"
+                  >
                     <p className="text-gray-500 text-sm mb-1">Followers</p>
                     <p className="text-gray-900 text-2xl font-semibold">{formatNumber(stats.followers)}</p>
                   </div>
@@ -715,6 +741,15 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             </div>
           </div>
         </div>
+
+        {/* Followers Modal */}
+        <UserListModal 
+          isOpen={showFollowersModal}
+          onClose={() => setShowFollowersModal(false)}
+          title="Followers"
+          users={followersList}
+          loading={loadingFollowers}
+        />
 
         {/* Event Analytics Modal */}
         {selectedEventForAnalytics && (

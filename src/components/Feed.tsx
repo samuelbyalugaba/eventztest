@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
+import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getNotifications, markNotificationAsRead, subscribeToNotifications, getFollowedUserIds, Post as ApiPost, Notification as ApiNotification } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getNotifications, markNotificationAsRead, subscribeToNotifications, getFollowedUserIds, getMutualFollows, Post as ApiPost, Notification as ApiNotification } from '../utils/supabase/api';
+import { Conversation } from '../types';
 
-import { UserProfileModal } from './UserProfileModal';
-import { Conversation, Message } from '../types';
-import { ShareModal } from './ShareModal';
-import { handleShare } from '../utils/share';
+import { ChatList } from './ChatList';
+import { ChatDetail } from './ChatDetail';
 
 interface Comment {
   id: number;
@@ -78,6 +78,7 @@ interface FeedProps {
   onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
   onSendMessage: (conversationId: number, messageText: string) => void;
   onMarkAsRead?: (conversationId: number) => void;
+  onlineUsers?: { id: string; name: string; avatar: string; username: string }[];
 }
 
 const isVideo = (url?: string) => {
@@ -85,11 +86,37 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage, onMarkAsRead }: FeedProps) {
+export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage, onMarkAsRead, onlineUsers = [] }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [showMessages, setShowMessages] = useState(false);
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean } | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
+  const [messageSearch, setMessageSearch] = useState('');
+  const [likeAnimation, setLikeAnimation] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
+  const [lastTap, setLastTap] = useState<number>(0);
+  const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
+  const [commentTexts, setCommentTexts] = useState<{ [key: number]: string }>({});
+  const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
+  const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
+  const [fullScreenTouchStart, setFullScreenTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [carouselIndexes, setCarouselIndexes] = useState<{ [key: number]: number }>({});
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [showControls, setShowControls] = useState(true);
+  const [lastVideoTap, setLastVideoTap] = useState<number>(0);
+  const [rewindAnimation, setRewindAnimation] = useState<{ show: boolean; direction: 'left' | 'right' } | null>(null);
+  const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [imageTouchStart, setImageTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [showChatMenu, setShowChatMenu] = useState(false);
 
   useEffect(() => {
     const loadPosts = async () => {
@@ -132,7 +159,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               id: p.user?.id || 'unknown',
               name: p.user?.full_name || p.user?.username || 'Unknown User',
               username: p.user?.username || '@unknown',
-              avatar: p.user?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
+              avatar: p.user?.avatar_url,
               verified: p.user?.verified || false,
               isOrganizer: p.user?.is_organizer || false,
             },
@@ -159,12 +186,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             views: p.views || 0,
             isLiked: p.is_liked || false,
             isSaved: p.is_saved || false,
-            recommended: false,
             isHighlight: !!p.video_url,
             highlights: p.video_url ? [{
               id: p.id,
               thumbnail: p.image_urls?.[0] || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', // Vertical thumbnail fallback
-              duration: p.duration,
+              duration: p.duration || '',
               title: p.content || 'Video Highlight',
               videoUrl: p.video_url,
               views: p.views || 0,
@@ -194,13 +220,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     };
   }, []);
 
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
-  const [showMessages, setShowMessages] = useState(false);
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
-
   // Sync activeConversation with global conversations updates and mark as read
   useEffect(() => {
     if (activeConversation) {
@@ -216,36 +235,15 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         }
         
         // Mark as read if needed
-        if (updatedConv.unreadCount > 0 && onMarkAsRead) {
+        if (updatedConv.unreadCount && updatedConv.unreadCount > 0 && onMarkAsRead) {
            onMarkAsRead(updatedConv.id);
         }
       }
     }
   }, [globalConversations, activeConversation, onMarkAsRead]);
-
-  const [messageText, setMessageText] = useState('');
-  const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean } | null>(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
-  const [messageSearch, setMessageSearch] = useState('');
-  const [likeAnimation, setLikeAnimation] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
-  const [lastTap, setLastTap] = useState<number>(0);
-  const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
-  const [commentTexts, setCommentTexts] = useState<{ [key: number]: string }>({});
-  const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
-  const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
-  const [fullScreenTouchStart, setFullScreenTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [carouselIndexes, setCarouselIndexes] = useState<{ [key: number]: number }>({});
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [showControls, setShowControls] = useState(true);
-  const [lastVideoTap, setLastVideoTap] = useState<number>(0);
-  const [rewindAnimation, setRewindAnimation] = useState<{ show: boolean; direction: 'left' | 'right' } | null>(null);
-  const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [imageTouchStart, setImageTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [showChatMenu, setShowChatMenu] = useState(false);
   
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const unreadMessagesCount = globalConversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
+  const unreadMessagesCount = globalConversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -421,7 +419,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 id: c.id,
                 user: {
                   name: c.user?.full_name || c.user?.username || 'Unknown',
-                  avatar: c.user?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
+                  avatar: c.user?.avatar_url || '',
                 },
                 text: c.text,
                 timestamp: new Date(c.created_at).toLocaleDateString(),
@@ -453,7 +451,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         id: newCommentData.id,
         user: {
           name: newCommentData.user?.full_name || newCommentData.user?.username || 'Unknown',
-          avatar: newCommentData.user?.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff',
+          avatar: newCommentData.user?.avatar_url,
         },
         text: newCommentData.text,
         timestamp: 'Just now',
@@ -624,10 +622,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                             onClick={() => handleNotificationClick(notif)}
                           >
                             <div className="flex gap-3">
-                              <img 
-                                src={notif.actor?.avatar_url || 'https://ui-avatars.com/api/?background=random'} 
-                                className="w-10 h-10 rounded-full object-cover"
-                                alt=""
+                              <UserAvatar
+                                src={notif.actor?.avatar_url}
+                                name={notif.actor?.full_name || 'Someone'}
+                                className="w-10 h-10 rounded-full flex-shrink-0"
                               />
                               <div>
                                 <p className="text-sm text-gray-900">
@@ -710,11 +708,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               <div className="px-4 pt-4 pb-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <img
+                    <UserAvatar
                       src={post.user.avatar}
-                      alt={post.user.name}
-                      className="w-11 h-11 rounded-xl object-cover ring-2 ring-purple-100 cursor-pointer hover:ring-purple-300 transition-all"
-                      onClick={(e) => handleOpenUserProfile(post.user, e)}
+                      name={post.user.name}
+                      className="w-11 h-11 ring-2 ring-purple-100 cursor-pointer hover:ring-purple-300 transition-all"
+                      onClick={() => handleOpenUserProfile(post.user)}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -1029,10 +1027,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 <div className="px-4 pb-4 space-y-4 animate-slideDown">
                   {/* Add Comment Input */}
                   <div className="flex gap-3 items-start">
-                    <img
-                      src={currentUser?.user_metadata?.avatar_url || currentUser?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.email || 'User')}&background=random`}
-                      alt="You"
-                      className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
+                    <UserAvatar
+                      src={currentUser?.user_metadata?.avatar_url || currentUser?.avatar_url}
+                      name={currentUser?.user_metadata?.full_name || currentUser?.full_name || currentUser?.email || 'User'}
+                      className="w-9 h-9 rounded-xl flex-shrink-0"
                     />
                     <div className="flex-1 flex gap-2">
                       <textarea
@@ -1393,269 +1391,49 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
 
       {/* Professional Messages Panel */}
       {showMessages && (
-        <div className="fixed inset-0 bg-black/50 z-40" onClick={() => {
-          if (!activeConversation) setShowMessages(false);
-        }}>
-          <div 
-            className="absolute right-0 top-0 w-full max-w-md bg-white h-full shadow-2xl flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {!activeConversation ? (
-              // Conversations List View
-              <>
-                {/* Header */}
-                <div className="bg-[#8A2BE2] px-5 py-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-white text-2xl font-bold">Messages</h2>
-                    <button
-                      onClick={() => setShowMessages(false)}
-                      className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                    >
-                      <X className="w-5 h-5 text-white" />
-                    </button>
-                  </div>
-                  
-                  {/* Search Bar */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search conversations..."
-                      value={messageSearch}
-                      onChange={(e) => setMessageSearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-white/95 backdrop-blur-sm rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-white/50"
-                    />
-                  </div>
-                </div>
-
-                {/* Conversations List */}
-                <div className="flex-1 overflow-y-auto">
-                  {globalConversations
-                    .filter(conv => 
-                      messageSearch === '' || 
-                      conv.user.name.toLowerCase().includes(messageSearch.toLowerCase()) ||
-                      conv.user.username.toLowerCase().includes(messageSearch.toLowerCase())
-                    )
-                    .map((conversation) => (
-                    <div
-                      key={conversation.id}
-                      onClick={() => {
-                        setActiveConversation(conversation);
-                        if (conversation.unreadCount > 0 && onMarkAsRead) {
-                          onMarkAsRead(conversation.id);
-                        }
-                      }}
-                      className="px-5 py-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-start gap-3">
-                        {/* Avatar */}
-                        <div className="relative flex-shrink-0">
-                          <img
-                            src={conversation.user.avatar}
-                            alt={conversation.user.name}
-                            className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100"
-                          />
-                          {conversation.unreadCount > 0 && (
-                            <div className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-[#8A2BE2] text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5">
-                              {conversation.unreadCount}
-                            </div>
-                          )}
-                          {conversation.user.isOrganizer && (
-                            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#8A2BE2] rounded-full flex items-center justify-center ring-2 ring-white">
-                              <Star className="w-2.5 h-2.5 text-white fill-white" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Conversation Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <h3 className={`font-bold truncate ${
-                                conversation.unreadCount > 0 ? 'text-gray-900' : 'text-gray-700'
-                              }`}>
-                                {conversation.user.name}
-                              </h3>
-                              {conversation.user.verified && (
-                                <div className="flex-shrink-0 w-4 h-4 bg-gradient-to-br from-[#00D1FF] to-[#8A2BE2] rounded-full flex items-center justify-center">
-                                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
-                              {conversation.lastMessage.timestamp}
-                            </span>
-                          </div>
-                          <p className={`text-sm truncate ${
-                            conversation.unreadCount > 0 ? 'text-gray-900 font-semibold' : 'text-gray-500'
-                          }`}>
-                            {conversation.lastMessage.text}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              // Individual Chat View
-              <>
-                {/* Chat Header */}
-                <div className="bg-[#8A2BE2] px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setActiveConversation(null)}
-                      className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                    >
-                      <ArrowLeft className="w-5 h-5 text-white" />
-                    </button>
-                    
-                    <div 
-                      className="relative cursor-pointer"
-                      onClick={(e) => handleOpenUserProfile({ ...activeConversation.user, id: activeConversation.user.id || '' }, e)}
-                    >
-                      <img
-                        src={activeConversation.user.avatar}
-                        alt={activeConversation.user.name}
-                        className="w-10 h-10 rounded-full object-cover ring-2 ring-white/50"
-                      />
-                      {activeConversation.user.isOrganizer && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#8A2BE2] rounded-full flex items-center justify-center ring-2 ring-white">
-                          <Star className="w-2 h-2 text-white fill-white" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div 
-                      className="flex-1 min-w-0 cursor-pointer"
-                      onClick={(e) => handleOpenUserProfile({ ...activeConversation.user, id: activeConversation.user.id || '' }, e)}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="text-white font-bold truncate hover:underline">
-                          {activeConversation.user.name}
-                        </h3>
-                        {activeConversation.user.verified && (
-                          <div className="flex-shrink-0 w-4 h-4 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center">
-                            <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-white/80 text-xs">{activeConversation.user.username}</p>
-                    </div>
-
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowChatMenu(!showChatMenu)}
-                        className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                      >
-                        <MoreVertical className="w-5 h-5 text-white" />
-                      </button>
-
-                      {showChatMenu && (
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                          <button
-                            onClick={() => {
-                              handleMarkAsUnread();
-                              setShowChatMenu(false);
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-                          >
-                            <Mail className="w-4 h-4" />
-                            Mark as Unread
-                          </button>
-                          <button
-                            onClick={() => {
-                              handleDeleteChat();
-                              setShowChatMenu(false);
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-gray-100"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete Chat
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setActiveConversation(null);
-                        setShowMessages(false);
-                      }}
-                      className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                    >
-                      <X className="w-5 h-5 text-white" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto bg-gray-50 px-5 py-4">
-                  <div className="space-y-4">
-                    {activeConversation.messages.map((message) => {
-                      const isMe = message.senderId === 0;
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div className={`max-w-[75%] ${isMe ? 'order-2' : 'order-1'}`}>
-                            <div
-                              className={`rounded-2xl px-4 py-2.5 ${
-                                isMe
-                                  ? 'bg-[#8A2BE2] text-white'
-                                  : 'bg-white text-gray-900 shadow-sm'
-                              }`}
-                            >
-                              <p className="text-sm leading-relaxed">{message.text}</p>
-                            </div>
-                            <span className={`text-xs text-gray-400 mt-1 block ${
-                              isMe ? 'text-right' : 'text-left'
-                            }`}>
-                              {message.timestamp}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Message Input */}
-                <div className="bg-white border-t border-gray-100 px-5 py-4">
-                  <div className="flex items-end gap-3">
-                    <div className="flex-1 relative">
-                      <textarea
-                        value={messageText}
-                        onChange={(e) => setMessageText(e.target.value)}
-                        placeholder="Type a message..."
-                        rows={1}
-                        className="w-full px-4 py-3 bg-gray-100 rounded-2xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]/50 resize-none"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage();
-                          }
-                        }}
-                      />
-                    </div>
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={!messageText.trim()}
-                      className="p-3 bg-[#8A2BE2] rounded-full hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                      <Send className="w-5 h-5 text-white" />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        !activeConversation ? (
+          <ChatList 
+            conversations={globalConversations}
+            onSelectConversation={(conv) => {
+              setActiveConversation(conv);
+              if (conv.unreadCount > 0 && onMarkAsRead) {
+                onMarkAsRead(conv.id);
+              }
+            }}
+            onStartNewChat={async (user) => {
+              const conv = await onStartConversation(user);
+              if (conv) setActiveConversation(conv);
+            }}
+            onClose={() => setShowMessages(false)}
+            onlineUsers={onlineUsers}
+          />
+        ) : (
+          <ChatDetail 
+            conversationId={activeConversation.id}
+            recipient={{
+              id: activeConversation.user.id || '',
+              username: activeConversation.user.username,
+              full_name: activeConversation.user.name,
+              avatar_url: activeConversation.user.avatar,
+              verified: activeConversation.user.verified,
+              is_organizer: activeConversation.user.isOrganizer,
+              updated_at: new Date().toISOString()
+            } as any}
+            currentUser={{ id: currentUser?.id || '' }}
+            onBack={() => setActiveConversation(null)}
+            onViewProfile={() => {
+              setSelectedUserProfile({
+                id: activeConversation.user.id || '',
+                name: activeConversation.user.name,
+                username: activeConversation.user.username,
+                avatar: activeConversation.user.avatar,
+                verified: activeConversation.user.verified,
+                isOrganizer: activeConversation.user.isOrganizer,
+              });
+            }}
+            isOnline={onlineUsers.some(u => u.id === activeConversation.user.id)}
+          />
+        )
       )}
 
       {/* Professional Thumbs Up Animation */}

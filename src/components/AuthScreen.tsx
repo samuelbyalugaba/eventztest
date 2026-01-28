@@ -136,7 +136,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   email: formData.email,
                   full_name: formData.fullName,
                   username: finalUsername,
-                  avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName)}&background=random`,
+                  avatar_url: null,
                 }
               ]);
             

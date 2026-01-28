@@ -9,10 +9,10 @@ import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { SetAlertModal } from './SetAlertModal';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, toggleReminder as toggleReminderApi, Profile as UserProfile, Event, Ticket, UserMedia, Post } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, toggleReminder as toggleReminderApi, Profile as UserProfile, Event, Ticket, UserMedia, Post, getFollowers, getFollowing } from '../utils/supabase/api';
+import { UserListModal } from './UserListModal';
 
 const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"; // Generic event background
-const FALLBACK_AVATAR_IMAGE = "https://ui-avatars.com/api/?background=random&color=fff"; // Dynamic fallback base
 
 interface ProfileProps {
   onLogout: () => Promise<void>;
@@ -47,6 +47,46 @@ export function Profile({ onLogout }: ProfileProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   
+  // Follower/Following Modal State
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [followList, setFollowList] = useState<any[]>([]);
+  const [isLoadingFollowList, setIsLoadingFollowList] = useState(false);
+
+  const handleShowFollowers = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    setShowFollowersModal(true);
+    setIsLoadingFollowList(true);
+    try {
+      const followers = await getFollowers(user.id);
+      setFollowList(followers);
+    } catch (err) {
+      console.error('Error fetching followers:', err);
+      toast.error('Failed to load followers');
+    } finally {
+      setIsLoadingFollowList(false);
+    }
+  };
+
+  const handleShowFollowing = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    setShowFollowingModal(true);
+    setIsLoadingFollowList(true);
+    try {
+      const following = await getFollowing(user.id);
+      setFollowList(following);
+    } catch (err) {
+      console.error('Error fetching following:', err);
+      toast.error('Failed to load following');
+    } finally {
+      setIsLoadingFollowList(false);
+    }
+  };
+  
   // Upload states
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -61,7 +101,7 @@ export function Profile({ onLogout }: ProfileProps) {
       try {
         const saved = await getSavedEvents(userId);
         if (saved) {
-           setSavedEvents(saved);
+           setSavedEvents(saved as unknown as Event[]);
 
            const reminders = new Set<number>();
            saved.forEach(e => {
@@ -274,7 +314,7 @@ export function Profile({ onLogout }: ProfileProps) {
       eventName: p.content,
       isPost: true,
       postId: p.id,
-      isLiked: p.has_liked
+      isLiked: p.is_liked
     }))
   );
 
@@ -289,7 +329,7 @@ export function Profile({ onLogout }: ProfileProps) {
       eventName: p.content,
       isPost: true,
       postId: p.id,
-      isLiked: p.has_liked,
+      isLiked: p.is_liked,
       duration: '0:30'
     }));
 
@@ -314,10 +354,10 @@ export function Profile({ onLogout }: ProfileProps) {
           {/* Profile Picture */}
           <div className="flex justify-center mb-4">
             <div className="relative">
-              <ImageWithFallback
-                src={userProfile?.avatar_url || `${FALLBACK_AVATAR_IMAGE}&name=${encodeURIComponent(userProfile?.full_name || 'User')}`}
-                alt="Profile"
-                className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover"
+              <UserAvatar
+                src={userProfile?.avatar_url}
+                name={userProfile?.full_name || 'User'}
+                className="w-24 h-24 rounded-full border-4 border-white shadow-lg"
               />
             </div>
           </div>
@@ -363,15 +403,37 @@ export function Profile({ onLogout }: ProfileProps) {
               <p className="text-gray-900">{attendedEvents.length}</p>
               <p className="text-gray-500 text-xs">Events</p>
             </div>
-            <div className="text-center">
+            <div 
+              className="text-center cursor-pointer hover:opacity-70 transition-opacity"
+              onClick={handleShowFollowers}
+            >
               <p className="text-gray-900">{followStats.followers}</p>
               <p className="text-gray-500 text-xs">Followers</p>
             </div>
-            <div className="text-center">
+            <div 
+              className="text-center cursor-pointer hover:opacity-70 transition-opacity"
+              onClick={handleShowFollowing}
+            >
               <p className="text-gray-900">{followStats.following}</p>
               <p className="text-gray-500 text-xs">Following</p>
             </div>
           </div>
+
+          <UserListModal 
+            isOpen={showFollowersModal}
+            onClose={() => setShowFollowersModal(false)}
+            title="Followers"
+            users={followList}
+            loading={isLoadingFollowList}
+          />
+
+          <UserListModal 
+            isOpen={showFollowingModal}
+            onClose={() => setShowFollowingModal(false)}
+            title="Following"
+            users={followList}
+            loading={isLoadingFollowList}
+          />
 
           {/* Modern Tab Navigation */}
           <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
@@ -1052,7 +1114,18 @@ export function Profile({ onLogout }: ProfileProps) {
       {/* Ticket Viewer */}
       {showTicketViewer && selectedTicket && (
         <TicketViewer
-          ticket={selectedTicket}
+          ticket={{
+            id: selectedTicket.id,
+            name: selectedTicket.event?.title || 'Unknown Event',
+            date: selectedTicket.event?.date || '',
+            time: selectedTicket.event?.time || '',
+            location: selectedTicket.event?.location || '',
+            image: selectedTicket.event?.image_url || '',
+            category: selectedTicket.event?.category || '',
+            ticketType: selectedTicket.ticket_type,
+            price: selectedTicket.price,
+            qrCode: selectedTicket.qr_code || '',
+          }}
           onClose={() => {
             setShowTicketViewer(false);
             setSelectedTicket(null);

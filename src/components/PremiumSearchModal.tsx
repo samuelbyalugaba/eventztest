@@ -1,5 +1,6 @@
 import { X, Search, TrendingUp, Clock, MapPin, Calendar, Users, Music, Building2, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile } from '../utils/supabase/api';
 
 interface PremiumSearchModalProps {
@@ -146,10 +147,10 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                         className="w-full flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all"
                       >
                         <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                          <img 
-                            src={person.avatar_url || 'https://ui-avatars.com/api/?background=random&color=fff'} 
-                            alt={person.full_name || person.username}
-                            className="w-full h-full object-cover"
+                          <UserAvatar
+                            src={person.avatar_url}
+                            name={person.full_name || person.username || 'User'}
+                            className="w-full h-full"
                           />
                         </div>
                         <div className="flex-1 text-left">
