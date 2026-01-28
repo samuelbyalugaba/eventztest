@@ -121,6 +121,16 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messageText, setMessageText] = useState('');
 
+  // Sync activeConversation with global conversations updates
+  useEffect(() => {
+    if (activeConversation) {
+      const updatedConv = globalConversations.find(c => c.id === activeConversation.id);
+      if (updatedConv && updatedConv !== activeConversation) {
+        setActiveConversation(updatedConv);
+      }
+    }
+  }, [globalConversations, activeConversation]);
+
   const categories = [
     { id: 'all', name: 'All', icon: '🌟' },
     { id: 'entertainment', name: 'Entertainment', icon: '🎭', subcategories: ['Concerts', 'Club Nights', 'Live Performances', 'Nightlife (Bars/Lounges)', 'Themed Parties'] },
@@ -198,27 +208,6 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
 
   const handleSendMessage = () => {
     if (!messageText.trim() || !activeConversation) return;
-
-    // Create the new message object for optimistic update
-    const newMessage: Message = {
-      id: Date.now(),
-      senderId: 0,
-      text: messageText.trim(),
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      read: true,
-    };
-
-    // Optimistically update local active conversation
-    const updatedConversation = {
-      ...activeConversation,
-      messages: [...activeConversation.messages, newMessage],
-      lastMessage: {
-        text: newMessage.text,
-        timestamp: 'Just now',
-        isRead: true,
-      },
-    };
-    setActiveConversation(updatedConversation);
 
     // Update the global state
     onSendMessage(activeConversation.id, messageText);
@@ -507,7 +496,7 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Professional Header with Search & Filter */}
-        <div className="mb-8">
+        <div className="mb-8 sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-2 pb-4 -mx-4 px-4 transition-all">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-gray-900 text-2xl"><strong>EVENTZ</strong></h1>

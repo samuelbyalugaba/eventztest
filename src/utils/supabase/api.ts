@@ -186,6 +186,89 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
   return data;
 };
 
+// --- NOTIFICATIONS ---
+
+export const getNotifications = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select(`
+      *,
+      actor:profiles!notifications_actor_id_fkey(*)
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+};
+
+export const markNotificationAsRead = async (notificationId: number) => {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('id', notificationId);
+
+  if (error) throw error;
+};
+
+export const subscribeToNotifications = (userId: string, callback: (payload: any) => void) => {
+  return supabase
+    .channel(`notifications:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`
+      },
+      (payload) => {
+        callback(payload);
+      }
+    )
+    .subscribe();
+};
+
+// --- FOLLOWS ---
+
+export const getFollowedUserIds = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', userId);
+
+  if (error) throw error;
+  return data.map(f => f.following_id);
+};
+
+export const toggleFollow = async (followerId: string, followingId: string) => {
+  const { data: existing } = await supabase
+    .from('follows')
+    .select('id')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .single();
+
+  if (existing) {
+    const { error } = await supabase.from('follows').delete().eq('id', existing.id);
+    if (error) throw error;
+    return false;
+  } else {
+    const { error } = await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId });
+    if (error) throw error;
+    // Create notification
+    await supabase.from('notifications').insert({
+      user_id: followingId,
+      actor_id: followerId,
+      type: 'follower',
+      title: 'New Follower',
+      message: 'started following you',
+      read: false
+    });
+    return true;
+  }
+};
+
 export const checkUsernameUnique = async (username: string, currentUserId?: string) => {
   let query = supabase
     .from('profiles')
@@ -651,6 +734,7 @@ export type PostComment = {
   post_id: number;
   text: string;
   created_at: string;
+  duration?: string;
   user?: Profile;
 };
 
@@ -734,6 +818,20 @@ export const toggleLikePost = async (postId: number, userId: string) => {
   } else {
     const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: userId });
     if (error) throw error;
+
+    // Notify post owner
+    const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single();
+    if (post && post.user_id !== userId) {
+      await supabase.from('notifications').insert({
+        user_id: post.user_id,
+        actor_id: userId,
+        type: 'like',
+        title: 'New Like',
+        message: 'liked your post',
+        read: false
+      });
+    }
+
     return true;
   }
 };
@@ -782,6 +880,20 @@ export const createPostComment = async (postId: number, userId: string, text: st
     .single();
 
   if (error) throw error;
+
+  // Notify post owner
+  const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single();
+  if (post && post.user_id !== userId) {
+    await supabase.from('notifications').insert({
+      user_id: post.user_id,
+      actor_id: userId,
+      type: 'comment',
+      title: 'New Comment',
+      message: 'commented on your post',
+      read: false
+    });
+  }
+
   return data;
 };
 

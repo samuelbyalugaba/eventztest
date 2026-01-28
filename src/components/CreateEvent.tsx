@@ -529,7 +529,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      <div className="bg-white sticky top-0 z-10 px-4 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-white/90 backdrop-blur-md sticky top-0 z-50 px-4 py-4 border-b border-gray-100 flex items-center justify-between transition-all">
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack}

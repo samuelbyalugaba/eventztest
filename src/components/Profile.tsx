@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
+import { EventDetailModal } from './EventDetailModal';
 import { SetAlertModal } from './SetAlertModal';
 import { supabase } from '../utils/supabase/client';
 import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, toggleReminder as toggleReminderApi, Profile as UserProfile, Event, Ticket, UserMedia, Post } from '../utils/supabase/api';
@@ -23,7 +24,7 @@ export function Profile({ onLogout }: ProfileProps) {
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [eventReminders, setEventReminders] = useState<Set<number>>(new Set());
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  // const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
+  const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
   // const [showOrganizerOnboarding, setShowOrganizerOnboarding] = useState(false);
   const [showSharePostModal, setShowSharePostModal] = useState(false);
   const [postCaption, setPostCaption] = useState('');

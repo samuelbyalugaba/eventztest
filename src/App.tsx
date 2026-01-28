@@ -9,7 +9,7 @@ import { OrganizerDashboard } from './components/OrganizerDashboard';
 import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
 import { Calendar, Radio, PlusCircle, User, Rss } from 'lucide-react';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { supabase } from './utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
@@ -331,10 +331,35 @@ export default function App() {
   const handleSendMessage = async (conversationId: number, messageText: string) => {
     if (!messageText.trim() || !currentUser) return;
 
+    const tempId = Date.now();
+    const tempMessage: Message = {
+      id: tempId,
+      senderId: 0, // Current user
+      text: messageText,
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      read: true,
+    };
+
+    // Optimistic update
+    setConversations(prev => prev.map((conv) => {
+      if (conv.id === conversationId) {
+        return {
+          ...conv,
+          messages: [...conv.messages, tempMessage],
+          lastMessage: {
+            text: tempMessage.text,
+            timestamp: 'Just now',
+            isRead: true,
+          },
+        };
+      }
+      return conv;
+    }));
+
     try {
       const sentMsg = await sendMessage(conversationId, messageText);
       
-      const newMessage: Message = {
+      const realMessage: Message = {
         id: sentMsg.id,
         senderId: 0, // Current user
         text: sentMsg.content,
@@ -342,13 +367,14 @@ export default function App() {
         read: true,
       };
 
-      setConversations(conversations.map((conv) => {
+      // Replace temp message with real one
+      setConversations(prev => prev.map((conv) => {
         if (conv.id === conversationId) {
           return {
             ...conv,
-            messages: [...conv.messages, newMessage],
+            messages: conv.messages.map(m => m.id === tempId ? realMessage : m),
             lastMessage: {
-              text: newMessage.text,
+              text: realMessage.text,
               timestamp: 'Just now',
               isRead: true,
             },
@@ -358,6 +384,17 @@ export default function App() {
       }));
     } catch (error) {
       console.error('Error sending message:', error);
+      // Revert on error
+      setConversations(prev => prev.map((conv) => {
+        if (conv.id === conversationId) {
+          return {
+            ...conv,
+            messages: conv.messages.filter(m => m.id !== tempId),
+          };
+        }
+        return conv;
+      }));
+      toast.error('Failed to send message');
     }
   };
 

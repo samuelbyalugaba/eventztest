@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2 } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, Post as ApiPost } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getNotifications, markNotificationAsRead, subscribeToNotifications, getFollowedUserIds, Post as ApiPost, Notification as ApiNotification } from '../utils/supabase/api';
 
 import { UserProfileModal } from './UserProfileModal';
 import { Conversation, Message } from '../types';
@@ -68,15 +68,8 @@ interface Post {
   totalHighlightViews?: number;
 }
 
-interface Notification {
-  id: number;
-  type: 'reminder' | 'update' | 'follower';
-  title: string;
-  message: string;
-  time: string;
-  image?: string;
-  read: boolean;
-}
+// Use ApiNotification directly or map it
+type Notification = ApiNotification;
 
 type FilterTab = 'all' | 'following' | 'organizers' | 'trending';
 
@@ -104,6 +97,32 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       try {
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
+        
+        if (user) {
+          // Load notifications
+          try {
+            const notifs = await getNotifications(user.id);
+            setNotifications(notifs || []);
+          } catch (e) {
+            console.error('Error loading notifications:', e);
+          }
+
+          // Load following
+          try {
+            const following = await getFollowedUserIds(user.id);
+            setFollowingIds(new Set(following));
+          } catch (e) {
+            console.error('Error loading following:', e);
+          }
+
+          // Subscribe to notifications
+          subscribeToNotifications(user.id, () => {
+             getNotifications(user.id).then(data => setNotifications(data || []));
+             toast('New notification', {
+               icon: <Bell className="w-4 h-4 text-purple-600" />,
+             });
+          });
+        }
         
         const data = await getPosts({ currentUserId: user?.id });
         if (data && data.length > 0) {
@@ -145,7 +164,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             highlights: p.video_url ? [{
               id: p.id,
               thumbnail: p.image_urls?.[0] || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', // Vertical thumbnail fallback
-              duration: p.duration || '0:30',
+              duration: p.duration,
               title: p.content || 'Video Highlight',
               videoUrl: p.video_url,
               views: p.views || 0,
@@ -177,7 +196,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
 
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [showMessages, setShowMessages] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
 
@@ -186,9 +206,12 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     if (activeConversation) {
       const updatedConv = globalConversations.find(c => c.id === activeConversation.id);
       if (updatedConv) {
-        // Only update if there are changes to messages or unread count
-        if (updatedConv.messages.length !== activeConversation.messages.length || 
-            updatedConv.unreadCount !== activeConversation.unreadCount) {
+        // Update local state to match global state (handles new messages, ID updates, etc.)
+        // We use JSON.stringify to avoid unnecessary updates if deep equality is same, 
+        // but simpler is just to check if it's a different object reference or length changed.
+        // Given App.tsx creates new references on update, this is safe.
+        // But to avoid infinite loops if set triggers update, we check if it's actually different.
+        if (updatedConv !== activeConversation) {
           setActiveConversation(updatedConv);
         }
         
@@ -458,28 +481,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const handleSendMessage = () => {
     if (!messageText.trim() || !activeConversation) return;
 
-    // Create the new message object for optimistic update
-    const newMessage: Message = {
-      id: Date.now(),
-      senderId: 0,
-      text: messageText.trim(),
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      read: true,
-    };
-
-    // Optimistically update local active conversation
-    const updatedConversation = {
-      ...activeConversation,
-      messages: [...activeConversation.messages, newMessage],
-      lastMessage: {
-        text: newMessage.text,
-        timestamp: 'Just now',
-        isRead: true,
-      },
-    };
-    setActiveConversation(updatedConversation);
-
-    // Update the global state
+    // Update the global state (which will sync back to us)
     onSendMessage(activeConversation.id, messageText);
 
     // Clear the input field
@@ -535,9 +537,26 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     setSelectedUserProfile(user);
   };
 
+  const markAllAsRead = async () => {
+    const unread = notifications.filter(n => !n.read);
+    for (const n of unread) {
+      await markNotificationAsRead(n.id);
+    }
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const handleNotificationClick = async (notif: Notification) => {
+    if (!notif.read) {
+      await markNotificationAsRead(notif.id);
+      setNotifications(notifications.map(n => n.id === notif.id ? { ...n, read: true } : n));
+    }
+    // Handle navigation based on type?
+  };
+
   const filteredPosts = posts.filter(post => {
     if (activeFilter === 'organizers') return post.user.isOrganizer;
     if (activeFilter === 'trending') return post.likes > 200;
+    if (activeFilter === 'following') return followingIds.has(post.user.id);
     return true;
   });
 
@@ -546,7 +565,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       {/* Main Feed View */}
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
         {/* Unique Header Design */}
-        <div className="bg-white border-b border-gray-100">
+        <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 transition-all">
           <div className="px-4 pt-5 pb-4">
             {/* Brand Section */}
             <div className="flex items-center justify-between mb-5">
@@ -577,6 +596,54 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                     <span className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full"></span>
                   )}
                 </button>
+                
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute top-16 right-4 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-slideDown">
+                    <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-900">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button 
+                          className="text-xs text-purple-600 font-medium hover:text-purple-700"
+                          onClick={markAllAsRead}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-[400px] overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500 text-sm">
+                          No notifications yet
+                        </div>
+                      ) : (
+                        notifications.map(notif => (
+                          <div 
+                            key={notif.id} 
+                            className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${!notif.read ? 'bg-purple-50/50' : ''}`}
+                            onClick={() => handleNotificationClick(notif)}
+                          >
+                            <div className="flex gap-3">
+                              <img 
+                                src={notif.actor?.avatar_url || 'https://ui-avatars.com/api/?background=random'} 
+                                className="w-10 h-10 rounded-full object-cover"
+                                alt=""
+                              />
+                              <div>
+                                <p className="text-sm text-gray-900">
+                                  <span className="font-semibold">{notif.actor?.full_name || 'Someone'}</span> {notif.message}
+                                </p>
+                                <span className="text-xs text-gray-400 mt-1 block">
+                                  {new Date(notif.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -724,6 +791,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                           src={post.highlights[0].thumbnail}
                           alt={post.highlights[0].title}
                           className="w-full h-full object-cover"
+                          fallbackType="video"
                         />
                         
                         {/* Cinematic Gradient Overlay */}
@@ -740,9 +808,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                         </div>
                         
                         {/* Duration Badge - Top Right */}
-                        <div className="absolute top-3 right-3 px-2.5 py-1 bg-black/90 backdrop-blur-md rounded-lg border border-white/10">
-                          <span className="text-white text-xs font-bold">{post.highlights[0].duration}</span>
-                        </div>
+                        {post.highlights[0].duration && (
+                          <div className="absolute top-3 right-3 px-2.5 py-1 bg-black/90 backdrop-blur-md rounded-lg border border-white/10">
+                            <span className="text-white text-xs font-bold">{post.highlights[0].duration}</span>
+                          </div>
+                        )}
                         
                         {/* Clip Info - Bottom Overlay */}
                         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent">
@@ -923,12 +993,18 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all bg-white text-gray-700 hover:bg-purple-50 hover:text-[#8A2BE2]`}
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">{post.comments.length}</span>
+                    <span className="text-sm font-medium">{post.comments_count || post.comments.length}</span>
                   </button>
 
-                  <button className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 hover:bg-purple-50 hover:text-[#8A2BE2] rounded-lg transition-all">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPost(post);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 hover:bg-purple-50 hover:text-[#8A2BE2] rounded-lg transition-all"
+                  >
                     <Eye className="w-4 h-4" />
-                    <span className="text-sm font-medium">{post.shares}</span>
+                    <span className="text-sm font-medium">{post.views || 0}</span>
                   </button>
 
                   <button
@@ -1708,19 +1784,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   }
                 }
                 
-                // Center tap - Play/Pause
-                const video = document.getElementById('highlight-video') as HTMLVideoElement;
-                if (video) {
-                  if (isPlaying) {
-                    video.pause();
-                    setIsPlaying(false);
-                  } else {
-                    video.play();
-                    setIsPlaying(true);
-                  }
-                  setShowControls(true);
-                  setTimeout(() => setShowControls(false), 2000);
-                }
+                // Center tap - Play/Pause (DISABLED to avoid conflict with native controls)
+                // We rely on native controls for play/pause.
+                // Just toggle the custom controls visibility
+                setShowControls(!showControls);
               }, 300);
             }}
           >
