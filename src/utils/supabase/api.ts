@@ -202,19 +202,7 @@ export type Notification = {
 
 // --- NOTIFICATIONS ---
 
-export const getNotifications = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('notifications')
-    .select(`
-      *,
-      actor:profiles!notifications_actor_id_fkey(*)
-    `)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
 
-  if (error) throw error;
-  return data;
-};
 
 export const markNotificationAsRead = async (notificationId: number) => {
   const { error } = await supabase
