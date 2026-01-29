@@ -264,7 +264,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const unreadMessagesCount = (globalConversations || []).reduce((acc, conv) => {
     if (!conv) return acc;
-    return acc + (conv.unreadCount || 0);
+    return acc + (conv?.unreadCount || 0);
   }, 0);
 
   const getIcon = (type: string) => {
@@ -924,6 +924,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                           className="w-full aspect-[16/10] object-cover"
                           controls
                           playsInline
+                          onPlay={() => incrementPostView(post.id)}
                         />
                       ) : (
                         <ImageWithFallback

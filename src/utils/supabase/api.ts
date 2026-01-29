@@ -665,9 +665,16 @@ export const getEventAnalytics = async (eventId: number) => {
 
     // Process Location
     if (user.location) {
-      const city = user.location.split(',')[0].trim();
-      if (city) {
-        const normalizedCity = city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+      // Handle various formats: "City, Country", "City, State, Country", or just "City"
+      const parts = user.location.split(',');
+      const city = parts[0].trim();
+      
+      if (city && city.toLowerCase() !== 'unknown') {
+        // Capitalize first letter of each word
+        const normalizedCity = city.split(' ')
+          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+          
         locationCounts[normalizedCity] = (locationCounts[normalizedCity] || 0) + 1;
         totalLocations++;
       }

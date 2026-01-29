@@ -14,7 +14,7 @@ import { ShareModal } from './ShareModal';
 import { EventDetailModal } from './EventDetailModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getSavedEvents, toggleSaveEvent, createTicket, getEventAttendees, getPosts, Event as ApiEvent } from '../utils/supabase/api';
+import { getEvents, getSavedEvents, toggleSaveEvent, createTicket, getEventAttendees, getPosts, Event as ApiEvent, incrementEventView } from '../utils/supabase/api';
 
 
 
@@ -83,6 +83,9 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
 
   useEffect(() => {
     if (selectedEvent) {
+      // Increment view count
+      incrementEventView(selectedEvent.id);
+
       const loadEventPosts = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
