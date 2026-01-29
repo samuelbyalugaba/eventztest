@@ -197,7 +197,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               image: p.image_urls?.[0],
               hashtags: p.hashtags,
             },
-            timestamp: new Date(p.created_at).toLocaleDateString(),
+            timestamp: (() => { try { const d = new Date(p.created_at); return isNaN(d.getTime()) ? 'Recently' : d.toLocaleDateString(); } catch { return 'Recently'; } })(),
             likes: p.likes_count || 0,
             comments: [], // Will load on expand
             comments_count: p.comments_count || 0,
@@ -444,7 +444,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   avatar: c.user?.avatar_url || '',
                 },
                 text: c.text,
-                timestamp: new Date(c.created_at).toLocaleDateString(),
+                timestamp: (() => { try { const d = new Date(c.created_at); return isNaN(d.getTime()) ? 'Recently' : d.toLocaleDateString(); } catch { return 'Recently'; } })(),
               }))
             };
           }
@@ -654,7 +654,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                                   <span className="font-semibold">{notif.actor?.full_name || 'Someone'}</span> {notif.message}
                                 </p>
                                 <span className="text-xs text-gray-400 mt-1 block">
-                                  {new Date(notif.created_at).toLocaleDateString()}
+                                  {(() => { try { const d = new Date(notif.created_at); return isNaN(d.getTime()) ? 'Just now' : d.toLocaleDateString(); } catch { return 'Just now'; } })()}
                                 </span>
                               </div>
                             </div>
@@ -1401,7 +1401,16 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                       {getIcon(notification.type)}
                     </div>
                     <p className="text-gray-500 text-sm">{notification.message}</p>
-                    <span className="text-gray-400 text-xs">{new Date(notification.created_at).toLocaleString()}</span>
+                    <span className="text-gray-400 text-xs">
+                      {(() => {
+                        try {
+                          const date = new Date(notification.created_at);
+                          return isNaN(date.getTime()) ? 'Just now' : date.toLocaleString();
+                        } catch (e) {
+                          return 'Just now';
+                        }
+                      })()}
+                    </span>
                   </div>
                 </div>
               ))}

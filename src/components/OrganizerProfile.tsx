@@ -148,7 +148,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             image: p.image_urls?.[0] || '',
             video: p.video_url,
             title: p.content.substring(0, 20) + '...',
-            date: new Date(p.created_at).toLocaleDateString(),
+            date: (() => { try { const d = new Date(p.created_at); return isNaN(d.getTime()) ? '' : d.toLocaleDateString(); } catch { return ''; } })(),
             attendees: p.likes_count || 0
           })),
           photos: posts.map((p, index) => ({
@@ -161,7 +161,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             id: e.id,
             title: e.title,
             image: e.image_url,
-            date: new Date(e.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+            date: (() => { try { const d = new Date(e.date); return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); } catch { return ''; } })(),
             time: e.time.substring(0, 5),
             location: e.location,
             price: e.price_range,
@@ -245,7 +245,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             event_id: event.id,
             ticket_number: `TKT-${crypto.randomUUID().split('-')[0].toUpperCase()}-${Date.now().toString().slice(-4)}`,
             barcode: crypto.randomUUID(),
-            price: event.price,
+            price: event.price ? (parseFloat(event.price.match(/\d+(\.\d+)?/)?.[0] || '0')) : 0,
             purchase_date: new Date().toISOString(),
             customer_name: name,
             customer_email: email,
