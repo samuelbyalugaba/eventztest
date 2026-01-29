@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { toast } from 'sonner';
+import { incrementPostView } from '../utils/supabase/api';
 
 interface HighlightViewerModalProps {
   highlight: {
@@ -49,6 +50,13 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
     video.addEventListener('timeupdate', updateProgress);
     return () => video.removeEventListener('timeupdate', updateProgress);
   }, []);
+
+  // Increment view count for videos
+  useEffect(() => {
+    if (highlight.mediaType === 'video' && highlight.type === 'post') {
+      incrementPostView(highlight.id);
+    }
+  }, [highlight.id, highlight.mediaType, highlight.type]);
 
   // Auto-play video on mount for mobile support
   useEffect(() => {

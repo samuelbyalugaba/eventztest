@@ -111,10 +111,11 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
           setOrganizerPosts(userPosts.map((p: any) => ({
              id: p.id,
              type: 'post',
-             mediaType: p.image_urls && p.image_urls.length > 0 ? 'image' : 'text',
+             mediaType: p.video_url ? 'video' : (p.image_urls && p.image_urls.length > 0 ? 'image' : 'text'),
              title: p.content ? p.content.substring(0, 30) + '...' : 'New Post',
              description: p.content,
              image: p.image_urls ? p.image_urls[0] : 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
+             video: p.video_url,
              likes: p.likes_count || 0,
              comments: p.comments_count || 0,
              shares: 0,
