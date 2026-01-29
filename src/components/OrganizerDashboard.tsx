@@ -28,10 +28,9 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [showSettings, setShowSettings] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [organizerPosts, setOrganizerPosts] = useState<any[]>([]);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'tickets' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'published' | 'drafts'>('published');
   const [stats, setStats] = useState({
     totalEvents: 0,
     followers: 0,
@@ -66,11 +65,9 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   // Load published events and profile from Supabase
   useEffect(() => {
     const loadOrganizerData = async () => {
-      // setIsLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          // setIsLoading(false);
           return;
         }
 
