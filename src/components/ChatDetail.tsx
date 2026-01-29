@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Message, Profile, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead } from '../utils/supabase/api';
+import { toast } from 'sonner';
 
 interface ChatDetailProps {
   conversationId: number;
@@ -16,6 +17,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
   const [showMenu, setShowMenu] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -53,17 +55,34 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   }, [conversationId, currentUser.id]);
 
   const handleSend = async () => {
-    if (messageText.trim()) {
-      const text = messageText;
-      setMessageText(''); // Optimistic clear
-      
-      try {
-        await sendMessage(conversationId, text);
-        inputRef.current?.focus();
-      } catch (error) {
-        console.error('Failed to send message:', error);
-        setMessageText(text); // Restore text on error
+    if (isSending) return;
+    const text = messageText.trim();
+    if (!text) return;
+    setIsSending(true);
+    setMessageText('');
+    try {
+      const sent = await sendMessage(conversationId, text);
+      if (sent) {
+        setMessages(prev => {
+          if (prev.some(m => m.id === sent.id)) return prev;
+          return [...prev, sent];
+        });
       }
+      // Fallback refresh to ensure UI consistency even if Realtime is delayed
+      getMessages(conversationId).then((msgs) => {
+        if (Array.isArray(msgs)) {
+          setMessages(msgs);
+          scrollToBottom();
+        }
+      }).catch(() => {});
+      scrollToBottom();
+      inputRef.current?.focus();
+    } catch (error: any) {
+      console.error('Failed to send message:', error);
+      toast.error('Failed to send message');
+      setMessageText(text);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -145,7 +164,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
         </div>
 
         <div className="space-y-4">
-          {messages.map((msg, index) => {
+          {messages.map((msg) => {
             const isMe = msg.sender_id === currentUser.id;
             
             return (
@@ -201,8 +220,10 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
 
           {messageText.trim() ? (
             <button 
+              type="button"
               onClick={handleSend}
               className="p-2.5 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex-shrink-0"
+              disabled={isSending}
             >
               <Send className="w-5 h-5 ml-0.5" />
             </button>

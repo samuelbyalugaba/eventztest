@@ -8,7 +8,7 @@ import { MediaViewer } from './MediaViewer';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { getEventAttendees, getPosts, toggleSaveEvent, Event as ApiEvent } from '../utils/supabase/api';
+import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, Event as ApiEvent } from '../utils/supabase/api';
 
 export interface EventDetailModalProps {
   event: ApiEvent;
@@ -33,6 +33,9 @@ export function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, 
   const [eventPosts, setEventPosts] = useState<any[]>([]);
 
   useEffect(() => {
+    // Increment view count
+    incrementEventView(event.id);
+
     const fetchAttendees = async () => {
       try {
         const attendees = await getEventAttendees(event.id);

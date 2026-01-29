@@ -4,11 +4,14 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getNotifications, markNotificationAsRead, subscribeToNotifications, getFollowedUserIds, getMutualFollows, Post as ApiPost, Notification as ApiNotification } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getNotifications, markNotificationAsRead, subscribeToNotifications, getFollowedUserIds, getMutualFollows, Post as ApiPost, Notification as ApiNotification, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
+import { handleShare } from '../utils/share';
 import { Conversation } from '../types';
 
 import { ChatList } from './ChatList';
 import { ChatDetail } from './ChatDetail';
+import { UserProfileModal } from './UserProfileModal';
+import { ShareModal } from './ShareModal';
 
 interface Comment {
   id: number;
@@ -79,6 +82,7 @@ interface FeedProps {
   onSendMessage: (conversationId: number, messageText: string) => void;
   onMarkAsRead?: (conversationId: number) => void;
   onlineUsers?: { id: string; name: string; avatar: string; username: string }[];
+  onDeleteConversation?: (conversationId: number) => void;
 }
 
 const isVideo = (url?: string) => {
@@ -119,6 +123,21 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [showChatMenu, setShowChatMenu] = useState(false);
 
   useEffect(() => {
+    if (selectedPost) {
+      incrementPostView(selectedPost.id);
+    }
+  }, [selectedPost]);
+
+  useEffect(() => {
+    if (playingVideo) {
+      // Increment view for the current clip
+      const currentClip = playingVideo.clips[playingVideo.clipIndex];
+      // If the clip ID matches the post ID, it's the main post video
+      incrementPostView(currentClip.id);
+    }
+  }, [playingVideo?.clipIndex, playingVideo?.clips]);
+
+  useEffect(() => {
     const loadPosts = async () => {
       setIsLoading(true);
       try {
@@ -153,13 +172,13 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         
         const data = await getPosts({ currentUserId: user?.id });
         if (data && data.length > 0) {
-          const mappedPosts: Post[] = data.map((p: ApiPost) => ({
+            const mappedPosts: Post[] = data.map((p: ApiPost) => ({
             id: p.id,
             user: {
               id: p.user?.id || 'unknown',
               name: p.user?.full_name || p.user?.username || 'Unknown User',
               username: p.user?.username || '@unknown',
-              avatar: p.user?.avatar_url,
+                avatar: p.user?.avatar_url || '',
               verified: p.user?.verified || false,
               isOrganizer: p.user?.is_organizer || false,
             },
@@ -189,7 +208,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             isHighlight: !!p.video_url,
             highlights: p.video_url ? [{
               id: p.id,
-              thumbnail: p.image_urls?.[0] || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', // Vertical thumbnail fallback
+              thumbnail: (p.image_urls?.find(url => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', // Use first non-video image or fallback
               duration: p.duration || '',
               title: p.content || 'Video Highlight',
               videoUrl: p.video_url,
@@ -243,7 +262,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   }, [globalConversations, activeConversation, onMarkAsRead]);
   
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const unreadMessagesCount = globalConversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+  const unreadMessagesCount = (globalConversations || []).reduce((acc, conv) => {
+    if (!conv) return acc;
+    return acc + (conv.unreadCount || 0);
+  }, 0);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -887,7 +909,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                         e.stopPropagation();
                         // For mouse clicks
                         const currentUrl = post.content.images![carouselIndexes[post.id] || 0];
-                        if (!('ontouchstart' in window) && !currentUrl.match(/\.(mp4|webm|ogg|mov)$/i)) {
+                        if (!('ontouchstart' in window) && !isVideo(currentUrl)) {
                           setFullScreenImage({ 
                             images: post.content.images!, 
                             currentIndex: carouselIndexes[post.id] || 0,
@@ -1367,20 +1389,18 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             <div className="px-4 py-5">
               {notifications.map((notification) => (
                 <div key={notification.id} className="flex items-start gap-3 mb-5">
-                  {notification.image && (
-                    <img
-                      src={notification.image}
-                      alt={notification.title}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  )}
+                  <img
+                    src={notification.actor?.avatar_url || ''}
+                    alt={notification.title}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-gray-900 font-bold">{notification.title}</span>
                       {getIcon(notification.type)}
                     </div>
                     <p className="text-gray-500 text-sm">{notification.message}</p>
-                    <span className="text-gray-400 text-xs">{notification.time}</span>
+                    <span className="text-gray-400 text-xs">{new Date(notification.created_at).toLocaleString()}</span>
                   </div>
                 </div>
               ))}

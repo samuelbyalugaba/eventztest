@@ -34,7 +34,8 @@ import {
   Mail,
   Phone,
   Globe,
-  AtSign
+  AtSign,
+  Calendar
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -59,7 +60,8 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
     location: '',
     bio: '',
     website: '',
-    avatarUrl: '', // Added avatarUrl to fix type error
+    avatarUrl: '',
+    birthdate: '',
   });
 
   const [notifications, setNotifications] = useState({
@@ -132,6 +134,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
               bio: profile.bio || '',
               website: profile.website || '',
               avatarUrl: profile.avatar_url || '',
+              birthdate: profile.birthdate || '',
             });
 
             if (profile.notification_settings) setNotifications(profile.notification_settings);
@@ -178,6 +181,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         location: profileData.location,
         bio: profileData.bio,
         website: profileData.website,
+        birthdate: profileData.birthdate,
       });
       toast.success('Profile updated successfully! ✅');
     } catch (error) {
@@ -815,6 +819,19 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           onChange={(e) => setProfileData({ ...profileData, website: e.target.value })}
                           className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
                           placeholder="https://yourwebsite.com"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-2">Date of Birth</label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="date"
+                          value={profileData.birthdate}
+                          onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
+                          className="w-full pl-10 pr-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
                         />
                       </div>
                     </div>

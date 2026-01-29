@@ -181,7 +181,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
               <div className="flex items-center gap-3">
                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/50">
                     <ImageWithFallback 
-                       src={avatarUrl}
+                       src={profile?.avatar_url || user.avatar}
                        alt={profile?.full_name || user.name}
                        className="w-full h-full object-cover"
                     />

@@ -1,5 +1,7 @@
-import { X, Eye, Users, Share2, TrendingUp, Calendar, MapPin, DollarSign, Ticket, Clock, Target, Activity, ArrowUp, ArrowDown, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Eye, Users, Share2, TrendingUp, Calendar, MapPin, DollarSign, Ticket, Activity, ArrowUp, ArrowDown, Download, Loader2, Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { getEventAnalytics } from '../utils/supabase/api';
 
 interface EventAnalyticsModalProps {
   event: any;
@@ -7,50 +9,24 @@ interface EventAnalyticsModalProps {
 }
 
 export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps) {
-  // Mock analytics data - in real app this would come from backend
-  const analytics = {
-    views: {
-      total: 1247,
-      change: +15.3,
-      trend: 'up',
-      daily: [120, 145, 168, 192, 215, 198, 209],
-    },
-    interested: {
-      total: 342,
-      change: +12.8,
-      trend: 'up',
-    },
-    shares: {
-      total: 89,
-      change: +8.4,
-      trend: 'up',
-    },
-    ticketsSold: {
-      total: 156,
-      change: +24.1,
-      trend: 'up',
-    },
-    revenue: {
-      total: 'TSh 234,000',
-      change: +28.5,
-      trend: 'up',
-    },
-    demographics: {
-      age: [
-        { range: '18-24', percent: 35 },
-        { range: '25-34', percent: 42 },
-        { range: '35-44', percent: 18 },
-        { range: '45+', percent: 5 },
-      ],
-      locations: [
-        { city: 'Dar es Salaam', percent: 45 },
-        { city: 'Arusha', percent: 25 },
-        { city: 'Mwanza', percent: 15 },
-        { city: 'Dodoma', percent: 10 },
-        { city: 'Others', percent: 5 },
-      ],
-    },
-  };
+  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const data = await getEventAnalytics(event.id);
+        setAnalytics(data);
+      } catch (error) {
+        console.error('Error fetching analytics:', error);
+        toast.error('Failed to load analytics');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [event.id]);
 
   const formatNumber = (num: number): string => {
     if (num >= 1000) {
@@ -58,6 +34,22 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
     }
     return num.toString();
   };
+
+  if (loading) {
+    return (
+      <div 
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
+        onClick={onClose}
+      >
+        <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl">
+          <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
+          <p className="text-gray-600 font-medium">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analytics) return null;
 
   return (
     <div 
@@ -134,9 +126,11 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
                   <Eye className="w-6 h-6 text-cyan-600" />
                 </div>
                 <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
-                  analytics.views.trend === 'up' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                  analytics.views.trend === 'up' ? 'bg-green-50 text-green-600' : 
+                  analytics.views.trend === 'down' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-600'
                 }`}>
-                  {analytics.views.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                  {analytics.views.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : 
+                   analytics.views.trend === 'down' ? <ArrowDown className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
                   <span className="text-xs">{analytics.views.change}%</span>
                 </div>
               </div>
@@ -151,9 +145,11 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
                   <Users className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
-                  analytics.interested.trend === 'up' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                  analytics.interested.trend === 'up' ? 'bg-green-50 text-green-600' : 
+                  analytics.interested.trend === 'down' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-600'
                 }`}>
-                  {analytics.interested.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                  {analytics.interested.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : 
+                   analytics.interested.trend === 'down' ? <ArrowDown className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
                   <span className="text-xs">{analytics.interested.change}%</span>
                 </div>
               </div>
@@ -168,9 +164,11 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
                   <Share2 className="w-6 h-6 text-pink-600" />
                 </div>
                 <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
-                  analytics.shares.trend === 'up' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                  analytics.shares.trend === 'up' ? 'bg-green-50 text-green-600' : 
+                  analytics.shares.trend === 'down' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-600'
                 }`}>
-                  {analytics.shares.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                  {analytics.shares.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : 
+                   analytics.shares.trend === 'down' ? <ArrowDown className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
                   <span className="text-xs">{analytics.shares.change}%</span>
                 </div>
               </div>
@@ -185,9 +183,11 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
                   <Ticket className="w-6 h-6 text-green-600" />
                 </div>
                 <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
-                  analytics.ticketsSold.trend === 'up' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                  analytics.ticketsSold.trend === 'up' ? 'bg-green-50 text-green-600' : 
+                  analytics.ticketsSold.trend === 'down' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-600'
                 }`}>
-                  {analytics.ticketsSold.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                  {analytics.ticketsSold.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : 
+                   analytics.ticketsSold.trend === 'down' ? <ArrowDown className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
                   <span className="text-xs">{analytics.ticketsSold.change}%</span>
                 </div>
               </div>
@@ -202,9 +202,11 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
                   <DollarSign className="w-6 h-6 text-amber-600" />
                 </div>
                 <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
-                  analytics.revenue.trend === 'up' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                  analytics.revenue.trend === 'up' ? 'bg-green-50 text-green-600' : 
+                  analytics.revenue.trend === 'down' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-600'
                 }`}>
-                  {analytics.revenue.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                  {analytics.revenue.trend === 'up' ? <ArrowUp className="w-3 h-3" /> : 
+                   analytics.revenue.trend === 'down' ? <ArrowDown className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
                   <span className="text-xs">{analytics.revenue.change}%</span>
                 </div>
               </div>
@@ -228,8 +230,8 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
             
             {/* Simple Bar Chart */}
             <div className="flex items-end gap-3 h-48">
-              {analytics.views.daily.map((value, index) => {
-                const maxValue = Math.max(...analytics.views.daily);
+              {analytics.views.daily.map((value: number, index: number) => {
+                const maxValue = Math.max(...analytics.views.daily, 1); // Avoid div by zero
                 const heightPercent = (value / maxValue) * 100;
                 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                 
@@ -253,7 +255,7 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <h3 className="text-gray-900 text-lg mb-5">Age Distribution</h3>
               <div className="space-y-4">
-                {analytics.demographics.age.map((group, index) => (
+                {analytics.demographics.age.map((group: any, index: number) => (
                   <div key={index}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-gray-700 text-sm">{group.range} years</span>
@@ -274,7 +276,7 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <h3 className="text-gray-900 text-lg mb-5">Top Locations</h3>
               <div className="space-y-4">
-                {analytics.demographics.locations.map((location, index) => (
+                {analytics.demographics.locations.map((location: any, index: number) => (
                   <div key={index}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -306,19 +308,11 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
                 <ul className="space-y-2 text-gray-700 text-sm">
                   <li className="flex items-start gap-2">
                     <span className="text-purple-600 mt-1">✓</span>
-                    <span>Your event is performing <strong>15.3% better</strong> than average events in this category</span>
+                    <span>Your event is performing <strong>well</strong> compared to average events</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-purple-600 mt-1">✓</span>
-                    <span>Peak engagement time is between <strong>6 PM - 9 PM</strong>. Schedule posts during this time</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-600 mt-1">✓</span>
-                    <span>Most of your audience is from <strong>Dar es Salaam</strong>. Consider local partnerships</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-600 mt-1">✓</span>
-                    <span>Enable HD live streaming to potentially increase engagement by <strong>40%</strong></span>
+                    <span>Most of your audience is from <strong>{analytics.demographics.locations[0]?.city || 'your area'}</strong>. Consider local partnerships</span>
                   </li>
                 </ul>
               </div>

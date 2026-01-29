@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Bell, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { SetAlertModal } from './SetAlertModal';
+import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, toggleReminder as toggleReminderApi, Profile as UserProfile, Event, Ticket, UserMedia, Post, getFollowers, getFollowing } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Event, Ticket, Post, getFollowers, getFollowing } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 
 const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"; // Generic event background
@@ -20,9 +21,8 @@ interface ProfileProps {
 
 export function Profile({ onLogout }: ProfileProps) {
   const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'photos' | 'videos' | 'saved'>('events');
-  const [savedEvents, setSavedEvents] = useState<Event[]>([]);
+  const [savedEvents, setSavedEvents] = useState<(Event & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
-  const [eventReminders, setEventReminders] = useState<Set<number>>(new Set());
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
   // const [showOrganizerOnboarding, setShowOrganizerOnboarding] = useState(false);
@@ -95,19 +95,12 @@ export function Profile({ onLogout }: ProfileProps) {
 
   // Load all data
   useEffect(() => {
-    let savedEventsSubscription: any;
 
     const fetchSavedEvents = async (userId: string) => {
       try {
         const saved = await getSavedEvents(userId);
         if (saved) {
-           setSavedEvents(saved as unknown as Event[]);
-
-           const reminders = new Set<number>();
-           saved.forEach(e => {
-             if (e.hasReminder) reminders.add(e.id);
-           });
-           setEventReminders(reminders);
+           setSavedEvents(saved as unknown as (Event & { isSaved: boolean; hasReminder: boolean })[]);
         }
       } catch (error) {
         console.error('Error fetching saved events:', error);
@@ -181,41 +174,6 @@ export function Profile({ onLogout }: ProfileProps) {
       savedEventsSubscriptionRef.current = null;
     };
   }, []);
-
-  // Toggle reminder for saved events
-  const toggleReminder = async (eventId: number, eventName: string) => {
-    // Optimistic update
-    const newReminders = new Set(eventReminders);
-    const isAdding = !newReminders.has(eventId);
-    
-    if (isAdding) {
-      newReminders.add(eventId);
-      toast.success('Reminder set! 🔔', {
-        description: `We'll notify you before ${eventName}`,
-        duration: 2000,
-      });
-    } else {
-      newReminders.delete(eventId);
-      toast.success('Reminder removed', {
-        description: `You won't be notified about ${eventName}`,
-        duration: 2000,
-      });
-    }
-    setEventReminders(newReminders);
-
-    // API Call
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            await toggleReminderApi(eventId, user.id);
-        }
-    } catch (error) {
-        console.error('Error toggling reminder:', error);
-        toast.error('Failed to update reminder');
-        // Revert on error
-        setEventReminders(eventReminders);
-    }
-  };
 
   // Clear state when modal opens
   useEffect(() => {
@@ -507,6 +465,9 @@ export function Profile({ onLogout }: ProfileProps) {
 
       {/* Content Area */}
       <div className="px-6">
+        {isLoading && (
+          <div className="py-3 text-gray-500 text-sm">Loading...</div>
+        )}
         {/* Attended Events - Vertical Cards */}
         {activeTab === 'events' && (
           <div className="space-y-4">
@@ -875,13 +836,7 @@ export function Profile({ onLogout }: ProfileProps) {
         />
       )}
 
-      {/* Settings Modal */}
-      {showSettingsModal && (
-        <SettingsModal
-          onClose={() => setShowSettingsModal(false)}
-          onLogout={onLogout}
-        />
-      )}
+      
 
       {/* Floating Action Button - Share Post */}
       <button

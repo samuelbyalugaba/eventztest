@@ -1,4 +1,4 @@
-import { X, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign } from 'lucide-react';
+import { X, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
@@ -22,6 +22,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     phone: '',
     location: '',
     bio: '',
+    birthdate: '',
   });
 
   // Notifications state
@@ -76,6 +77,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                 phone: profile.phone || '',
                 location: profile.location || '',
                 bio: profile.bio || '',
+                birthdate: profile.birthdate || '',
               });
               if (localProfile) localStorage.removeItem('eventz-user-profile');
             }
@@ -175,6 +177,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
           phone: profileData.phone,
           location: profileData.location,
           bio: profileData.bio,
+          birthdate: profileData.birthdate,
         });
       } else {
         localStorage.setItem('eventz-user-profile', JSON.stringify(profileData));
@@ -462,6 +465,19 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                       onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent"
                       placeholder="City, Country"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-medium mb-2">Date of Birth</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="date"
+                      value={profileData.birthdate}
+                      onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent"
                     />
                   </div>
                 </div>

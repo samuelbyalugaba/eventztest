@@ -46,3 +46,27 @@ USING (
   bucket_id = 'posts' 
   AND auth.uid() = owner
 );
+
+-- 5. Fix Chat Trigger Error (COALESCE types messages and json cannot be matched)
+-- Drop problematic triggers on messages
+DROP TRIGGER IF EXISTS on_message_created ON public.messages;
+DROP TRIGGER IF EXISTS handle_new_message ON public.messages;
+DROP TRIGGER IF EXISTS update_conversation_last_message ON public.messages;
+DROP TRIGGER IF EXISTS update_conversation_timestamp ON public.messages;
+DROP TRIGGER IF EXISTS sync_message_to_conversation ON public.messages;
+
+-- Create a safe function to update conversation timestamp
+CREATE OR REPLACE FUNCTION public.handle_new_message()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.conversations
+  SET updated_at = NOW()
+  WHERE id = NEW.conversation_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create the safe trigger
+CREATE TRIGGER on_message_created
+  AFTER INSERT ON public.messages
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_message();

@@ -24,6 +24,7 @@ import {
   getLiveStreams,
   getMutualFollows,
   subscribeToOnlineUsers,
+  deleteConversation,
   Event
 } from './utils/supabase/api';
 import { PurchasedTicket, Message, Conversation } from './types';
@@ -239,7 +240,7 @@ export default function App() {
              read: newMessage.sender_id === currentUser.id ? true : false
           };
           
-          updatedConvs[convIndex] = {
+          const updatedConv = {
             ...conv,
             messages: [...conv.messages, appMsg],
             lastMessage: {
@@ -247,12 +248,12 @@ export default function App() {
               timestamp: 'Just now',
               isRead: appMsg.read
             },
-            unreadCount: newMessage.sender_id !== currentUser.id ? conv.unreadCount + 1 : conv.unreadCount
+            unreadCount: newMessage.sender_id !== currentUser.id ? (conv.unreadCount || 0) + 1 : (conv.unreadCount || 0)
           };
           
           // Move to top
           updatedConvs.splice(convIndex, 1);
-          updatedConvs.unshift(updatedConvs[convIndex]);
+          updatedConvs.unshift(updatedConv);
           
           return updatedConvs;
         } else {
@@ -402,30 +403,31 @@ export default function App() {
 
     try {
       const sentMsg = await sendMessage(conversationId, messageText);
-      
-      const realMessage: Message = {
-        id: sentMsg.id,
-        senderId: 0, // Current user
-        text: sentMsg.content,
-        timestamp: new Date(sentMsg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-        read: true,
-      };
+      if (sentMsg) {
+        const realMessage: Message = {
+          id: sentMsg.id,
+          senderId: 0, // Current user
+          text: sentMsg.content,
+          timestamp: new Date(sentMsg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          read: true,
+        };
 
-      // Replace temp message with real one
-      setConversations(prev => prev.map((conv) => {
-        if (conv.id === conversationId) {
-          return {
-            ...conv,
-            messages: conv.messages.map(m => m.id === tempId ? realMessage : m),
-            lastMessage: {
-              text: realMessage.text,
-              timestamp: 'Just now',
-              isRead: true,
-            },
-          };
-        }
-        return conv;
-      }));
+        // Replace temp message with real one
+        setConversations(prev => prev.map((conv) => {
+          if (conv.id === conversationId) {
+            return {
+              ...conv,
+              messages: conv.messages.map(m => m.id === tempId ? realMessage : m),
+              lastMessage: {
+                text: realMessage.text,
+                timestamp: 'Just now',
+                isRead: true,
+              },
+            };
+          }
+          return conv;
+        }));
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       // Revert on error
@@ -479,7 +481,43 @@ export default function App() {
       console.error('Error deleting conversation:', error);
       toast.error('Failed to delete conversation');
       // Refresh to restore state if failed
-      loadConversations();
+      if (currentUser) {
+        try {
+          const apiConvs = await getConversations(currentUser.id);
+          const formattedConvs: Conversation[] = await Promise.all(apiConvs.map(async (c: any) => {
+            const otherUser = c.participant1_id === currentUser.id ? c.participant2 : c.participant1;
+            const msgs = await getMessages(c.id);
+            const formattedMsgs: Message[] = msgs.map((m: any) => ({
+              id: m.id,
+              senderId: m.sender_id === currentUser.id ? 0 : parseInt(m.sender_id) || 1,
+              text: m.content,
+              timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              read: m.is_read
+            }));
+            return {
+              id: c.id,
+              user: {
+                id: otherUser?.id,
+                name: otherUser?.full_name || 'Unknown User',
+                username: otherUser?.username || '',
+                avatar: otherUser?.avatar_url,
+                verified: otherUser?.verified || false,
+                isOrganizer: otherUser?.is_organizer || false,
+              },
+              lastMessage: {
+                text: c.last_message?.content || '',
+                timestamp: c.last_message ? new Date(c.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+                isRead: c.last_message?.is_read || false,
+              },
+              unreadCount: c.unread_count || 0,
+              messages: formattedMsgs
+            };
+          }));
+          setConversations(formattedConvs);
+        } catch (e) {
+          console.error('Failed to reload conversations:', e);
+        }
+      }
     }
   };
 
@@ -546,7 +584,7 @@ export default function App() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto pb-20">
         {activeTab === 'event' && <EventDetails onTicketPurchase={handleTicketPurchase} purchasedTickets={purchasedTickets} conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} />}
-        {activeTab === 'feed' && <Feed conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} onMarkAsRead={handleMarkAsRead} onlineUsers={onlineFriends} />}
+        {activeTab === 'feed' && <Feed conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} onMarkAsRead={handleMarkAsRead} onlineUsers={onlineFriends} onDeleteConversation={handleDeleteConversation} />}
         {activeTab === 'live' && <LiveFeed />}
         {activeTab === 'create' && (
           !isOrganizer ? (
