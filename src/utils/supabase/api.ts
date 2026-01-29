@@ -1598,7 +1598,7 @@ export type AppNotification = {
 
 export const getNotifications = async (userId: string): Promise<AppNotification[]> => {
   // Parallel fetch for different sources
-  const [ticketsRes, remindersRes, followsRes] = await Promise.all([
+  const [ticketsRes, remindersRes, followsRes, notificationsRes] = await Promise.all([
     // Tickets
     supabase
       .from('tickets')
@@ -1616,59 +1616,112 @@ export const getNotifications = async (userId: string): Promise<AppNotification[
       .order('created_at', { ascending: false })
       .limit(10),
       
-    // Followers
+    // Followers (Direct from follows table)
     supabase
       .from('follows')
       .select('*, follower:profiles!follower_id(full_name, avatar_url)')
       .eq('following_id', userId)
       .order('created_at', { ascending: false })
-      .limit(10)
+      .limit(10),
+
+    // Social Notifications (Likes, Comments, New Followers from notifications table)
+    supabase
+      .from('notifications')
+      .select(`
+        *,
+        actor:profiles!notifications_actor_id_fkey(full_name, avatar_url)
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20)
   ]);
 
   const notifications: AppNotification[] = [];
+  const processedIds = new Set<string>();
 
   // Process Tickets
   ticketsRes.data?.forEach((t: any) => {
-    notifications.push({
-      id: `ticket-${t.id}`,
-      type: 'ticket',
-      title: 'Ticket Purchased ✅',
-      message: `Your virtual ticket for ${t.event?.title || 'an event'} has been confirmed!`,
-      time: t.purchase_date,
-      image: t.event?.image_url,
-      read: false,
-      ticketData: {
-        ticketNumber: t.ticket_number,
-        barcode: t.barcode,
-        eventTitle: t.event?.title || 'Event'
-      }
-    });
+    const id = `ticket-${t.id}`;
+    if (!processedIds.has(id)) {
+      notifications.push({
+        id,
+        type: 'ticket',
+        title: 'Ticket Purchased ✅',
+        message: `Your virtual ticket for ${t.event?.title || 'an event'} has been confirmed!`,
+        time: t.purchase_date,
+        image: t.event?.image_url,
+        read: false,
+        ticketData: {
+          ticketNumber: t.ticket_number,
+          barcode: t.barcode,
+          eventTitle: t.event?.title || 'Event'
+        }
+      });
+      processedIds.add(id);
+    }
   });
 
   // Process Reminders
   remindersRes.data?.forEach((r: any) => {
-    notifications.push({
-      id: `reminder-${r.id}`,
-      type: 'reminder',
-      title: 'Event Reminder',
-      message: `Reminder set for: ${r.event?.title}`,
-      time: r.created_at, 
-      image: r.event?.image_url,
-      read: true
-    });
+    const id = `reminder-${r.id}`;
+    if (!processedIds.has(id)) {
+      notifications.push({
+        id,
+        type: 'reminder',
+        title: 'Event Reminder',
+        message: `Reminder set for: ${r.event?.title}`,
+        time: r.created_at, 
+        image: r.event?.image_url,
+        read: true
+      });
+      processedIds.add(id);
+    }
   });
 
-  // Process Followers
+  // Process Social Notifications
+  notificationsRes.data?.forEach((n: any) => {
+    const id = `notif-${n.id}`;
+    if (!processedIds.has(id)) {
+      notifications.push({
+        id,
+        type: n.type as any, // 'like', 'comment', 'follower'
+        title: n.title,
+        message: n.message, // e.g., "liked your post"
+        time: n.created_at,
+        image: n.actor?.avatar_url,
+        read: n.read
+      });
+      processedIds.add(id);
+    }
+  });
+
+  // Process Followers (Direct) - Only add if not already covered by notifications table
+  // This is a fallback for legacy data or if notification wasn't created
   followsRes.data?.forEach((f: any) => {
-    notifications.push({
-      id: `follow-${f.follower_id}-${f.created_at}`,
-      type: 'follower',
-      title: 'New Follower',
-      message: `${f.follower?.full_name || 'Someone'} started following you`,
-      time: f.created_at,
-      image: f.follower?.avatar_url,
-      read: false
-    });
+    // Check if we already have a follower notification for this user around this time?
+    // Hard to match exactly. For now, let's just add them if we don't have a 'follower' type from this actor recently?
+    // Simpler: Just add them, UI might show dupes but it ensures data visibility.
+    // Better: Rely on notifications table for new stuff.
+    // Let's add them but maybe deduplicate based on approximate time/actor?
+    // For now, to match previous behavior, I'll add them but give them a unique ID.
+    // Note: The notification table inserts 'follower' type.
+    
+    // Let's skip direct follows if we have notifications, to avoid dupes.
+    // Or better: Only add if we don't have a notification from this actor of type 'follower'.
+    const hasNotif = notifications.some(n => n.type === 'follower' && n.message.includes(f.follower?.full_name));
+    
+    if (!hasNotif) {
+       const id = `follow-direct-${f.id}`;
+       notifications.push({
+        id,
+        type: 'follower',
+        title: 'New Follower',
+        message: `${f.follower?.full_name || 'Someone'} started following you`,
+        time: f.created_at,
+        image: f.follower?.avatar_url,
+        read: false
+      });
+    }
   });
 
   return notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
