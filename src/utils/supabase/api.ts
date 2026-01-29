@@ -297,29 +297,7 @@ export const searchProfiles = async (query: string) => {
   return data;
 };
 
-export const getTrending = async () => {
-  // Get trending events (by views)
-  const { data: events, error: eventsError } = await supabase
-    .from('events')
-    .select('*, organizer:profiles(*)')
-    .order('views', { ascending: false })
-    .limit(5);
 
-  if (eventsError) throw eventsError;
-
-  // Get trending people (by followers count - simplistic approach using most recent follows or just random verified for now)
-  // Better: Users with most followers. Since we don't have a follower_count column on profiles, we can't sort easily by it without an RPC or a counter.
-  // For now, let's just get verified users or random users.
-  const { data: people, error: peopleError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('verified', true)
-    .limit(5);
-
-  if (peopleError) throw peopleError;
-
-  return { events: events || [], people: people || [] };
-};
 
 // --- ORGANIZER STATS ---
 
