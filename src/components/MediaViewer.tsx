@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { toast } from 'sonner';
-import { supabase, toggleLikePost } from '../utils/supabase/api';
+import { supabase, toggleLikePost, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
 
 interface Photo {
   id: number;
@@ -61,6 +61,19 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
     }
     setIsLiked((currentMedia as any).isLiked || false);
   }, [currentIndex, currentMedia, type]);
+
+  // Increment view count for videos
+  useEffect(() => {
+    if (type === 'video' && media[currentIndex]) {
+      const current = media[currentIndex] as VideoClip;
+      
+      if (current.isPost && current.postId) {
+        incrementPostView(current.postId);
+      } else {
+        incrementUserMediaView(current.id);
+      }
+    }
+  }, [currentIndex, type, media]);
 
   // Update progress bar for videos
   useEffect(() => {
