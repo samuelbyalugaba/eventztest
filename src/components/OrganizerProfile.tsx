@@ -92,6 +92,15 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   const [ticketFormData, setTicketFormData] = useState({ name: '', email: '' });
 
   useEffect(() => {
+    if (currentUser) {
+      setTicketFormData({
+        name: currentUser.user_metadata?.full_name || '',
+        email: currentUser.email || ''
+      });
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     const fetchOrganizerData = async () => {
       try {
         setLoading(true);
@@ -190,9 +199,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     }
     
     if (!organizerId) {
-      // Mock follow for legacy
-      setIsFollowing(!isFollowing);
-      toast.success(isFollowing ? 'Unfollowed' : 'Following');
+      toast.error('Cannot follow unknown organizer');
       return;
     }
 

@@ -1,7 +1,7 @@
 import { X, Search, TrendingUp, Clock, MapPin, Calendar, Users, Music, Building2, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
-import { searchProfiles, Profile } from '../utils/supabase/api';
+import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
 
 interface PremiumSearchModalProps {
   onClose: () => void;
@@ -15,15 +15,38 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
   const [searchCategory, setSearchCategory] = useState<'all' | 'events' | 'venues' | 'people'>('all');
   const [peopleResults, setPeopleResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [trendingData, setTrendingData] = useState<{events: any[], people: any[]}>({ events: [], people: [] });
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  // Mock recent searches - can be replaced with local storage later
-  const recentSearches: string[] = [];
+  useEffect(() => {
+    // Load recent searches
+    const saved = localStorage.getItem('recentSearches');
+    if (saved) {
+      try {
+        setRecentSearches(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error parsing recent searches', e);
+      }
+    }
 
-  // Mock trending searches - removed or fetch from API if available
-  const trendingSearches: any[] = [];
+    // Load trending data
+    const loadTrending = async () => {
+      try {
+        const data = await getTrending();
+        setTrendingData(data);
+      } catch (error) {
+        console.error('Error loading trending data:', error);
+      }
+    };
+    loadTrending();
+  }, []);
 
-  // Mock venue suggestions - removed
-  const venues: any[] = [];
+  const addToRecent = (query: string) => {
+    if (!query.trim()) return;
+    const newRecent = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
+    setRecentSearches(newRecent);
+    localStorage.setItem('recentSearches', JSON.stringify(newRecent));
+  };
 
   useEffect(() => {
     const searchPeople = async () => {
@@ -118,14 +141,108 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
         {/* Content */}
         <div className="px-6 py-6 max-w-4xl mx-auto">
           {searchQuery === '' ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mb-6">
-                <Search className="w-10 h-10 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Search Eventz</h3>
-              <p className="text-gray-500 max-w-xs">
-                Find events, organizers, and people in your community.
-              </p>
+            <div className="py-4">
+              {/* Recent Searches */}
+              {recentSearches.length > 0 && (
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-gray-900 font-semibold flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-500" />
+                      Recent
+                    </h3>
+                    <button 
+                      onClick={() => {
+                        setRecentSearches([]);
+                        localStorage.removeItem('recentSearches');
+                      }}
+                      className="text-xs text-purple-600 font-medium"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {recentSearches.map((term, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSearchQuery(term)}
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+                      >
+                        {term}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Trending */}
+              {(trendingData.events.length > 0 || trendingData.people.length > 0) && (
+                <div>
+                  <h3 className="text-gray-900 font-semibold flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-4 h-4 text-[#8A2BE2]" />
+                    Trending Now
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Trending Events */}
+                    {trendingData.events.map((event) => (
+                      <button
+                        key={`trend-evt-${event.id}`}
+                        onClick={() => {
+                          setSearchQuery(event.title);
+                          addToRecent(event.title);
+                        }}
+                        className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-sm transition-all text-left"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 font-bold text-xs flex-shrink-0">
+                          {event.views > 0 ? (event.views > 1000 ? (event.views/1000).toFixed(1) + 'k' : event.views) : 'Hot'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">{event.title}</div>
+                          <div className="text-xs text-gray-500">{event.category}</div>
+                        </div>
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                      </button>
+                    ))}
+
+                    {/* Trending People */}
+                    {trendingData.people.map((person) => (
+                      <button
+                        key={`trend-ppl-${person.id}`}
+                        onClick={() => {
+                          onPersonSelect && onPersonSelect(person);
+                          addToRecent(person.full_name || person.username || '');
+                          onClose();
+                        }}
+                        className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-sm transition-all text-left"
+                      >
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                            <UserAvatar
+                              src={person.avatar_url}
+                              name={person.full_name || person.username || 'User'}
+                              className="w-full h-full"
+                            />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">{person.full_name || person.username}</div>
+                          <div className="text-xs text-gray-500">{person.is_organizer ? 'Organizer' : 'Verified User'}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {recentSearches.length === 0 && trendingData.events.length === 0 && trendingData.people.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mb-6">
+                    <Search className="w-10 h-10 text-purple-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Search Eventz</h3>
+                  <p className="text-gray-500 max-w-xs">
+                    Find events, organizers, and people in your community.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -186,6 +303,7 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                         key={event.id}
                         onClick={() => {
                           onEventSelect(event);
+                          addToRecent(event.title);
                           onClose();
                         }}
                         className="w-full flex items-start gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all text-left"

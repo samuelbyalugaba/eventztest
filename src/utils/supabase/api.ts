@@ -548,7 +548,8 @@ export const getOrganizerEvents = async (organizerId: string) => {
     .select(`
       *,
       organizer:profiles(*),
-      tickets(count)
+      tickets(count),
+      saved_events(count)
     `)
     .eq('organizer_id', organizerId)
     .order('created_at', { ascending: false });
@@ -557,6 +558,7 @@ export const getOrganizerEvents = async (organizerId: string) => {
   
   return data.map((event: any) => ({
     ...event,
+    interested: event.saved_events?.[0]?.count || 0,
     attendees: (event.attendees || 0) + (event.tickets?.[0]?.count || 0)
   }));
 };
@@ -628,13 +630,16 @@ export const incrementUserMediaView = async (mediaId: number) => {
 
 export const getEventAnalytics = async (eventId: number) => {
   // Parallel fetch for efficiency
-  const [eventRes, savedRes, ticketsRes] = await Promise.all([
+  const [eventRes, savedRes, ticketsRes, postsRes] = await Promise.all([
     supabase.from('events').select('views').eq('id', eventId).single(),
     supabase.from('saved_events')
-      .select('user:profiles(location, birthdate)', { count: 'exact' })
+      .select('user:profiles(location, birthdate), created_at', { count: 'exact' })
       .eq('event_id', eventId),
     supabase.from('tickets')
-      .select('price, user:profiles(location, birthdate)')
+      .select('price, user:profiles(location, birthdate), created_at')
+      .eq('event_id', eventId),
+    supabase.from('posts')
+      .select('id, created_at')
       .eq('event_id', eventId)
   ]);
 
@@ -643,11 +648,42 @@ export const getEventAnalytics = async (eventId: number) => {
   
   // Calculate revenue and tickets
   const ticketsSold = ticketsRes.data?.length || 0;
+  const shares = postsRes.data?.length || 0;
+
   const revenue = ticketsRes.data?.reduce((sum, t) => {
     if (!t.price || t.price === 'Free') return sum;
     const num = parseInt(t.price.replace(/[^0-9]/g, ''));
     return sum + (isNaN(num) ? 0 : num);
   }, 0) || 0;
+
+  // Calculate Trends (Last 7 days vs Previous 7 days)
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+  const calculateTrend = (dates: string[]) => {
+    const last7Days = dates.filter(d => new Date(d) >= sevenDaysAgo).length;
+    const prev7Days = dates.filter(d => {
+      const date = new Date(d);
+      return date >= fourteenDaysAgo && date < sevenDaysAgo;
+    }).length;
+
+    if (prev7Days === 0) return { change: last7Days > 0 ? 100 : 0, trend: 'neutral' };
+    
+    const change = Math.round(((last7Days - prev7Days) / prev7Days) * 100);
+    return {
+      change: Math.abs(change),
+      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral'
+    };
+  };
+
+  const interestedDates = savedRes.data?.map((s: any) => s.created_at) || [];
+  const ticketDates = ticketsRes.data?.map((t: any) => t.created_at) || [];
+  const shareDates = postsRes.data?.map((p: any) => p.created_at) || [];
+
+  const interestedTrend = calculateTrend(interestedDates);
+  const ticketsTrend = calculateTrend(ticketDates);
+  const sharesTrend = calculateTrend(shareDates);
 
   // Helper to process user data
   const locationCounts: Record<string, number> = {};
@@ -763,23 +799,23 @@ export const getEventAnalytics = async (eventId: number) => {
     },
     interested: {
       total: interested,
-      change: 0,
-      trend: 'neutral',
+      change: interestedTrend.change,
+      trend: interestedTrend.trend,
     },
     shares: {
-      total: 0,
-      change: 0,
-      trend: 'neutral',
+      total: shares,
+      change: sharesTrend.change,
+      trend: sharesTrend.trend,
     },
     ticketsSold: {
       total: ticketsSold,
-      change: 0,
-      trend: 'neutral',
+      change: ticketsTrend.change,
+      trend: ticketsTrend.trend,
     },
     revenue: {
       total: revenueStr,
-      change: 0,
-      trend: 'neutral',
+      change: ticketsTrend.change,
+      trend: ticketsTrend.trend,
     },
     demographics: {
       age: ageDistribution,
@@ -1542,3 +1578,126 @@ export const subscribeToMessages = (conversationId: number, callback: (message: 
     )
     .subscribe();
 };
+
+// --- NOTIFICATIONS ---
+
+export type AppNotification = {
+  id: string | number;
+  type: 'reminder' | 'update' | 'ticket' | 'follower';
+  title: string;
+  message: string;
+  time: string;
+  image?: string;
+  read: boolean;
+  ticketData?: {
+    ticketNumber: string;
+    barcode: string;
+    eventTitle: string;
+  };
+};
+
+export const getNotifications = async (userId: string): Promise<AppNotification[]> => {
+  // Parallel fetch for different sources
+  const [ticketsRes, remindersRes, followsRes] = await Promise.all([
+    // Tickets
+    supabase
+      .from('tickets')
+      .select('*, event:events(title, image_url)')
+      .eq('user_id', userId)
+      .order('purchase_date', { ascending: false })
+      .limit(10),
+      
+    // Reminders (Saved Events)
+    supabase
+      .from('saved_events')
+      .select('*, event:events(title, image_url, date, time)')
+      .eq('user_id', userId)
+      .eq('is_reminder', true)
+      .order('created_at', { ascending: false })
+      .limit(10),
+      
+    // Followers
+    supabase
+      .from('follows')
+      .select('*, follower:profiles!follower_id(full_name, avatar_url)')
+      .eq('following_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+  ]);
+
+  const notifications: AppNotification[] = [];
+
+  // Process Tickets
+  ticketsRes.data?.forEach((t: any) => {
+    notifications.push({
+      id: `ticket-${t.id}`,
+      type: 'ticket',
+      title: 'Ticket Purchased ✅',
+      message: `Your virtual ticket for ${t.event?.title || 'an event'} has been confirmed!`,
+      time: t.purchase_date,
+      image: t.event?.image_url,
+      read: false,
+      ticketData: {
+        ticketNumber: t.ticket_number,
+        barcode: t.barcode,
+        eventTitle: t.event?.title || 'Event'
+      }
+    });
+  });
+
+  // Process Reminders
+  remindersRes.data?.forEach((r: any) => {
+    notifications.push({
+      id: `reminder-${r.id}`,
+      type: 'reminder',
+      title: 'Event Reminder',
+      message: `Reminder set for: ${r.event?.title}`,
+      time: r.created_at, 
+      image: r.event?.image_url,
+      read: true
+    });
+  });
+
+  // Process Followers
+  followsRes.data?.forEach((f: any) => {
+    notifications.push({
+      id: `follow-${f.follower_id}-${f.created_at}`,
+      type: 'follower',
+      title: 'New Follower',
+      message: `${f.follower?.full_name || 'Someone'} started following you`,
+      time: f.created_at,
+      image: f.follower?.avatar_url,
+      read: false
+    });
+  });
+
+  return notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+};
+
+// --- SEARCH ---
+
+export const getTrending = async () => {
+  // Parallel fetch for trending events and profiles
+  const [eventsRes, profilesRes] = await Promise.all([
+    // Trending Events (by views)
+    supabase
+      .from('events')
+      .select('id, title, category, views')
+      .eq('status', 'published')
+      .order('views', { ascending: false })
+      .limit(5),
+    
+    // Verified Profiles (as proxy for trending/popular people)
+    supabase
+      .from('profiles')
+      .select('id, username, full_name, avatar_url, is_organizer')
+      .eq('verified', true)
+      .limit(5)
+  ]);
+
+  return {
+    events: eventsRes.data || [],
+    people: profilesRes.data || []
+  };
+};
+

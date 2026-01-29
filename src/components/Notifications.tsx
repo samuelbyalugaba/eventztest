@@ -1,24 +1,9 @@
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Bell, Calendar, Ticket, UserPlus } from 'lucide-react';
+import { Bell, Calendar, Ticket, UserPlus, Loader2 } from 'lucide-react';
 import { PurchasedTicket } from '../types';
-import { useState } from 'react';
-
-interface Notification {
-  id: string | number;
-  type: 'reminder' | 'update' | 'ticket' | 'follower';
-  title: string;
-  message: string;
-  time: string;
-  image?: string;
-  read: boolean;
-  ticketData?: {
-    ticketNumber: string;
-    barcode: string;
-    eventTitle: string;
-  };
-}
-
-const notifications: Notification[] = [];
+import { useState, useEffect } from 'react';
+import { getNotifications, AppNotification, supabase } from '../utils/supabase/api';
+import { toast } from 'sonner';
 
 interface NotificationsProps {
   purchasedTickets: PurchasedTicket[];
@@ -26,6 +11,27 @@ interface NotificationsProps {
 
 export function Notifications({ purchasedTickets }: NotificationsProps) {
   const [activeFilter, setActiveFilter] = useState<'all' | 'follower' | 'reminder' | 'update'>('all');
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const data = await getNotifications(user.id);
+          setNotifications(data);
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        // Don't toast error here to avoid annoyance if it's just empty or auth issue
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -42,34 +48,40 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
     }
   };
 
-  // Convert purchased tickets to notifications
-  const ticketNotifications: Notification[] = purchasedTickets.map((ticket) => ({
-    id: ticket.id,
-    type: 'ticket' as const,
-    title: 'Virtual Ticket Purchased ✅',
-    message: `Your virtual ticket for ${ticket.eventTitle} has been confirmed!`,
-    time: new Date(ticket.purchaseDate).toLocaleString(),
-    read: false,
-    ticketData: {
-      ticketNumber: ticket.ticketNumber,
-      barcode: ticket.barcode,
-      eventTitle: ticket.eventTitle,
-    },
-  }));
-
-  // Combine all notifications
-  const allNotifications = [...ticketNotifications, ...notifications].sort((a, b) => {
-    // Sort by ID if both are numbers (legacy), otherwise use string comparison or time if available
-    if (typeof a.id === 'number' && typeof b.id === 'number') {
-      return b.id - a.id;
+  // Merge purchasedTickets (from props - recent/session) with API notifications
+  const mergedNotifications = [...notifications];
+  
+  // Check if ticket from prop is already in notifications
+  purchasedTickets.forEach(ticket => {
+    // Check by ID or ticket number to avoid duplicates
+    // API tickets have ID `ticket-{db_id}`, prop tickets have `temp-{timestamp}` or db id
+    const exists = notifications.some(n => 
+      n.ticketData?.ticketNumber === ticket.ticketNumber || 
+      (typeof ticket.id === 'number' && n.id === `ticket-${ticket.id}`)
+    );
+    
+    if (!exists) {
+       mergedNotifications.unshift({
+        id: ticket.id,
+        type: 'ticket',
+        title: 'Virtual Ticket Purchased ✅',
+        message: `Your virtual ticket for ${ticket.eventTitle} has been confirmed!`,
+        time: ticket.purchaseDate, // Assuming ISO string
+        read: false,
+        ticketData: {
+          ticketNumber: ticket.ticketNumber,
+          barcode: ticket.barcode,
+          eventTitle: ticket.eventTitle,
+        },
+      });
     }
-    // Fallback to time-based sorting if available
+  });
+
+  // Combine and sort
+  const allNotifications = mergedNotifications.sort((a, b) => {
     const timeA = new Date(a.time).getTime();
     const timeB = new Date(b.time).getTime();
-    if (!isNaN(timeA) && !isNaN(timeB)) {
-      return timeB - timeA;
-    }
-    return String(b.id).localeCompare(String(a.id));
+    return timeB - timeA;
   });
 
   // Filter notifications based on active filter

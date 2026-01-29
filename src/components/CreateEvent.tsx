@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { createEvent, updateEvent, uploadImage } from '../utils/supabase/api';
+import { createEvent, updateEvent, uploadImage, getProfile, getEventAnalytics } from '../utils/supabase/api';
 
 interface EventForm {
   title: string;
@@ -47,6 +47,34 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   // const [isUploading, setIsUploading] = useState(false);
   const isEditing = !!savedEventId;
+
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const profile = await getProfile(user.id);
+        setUserProfile(profile);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    if (showSuccessScreen && savedEventId) {
+      const fetchAnalytics = async () => {
+        try {
+          const data = await getEventAnalytics(savedEventId);
+          setAnalytics(data);
+        } catch (error) {
+          console.error('Error fetching analytics:', error);
+        }
+      };
+      fetchAnalytics();
+    }
+  }, [showSuccessScreen, savedEventId]);
 
   // Auto-save functionality
   useEffect(() => {
@@ -282,8 +310,8 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   // Preview Screen
   if (showPreview) {
-    const mockEvent: any = {
-      id: 0,
+    const previewEvent: any = {
+      id: savedEventId || 0,
       title: formData.title || 'Untitled Event',
       category: formData.category,
       subcategory: formData.subcategory,
@@ -293,7 +321,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       image_url: formData.coverImage || '',
       price_range: formData.price,
       description: formData.description,
-      organizer: {
+      organizer: userProfile ? {
+        full_name: userProfile.full_name || userProfile.username || 'You',
+        id: userProfile.id,
+        avatar_url: userProfile.avatar_url || ''
+      } : {
         full_name: 'You',
         id: 'user',
         avatar_url: ''
@@ -335,7 +367,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                <p className="text-gray-600 text-sm mb-6">This is how your event will appear in the main feed and search results.</p>
                <div className="max-w-sm mx-auto md:mx-0 shadow-2xl rounded-2xl transform hover:scale-105 transition-transform duration-300">
                  <EventCard 
-                   event={mockEvent} 
+                   event={previewEvent} 
                    onClick={() => toast.info('This is a preview of the event card')} 
                  />
                </div>
@@ -453,21 +485,21 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               <div className="bg-white p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Users className="w-5 h-5 text-purple-600" />
-                  <p className="text-gray-900 text-xl">0</p>
+                  <p className="text-gray-900 text-xl">{analytics?.interested?.total || 0}</p>
                 </div>
                 <p className="text-gray-600 text-xs">Interested</p>
               </div>
               <div className="bg-white p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Eye className="w-5 h-5 text-cyan-600" />
-                  <p className="text-gray-900 text-xl">0</p>
+                  <p className="text-gray-900 text-xl">{analytics?.views?.total || 0}</p>
                 </div>
                 <p className="text-gray-600 text-xs">Views</p>
               </div>
               <div className="bg-white p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Share2 className="w-5 h-5 text-pink-600" />
-                  <p className="text-gray-900 text-xl">0</p>
+                  <p className="text-gray-900 text-xl">{analytics?.shares?.total || 0}</p>
                 </div>
                 <p className="text-gray-600 text-xs">Shares</p>
               </div>
