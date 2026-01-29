@@ -1183,9 +1183,9 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               {/* User Card */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <img
+                  <UserAvatar
                     src={selectedPost.user.avatar}
-                    alt={selectedPost.user.name}
+                    name={selectedPost.user.name}
                     className="w-14 h-14 rounded-2xl object-cover ring-4 ring-purple-100 cursor-pointer hover:ring-purple-300 transition-all"
                     onClick={(e) => handleOpenUserProfile(selectedPost.user, e)}
                   />
@@ -1355,11 +1355,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   ) : (
                     selectedPost.comments.map((comment) => (
                       <div key={comment.id} className="flex gap-3">
-                        <img
-                          src={comment.user.avatar}
-                          alt={comment.user.name}
-                          className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
-                        />
+                      <UserAvatar
+                        src={comment.user.avatar}
+                        name={comment.user.name}
+                        className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
+                      />
                         <div className="flex-1">
                           <div className="bg-gray-50 rounded-2xl p-4">
                             <div className="flex items-center gap-2 mb-2">

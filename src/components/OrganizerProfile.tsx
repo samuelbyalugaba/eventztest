@@ -135,7 +135,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           name: profile.full_name || profile.username || 'Organizer',
           bio: profile.bio || 'No bio available',
           coverImage: profile.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
-          avatar: profile.avatar_url || '',
+          avatar: profile.avatar_url || '/profile.jpg',
           location: profile.location || 'Tanzania',
           totalEvents: stats.totalEvents,
           followers: stats.followers,

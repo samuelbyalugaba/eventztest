@@ -1,6 +1,5 @@
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
-import organizerProfileImg from 'figma:asset/f341912f973a7295b54e9b5936a0020cb0975622.png';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { EventAnalyticsModal } from './EventAnalyticsModal';
@@ -248,9 +247,9 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm overflow-hidden relative">
-                  <img 
-                    src={organizerProfile.avatar_url || organizerProfileImg}
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/50 bg-gray-100">
+                  <img
+                    src={organizerProfile.avatar_url || '/profile.jpg'}
                     alt="Organizer Profile"
                     className="w-full h-full object-cover"
                   />

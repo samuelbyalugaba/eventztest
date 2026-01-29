@@ -36,12 +36,12 @@ export function UserAvatar({ src, name, className = '', onClick }: UserAvatarPro
 
   if (!src || imageError) {
     return (
-      <div 
-        className={`flex items-center justify-center rounded-full text-white font-semibold ${bgColor} ${className}`}
+      <img 
+        src="/profile.jpg" 
+        alt={name} 
+        className={`rounded-full object-cover ${className}`}
         onClick={onClick}
-      >
-        <span className="text-[40%]">{initials}</span>
-      </div>
+      />
     );
   }
 

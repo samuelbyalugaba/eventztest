@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { UserAvatar } from './UserAvatar';
 import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Video, Play, MessageCircle } from 'lucide-react';
 import { MediaViewer } from './MediaViewer';
 import { getOrganizerStats, getOrganizerEvents, getPosts, getUserTickets, followUser, unfollowUser, isFollowing as checkIsFollowing, getProfile, supabase, type Event, type Post, type Profile } from '../utils/supabase/api';
@@ -180,10 +181,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
             <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/50">
-                    <ImageWithFallback 
+                    <UserAvatar 
                        src={profile?.avatar_url || user.avatar}
-                       alt={profile?.full_name || user.name}
-                       className="w-full h-full object-cover"
+                       name={profile?.full_name || user.name}
+                       className="w-full h-full"
                     />
                  </div>
                  <div>

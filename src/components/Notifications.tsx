@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Bell, Calendar, Ticket, UserPlus, Loader2 } from 'lucide-react';
 import { PurchasedTicket } from '../types';
@@ -205,11 +207,19 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
               {/* Image */}
               {notification.image && (
                 <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden">
-                  <ImageWithFallback
-                    src={notification.image}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
+                  {notification.type === 'follower' ? (
+                    <UserAvatar
+                      src={notification.image}
+                      name={notification.title}
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <ImageWithFallback
+                      src={notification.image}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
               )}
 

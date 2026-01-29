@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Search } from 'lucide-react';
+import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Profile } from '../utils/supabase/api';
 
