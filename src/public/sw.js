@@ -99,46 +99,6 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push notification event
-self.addEventListener('push', (event) => {
-  console.log('[ServiceWorker] Push Received');
-  
-  const options = {
-    body: event.data ? event.data.text() : 'New update available!',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
-    vibrate: [200, 100, 200],
-    tag: 'eventz-notification',
-    requireInteraction: false,
-    actions: [
-      {
-        action: 'open',
-        title: 'Open EVENTZ'
-      },
-      {
-        action: 'close',
-        title: 'Close'
-      }
-    ]
-  };
-
-  event.waitUntil(
-    self.registration.showNotification('EVENTZ', options)
-  );
-});
-
-// Notification click event
-self.addEventListener('notificationclick', (event) => {
-  console.log('[ServiceWorker] Notification clicked');
-  event.notification.close();
-
-  if (event.action === 'open') {
-    event.waitUntil(
-      clients.openWindow('/')
-    );
-  }
-});
-
 // Background sync event (for offline functionality)
 self.addEventListener('sync', (event) => {
   console.log('[ServiceWorker] Background sync');

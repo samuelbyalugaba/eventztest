@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, Search, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getNotifications, markNotificationAsRead, subscribeToNotifications, getFollowedUserIds, getMutualFollows, Post as ApiPost, Notification as ApiNotification, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getFollowedUserIds, getMutualFollows, Post as ApiPost, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
 import { Conversation } from '../types';
 
@@ -72,11 +72,6 @@ interface Post {
   totalHighlightViews?: number;
 }
 
-// Use ApiNotification directly or map it
-type Notification = ApiNotification;
-
-type FilterTab = 'all' | 'following' | 'organizers' | 'trending';
-
 interface FeedProps {
   conversations: Conversation[];
   onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
@@ -97,8 +92,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [showMessages, setShowMessages] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
@@ -140,6 +133,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   }, [playingVideo?.clipIndex, playingVideo?.clips]);
 
   useEffect(() => {
+    // Load posts
     const loadPosts = async () => {
       setIsLoading(true);
       try {
@@ -147,14 +141,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         setCurrentUser(user);
         
         if (user) {
-          // Load notifications
-          try {
-            const notifs = await getNotifications(user.id);
-            setNotifications(notifs || []);
-          } catch (e) {
-            console.error('Error loading notifications:', e);
-          }
-
           // Load following
           try {
             const following = await getFollowedUserIds(user.id);
@@ -162,14 +148,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           } catch (e) {
             console.error('Error loading following:', e);
           }
-
-          // Subscribe to notifications
-          subscribeToNotifications(user.id, () => {
-             getNotifications(user.id).then(data => setNotifications(data || []));
-             toast('New notification', {
-               icon: <Bell className="w-4 h-4 text-purple-600" />,
-             });
-          });
         }
         
         const data = await getPosts({ currentUserId: user?.id });
@@ -241,6 +219,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     };
   }, []);
 
+
+
   // Sync activeConversation with global conversations updates and mark as read
   useEffect(() => {
     if (activeConversation) {
@@ -263,24 +243,13 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   }, [globalConversations, activeConversation, onMarkAsRead]);
   
-  const unreadCount = notifications.filter((n) => !n.read).length;
+
   const unreadMessagesCount = (globalConversations || []).reduce((acc, conv) => {
     if (!conv) return acc;
     return acc + (conv?.unreadCount || 0);
   }, 0);
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'reminder':
-        return <Calendar className="w-5 h-5 text-cyan-500" />;
-      case 'update':
-        return <Bell className="w-5 h-5 text-purple-500" />;
-      case 'follower':
-        return <UserPlus className="w-5 h-5 text-green-500" />;
-      default:
-        return <Bell className="w-5 h-5 text-gray-500" />;
-    }
-  };
+
 
   const toggleLike = async (postId: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -559,21 +528,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     setSelectedUserProfile(user);
   };
 
-  const markAllAsRead = async () => {
-    const unread = notifications.filter(n => !n.read);
-    for (const n of unread) {
-      await markNotificationAsRead(n.id);
-    }
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
 
-  const handleNotificationClick = async (notif: Notification) => {
-    if (!notif.read) {
-      await markNotificationAsRead(notif.id);
-      setNotifications(notifications.map(n => n.id === notif.id ? { ...n, read: true } : n));
-    }
-    // Handle navigation based on type?
-  };
 
   const filteredPosts = posts.filter(post => {
     if (activeFilter === 'organizers') return post.user.isOrganizer;
@@ -587,7 +542,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       {/* Main Feed View */}
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
         {/* Unique Header Design */}
-        <div className={`bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 transition-all ${showMessages || showNotifications || selectedPost ? 'z-0' : 'z-50'}`}>
+        <div className={`bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 transition-all ${showMessages || selectedPost ? 'z-0' : 'z-50'}`}>
           <div className="px-4 pt-5 pb-4">
             {/* Brand Section */}
             <div className="flex items-center justify-between mb-5">
@@ -609,63 +564,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                     </span>
                   )}
                 </button>
-                <button
-                  className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors relative"
-                  onClick={() => setShowNotifications(!showNotifications)}
-                >
-                  <Bell className="w-5 h-5 text-gray-700" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full"></span>
-                  )}
-                </button>
-                
-                {/* Notifications Dropdown */}
-                {showNotifications && (
-                  <div className="absolute top-16 right-4 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-slideDown">
-                    <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                      <h3 className="font-bold text-gray-900">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <button 
-                          className="text-xs text-purple-600 font-medium hover:text-purple-700"
-                          onClick={markAllAsRead}
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                    </div>
-                    <div className="max-h-[400px] overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500 text-sm">
-                          No notifications yet
-                        </div>
-                      ) : (
-                        notifications.map(notif => (
-                          <div 
-                            key={notif.id} 
-                            className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${!notif.read ? 'bg-purple-50/50' : ''}`}
-                            onClick={() => handleNotificationClick(notif)}
-                          >
-                            <div className="flex gap-3">
-                              <UserAvatar
-                                src={notif.actor?.avatar_url}
-                                name={notif.actor?.full_name || 'Someone'}
-                                className="w-10 h-10 rounded-full flex-shrink-0"
-                              />
-                              <div>
-                                <p className="text-sm text-gray-900">
-                                  <span className="font-semibold">{notif.actor?.full_name || 'Someone'}</span> {notif.message}
-                                </p>
-                                <span className="text-xs text-gray-400 mt-1 block">
-                                  {(() => { try { const d = new Date(notif.created_at); return isNaN(d.getTime()) ? 'Just now' : d.toLocaleDateString(); } catch { return 'Just now'; } })()}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
+
               </div>
             </div>
 
@@ -723,11 +622,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
           {filteredPosts.map((post, index) => (
             <div
-              key={post.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer"
-              onClick={(e) => handleDoubleTap(post, e)}
-              style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}
-            >
+          key={post.id}
+          className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer"
+          onClick={() => openPostDetail(post)}
+          style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}
+        >
               {/* Unique Header with Actions on Right */}
               <div className="px-4 pt-4 pb-3">
                 <div className="flex items-start justify-between gap-3">
@@ -759,9 +658,9 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                           </div>
                         )}
                         {post.user.isOrganizer && !post.user.isOrganizerPage && (
-                          <span className="flex-shrink-0 px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded uppercase">
-                            Organizer
-                          </span>
+                          <div className="flex-shrink-0 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center" title="Event Organizer">
+                            <Star className="w-2.5 h-2.5 text-white fill-white" />
+                          </div>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
@@ -927,10 +826,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                     >
                       {post.content.images[carouselIndexes[post.id] || 0].match(/\.(mp4|webm|ogg|mov)$/i) ? (
                         <video
-                          src={post.content.images[carouselIndexes[post.id] || 0]}
+                          src={`${post.content.images[carouselIndexes[post.id] || 0]}#t=0.001`}
                           className="w-full aspect-[16/10] object-cover"
                           controls
                           playsInline
+                          preload="metadata"
                           onPlay={() => incrementPostView(post.id)}
                         />
                       ) : (
@@ -1387,80 +1287,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         </div>
       )}
 
-      {/* Notifications Panel */}
-      {showNotifications && (
-        <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowNotifications(false)}>
-          <div className="absolute right-0 top-0 w-80 bg-white h-full shadow-lg overflow-y-auto">
-            <div className="px-4 py-5 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-gray-900 text-lg font-bold">Notifications</h3>
-              {notifications.some(n => !n.read) && (
-                <button 
-                  onClick={async () => {
-                    const unread = notifications.filter(n => !n.read);
-                    for (const n of unread) {
-                      await markNotificationAsRead(n.id);
-                    }
-                    // Refresh notifications
-                    if (currentUser) {
-                      const notifs = await getNotifications(currentUser.id);
-                      setNotifications(notifs || []);
-                    }
-                    toast.success('All notifications marked as read');
-                  }}
-                  className="text-xs text-purple-600 font-medium hover:text-purple-700"
-                >
-                  Mark all read
-                </button>
-              )}
-            </div>
-            <div className="px-4 py-5">
-              {notifications.map((notification) => (
-                <div 
-                  key={notification.id} 
-                  className={`flex items-start gap-3 mb-5 p-2 rounded-lg transition-colors ${!notification.read ? 'bg-purple-50/50' : ''}`}
-                  onClick={async () => {
-                     if (!notification.read) {
-                        await markNotificationAsRead(notification.id);
-                        setNotifications(prev => prev.map(n => n.id === notification.id ? {...n, read: true} : n));
-                     }
-                  }}
-                >
-                  <UserAvatar
-                    src={notification.actor?.avatar_url || ''}
-                    name={notification.actor?.full_name || notification.actor?.username || notification.title || 'User'}
-                    className="w-10 h-10 rounded-full flex-shrink-0"
-                  />
-                  <div className="flex-1 cursor-pointer">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-gray-900 font-bold text-sm">{notification.title}</span>
-                      {getIcon(notification.type)}
-                    </div>
-                    <p className="text-gray-500 text-sm">{notification.message}</p>
-                    <span className="text-gray-400 text-xs">
-                      {(() => {
-                        try {
-                          const date = new Date(notification.created_at);
-                          return isNaN(date.getTime()) ? 'Just now' : date.toLocaleString();
-                        } catch (e) {
-                          return 'Just now';
-                        }
-                      })()}
-                    </span>
-                  </div>
-                  {!notification.read && (
-                    <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0" />
-                  )}
-                </div>
-              ))}
-              {notifications.length === 0 && (
-                 <div className="text-center py-10 text-gray-500 text-sm">
-                   No notifications yet
-                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Professional Messages Panel */}
       {showMessages && (
@@ -1745,6 +1572,16 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
+        @keyframes slideLeft {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
         @keyframes slideUp {
           from {
             opacity: 0;
@@ -1794,6 +1631,9 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             opacity: 0;
             transform: scale(0.8);
           }
+        }
+        .animate-slideLeft {
+          animation: slideLeft 0.3s ease-out forwards;
         }
         .animate-likePopup {
           animation: likePopup 1s ease-out forwards;

@@ -10,7 +10,7 @@ import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, MoreVertical, Edit, TrendingUp } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers } from '../utils/supabase/api';
+import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile } from '../utils/supabase/api';
 import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
 
@@ -72,14 +72,41 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         }
 
         // Load profile
-        const profile = await getProfile(user.id);
-        if (profile) {
-          setOrganizerProfile({
-            organizerName: profile.full_name || profile.username || 'Organizer',
-            organizerType: profile.organizer_type || 'Event Organizer',
-            location: profile.location || 'Location not set',
-            ...profile
-          });
+        // Try to get organizer profile first
+        try {
+          const orgProfile = await getOrganizerProfile(user.id);
+          if (orgProfile) {
+            setOrganizerProfile({
+              organizerName: orgProfile.organizer_name || 'Organizer',
+              organizerType: orgProfile.organizer_type || 'Event Organizer',
+              location: orgProfile.location || 'Location not set',
+              avatar_url: orgProfile.avatar_url,
+              cover_url: orgProfile.cover_url,
+              ...orgProfile
+            });
+          } else {
+             // Fallback to user profile if no organizer profile
+             const profile = await getProfile(user.id);
+             if (profile) {
+               setOrganizerProfile({
+                 organizerName: profile.full_name || profile.username || 'Organizer',
+                 organizerType: profile.organizer_type || 'Event Organizer',
+                 location: profile.location || 'Location not set',
+                 ...profile
+               });
+             }
+          }
+        } catch (err) {
+           console.error("Error loading organizer profile", err);
+           const profile = await getProfile(user.id);
+           if (profile) {
+             setOrganizerProfile({
+               organizerName: profile.full_name || profile.username || 'Organizer',
+               organizerType: profile.organizer_type || 'Event Organizer',
+               location: profile.location || 'Location not set',
+               ...profile
+             });
+           }
         }
 
         // Load stats

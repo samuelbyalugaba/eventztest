@@ -2,7 +2,6 @@ import {
   // Icons
   X, 
   User, 
-  Bell, 
   CreditCard, 
   Lock, 
   Video, 
@@ -48,7 +47,7 @@ interface OrganizerSettingsModalProps {
 }
 
 export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'streaming' | 'payments' | 'privacy' | 'account'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'streaming' | 'payments' | 'privacy' | 'account'>('profile');
 
   const [profileData, setProfileData] = useState({
     username: '',
@@ -62,17 +61,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
     website: '',
     avatarUrl: '',
     birthdate: '',
-  });
-
-  const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    eventReminders: true,
-    ticketSales: true,
-    newFollowers: true,
-    streamAlerts: true,
-    weeklyReport: true,
-    marketingEmails: false,
   });
 
   const [streamingSettings, setStreamingSettings] = useState({
@@ -189,7 +177,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
               birthdate: profile.birthdate || '',
             });
 
-            if (profile.notification_settings) setNotifications(profile.notification_settings);
+
             if (profile.streaming_settings) setStreamingSettings(profile.streaming_settings);
             if (profile.privacy_settings) setPrivacySettings(profile.privacy_settings);
             if (profile.payment_settings) setPaymentData(profile.payment_settings);
@@ -266,21 +254,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
     }
   };
 
-  const handleSaveNotifications = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      await updateProfile(user.id, {
-        notification_settings: notifications
-      });
-      toast.success('Notification preferences saved! 🔔');
-    } catch (error) {
-      console.error('Error saving notifications:', error);
-      toast.error('Failed to save notification preferences');
-    }
-  };
-
   const handleSaveStreaming = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -341,7 +314,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'streaming', label: 'Streaming', icon: Video },
     { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'privacy', label: 'Privacy', icon: Shield },
@@ -964,114 +936,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
               </div>
             )}
 
-            {/* Notifications Tab */}
-            {activeTab === 'notifications' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-200">
-                  {[
-                    { key: 'emailNotifications', title: 'Email Notifications', desc: 'Receive updates via email' },
-                    { key: 'pushNotifications', title: 'Push Notifications', desc: 'Get real-time alerts' },
-                    { key: 'eventReminders', title: 'Event Reminders', desc: 'Notifications before events' },
-                    { key: 'ticketSales', title: 'Ticket Sales', desc: 'Alerts when tickets are sold' },
-                    { key: 'newFollowers', title: 'New Followers', desc: 'When someone follows you' },
-                    { key: 'streamAlerts', title: 'Stream Alerts', desc: 'Technical streaming alerts' },
-                    { key: 'weeklyReport', title: 'Weekly Report', desc: 'Performance summary' },
-                    { key: 'marketingEmails', title: 'Marketing & Tips', desc: 'Promotional content' },
-                  ].map((item) => {
-                    const isEnabled = notifications[item.key as keyof typeof notifications];
-                    return (
-                      <div key={item.key} className="p-5 flex items-center justify-between">
-                        <div>
-                          <h5 className="text-gray-900 font-medium text-sm">{item.title}</h5>
-                          <p className="text-gray-500 text-sm mt-0.5">{item.desc}</p>
-                        </div>
-                        <button
-                          onClick={() => setNotifications({ ...notifications, [item.key]: !isEnabled })}
-                          className={`relative w-11 h-6 rounded-full ${isEnabled ? 'bg-[#8A2BE2]' : 'bg-gray-300'}`}
-                        >
-                          <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isEnabled ? 'right-0.5' : 'left-0.5'}`} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h4 className="text-gray-900 font-medium mb-4">Advanced Stream Configuration</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-2">Ingest Server</label>
-                      <div className="relative">
-                        <select
-                          value={streamingSettings.ingestServer || 'rtmp://live.eventz.com/app'}
-                          onChange={(e) => setStreamingSettings({ ...streamingSettings, ingestServer: e.target.value })}
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] bg-white"
-                        >
-                          <option value="rtmp://live.eventz.com/app">Primary (US-East)</option>
-                          <option value="rtmp://live-eu.eventz.com/app">Backup (EU-West)</option>
-                          <option value="rtmp://live-asia.eventz.com/app">Backup (Asia-Pacific)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-2">Stream Key</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="password"
-                          value={streamingSettings.streamKey || ''}
-                          readOnly
-                          className="flex-1 px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-500 font-mono"
-                        />
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(streamingSettings.streamKey || '');
-                            toast.success('Stream key copied!');
-                          }}
-                          className="px-4 py-2.5 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 font-medium"
-                        >
-                          Copy
-                        </button>
-                        <button
-                          onClick={() => {
-                             const newKey = 'live_sk_' + Math.random().toString(36).substring(2, 15);
-                             setStreamingSettings({ ...streamingSettings, streamKey: newKey });
-                             toast.success('Stream key reset!');
-                          }}
-                          className="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 font-medium"
-                        >
-                          Reset
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1.5">Keep this key secret. Anyone with it can stream to your channel.</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-2">Max Bitrate</label>
-                      <select
-                        value={streamingSettings.maxBitrate || '6000'}
-                        onChange={(e) => setStreamingSettings({ ...streamingSettings, maxBitrate: e.target.value })}
-                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] bg-white"
-                      >
-                        <option value="4000">4000 kbps (Standard)</option>
-                        <option value="6000">6000 kbps (High)</option>
-                        <option value="8000">8000 kbps (Ultra)</option>
-                        <option value="auto">Auto-negotiate</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3">
-                  <button onClick={onClose} className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
-                    Cancel
-                  </button>
-                  <button onClick={handleSaveNotifications} className="px-5 py-2.5 bg-[#8A2BE2] text-white text-sm rounded-lg hover:bg-[#7825d4]">
-                    Save Preferences
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Streaming Tab */}
             {activeTab === 'streaming' && (

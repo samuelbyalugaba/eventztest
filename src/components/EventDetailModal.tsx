@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Bell, Send, Star } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Send, Star } from 'lucide-react';
 import { OrganizerProfile } from './OrganizerProfile';
 import { toast } from 'sonner';
-import { SetAlertModal } from './SetAlertModal';
 import { MediaViewer } from './MediaViewer';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
@@ -13,7 +12,6 @@ import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, Event
 export interface EventDetailModalProps {
   event: ApiEvent;
   onClose: () => void;
-  hasTicket: (eventId: number) => boolean;
   onPurchaseTicket: (event: ApiEvent) => void;
   onPurchaseNormalTicket: (event: ApiEvent) => void;
   onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => void;
@@ -27,7 +25,7 @@ const locations = [
   { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
 ];
 
-export function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation }: EventDetailModalProps) {
+export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation }: EventDetailModalProps) {
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
   const [recentAttendees, setRecentAttendees] = useState<any[]>([]);
   const [eventPosts, setEventPosts] = useState<any[]>([]);
@@ -60,7 +58,6 @@ export function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, 
 
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showAlertModal, setShowAlertModal] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
@@ -423,12 +420,7 @@ export function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, 
                 )}
 
                 {/* Virtual Ticket CTA */}
-                {hasTicket(event.id) ? (
-                  <div className="w-full bg-green-500 text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg">
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span>Ticket Purchased ✓</span>
-                  </div>
-                ) : (
+                {/* Removed hasTicket check */}
                   <button 
                     onClick={() => onPurchaseTicket(event)}
                     className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white py-4 rounded-xl hover:from-purple-700 hover:to-cyan-600 transition-all flex items-center justify-center gap-2 shadow-lg"
@@ -436,7 +428,6 @@ export function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, 
                     <Tv className="w-5 h-5" />
                     <span>Get Virtual Ticket - {event.streaming.virtualPrice}</span>
                   </button>
-                )}
 
                 {/* Info Badge */}
                 <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
@@ -511,27 +502,8 @@ export function EventDetailModal({ event, onClose, hasTicket, onPurchaseTicket, 
               <MessageCircle className="w-5 h-5" />
               <span>Contact Organizer</span>
             </button>
-            <button 
-              onClick={() => setShowAlertModal(true)}
-              className="bg-pink-500 text-white py-4 px-6 rounded-xl hover:bg-pink-600 transition-colors flex items-center justify-center"
-            >
-              <Bell className="w-5 h-5" />
-            </button>
           </div>
         </div>
-
-        {/* Alert Modal */}
-        {showAlertModal && (
-          <SetAlertModal
-            event={{
-              title: event.title,
-              date: event.date,
-              time: event.time,
-              location: event.location,
-            }}
-            onClose={() => setShowAlertModal(false)}
-          />
-        )}
 
         {/* Media Viewer - Rendered outside modal for engaging photo/video viewing */}
         {showMediaViewer && event.event_highlights && (

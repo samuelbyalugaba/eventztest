@@ -1,9 +1,9 @@
-import { X, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar } from 'lucide-react';
+import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
 
-type SettingsView = 'main' | 'profile' | 'notifications' | 'privacy' | 'help';
+type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -75,15 +75,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     }
   };
 
-  // Notifications state
-  const [notifications, setNotifications] = useState({
-    pushNotifications: true,
-    emailNotifications: true,
-    eventReminders: true,
-    newEvents: true,
-    promotions: false,
-    socialActivity: true,
-  });
+
 
   // Privacy state
   const [privacy, setPrivacy] = useState({
@@ -133,27 +125,6 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
               if (localProfile) localStorage.removeItem('eventz-user-profile');
             }
 
-            // Notification Settings Migration
-            const localNotifications = localStorage.getItem('eventz-notifications');
-            if (profile.notification_settings) {
-              setNotifications(prev => ({
-                ...prev,
-                pushNotifications: profile.notification_settings?.pushNotifications ?? prev.pushNotifications,
-                emailNotifications: profile.notification_settings?.emailNotifications ?? prev.emailNotifications,
-                eventReminders: profile.notification_settings?.eventReminders ?? prev.eventReminders,
-                newEvents: profile.notification_settings?.newEvents ?? prev.newEvents,
-                promotions: profile.notification_settings?.promotions ?? prev.promotions,
-                socialActivity: profile.notification_settings?.socialActivity ?? prev.socialActivity,
-              }));
-              if (localNotifications) localStorage.removeItem('eventz-notifications');
-            } else if (localNotifications) {
-              const parsed = JSON.parse(localNotifications);
-              setNotifications(parsed);
-              profileUpdates.notification_settings = parsed;
-              hasUpdates = true;
-              localStorage.removeItem('eventz-notifications');
-            }
-
             // Privacy Settings Migration
             const localPrivacy = localStorage.getItem('eventz-privacy');
             if (profile.privacy_settings) {
@@ -184,8 +155,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
           const storedProfile = localStorage.getItem('eventz-user-profile');
           if (storedProfile) setProfileData(JSON.parse(storedProfile));
           
-          const storedNotifications = localStorage.getItem('eventz-notifications');
-          if (storedNotifications) setNotifications(JSON.parse(storedNotifications));
+
 
           const storedPrivacy = localStorage.getItem('eventz-privacy');
           if (storedPrivacy) setPrivacy(JSON.parse(storedPrivacy));
@@ -317,12 +287,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
       description: 'Update your personal information',
       onClick: () => setCurrentView('profile'),
     },
-    {
-      icon: Bell,
-      label: 'Notifications',
-      description: 'Manage your notification preferences',
-      onClick: () => setCurrentView('notifications'),
-    },
+
     {
       icon: Shield,
       label: 'Privacy & Security',
@@ -370,7 +335,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
               <h2 className="text-gray-900 text-xl">
                 {currentView === 'main' && 'Settings'}
                 {currentView === 'profile' && 'Edit Profile'}
-                {currentView === 'notifications' && 'Notifications'}
+
                 {currentView === 'privacy' && 'Privacy & Security'}
                 {currentView === 'help' && 'Help & Support'}
               </h2>
@@ -575,150 +540,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
           )}
 
           {/* Notifications View */}
-          {currentView === 'notifications' && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200">
-                <div className="flex items-start gap-3">
-                  <Bell className="w-5 h-5 text-[#8A2BE2] mt-0.5" />
-                  <div>
-                    <p className="text-gray-900 font-medium mb-1">Stay Updated</p>
-                    <p className="text-gray-600 text-sm">Choose how you want to receive notifications about events and updates</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {/* Push Notifications */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-200 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-gray-900 font-medium text-sm mb-1">Push Notifications</p>
-                      <p className="text-gray-500 text-xs">Receive alerts on your device</p>
-                    </div>
-                    <button
-                      onClick={() => setNotifications({ ...notifications, pushNotifications: !notifications.pushNotifications })}
-                      className={`relative w-12 h-7 rounded-full transition-colors ${
-                        notifications.pushNotifications ? 'bg-[#8A2BE2]' : 'bg-gray-300'
-                      }`}
-                    >
-                      <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                        notifications.pushNotifications ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Email Notifications */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-200 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-gray-900 font-medium text-sm mb-1">Email Notifications</p>
-                      <p className="text-gray-500 text-xs">Get updates via email</p>
-                    </div>
-                    <button
-                      onClick={() => setNotifications({ ...notifications, emailNotifications: !notifications.emailNotifications })}
-                      className={`relative w-12 h-7 rounded-full transition-colors ${
-                        notifications.emailNotifications ? 'bg-[#8A2BE2]' : 'bg-gray-300'
-                      }`}
-                    >
-                      <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                        notifications.emailNotifications ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Event Reminders */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-200 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-gray-900 font-medium text-sm mb-1">Event Reminders</p>
-                      <p className="text-gray-500 text-xs">Get reminded about upcoming events</p>
-                    </div>
-                    <button
-                      onClick={() => setNotifications({ ...notifications, eventReminders: !notifications.eventReminders })}
-                      className={`relative w-12 h-7 rounded-full transition-colors ${
-                        notifications.eventReminders ? 'bg-[#8A2BE2]' : 'bg-gray-300'
-                      }`}
-                    >
-                      <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                        notifications.eventReminders ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* New Events */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-200 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-gray-900 font-medium text-sm mb-1">New Events</p>
-                      <p className="text-gray-500 text-xs">Notify about new events in your area</p>
-                    </div>
-                    <button
-                      onClick={() => setNotifications({ ...notifications, newEvents: !notifications.newEvents })}
-                      className={`relative w-12 h-7 rounded-full transition-colors ${
-                        notifications.newEvents ? 'bg-[#8A2BE2]' : 'bg-gray-300'
-                      }`}
-                    >
-                      <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                        notifications.newEvents ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Promotions */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-200 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-gray-900 font-medium text-sm mb-1">Promotions & Deals</p>
-                      <p className="text-gray-500 text-xs">Special offers and discounts</p>
-                    </div>
-                    <button
-                      onClick={() => setNotifications({ ...notifications, promotions: !notifications.promotions })}
-                      className={`relative w-12 h-7 rounded-full transition-colors ${
-                        notifications.promotions ? 'bg-[#8A2BE2]' : 'bg-gray-300'
-                      }`}
-                    >
-                      <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                        notifications.promotions ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Social Activity */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-200 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-gray-900 font-medium text-sm mb-1">Social Activity</p>
-                      <p className="text-gray-500 text-xs">Likes, comments, and followers</p>
-                    </div>
-                    <button
-                      onClick={() => setNotifications({ ...notifications, socialActivity: !notifications.socialActivity })}
-                      className={`relative w-12 h-7 rounded-full transition-colors ${
-                        notifications.socialActivity ? 'bg-[#8A2BE2]' : 'bg-gray-300'
-                      }`}
-                    >
-                      <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                        notifications.socialActivity ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Save Button */}
-              <button
-                onClick={handleSaveNotifications}
-                className="w-full bg-gradient-to-r from-[#8A2BE2] to-[#6A1BB2] text-white py-3.5 rounded-xl hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2 font-medium"
-              >
-                <Save className="w-5 h-5" />
-                Save Preferences
-              </button>
-            </div>
-          )}
+          {/* Removed Notifications View */}
 
           {/* Privacy & Security View */}
           {currentView === 'privacy' && (

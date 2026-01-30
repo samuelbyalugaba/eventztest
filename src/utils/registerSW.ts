@@ -41,45 +41,6 @@ export const registerServiceWorker = async () => {
   }
 };
 
-// Request notification permission
-export const requestNotificationPermission = async () => {
-  if ('Notification' in window && 'serviceWorker' in navigator) {
-    try {
-      const permission = await Notification.requestPermission();
-      
-      if (permission === 'granted') {
-        console.log('Notification permission granted');
-        toast.success('Notifications enabled! 🔔');
-        return true;
-      } else {
-        console.log('Notification permission denied');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error requesting notification permission:', error);
-      return false;
-    }
-  }
-  return false;
-};
-
-// Send a test notification
-export const sendTestNotification = async () => {
-  if ('serviceWorker' in navigator && 'Notification' in window) {
-    if (Notification.permission === 'granted') {
-      const registration = await navigator.serviceWorker.ready;
-      
-      registration.showNotification('EVENTZ', {
-        body: 'You\'re all set! You\'ll receive notifications for your events.',
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-72x72.png',
-        vibrate: [200, 100, 200],
-        tag: 'test-notification',
-      } as NotificationOptions);
-    }
-  }
-};
-
 // Check if app is installed
 export const isAppInstalled = () => {
   return window.matchMedia('(display-mode: standalone)').matches ||

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Eye, Users, Share2, TrendingUp, Calendar, MapPin, DollarSign, Ticket, Activity, ArrowUp, ArrowDown, Download, Loader2, Target } from 'lucide-react';
+import { X, Eye, Users, Share2, Calendar, MapPin, DollarSign, Ticket, Activity, ArrowUp, ArrowDown, Download, Loader2, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import { getEventAnalytics } from '../utils/supabase/api';
 

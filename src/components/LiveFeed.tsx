@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, Play, Clock, Bell, Check, MapPin, Search, Lock, Unlock, X, CheckCircle2 } from 'lucide-react';
+import { Filter, Play, Clock, Check, MapPin, Search, Lock, Unlock, X, CheckCircle2 } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { toast } from 'sonner';
 import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile } from '../utils/supabase/api';
@@ -319,7 +319,7 @@ export function LiveFeed() {
         // Assuming we just have recentCountries for now, replacing `preferences` object is fine.
         // If we add more keys to preferences later, we should fetch first.
         const profile = await getProfile(user.id);
-        const currentPreferences = profile?.preferences || {};
+        // const currentPreferences = profile?.preferences || {};
         
         // Commented out to avoid PGRST204 error (missing preferences column)
         // await updateProfile(user.id, { 
@@ -544,25 +544,6 @@ export function LiveFeed() {
                         <p className="text-gray-600 text-xs">{stream.scheduledTime}</p>
                       </div>
                     </div>
-
-                    {/* Reminder Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleReminder(stream.id);
-                      }}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                        reminders.has(stream.id)
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {reminders.has(stream.id) ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        <Bell className="w-4 h-4" />
-                      )}
-                    </button>
                   </div>
                 </div>
               ))}

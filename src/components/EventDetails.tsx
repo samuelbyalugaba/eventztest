@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Bell, Send, Star } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Send, Star } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { OrganizerProfile } from './OrganizerProfile';
 import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
 import { PremiumSearchModal } from './PremiumSearchModal';
 import { UserProfileModal } from './UserProfileModal';
-import { SetAlertModal } from './SetAlertModal';
 import { TierTicketModal } from './TierTicketModal';
 import { MediaViewer } from './MediaViewer';
 import { ShareModal } from './ShareModal';
@@ -29,14 +28,12 @@ const locations = [
 
 
 interface EventDetailsProps {
-  onTicketPurchase: (ticket: PurchasedTicket) => void;
-  purchasedTickets: PurchasedTicket[];
   conversations: Conversation[];
   onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
   onSendMessage: (conversationId: number, messageText: string) => void;
 }
 
-export function EventDetails({ onTicketPurchase, purchasedTickets, conversations: globalConversations, onStartConversation, onSendMessage }: EventDetailsProps) {
+export function EventDetails({ conversations: globalConversations, onStartConversation, onSendMessage }: EventDetailsProps) {
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -302,7 +299,7 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
       };
 
       // Save ticket
-      onTicketPurchase(appTicket);
+      // onTicketPurchase(appTicket);
 
       // Show success toast
       toast.success('Virtual Ticket Purchased! 🎉', {
@@ -318,11 +315,6 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
       console.error('Error purchasing ticket:', error);
       toast.error('Failed to purchase ticket');
     }
-  };
-
-  // Check if user has purchased ticket for an event
-  const hasTicket = (eventId: number) => {
-    return purchasedTickets.some(ticket => ticket.eventId === eventId);
   };
 
   // Handle normal ticket purchase
@@ -398,7 +390,7 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
       }
 
       // Save all tickets
-      tickets.forEach(ticket => onTicketPurchase(ticket));
+      // tickets.forEach(ticket => onTicketPurchase(ticket));
 
       // Show success toast
       toast.success(`${normalTicketQuantity} Ticket${normalTicketQuantity > 1 ? 's' : ''} Purchased! 🎉`, {
@@ -474,7 +466,7 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
       }
 
       // Save all tickets
-      tickets.forEach(ticket => onTicketPurchase(ticket));
+      // tickets.forEach(ticket => onTicketPurchase(ticket));
 
       // Show success toast
       toast.success(`${tierTicketQuantity} ${selectedTier} Ticket${tierTicketQuantity > 1 ? 's' : ''} Purchased! 🎉`, {
@@ -876,7 +868,6 @@ export function EventDetails({ onTicketPurchase, purchasedTickets, conversations
         <EventDetailModal 
           event={selectedEvent} 
           onClose={() => setSelectedEvent(null)} 
-          hasTicket={hasTicket}
           onPurchaseTicket={handlePurchaseTicket}
           onPurchaseNormalTicket={handleNormalTicketPurchase}
           onStartConversation={handleStartConversationLocal}

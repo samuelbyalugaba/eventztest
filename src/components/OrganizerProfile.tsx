@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Play, ChevronLeft, MessageCircle, Phone } from 'lucide-react';
+import { X, MapPin, Calendar, Users, CheckCircle2, Share2, Play, MessageCircle, Phone } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
 import { toast } from 'sonner';
-import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, Event as ApiEvent, Profile } from '../utils/supabase/api';
+import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 
 interface OrganizerData {
@@ -250,7 +250,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             event_id: event.id,
             ticket_number: `TKT-${crypto.randomUUID().split('-')[0].toUpperCase()}-${Date.now().toString().slice(-4)}`,
             barcode: crypto.randomUUID(),
-            price: event.price ? (parseFloat(event.price.match(/\d+(\.\d+)?/)?.[0] || '0')) : 0,
+            price: event.price || '0',
             purchase_date: new Date().toISOString(),
             customer_name: name,
             customer_email: email,
@@ -351,13 +351,6 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       videoUrl: '',
     })),
   ];
-
-  const handleShare = (item: typeof combinedGallery[0]) => {
-    toast.success('Link copied to clipboard!', {
-      description: `Share ${item.title} with your friends`,
-      duration: 2000,
-    });
-  };
 
   return (
     <>

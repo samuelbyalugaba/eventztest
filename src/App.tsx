@@ -13,7 +13,6 @@ import { Toaster, toast } from 'sonner';
 import { supabase } from './utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
-  getUserTickets, 
   getProfile, 
   getConversations, 
   getMessages, 
@@ -27,7 +26,7 @@ import {
   deleteConversation,
   Event
 } from './utils/supabase/api';
-import { PurchasedTicket, Message, Conversation } from './types';
+import { Message, Conversation } from './types';
 
 type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile';
 type OrganizerView = 'dashboard' | 'createEvent';
@@ -43,9 +42,6 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
-
-  // Ticket management state
-  const [purchasedTickets, setPurchasedTickets] = useState<PurchasedTicket[]>([]);
 
   // Global messaging state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -82,38 +78,6 @@ export default function App() {
     setCurrentUser(user);
     setIsAuthenticated(true);
   };
-
-  // Fetch tickets when authenticated
-  useEffect(() => {
-    const fetchTickets = async () => {
-      if (isAuthenticated && currentUser) {
-        try {
-          const tickets = await getUserTickets(currentUser.id);
-          const appTickets: PurchasedTicket[] = tickets.map(t => ({
-            id: t.id.toString(),
-            eventId: t.event_id,
-            eventTitle: t.event?.title || 'Unknown Event',
-            eventDate: t.event?.date || '',
-            eventLocation: t.event?.location || '',
-            ticketNumber: t.ticket_number,
-            barcode: t.barcode,
-            purchaseDate: t.purchase_date,
-            customerName: t.customer_name,
-            customerEmail: t.customer_email,
-            price: t.price,
-            ticketType: t.ticket_type as any,
-          }));
-          setPurchasedTickets(appTickets);
-        } catch (error) {
-          console.error('Error fetching tickets:', error);
-        }
-      } else {
-        setPurchasedTickets([]);
-      }
-    };
-
-    fetchTickets();
-  }, [isAuthenticated, currentUser]);
 
   // Fetch user profile to determine organizer status
   useEffect(() => {
@@ -545,10 +509,7 @@ export default function App() {
     setOrganizerView('dashboard');
   };
 
-  const handleTicketPurchase = (ticket: PurchasedTicket) => {
-    const updatedTickets = [ticket, ...purchasedTickets];
-    setPurchasedTickets(updatedTickets);
-  };
+
 
   // Show loading screen while checking auth
   if (isCheckingAuth) {
@@ -583,7 +544,7 @@ export default function App() {
       />
       {/* Main Content */}
       <div className="max-w-7xl mx-auto pb-20">
-        {activeTab === 'event' && <EventDetails onTicketPurchase={handleTicketPurchase} purchasedTickets={purchasedTickets} conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} />}
+        {activeTab === 'event' && <EventDetails conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} />}
         {activeTab === 'feed' && <Feed conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} onMarkAsRead={handleMarkAsRead} onlineUsers={onlineFriends} onDeleteConversation={handleDeleteConversation} />}
         {activeTab === 'live' && <LiveFeed />}
         {activeTab === 'create' && (

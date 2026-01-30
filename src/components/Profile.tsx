@@ -7,7 +7,6 @@ import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
-import { SetAlertModal } from './SetAlertModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
 import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Event, Ticket, Post, getFollowers, getFollowing } from '../utils/supabase/api';
@@ -36,7 +35,6 @@ export function Profile({ onLogout }: ProfileProps) {
   const [showTicketViewer, setShowTicketViewer] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showAllEvents, setShowAllEvents] = useState(false);
-  const [showSetAlertModal, setShowSetAlertModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   
   // Data states
@@ -826,7 +824,6 @@ export function Profile({ onLogout }: ProfileProps) {
         <EventDetailModal
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
-          hasTicket={(id) => ticketEvents.some(t => t.event_id === id)}
           onPurchaseTicket={() => {
              toast.info("Please go to Events page to purchase tickets");
           }}
@@ -1084,17 +1081,6 @@ export function Profile({ onLogout }: ProfileProps) {
           onClose={() => {
             setShowTicketViewer(false);
             setSelectedTicket(null);
-          }}
-        />
-      )}
-
-      {/* Set Alert Modal */}
-      {showSetAlertModal && selectedEvent && (
-        <SetAlertModal
-          event={selectedEvent}
-          onClose={() => {
-            setShowSetAlertModal(false);
-            setSelectedEvent(null);
           }}
         />
       )}
