@@ -148,9 +148,16 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          // Fetch independently to prevent one failure from blocking the other
+          const profilePromise = getProfile(user.id);
+          const organizerProfilePromise = getOrganizerProfile(user.id).catch(err => {
+            console.error('Failed to fetch organizer profile (might be missing table or permissions):', err);
+            return null;
+          });
+
           const [profile, organizerProfile] = await Promise.all([
-            getProfile(user.id),
-            getOrganizerProfile(user.id)
+            profilePromise,
+            organizerProfilePromise
           ]);
 
           if (profile) {
@@ -165,17 +172,24 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
             setProfileData({
               username: profile.username || '',
-              organizerName: organizerProfile?.organizer_name || profile.full_name || '',
+              // Explicitly do NOT fallback to user profile for organizer-specific fields
+              // to enforce the "separate page" concept requested by user.
+              organizerName: organizerProfile?.organizer_name || '', 
               organizerType: type,
               venueSubType: subType,
               email: organizerProfile?.contact_email || profile.contact_email || user.email || '',
               phone: organizerProfile?.phone || profile.phone || '',
-              location: organizerProfile?.location || profile.location || '',
-              bio: organizerProfile?.bio || profile.bio || '',
-              website: organizerProfile?.website || profile.website || '',
-              avatarUrl: organizerProfile?.avatar_url || profile.avatar_url || '',
+              location: organizerProfile?.location || '',
+              bio: organizerProfile?.bio || '',
+              website: organizerProfile?.website || '',
+              avatarUrl: organizerProfile?.avatar_url || '',
               birthdate: profile.birthdate || '',
             });
+
+            if (!organizerProfile) {
+               // Hint to user that they are creating a new profile
+               toast.info('Set up your new Organizer Page details');
+            }
 
 
             if (profile.streaming_settings) setStreamingSettings(profile.streaming_settings);
@@ -248,9 +262,16 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         // We do NOT update full_name, bio, location etc here to keep User Profile separate
       });
       toast.success('Profile updated successfully! ✅');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      // Show more detailed error message to help debug
+      const errorMessage = error.message || error.error_description || error.details || 'Failed to update profile';
+      
+      if (errorMessage.includes('relation "organizer_profiles" does not exist') || error.code === '42P01') {
+        toast.error('System Error: Organizer database table is missing. Please ask developer to run the setup SQL.');
+      } else {
+        toast.error(`Failed to update profile: ${errorMessage}`);
+      }
     }
   };
 

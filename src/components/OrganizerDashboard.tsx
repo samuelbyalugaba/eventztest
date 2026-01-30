@@ -86,13 +86,17 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             });
           } else {
              // Fallback to user profile if no organizer profile
+             // But give it a distinct "Organization" feel as requested
              const profile = await getProfile(user.id);
              if (profile) {
                setOrganizerProfile({
-                 organizerName: profile.full_name || profile.username || 'Organizer',
-                 organizerType: profile.organizer_type || 'Event Organizer',
+                 organizerName: 'Your Organization', // Default to generic name to distinguish from user profile
+                 organizerType: 'Event Organizer',
                  location: profile.location || 'Location not set',
-                 ...profile
+                 avatar_url: profile.avatar_url,
+                 cover_url: profile.cover_url,
+                 ...profile,
+                 isDefault: true // Flag to indicate this is a fallback
                });
              }
           }
@@ -101,10 +105,13 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
            const profile = await getProfile(user.id);
            if (profile) {
              setOrganizerProfile({
-               organizerName: profile.full_name || profile.username || 'Organizer',
-               organizerType: profile.organizer_type || 'Event Organizer',
+               organizerName: 'Your Organization',
+               organizerType: 'Event Organizer',
                location: profile.location || 'Location not set',
-               ...profile
+               avatar_url: profile.avatar_url,
+               cover_url: profile.cover_url,
+               ...profile,
+               isDefault: true
              });
            }
         }
@@ -245,7 +252,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             className="flex items-center gap-2 bg-white shadow-xl text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-50 hover:shadow-2xl transition-all border border-gray-200 flex-shrink-0 backdrop-blur-sm"
           >
             <Settings className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm font-medium whitespace-nowrap hidden xs:inline">Settings</span>
+            <span className="text-sm font-medium whitespace-nowrap hidden xs:inline">Manage Page</span>
           </button>
         </div>,
         document.body
@@ -286,6 +293,14 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                 </div>
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto">
+                <button
+                  onClick={onCreateEvent}
+                  className="flex items-center gap-2 bg-white/10 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition-all border border-white/20 backdrop-blur-sm"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span className="text-sm font-semibold whitespace-nowrap">Create Event</span>
+                </button>
+                
                 {/* Premium Go Live Button - Optimized for iPhone 16 (392x852) */}
                 <button className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-xl hover:shadow-xl hover:shadow-red-500/30 transition-all group relative overflow-hidden min-w-[110px] flex-shrink-0">
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
@@ -341,28 +356,30 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         </div>
 
         <div className="px-6 py-8 max-w-7xl mx-auto">
-          {/* Welcome Section - Professional */}
-          <div className="bg-white border border-purple-200 rounded-lg p-6 mb-8 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Star className="w-6 h-6 text-[#8A2BE2]" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-gray-900 text-xl mb-2">Welcome to EVENTZ Organizers</h2>
-                <p className="text-gray-600 mb-4 leading-relaxed">
-                  You're all set to create amazing events and reach thousands of people with HD live streaming. 
-                  Start by creating your first event and watch your audience grow.
-                </p>
-                <button
-                  onClick={onCreateEvent}
-                  className="bg-[#8A2BE2] text-white px-6 py-2.5 rounded-lg hover:bg-[#7825d4] transition-all flex items-center gap-2"
-                >
-                  <PlusCircle className="w-5 h-5" />
-                  <span>Create Your First Event</span>
-                </button>
+          {/* Welcome Section - Professional - Only show when no events exist */}
+          {publishedEvents.length === 0 && draftEvents.length === 0 && (
+            <div className="bg-white border border-purple-200 rounded-lg p-6 mb-8 shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Star className="w-6 h-6 text-[#8A2BE2]" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-gray-900 text-xl mb-2">Welcome to EVENTZ Organizers</h2>
+                  <p className="text-gray-600 mb-4 leading-relaxed">
+                    You're all set to create amazing events and reach thousands of people with HD live streaming. 
+                    Start by creating your first event and watch your audience grow.
+                  </p>
+                  <button
+                    onClick={onCreateEvent}
+                    className="bg-[#8A2BE2] text-white px-6 py-2.5 rounded-lg hover:bg-[#7825d4] transition-all flex items-center gap-2"
+                  >
+                    <PlusCircle className="w-5 h-5" />
+                    <span>Create Your First Event</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Highlights/Posts Section */}
           <div className="mb-8">

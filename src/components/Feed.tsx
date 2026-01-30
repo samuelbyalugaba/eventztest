@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, Search, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, Search, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getFollowedUserIds, getMutualFollows, Post as ApiPost, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getFollowedUserIds, getMutualFollows, Post as ApiPost, incrementPostView, incrementUserMediaView, getNotifications } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
 import { Conversation } from '../types';
 
@@ -12,6 +12,7 @@ import { ChatList } from './ChatList';
 import { ChatDetail } from './ChatDetail';
 import { UserProfileModal } from './UserProfileModal';
 import { ShareModal } from './ShareModal';
+import { NotificationsModal } from './NotificationsModal';
 
 interface Comment {
   id: number;
@@ -116,6 +117,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [imageTouchStart, setImageTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   useEffect(() => {
     if (selectedPost) {
@@ -145,6 +148,13 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           try {
             const following = await getFollowedUserIds(user.id);
             setFollowingIds(new Set(following));
+
+            // Load notifications
+            getNotifications(user.id).then(data => {
+              if (data) {
+                setUnreadNotificationsCount(data.filter(n => !n.read).length);
+              }
+            });
           } catch (e) {
             console.error('Error loading following:', e);
           }
@@ -553,6 +563,15 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 </span>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors relative"
+                  onClick={() => setShowNotifications(true)}
+                >
+                  <Bell className="w-5 h-5 text-gray-700" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
+                  )}
+                </button>
                 <button
                   className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors relative"
                   onClick={() => setShowMessages(!showMessages)}
@@ -1804,6 +1823,12 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           url={shareModalData.url}
         />
       )}
+      {/* Notifications Modal */}
+      <NotificationsModal
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        userId={currentUser?.id}
+      />
     </>
   );
 }

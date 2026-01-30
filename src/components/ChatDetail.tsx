@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
-import { Message, Profile, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead } from '../utils/supabase/api';
+import { Message, Profile, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage } from '../utils/supabase/api';
 import { toast } from 'sonner';
 
 interface ChatDetailProps {
@@ -22,6 +22,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleListening = () => {
     if (isListening) {
@@ -106,6 +107,35 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
       subscription.unsubscribe();
     };
   }, [conversationId, currentUser.id]);
+
+  const handlePlusClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so same file can be selected again
+    e.target.value = '';
+
+    const toastId = toast.loading('Sending image...');
+    try {
+      const imageUrl = await uploadImage(file, 'posts'); 
+      if (imageUrl) {
+        await sendMessage(conversationId, 'Sent an image', imageUrl);
+        toast.success('Image sent', { id: toastId });
+        scrollToBottom();
+      }
+    } catch (error) {
+      console.error('Error sending image:', error);
+      toast.error('Failed to send image', { id: toastId });
+    }
+  };
 
   const handleSend = async () => {
     if (isSending) return;
@@ -230,6 +260,16 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                         : 'bg-white text-gray-900 shadow-sm rounded-bl-none border border-gray-100'
                     }`}
                   >
+                    {msg.image_url && (
+                      <div className="mb-2">
+                        <img 
+                          src={msg.image_url} 
+                          alt="Shared" 
+                          className="rounded-lg max-h-60 object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                          onClick={() => window.open(msg.image_url, '_blank')}
+                        />
+                      </div>
+                    )}
                     {msg.content}
                   </div>
                   <div className="mt-1 flex items-center gap-1">
@@ -250,8 +290,18 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
 
       {/* Input Area */}
       <div className="p-3 bg-white border-t border-gray-100 sticky bottom-0">
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept="image/*"
+          onChange={handleFileChange}
+        />
         <div className="flex items-center gap-2">
-          <button className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0">
+          <button 
+            onClick={handlePlusClick}
+            className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0"
+          >
             <Plus className="w-5 h-5" />
           </button>
           
@@ -266,7 +316,10 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
               className="w-full bg-gray-100 rounded-full py-2.5 pl-4 pr-10 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
             {/* Sticker Icon inside input */}
-             <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full">
+             <button 
+               onClick={handleImageClick}
+               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full"
+             >
                <ImageIcon className="w-5 h-5 text-gray-500" />
              </button>
           </div>

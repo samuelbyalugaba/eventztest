@@ -238,6 +238,20 @@ export type Notification = {
 
 
 
+export const getNotifications = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select(`
+      *,
+      actor:profiles!notifications_actor_id_fkey(*)
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data as Notification[];
+};
+
 export const markNotificationAsRead = async (notificationId: number) => {
   const { error } = await supabase
     .from('notifications')
@@ -468,6 +482,17 @@ export const followUser = async (followerId: string, followingId: string) => {
 
   // Ignore unique constraint violation (already following)
   if (error && error.code !== '23505') throw error;
+
+  if (!error) {
+    await supabase.from('notifications').insert({
+      user_id: followingId,
+      actor_id: followerId,
+      type: 'follow',
+      title: 'New Follower',
+      message: 'started following you',
+      read: false
+    });
+  }
 };
 
 export const unfollowUser = async (followerId: string, followingId: string) => {
@@ -1316,8 +1341,17 @@ export const createPostComment = async (postId: number, userId: string, text: st
   if (error) throw error;
 
   // Notify post owner
-  // Notification logic removed
-
+  const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single();
+  if (post && post.user_id !== userId) {
+    await supabase.from('notifications').insert({
+      user_id: post.user_id,
+      actor_id: userId,
+      type: 'comment',
+      title: 'New Comment',
+      message: 'commented on your post',
+      read: false
+    });
+  }
 
   return data;
 };
@@ -1483,6 +1517,7 @@ export type Message = {
   conversation_id: number;
   sender_id: string;
   content: string;
+  image_url?: string;
   is_read: boolean;
   created_at: string;
   sender?: Profile;
@@ -1545,7 +1580,7 @@ export const getMessages = async (conversationId: number) => {
   return data;
 };
 
-export const sendMessage = async (conversationId: number, text: string) => {
+export const sendMessage = async (conversationId: number, text: string, imageUrl?: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
@@ -1555,7 +1590,8 @@ export const sendMessage = async (conversationId: number, text: string) => {
     .insert({
       conversation_id: conversationId,
       sender_id: user.id,
-      content: text
+      content: text,
+      image_url: imageUrl
     })
     .select('*')
     .single();
@@ -1636,7 +1672,7 @@ export const subscribeToMessages = (conversationId: number, callback: (message: 
 };
 
 // --- NOTIFICATIONS ---
-// Notification functionality has been removed.
+// (consolidated above)
 
 
 // --- SEARCH ---
