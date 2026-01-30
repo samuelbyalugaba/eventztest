@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, Search, Bell, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getNotifications, markNotificationAsRead, subscribeToNotifications, getFollowedUserIds, getMutualFollows, Post as ApiPost, Notification as ApiNotification, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
@@ -41,6 +41,7 @@ interface Post {
     avatar: string;
     verified: boolean;
     isOrganizer?: boolean;
+    isOrganizerPage?: boolean;
   };
   event?: {
     id: number;
@@ -121,6 +122,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [imageTouchStart, setImageTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
     if (selectedPost) {
@@ -744,14 +746,19 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                         >
                           {post.user.name}
                         </span>
-                        {post.user.verified && (
+                        {post.user.isOrganizerPage && (
+                          <div className="flex-shrink-0 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center" title="Event Organizer Page">
+                            <Star className="w-2.5 h-2.5 text-white fill-white" />
+                          </div>
+                        )}
+                        {post.user.verified && !post.user.isOrganizerPage && (
                           <div className="flex-shrink-0 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                             <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                             </svg>
                           </div>
                         )}
-                        {post.user.isOrganizer && (
+                        {post.user.isOrganizer && !post.user.isOrganizerPage && (
                           <span className="flex-shrink-0 px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded uppercase">
                             Organizer
                           </span>
@@ -1312,9 +1319,9 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 {/* Add Comment First */}
                 <div className="mb-5">
                   <div className="flex gap-3 bg-gradient-to-r from-gray-50 to-purple-50/30 rounded-2xl p-4">
-                    <img
-                      src="https://i.ibb.co/3559hRDP/G-Profile.jpg"
-                      alt="You"
+                    <UserAvatar
+                      src={currentUser?.user_metadata?.avatar_url || "https://i.ibb.co/3559hRDP/G-Profile.jpg"}
+                      name={currentUser?.user_metadata?.full_name || "You"}
                       className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
                     />
                     <div className="flex-1">
@@ -1384,20 +1391,48 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       {showNotifications && (
         <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowNotifications(false)}>
           <div className="absolute right-0 top-0 w-80 bg-white h-full shadow-lg overflow-y-auto">
-            <div className="px-4 py-5 border-b border-gray-100">
+            <div className="px-4 py-5 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-gray-900 text-lg font-bold">Notifications</h3>
+              {notifications.some(n => !n.read) && (
+                <button 
+                  onClick={async () => {
+                    const unread = notifications.filter(n => !n.read);
+                    for (const n of unread) {
+                      await markNotificationAsRead(n.id);
+                    }
+                    // Refresh notifications
+                    if (currentUser) {
+                      const notifs = await getNotifications(currentUser.id);
+                      setNotifications(notifs || []);
+                    }
+                    toast.success('All notifications marked as read');
+                  }}
+                  className="text-xs text-purple-600 font-medium hover:text-purple-700"
+                >
+                  Mark all read
+                </button>
+              )}
             </div>
             <div className="px-4 py-5">
               {notifications.map((notification) => (
-                <div key={notification.id} className="flex items-start gap-3 mb-5">
-                  <img
+                <div 
+                  key={notification.id} 
+                  className={`flex items-start gap-3 mb-5 p-2 rounded-lg transition-colors ${!notification.read ? 'bg-purple-50/50' : ''}`}
+                  onClick={async () => {
+                     if (!notification.read) {
+                        await markNotificationAsRead(notification.id);
+                        setNotifications(prev => prev.map(n => n.id === notification.id ? {...n, read: true} : n));
+                     }
+                  }}
+                >
+                  <UserAvatar
                     src={notification.actor?.avatar_url || ''}
-                    alt={notification.title}
-                    className="w-10 h-10 rounded-full object-cover"
+                    name={notification.actor?.full_name || notification.actor?.username || notification.title || 'User'}
+                    className="w-10 h-10 rounded-full flex-shrink-0"
                   />
-                  <div className="flex-1">
+                  <div className="flex-1 cursor-pointer">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-gray-900 font-bold">{notification.title}</span>
+                      <span className="text-gray-900 font-bold text-sm">{notification.title}</span>
                       {getIcon(notification.type)}
                     </div>
                     <p className="text-gray-500 text-sm">{notification.message}</p>
@@ -1412,8 +1447,16 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                       })()}
                     </span>
                   </div>
+                  {!notification.read && (
+                    <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0" />
+                  )}
                 </div>
               ))}
+              {notifications.length === 0 && (
+                 <div className="text-center py-10 text-gray-500 text-sm">
+                   No notifications yet
+                 </div>
+              )}
             </div>
           </div>
         </div>
@@ -1605,8 +1648,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               id="highlight-video"
               src={playingVideo.clips[playingVideo.clipIndex].videoUrl}
               autoPlay
-              controls
-              muted
+              controls={false} // Custom controls
+              muted={isMuted}
               playsInline
               loop
               preload="auto"
@@ -1620,6 +1663,25 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 });
               }}
             />
+
+            {/* Mute Button - Top Right */}
+            <div className={`absolute top-4 right-4 z-20 transition-opacity ${
+              showControls ? 'opacity-100' : 'opacity-0'
+            }`}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMuted(!isMuted);
+                }}
+                className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/60 transition-colors"
+              >
+                {isMuted ? (
+                  <VolumeX className="w-5 h-5 text-white" />
+                ) : (
+                  <Volume2 className="w-5 h-5 text-white" />
+                )}
+              </button>
+            </div>
 
             {/* Play/Pause Icon - Center (Shows briefly when tapped) */}
             <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity ${

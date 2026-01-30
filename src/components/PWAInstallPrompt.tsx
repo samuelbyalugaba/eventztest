@@ -130,12 +130,16 @@ export function PWAInstallPrompt() {
         const profile = await getProfile(user.id);
         const currentPreferences = profile?.preferences || {};
         
-        await updateProfile(user.id, {
-          preferences: {
-            ...currentPreferences,
-            pwaDismissed: dismissedDate
-          }
-        });
+        // Commented out to avoid PGRST204 error
+        // await updateProfile(user.id, {
+        //   preferences: {
+        //     ...currentPreferences,
+        //     pwaDismissed: dismissedDate
+        //   }
+        // });
+        
+        // Fallback to local storage since we can't save to profile
+        localStorage.setItem('eventz-pwa-dismissed', dismissedDate);
       } else {
         localStorage.setItem('eventz-pwa-dismissed', dismissedDate);
       }

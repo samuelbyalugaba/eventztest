@@ -1,5 +1,5 @@
 import { X, User, Bell, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
 
@@ -23,7 +23,57 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     location: '',
     bio: '',
     birthdate: '',
+    avatarUrl: '',
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+      const file = event.target.files[0];
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('File must be an image');
+        return;
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setProfileData(prev => ({ ...prev, avatarUrl: publicUrl }));
+      toast.success('Profile photo updated successfully');
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast.error(error.message || 'Error uploading avatar');
+    }
+  };
 
   // Notifications state
   const [notifications, setNotifications] = useState({
@@ -78,6 +128,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                 location: profile.location || '',
                 bio: profile.bio || '',
                 birthdate: profile.birthdate || '',
+                avatarUrl: profile.avatar_url || '',
               });
               if (localProfile) localStorage.removeItem('eventz-user-profile');
             }
@@ -178,6 +229,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
           location: profileData.location,
           bio: profileData.bio,
           birthdate: profileData.birthdate,
+          avatar_url: profileData.avatarUrl,
         });
       } else {
         localStorage.setItem('eventz-user-profile', JSON.stringify(profileData));
@@ -381,18 +433,35 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
                 <div className="flex items-center gap-4">
                   <div className="relative">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white text-2xl font-bold">
-                      AJ
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
+                      {profileData.avatarUrl ? (
+                        <img src={profileData.avatarUrl} alt={profileData.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{profileData.name ? profileData.name.charAt(0).toUpperCase() : 'U'}</span>
+                      )}
                     </div>
-                    <button className="absolute bottom-0 right-0 w-7 h-7 bg-[#8A2BE2] rounded-full flex items-center justify-center text-white shadow-lg hover:bg-[#7825d4] transition-colors">
+                    <button 
+                      onClick={handleAvatarClick}
+                      className="absolute bottom-0 right-0 w-7 h-7 bg-[#8A2BE2] rounded-full flex items-center justify-center text-white shadow-lg hover:bg-[#7825d4] transition-colors"
+                    >
                       <Camera className="w-4 h-4" />
                     </button>
                   </div>
                   <div>
                     <p className="text-gray-900 font-medium mb-1">{profileData.name}</p>
-                    <button className="text-[#8A2BE2] text-sm hover:text-[#7825d4] font-medium">
+                    <button 
+                      onClick={handleAvatarClick}
+                      className="text-[#8A2BE2] text-sm hover:text-[#7825d4] font-medium"
+                    >
                       Change Photo
                     </button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleAvatarChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
                   </div>
                 </div>
               </div>

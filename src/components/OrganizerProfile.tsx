@@ -120,6 +120,9 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         const profile = await getProfile(organizerId);
         if (!profile) throw new Error('Organizer not found');
 
+        // 1b. Fetch Organizer Profile (New separate profile)
+        const organizerProfile = await getOrganizerProfile(organizerId);
+
         // 2. Fetch Stats
         const stats = await getOrganizerStats(organizerId);
 
@@ -130,19 +133,21 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         const posts = await getPosts({ authorId: organizerId });
 
         // Map to component state
+        // Prefer organizer-specific data from separate table
+        
         setOrganizerData({
           id: profile.id,
-          name: profile.full_name || profile.username || 'Organizer',
-          bio: profile.bio || 'No bio available',
-          coverImage: profile.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
-          avatar: profile.avatar_url || '/profile.jpg',
-          location: profile.location || 'Tanzania',
+          name: organizerProfile?.organizer_name || profile.full_name || profile.username || 'Organizer',
+          bio: organizerProfile?.bio || profile.bio || 'No bio available',
+          coverImage: organizerProfile?.cover_url || profile.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
+          avatar: organizerProfile?.avatar_url || profile.avatar_url || '/profile.jpg',
+          location: organizerProfile?.location || profile.location || 'Tanzania',
           totalEvents: stats.totalEvents,
           followers: stats.followers,
           verified: profile.verified || false,
           rating: stats.avgRating || 0,
-          phone: profile.phone,
-          whatsapp: profile.phone, // Assuming phone is whatsapp for now
+          phone: organizerProfile?.phone || profile.phone,
+          whatsapp: organizerProfile?.phone || profile.phone, // Assuming phone is whatsapp for now
           highlights: posts.slice(0, 5).map(p => ({
             id: p.id,
             image: p.image_urls?.[0] || '',

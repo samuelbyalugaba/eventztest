@@ -6,6 +6,7 @@ const ERROR_IMG_SRC =
 
 interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackType?: 'image' | 'video'
+  fallbackSrc?: string
 }
 
 export function ImageWithFallback(props: ImageWithFallbackProps) {
@@ -15,7 +16,7 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
     setDidError(true)
   }
 
-  const { src, alt, style, className, fallbackType = 'image', ...rest } = props
+  const { src, alt, style, className, fallbackType = 'image', fallbackSrc, ...rest } = props
 
   return didError ? (
     <div
@@ -26,7 +27,13 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
         {fallbackType === 'video' ? (
           <Film className="w-8 h-8 opacity-50" />
         ) : (
-          <img src={ERROR_IMG_SRC} alt="Error loading image" {...rest} data-original-url={src} />
+          <img 
+            src={fallbackSrc || ERROR_IMG_SRC} 
+            alt="Error loading image" 
+            {...rest} 
+            className={fallbackSrc ? className : undefined} // Keep className if using custom fallback (like profile.jpg)
+            data-original-url={src} 
+          />
         )}
       </div>
     </div>

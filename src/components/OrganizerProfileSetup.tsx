@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Globe, Instagram, Facebook, Twitter, ArrowRight, Building2, Mic2, Store, Users, Briefcase, Trophy, Check, Music, Wine, Coffee, UtensilsCrossed, Headphones, Radio, Mic, Heart, GraduationCap, School, Building, Church, Laptop, ShoppingBag, Plane, Film, Dumbbell, Activity, Flame, Target, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateProfile, supabase, getProfile, checkUsernameUnique } from '../utils/supabase/api';
+import { updateProfile, supabase, getProfile, checkUsernameUnique, getOrganizerProfile, upsertOrganizerProfile } from '../utils/supabase/api';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;
@@ -248,20 +248,26 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
     const fetchProfileData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const profile = await getProfile(user.id);
+        // Fetch both user profile and organizer profile
+        const [profile, organizerProfile] = await Promise.all([
+          getProfile(user.id),
+          getOrganizerProfile(user.id)
+        ]);
+        
         if (profile) {
+          // Determine values, preferring organizer profile if available
           setProfileData(prev => ({
             ...prev,
             username: profile.username || '',
-            organizerName: profile.full_name || '',
-            email: profile.contact_email || profile.email || '',
-            phone: profile.phone || '',
-            location: profile.location || '',
-            bio: profile.bio || '',
-            website: profile.website || '',
-            instagram: profile.social_links?.instagram || '',
-            facebook: profile.social_links?.facebook || '',
-            twitter: profile.social_links?.twitter || '',
+            organizerName: organizerProfile?.organizer_name || profile.full_name || '',
+            email: organizerProfile?.contact_email || profile.contact_email || profile.email || '',
+            phone: organizerProfile?.phone || profile.phone || '',
+            location: organizerProfile?.location || profile.location || '',
+            bio: organizerProfile?.bio || profile.bio || '',
+            website: organizerProfile?.website || profile.website || '',
+            instagram: organizerProfile?.social_links?.instagram || profile.social_links?.instagram || '',
+            facebook: organizerProfile?.social_links?.facebook || profile.social_links?.facebook || '',
+            twitter: organizerProfile?.social_links?.twitter || profile.social_links?.twitter || '',
           }));
         }
       }
@@ -319,21 +325,29 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
         }
       }
 
-      // Save organizer profile to Supabase
-      await updateProfile(user.id, {
-        username: profileData.username,
-        full_name: profileData.organizerName, // Using full_name for organizer name as per current usage
+      // Save organizer profile to separate table
+      await upsertOrganizerProfile({
+        id: user.id,
+        organizer_name: profileData.organizerName,
         organizer_type: finalOrganizerType,
-        contact_email: profileData.email,
-        phone: profileData.phone,
+        bio: profileData.bio,
         location: profileData.location,
         website: profileData.website,
-        bio: profileData.bio,
+        contact_email: profileData.email,
+        phone: profileData.phone,
         social_links: {
           instagram: profileData.instagram,
           facebook: profileData.facebook,
           twitter: profileData.twitter,
         }
+      });
+
+      // Update main profile to mark as organizer, but DO NOT overwrite full_name or other user details
+      await updateProfile(user.id, {
+        username: profileData.username, // Username is still shared for login/uniqueness
+        is_organizer: true,
+        organizer_type: finalOrganizerType,
+        // We do NOT update full_name, bio, location etc here to keep User Profile separate
       });
       
       toast.success('Profile setup complete! 🎉', {

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Image as ImageIcon, Send, Loader2 } from 'lucide-react';
+import { X, Image as ImageIcon, Send, Loader2, User, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createPost, uploadImage } from '../utils/supabase/api';
@@ -9,14 +9,17 @@ interface CreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPostCreated: () => void;
+  isOrganizer?: boolean;
+  organizerName?: string;
 }
 
-export function CreatePostModal({ isOpen, onClose, onPostCreated }: CreatePostModalProps) {
+export function CreatePostModal({ isOpen, onClose, onPostCreated, isOrganizer = false, organizerName }: CreatePostModalProps) {
   const [content, setContent] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileType, setFileType] = useState<'image' | 'video' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [postAsOrganizer, setPostAsOrganizer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -151,13 +154,13 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated }: CreatePostMo
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <div className="flex gap-2">
+        {/* Footer Actions */}
+        <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
-              title="Add Media"
+              className="p-2 text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+              title="Add Photo/Video"
             >
               <ImageIcon className="w-5 h-5" />
             </button>
@@ -170,23 +173,43 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated }: CreatePostMo
             />
           </div>
 
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || (!content.trim() && !selectedFile)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#8A2BE2] text-white rounded-xl font-medium hover:bg-[#7825d4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Posting...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                Post
-              </>
+          <div className="flex items-center gap-3">
+            {isOrganizer && (
+              <button
+                onClick={() => setPostAsOrganizer(!postAsOrganizer)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  postAsOrganizer 
+                    ? 'bg-purple-100 text-purple-700 border border-purple-200' 
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {postAsOrganizer ? (
+                  <>
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>{organizerName || 'Organizer'}</span>
+                  </>
+                ) : (
+                  <>
+                    <User className="w-3.5 h-3.5" />
+                    <span>Myself</span>
+                  </>
+                )}
+              </button>
             )}
-          </button>
+
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || (!content.trim() && !selectedFile)}
+              className="flex items-center gap-2 bg-[#8A2BE2] text-white px-5 py-2 rounded-xl hover:bg-[#7B27CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              <span>Post</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>,

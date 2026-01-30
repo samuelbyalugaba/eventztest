@@ -65,6 +65,27 @@ export type Profile = {
   };
 };
 
+export type OrganizerProfile = {
+  id: string;
+  organizer_name: string;
+  organizer_type: string;
+  avatar_url?: string;
+  cover_url?: string;
+  bio?: string;
+  description?: string;
+  location?: string;
+  website?: string;
+  contact_email?: string;
+  phone?: string;
+  social_links?: {
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+  };
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type Event = {
   id: number;
   organizer_id: string;
@@ -187,6 +208,31 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
   return data;
 };
 
+export const getOrganizerProfile = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('organizer_profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+  return data as OrganizerProfile;
+};
+
+export const upsertOrganizerProfile = async (profile: Partial<OrganizerProfile> & { id: string }) => {
+  const { data, error } = await supabase
+    .from('organizer_profiles')
+    .upsert(profile)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as OrganizerProfile;
+};
+
 export type Notification = {
   id: number;
   user_id: string;
@@ -209,6 +255,16 @@ export const markNotificationAsRead = async (notificationId: number) => {
     .from('notifications')
     .update({ read: true })
     .eq('id', notificationId);
+
+  if (error) throw error;
+};
+
+export const markAllNotificationsAsRead = async (userId: string) => {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('user_id', userId)
+    .eq('read', false);
 
   if (error) throw error;
 };
@@ -318,14 +374,34 @@ export const getOrganizerStats = async (userId: string) => {
     
   if (followersError) throw followersError;
 
-  // 3. Total Views (sum of event views)
+  // 3. Total Views (sum of event views + post views + media views)
   const { data: events, error: viewsError } = await supabase
     .from('events')
     .select('views, streaming')
     .eq('organizer_id', userId);
     
   if (viewsError) throw viewsError;
-  const totalViews = events?.reduce((sum, e) => sum + (e.views || 0), 0) || 0;
+  const eventViews = events?.reduce((sum, e) => sum + (e.views || 0), 0) || 0;
+
+  // Post Views
+  const { data: posts, error: postViewsError } = await supabase
+    .from('posts')
+    .select('views')
+    .eq('user_id', userId);
+
+  if (postViewsError) throw postViewsError;
+  const postViews = posts?.reduce((sum, p) => sum + (p.views || 0), 0) || 0;
+
+  // Media Views
+  const { data: media, error: mediaViewsError } = await supabase
+    .from('user_media')
+    .select('views')
+    .eq('user_id', userId);
+
+  if (mediaViewsError) throw mediaViewsError;
+  const mediaViews = media?.reduce((sum, m) => sum + (m.views || 0), 0) || 0;
+
+  const totalViews = eventViews + postViews + mediaViews;
 
   // 4. Live Streams (count from fetched events)
   const liveStreams = events?.filter((e: any) => e.streaming?.available).length || 0;
@@ -538,7 +614,8 @@ export const getOrganizerEvents = async (organizerId: string) => {
       *,
       organizer:profiles(*),
       tickets(count),
-      saved_events(count)
+      saved_events(count),
+      posts(count)
     `)
     .eq('organizer_id', organizerId)
     .order('created_at', { ascending: false });
@@ -548,6 +625,7 @@ export const getOrganizerEvents = async (organizerId: string) => {
   return data.map((event: any) => ({
     ...event,
     interested: event.saved_events?.[0]?.count || 0,
+    shares: event.posts?.[0]?.count || 0,
     attendees: (event.attendees || 0) + (event.tickets?.[0]?.count || 0)
   }));
 };
@@ -674,6 +752,28 @@ export const getEventAnalytics = async (eventId: number) => {
   const ticketsTrend = calculateTrend(ticketDates);
   const sharesTrend = calculateTrend(shareDates);
 
+  // Calculate Daily Activity (Last 7 Days)
+  const dailyActivity = [0, 0, 0, 0, 0, 0, 0]; // Mon, Tue, Wed, Thu, Fri, Sat, Sun
+  // Note: This aligns with the UI's static labels 'Mon'...'Sun'. 
+  // Ideally we should rotate this based on today, but for now we'll map to the nearest day of week.
+  
+  const processDates = (dates: string[]) => {
+    dates.forEach(d => {
+      const date = new Date(d);
+      if (date >= sevenDaysAgo) {
+        // 0 = Sunday, 1 = Monday... 6 = Saturday
+        // We want to map to: 0=Mon, 1=Tue... 6=Sun
+        let dayIndex = date.getDay() - 1;
+        if (dayIndex === -1) dayIndex = 6; // Sunday
+        dailyActivity[dayIndex]++;
+      }
+    });
+  };
+
+  processDates(interestedDates);
+  processDates(ticketDates);
+  processDates(shareDates);
+
   // Helper to process user data
   const locationCounts: Record<string, number> = {};
   const ageCounts: Record<string, number> = {
@@ -771,9 +871,6 @@ export const getEventAnalytics = async (eventId: number) => {
       { range: '35-44', percent: Math.round((ageCounts['35-44'] / totalAges) * 100) },
       { range: '45+', percent: Math.round((ageCounts['45+'] / totalAges) * 100) },
     ];
-  } else {
-    // If no real age data, keep 0s or show "No data" (UI handles 0s gracefully usually)
-    // But to match UI structure we return the array with 0s
   }
 
   // Format revenue string
@@ -784,7 +881,7 @@ export const getEventAnalytics = async (eventId: number) => {
       total: views,
       change: 0, 
       trend: 'neutral',
-      daily: [Math.floor(views * 0.1), Math.floor(views * 0.15), Math.floor(views * 0.2), Math.floor(views * 0.1), Math.floor(views * 0.25), Math.floor(views * 0.1), Math.floor(views * 0.1)],
+      daily: dailyActivity, // Now returns real combined activity
     },
     interested: {
       total: interested,
@@ -803,7 +900,7 @@ export const getEventAnalytics = async (eventId: number) => {
     },
     revenue: {
       total: revenueStr,
-      change: ticketsTrend.change,
+      change: ticketsTrend.change, // Revenue trend roughly follows ticket trend
       trend: ticketsTrend.trend,
     },
     demographics: {

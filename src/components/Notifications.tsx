@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Bell, Calendar, Ticket, UserPlus, Loader2 } from 'lucide-react';
+import { Bell, Calendar, Ticket, UserPlus, Loader2, Check, CheckCheck } from 'lucide-react';
 import { PurchasedTicket } from '../types';
-import { useState, useEffect } from 'react';
-import { getNotifications, AppNotification, supabase } from '../utils/supabase/api';
+import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, AppNotification, supabase } from '../utils/supabase/api';
 import { toast } from 'sonner';
 
 interface NotificationsProps {
@@ -15,6 +13,7 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
   const [activeFilter, setActiveFilter] = useState<'all' | 'follower' | 'reminder' | 'update'>('all');
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [markingRead, setMarkingRead] = useState(false);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -26,7 +25,6 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
         }
       } catch (error) {
         console.error('Error fetching notifications:', error);
-        // Don't toast error here to avoid annoyance if it's just empty or auth issue
       } finally {
         setLoading(false);
       }
@@ -34,6 +32,49 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
 
     fetchNotifications();
   }, []);
+
+  const handleMarkAsRead = async (notification: AppNotification) => {
+    if (notification.read) return;
+
+    try {
+      // Optimistic update
+      setNotifications(prev => prev.map(n => 
+        n.id === notification.id ? { ...n, read: true } : n
+      ));
+
+      // If it's a DB notification (starts with notif-), update backend
+      if (typeof notification.id === 'string' && notification.id.startsWith('notif-')) {
+        const dbId = parseInt(notification.id.replace('notif-', ''));
+        if (!isNaN(dbId)) {
+          await markNotificationAsRead(dbId);
+        }
+      }
+    } catch (error) {
+      console.error('Error marking as read:', error);
+      toast.error('Failed to mark as read');
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      setMarkingRead(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Update backend for supported types
+        await markAllNotificationsAsRead(user.id);
+        
+        // Update local state for all
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        toast.success('All notifications marked as read');
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast.error('Failed to mark all as read');
+    } finally {
+      setMarkingRead(false);
+    }
+  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -75,6 +116,7 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
           barcode: ticket.barcode,
           eventTitle: ticket.eventTitle,
         },
+        image: 'https://images.unsplash.com/photo-1543857778-c4a1a3e0b2eb?w=100&q=80', // Default ticket image
       });
     }
   });
@@ -137,11 +179,23 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
       <div className="px-6 py-6 max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-gray-900 mb-2">Notifications</h1>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-gray-900 text-2xl font-bold">Notifications</h1>
+            {unreadCount > 0 && (
+              <button 
+                onClick={handleMarkAllAsRead}
+                disabled={markingRead}
+                className="flex items-center gap-2 text-sm text-pink-600 hover:text-pink-700 font-medium disabled:opacity-50"
+              >
+                <CheckCheck className="w-4 h-4" />
+                Mark all as read
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
             <p className="text-gray-600">Stay updated with your events</p>
             {unreadCount > 0 && (
-              <span className="px-3 py-1 bg-pink-500 text-white rounded-full text-sm">
+              <span className="px-3 py-1 bg-pink-100 text-pink-600 rounded-full text-xs font-medium">
                 {unreadCount} new
               </span>
             )}
@@ -205,35 +259,37 @@ export function Notifications({ purchasedTickets }: NotificationsProps) {
               }`}
             >
               {/* Image */}
-              {notification.image && (
-                <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden">
-                  {notification.type === 'follower' ? (
-                    <UserAvatar
-                      src={notification.image}
-                      name={notification.title}
-                      className="w-full h-full"
-                    />
-                  ) : (
-                    <ImageWithFallback
-                      src={notification.image}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                </div>
-              )}
+              <div className="flex-shrink-0 w-12 h-12">
+                <UserAvatar
+                  src={notification.image}
+                  name={notification.title}
+                  className="w-full h-full"
+                />
+              </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-start gap-2 mb-1">
-                  {getIcon(notification.type)}
-                  <h3 className="text-gray-900 flex-1">{notification.title}</h3>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2">
+                    {getIcon(notification.type)}
+                    <h3 className="text-gray-900 font-medium">{notification.title}</h3>
+                  </div>
                   {!notification.read && (
-                    <span className="w-2 h-2 bg-pink-500 rounded-full flex-shrink-0 mt-2"></span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkAsRead(notification);
+                      }}
+                      className="flex items-center gap-1 px-3 py-1 bg-white border border-pink-200 hover:bg-pink-50 hover:border-pink-300 rounded-full text-pink-600 hover:text-pink-700 transition-all shadow-sm text-xs font-medium"
+                      title="Mark as read"
+                    >
+                      <Check className="w-3 h-3" />
+                      Mark as read
+                    </button>
                   )}
                 </div>
-                <p className="text-gray-700 mb-1 line-clamp-2">{notification.message}</p>
-                <p className="text-gray-500 text-sm">{notification.time}</p>
+                <p className="text-gray-700 mb-1 line-clamp-2 text-sm">{notification.message}</p>
+                <p className="text-gray-500 text-xs">{new Date(notification.time).toLocaleDateString()} • {new Date(notification.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                 {notification.ticketData && (
                   <div className="mt-3 p-3 bg-gradient-to-br from-purple-50 to-cyan-50 border border-purple-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">

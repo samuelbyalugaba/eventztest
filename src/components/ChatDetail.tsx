@@ -18,8 +18,61 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   const [messageText, setMessageText] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleListening = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error('Voice input is not supported in this browser');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0])
+        .map((result: any) => result.transcript)
+        .join('');
+      setMessageText(prev => {
+         // If we are getting interim results, we might want to just replace current text 
+         // or append if we want continuous dictation. 
+         // For simple "voice message" style, replacing or appending to empty is fine.
+         // Let's just set it to the transcript for now to keep it simple.
+         return transcript;
+      });
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error', event.error);
+      setIsListening(false);
+      // toast.error('Voice input failed');
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -228,8 +281,15 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
               <Send className="w-5 h-5 ml-0.5" />
             </button>
           ) : (
-            <button className="p-2.5 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0">
-              <Mic className="w-5 h-5" />
+            <button 
+              onClick={toggleListening}
+              className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${
+                isListening 
+                  ? 'bg-red-100 text-red-600 animate-pulse' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <Mic className={`w-5 h-5 ${isListening ? 'animate-bounce' : ''}`} />
             </button>
           )}
         </div>

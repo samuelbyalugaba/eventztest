@@ -1,4 +1,5 @@
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { UserAvatar } from './UserAvatar';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -228,17 +229,10 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         isOpen={showCreatePostModal}
         onClose={() => setShowCreatePostModal(false)}
         onPostCreated={() => {
-          // The component listens to eventsUpdated, but let's also manually trigger a reload or rely on the event if the modal emits one?
-          // The modal calls onPostCreated. We should reload posts.
-          // loadOrganizerData is inside useEffect, we can't call it directly easily unless we extract it or use a trigger state.
-          // But wait, the useEffect listens to 'eventsUpdated'. Does CreatePostModal emit it?
-          // CreatePostModal calls createPost API.
-          // Let's check CreatePostModal again. It calls onPostCreated callback.
-          // In OrganizerDashboard, we can use window.dispatchEvent(new Event('eventsUpdated')) or just trigger a reload.
-          // Actually, OrganizerDashboard has a listener for 'eventsUpdated'.
-          // So if we dispatch it here, it will reload.
           window.dispatchEvent(new Event('eventsUpdated'));
         }}
+        isOrganizer={true}
+        organizerName={organizerProfile.organizerName}
       />
 
       <div className="bg-gray-50 min-h-screen pb-24">
@@ -248,10 +242,10 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                 <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/50 bg-gray-100">
-                  <img
-                    src={organizerProfile.avatar_url || '/profile.jpg'}
-                    alt="Organizer Profile"
-                    className="w-full h-full object-cover"
+                  <UserAvatar
+                    src={organizerProfile.avatar_url}
+                    name={organizerProfile.organizerName || 'Organizer'}
+                    className="w-full h-full"
                   />
                 </div>
                 <div>
@@ -434,359 +428,223 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                   <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                     <DollarSign className="w-5 h-5 text-green-600" />
                   </div>
-                  <span className="text-green-600 text-xs bg-green-50 px-2 py-1 rounded-full">+0%</span>
+                  {/* <span className="text-green-600 text-xs bg-green-50 px-2 py-1 rounded-full">+0%</span> */}
                 </div>
-                <p className="text-gray-600 text-sm mb-1">Total Revenue</p>
-                <p className="text-gray-900 text-2xl">TSh {formatNumber(stats.revenue)}</p>
+                <p className="text-gray-500 text-sm mb-1">Total Revenue</p>
+                <p className="text-gray-900 text-2xl font-bold">TSh {formatNumber(stats.revenue)}</p>
               </div>
 
-              {/* Tickets Sold */}
+              {/* Tickets */}
+              <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Ticket className="w-5 h-5 text-blue-600" />
+                  </div>
+                </div>
+                <p className="text-gray-500 text-sm mb-1">Tickets Sold</p>
+                <p className="text-gray-900 text-2xl font-bold">{formatNumber(stats.ticketsSold)}</p>
+              </div>
+
+              {/* Views */}
               <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Ticket className="w-5 h-5 text-[#8A2BE2]" />
+                    <Eye className="w-5 h-5 text-purple-600" />
                   </div>
-                  <span className="text-purple-600 text-xs bg-purple-50 px-2 py-1 rounded-full">+0%</span>
                 </div>
-                <p className="text-gray-600 text-sm mb-1">Tickets Sold</p>
-                <p className="text-gray-900 text-2xl">{stats.ticketsSold}</p>
+                <p className="text-gray-500 text-sm mb-1">Total Views</p>
+                <p className="text-gray-900 text-2xl font-bold">{formatNumber(stats.totalViews)}</p>
               </div>
 
-              {/* Live Streams */}
+              {/* Followers */}
               <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                    <Radio className="w-5 h-5 text-red-600" />
+                  <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
+                    <Users className="w-5 h-5 text-pink-600" />
                   </div>
-                  <span className="text-red-600 text-xs bg-red-50 px-2 py-1 rounded-full">+0%</span>
                 </div>
-                <p className="text-gray-600 text-sm mb-1">Live Streams</p>
-                <p className="text-gray-900 text-2xl">{stats.liveStreams}</p>
-              </div>
-
-              {/* Total Views */}
-              <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center">
-                    <Eye className="w-5 h-5 text-cyan-600" />
-                  </div>
-                  <span className="text-cyan-600 text-xs bg-cyan-50 px-2 py-1 rounded-full">+0%</span>
-                </div>
-                <p className="text-gray-600 text-sm mb-1">Total Views</p>
-                <p className="text-gray-900 text-2xl">{formatNumber(stats.totalViews)}</p>
+                <p className="text-gray-500 text-sm mb-1">Followers</p>
+                <p className="text-gray-900 text-2xl font-bold">{formatNumber(stats.followers)}</p>
               </div>
             </div>
           </div>
 
-          {/* HD Streaming Performance */}
+          {/* Published Events */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-gray-900 text-xl">HD Streaming Performance</h2>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-[#8A2BE2] rounded-lg flex items-center justify-center">
-                    <Play className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-sm mb-1">Stream Quality</p>
-                    <p className="text-gray-900 text-xl">HD 1080p</p>
-                  </div>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#8A2BE2] w-0 transition-all"></div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-cyan-600 rounded-lg flex items-center justify-center">
-                    <Users className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-sm mb-1">Peak Viewers</p>
-                    <p className="text-gray-900 text-xl">0</p>
-                  </div>
-                </div>
-                <p className="text-gray-500 text-sm">Concurrent: 0 viewers</p>
-              </div>
-
-              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-green-600 rounded-lg flex items-center justify-center">
-                    <Clock className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-sm mb-1">Stream Time</p>
-                    <p className="text-gray-900 text-xl">0h 0m</p>
-                  </div>
-                </div>
-                <p className="text-gray-500 text-sm">Last 30 days</p>
+              <h2 className="text-gray-900 text-xl">My Events</h2>
+              <div className="flex bg-white rounded-lg p-1 border border-gray-200">
+                <button
+                  onClick={() => setActiveTab('published')}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    activeTab === 'published'
+                      ? 'bg-[#8A2BE2] text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Published
+                </button>
+                <button
+                  onClick={() => setActiveTab('drafts')}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    activeTab === 'drafts'
+                      ? 'bg-[#8A2BE2] text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Drafts
+                </button>
               </div>
             </div>
-          </div>
 
-          {/* Your Events */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-gray-900 text-xl">Your Events</h2>
-              <button
-                onClick={onCreateEvent}
-                className="text-[#8A2BE2] hover:text-[#7825d4] flex items-center gap-2"
-              >
-                <PlusCircle className="w-5 h-5" />
-                <span>Create Event</span>
-              </button>
-            </div>
-
-            <div className="flex gap-6 mb-6 border-b border-gray-200">
-              <button 
-                className={`pb-3 text-sm font-medium transition-colors relative ${
-                  activeTab === 'published' 
-                    ? 'text-[#8A2BE2]' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setActiveTab('published')}
-              >
-                Published ({publishedEvents.length})
-                {activeTab === 'published' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8A2BE2] rounded-t-full"></div>
-                )}
-              </button>
-              <button 
-                className={`pb-3 text-sm font-medium transition-colors relative ${
-                  activeTab === 'drafts' 
-                    ? 'text-[#8A2BE2]' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setActiveTab('drafts')}
-              >
-                Drafts ({draftEvents.length})
-                {activeTab === 'drafts' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8A2BE2] rounded-t-full"></div>
-                )}
-              </button>
-            </div>
-
-            {(activeTab === 'published' ? publishedEvents : draftEvents).length === 0 ? (
-              <div className="bg-white rounded-lg p-16 border border-gray-200 text-center shadow-sm">
-                <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="w-10 h-10 text-[#8A2BE2]" />
-                </div>
-                <h3 className="text-gray-900 text-xl mb-2">
-                  {activeTab === 'published' ? 'No Events Yet' : 'No Drafts'}
-                </h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  {activeTab === 'published' 
-                    ? "Start creating amazing events with HD live streaming and reach thousands of people worldwide."
-                    : "You don't have any saved drafts."}
-                </p>
-                {activeTab === 'published' && (
-                  <button
-                    onClick={onCreateEvent}
-                    className="bg-[#8A2BE2] text-white px-8 py-3.5 rounded-lg hover:bg-[#7825d4] transition-all inline-flex items-center gap-2.5 mx-auto"
-                  >
-                    <PlusCircle className="w-5 h-5" />
-                    <span>Create Your First Event</span>
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {(activeTab === 'published' ? publishedEvents : draftEvents).map((event) => (
-                  <div key={event.id} className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-lg transition-all group">
-                    {/* Event Image */}
-                    <div className="relative h-52 overflow-hidden bg-gradient-to-br from-purple-600 to-pink-600">
-                      {event.coverImage ? (
-                        <img 
-                          src={event.coverImage} 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {activeTab === 'published' ? (
+                publishedEvents.length > 0 ? (
+                  publishedEvents.map(event => (
+                    <div key={event.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all group">
+                      <div className="relative h-48">
+                        <ImageWithFallback
+                          src={event.coverImage}
                           alt={event.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover"
                         />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Calendar className="w-16 h-16 text-white/30" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                      
-                      {/* Category Badge */}
-                      <div className="absolute top-4 left-4">
-                        <div className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30">
-                          <span className="text-white text-xs">{event.category}</span>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="absolute top-3 right-3 flex gap-2">
+                          <button 
+                            onClick={() => setSelectedEventForAnalytics(event)}
+                            className="bg-white/90 backdrop-blur-sm p-2 rounded-lg text-gray-700 hover:text-[#8A2BE2] hover:bg-white transition-all shadow-sm"
+                            title="Analytics"
+                          >
+                            <BarChart3 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => onEditEvent?.(event)}
+                            className="bg-white/90 backdrop-blur-sm p-2 rounded-lg text-gray-700 hover:text-[#8A2BE2] hover:bg-white transition-all shadow-sm"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                      
-                      {/* Actions Menu */}
-                      <div className="absolute top-4 right-4 flex gap-2">
-                        <button
-                          onClick={() => {
-                            toast.success('Event link copied! 📋');
-                          }}
-                          className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30 flex items-center justify-center transition-all"
-                        >
-                          <Share2 className="w-4 h-4 text-white" />
-                        </button>
-                        <button className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30 flex items-center justify-center transition-all">
-                          <MoreVertical className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-
-                      {/* Title Overlay */}
-                      <div className="absolute bottom-4 left-4 right-4">
-                        <h3 className="text-white text-xl mb-1 line-clamp-1">{event.title || 'Untitled Event'}</h3>
-                        <div className="flex items-center gap-3 text-white/90 text-sm">
-                          <div className="flex items-center gap-1">
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="text-gray-900 font-semibold line-clamp-1">{event.title}</h3>
+                          <span className="text-[#8A2BE2] font-bold text-sm">
+                            {event.price === 0 ? 'Free' : `TSh ${formatNumber(event.price)}`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                          <div className="flex items-center gap-1.5">
                             <Calendar className="w-4 h-4" />
-                            <span>{event.date || 'TBD'}</span>
+                            <span>{new Date(event.date).toLocaleDateString()}</span>
                           </div>
-                          {event.location && (
-                            <>
-                              <span>•</span>
-                              <div className="flex items-center gap-1">
-                                <MapPin className="w-4 h-4" />
-                                <span className="line-clamp-1">{event.location}</span>
-                              </div>
-                            </>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-4 h-4" />
+                            <span>{event.time}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                          <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                            <Ticket className="w-4 h-4 text-gray-400" />
+                            <span>{event.ticketsSold || 0} sold</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                            <Eye className="w-4 h-4 text-gray-400" />
+                            <span>{event.views || 0} views</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-
-                    {/* Event Stats */}
-                    <div className="p-5">
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 mb-1">
-                            <Eye className="w-4 h-4 text-cyan-600" />
-                            <p className="text-gray-900">{event.views || 0}</p>
-                          </div>
-                          <p className="text-gray-500 text-xs">Views</p>
-                        </div>
-                        <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 mb-1">
-                            <Users className="w-4 h-4 text-purple-600" />
-                            <p className="text-gray-900">{event.interested || 0}</p>
-                          </div>
-                          <p className="text-gray-500 text-xs">Interested</p>
-                        </div>
-                        <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 mb-1">
-                            <Share2 className="w-4 h-4 text-pink-600" />
-                            <p className="text-gray-900">{event.shares || 0}</p>
-                          </div>
-                          <p className="text-gray-500 text-xs">Shares</p>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => {
-                            if (onEditEvent) {
-                              onEditEvent(event);
-                            }
-                          }}
-                          className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all text-sm flex items-center justify-center gap-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </button>
-                        <button 
-                          onClick={() => setSelectedEventForAnalytics(event)}
-                          className="flex-1 px-4 py-2.5 rounded-lg bg-[#8A2BE2] text-white hover:bg-[#7825d4] transition-all text-sm flex items-center justify-center gap-2"
-                        >
-                          <BarChart3 className="w-4 h-4" />
-                          Analytics
-                        </button>
-                      </div>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Calendar className="w-6 h-6 text-gray-400" />
                     </div>
+                    <p className="text-gray-900 font-medium mb-1">No published events</p>
+                    <p className="text-gray-500 text-sm">Create your first event to get started</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Growth Tips */}
-          <div className="bg-white border border-purple-200 rounded-lg p-6 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-6 h-6 text-[#8A2BE2]" />
-              </div>
-              <div>
-                <h3 className="text-gray-900 text-lg mb-3">Tips to Grow Your Audience</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#8A2BE2] mt-1">•</span>
-                    <span>Enable HD live streaming to attract more viewers and boost engagement</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#8A2BE2] mt-1">•</span>
-                    <span>Share your events on social media to reach a wider audience</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#8A2BE2] mt-1">•</span>
-                    <span>Offer early bird tickets and exclusive perks to build anticipation</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#8A2BE2] mt-1">•</span>
-                    <span>Engage with your followers through live chat and reactions during streams</span>
-                  </li>
-                </ul>
-              </div>
+                )
+              ) : (
+                draftEvents.length > 0 ? (
+                  draftEvents.map(event => (
+                    <div key={event.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all group opacity-80 hover:opacity-100">
+                      <div className="relative h-48">
+                        <ImageWithFallback
+                          src={event.coverImage}
+                          alt={event.title}
+                          className="w-full h-full object-cover grayscale"
+                        />
+                        <div className="absolute inset-0 bg-black/10"></div>
+                        <div className="absolute top-3 right-3">
+                          <button 
+                            onClick={() => onEditEvent?.(event)}
+                            className="bg-white p-2 rounded-lg text-gray-700 hover:text-[#8A2BE2] shadow-sm"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="absolute bottom-3 left-3">
+                          <span className="bg-gray-900/80 text-white text-xs px-2 py-1 rounded-md backdrop-blur-sm">
+                            Draft
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="text-gray-900 font-semibold mb-2">{event.title}</h3>
+                        <p className="text-sm text-gray-500 line-clamp-2">{event.description}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+                    <p className="text-gray-500">No draft events</p>
+                  </div>
+                )
+              )}
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Followers Modal */}
-        <UserListModal 
+      {/* Modals */}
+      {showSettings && (
+        <OrganizerSettingsModal onClose={() => setShowSettings(false)} />
+      )}
+
+      {selectedEventForAnalytics && (
+        <EventAnalyticsModal
+          event={selectedEventForAnalytics}
+          onClose={() => setSelectedEventForAnalytics(null)}
+        />
+      )}
+
+      {selectedHighlight && (
+        <HighlightViewerModal
+          highlight={selectedHighlight}
+          onClose={() => setSelectedHighlight(null)}
+        />
+      )}
+
+      {showShareModal && shareModalData && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          title={shareModalData.title}
+          text={shareModalData.text}
+          url={shareModalData.url || window.location.href}
+        />
+      )}
+      
+      {showFollowersModal && (
+        <UserListModal
           isOpen={showFollowersModal}
           onClose={() => setShowFollowersModal(false)}
           title="Followers"
           users={followersList}
           loading={loadingFollowers}
         />
-
-        {/* Event Analytics Modal */}
-        {selectedEventForAnalytics && (
-          <EventAnalyticsModal
-            event={selectedEventForAnalytics}
-            onClose={() => setSelectedEventForAnalytics(null)}
-          />
-        )}
-
-        {/* Highlight Viewer Modal */}
-        {selectedHighlight && (
-          <HighlightViewerModal
-            highlight={selectedHighlight}
-            onClose={() => setSelectedHighlight(null)}
-            onLike={handleLike}
-            onShare={handleShare}
-          />
-        )}
-
-        {/* Organizer Settings Modal */}
-        {showSettings && (
-          <OrganizerSettingsModal
-            onClose={() => setShowSettings(false)}
-          />
-        )}
-
-        {/* Share Modal */}
-        {shareModalData && (
-          <ShareModal
-            isOpen={showShareModal}
-            onClose={() => {
-              setShowShareModal(false);
-              setShareModalData(null);
-            }}
-            title={shareModalData.title}
-            text={shareModalData.text}
-            url={shareModalData.url}
-          />
-        )}
-      </div>
+      )}
     </>
   );
 }

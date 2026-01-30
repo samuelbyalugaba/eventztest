@@ -37,11 +37,11 @@ import {
   AtSign,
   Calendar
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { updateProfile, getProfile, checkUsernameUnique } from '../utils/supabase/api';
+import { updateProfile, getProfile, checkUsernameUnique, getOrganizerProfile, upsertOrganizerProfile } from '../utils/supabase/api';
 
 interface OrganizerSettingsModalProps {
   onClose: () => void;
@@ -102,6 +102,54 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
   });
 
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+      const file = event.target.files[0];
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('File must be an image');
+        return;
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setProfileData({ ...profileData, avatarUrl: publicUrl });
+      toast.success('Profile photo updated successfully');
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast.error(error.message || 'Error uploading avatar');
+    }
+  };
 
   if (loading) {
      // Optional: Add a loading state or just return null
@@ -112,10 +160,14 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const profile = await getProfile(user.id);
+          const [profile, organizerProfile] = await Promise.all([
+            getProfile(user.id),
+            getOrganizerProfile(user.id)
+          ]);
+
           if (profile) {
-            // Parse organizer type and subtype
-            let type = profile.organizer_type || '';
+            // Parse organizer type and subtype from organizer profile OR profile (legacy)
+            let type = organizerProfile?.organizer_type || profile.organizer_type || '';
             let subType = '';
             if (type.includes(' - ')) {
               const parts = type.split(' - ');
@@ -125,15 +177,15 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
             setProfileData({
               username: profile.username || '',
-              organizerName: profile.full_name || '',
+              organizerName: organizerProfile?.organizer_name || profile.full_name || '',
               organizerType: type,
               venueSubType: subType,
-              email: profile.contact_email || user.email || '',
-              phone: profile.phone || '',
-              location: profile.location || '',
-              bio: profile.bio || '',
-              website: profile.website || '',
-              avatarUrl: profile.avatar_url || '',
+              email: organizerProfile?.contact_email || profile.contact_email || user.email || '',
+              phone: organizerProfile?.phone || profile.phone || '',
+              location: organizerProfile?.location || profile.location || '',
+              bio: organizerProfile?.bio || profile.bio || '',
+              website: organizerProfile?.website || profile.website || '',
+              avatarUrl: organizerProfile?.avatar_url || profile.avatar_url || '',
               birthdate: profile.birthdate || '',
             });
 
@@ -153,10 +205,24 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
     fetchProfile();
   }, []);
 
-  const handleSaveProfile = async () => {
+    const handleSaveProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Validation: Check if sub-type is selected for types that require it
+      const typesRequiringSubType = [
+        'Venue', 
+        'Artist/Performer', 
+        'Organization/Institution', 
+        'Business/Corporate', 
+        'Sports Club/Fitness'
+      ];
+
+      if (typesRequiringSubType.includes(profileData.organizerType) && !profileData.venueSubType) {
+        toast.error(`Please select a specific type for ${profileData.organizerType}`);
+        return;
+      }
 
       // Check username uniqueness if changed
       const currentProfile = await getProfile(user.id);
@@ -172,16 +238,26 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         ? `${profileData.organizerType} - ${profileData.venueSubType}`
         : profileData.organizerType;
 
-      await updateProfile(user.id, {
-        username: profileData.username,
-        full_name: profileData.organizerName,
+      // Save organizer profile to separate table
+      await upsertOrganizerProfile({
+        id: user.id,
+        organizer_name: profileData.organizerName,
         organizer_type: finalOrganizerType,
+        avatar_url: profileData.avatarUrl,
+        bio: profileData.bio,
+        location: profileData.location,
+        website: profileData.website,
         contact_email: profileData.email,
         phone: profileData.phone,
-        location: profileData.location,
-        bio: profileData.bio,
-        website: profileData.website,
-        birthdate: profileData.birthdate,
+      });
+
+      // Update main profile - ONLY update username and ensure is_organizer is true
+      // DO NOT overwrite full_name or other user fields with organizer data
+      await updateProfile(user.id, {
+        username: profileData.username,
+        is_organizer: true,
+        organizer_type: finalOrganizerType,
+        // We do NOT update full_name, bio, location etc here to keep User Profile separate
       });
       toast.success('Profile updated successfully! ✅');
     } catch (error) {
@@ -237,6 +313,19 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
   const handleSavePayment = async () => {
     try {
+      // Validate payment info
+      if (paymentData.paymentMethod === 'bank') {
+        if (!paymentData.bankName || !paymentData.accountNumber || !paymentData.accountName) {
+          toast.error('Please fill in all bank details');
+          return;
+        }
+      } else if (paymentData.paymentMethod === 'mobile') {
+        if (!paymentData.mobileMoney) {
+          toast.error('Please enter your mobile money number');
+          return;
+        }
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -316,15 +405,28 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           className="w-full h-full" 
                         />
                       </div>
-                      <button className="absolute bottom-0 right-0 w-7 h-7 bg-[#8A2BE2] rounded-full flex items-center justify-center text-white hover:bg-[#7825d4]">
+                      <button 
+                        onClick={handleAvatarClick}
+                        className="absolute bottom-0 right-0 w-7 h-7 bg-[#8A2BE2] rounded-full flex items-center justify-center text-white hover:bg-[#7825d4]"
+                      >
                         <Camera className="w-4 h-4" />
                       </button>
                     </div>
                     <div>
                       <p className="text-gray-600 text-sm mb-3">Upload a new profile photo</p>
-                      <button className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200">
+                      <button 
+                        onClick={handleAvatarClick}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+                      >
                         Change Photo
                       </button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleAvatarChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
                     </div>
                   </div>
                 </div>
@@ -892,6 +994,72 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                       </div>
                     );
                   })}
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h4 className="text-gray-900 font-medium mb-4">Advanced Stream Configuration</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-2">Ingest Server</label>
+                      <div className="relative">
+                        <select
+                          value={streamingSettings.ingestServer || 'rtmp://live.eventz.com/app'}
+                          onChange={(e) => setStreamingSettings({ ...streamingSettings, ingestServer: e.target.value })}
+                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] bg-white"
+                        >
+                          <option value="rtmp://live.eventz.com/app">Primary (US-East)</option>
+                          <option value="rtmp://live-eu.eventz.com/app">Backup (EU-West)</option>
+                          <option value="rtmp://live-asia.eventz.com/app">Backup (Asia-Pacific)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-2">Stream Key</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          value={streamingSettings.streamKey || ''}
+                          readOnly
+                          className="flex-1 px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-500 font-mono"
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(streamingSettings.streamKey || '');
+                            toast.success('Stream key copied!');
+                          }}
+                          className="px-4 py-2.5 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 font-medium"
+                        >
+                          Copy
+                        </button>
+                        <button
+                          onClick={() => {
+                             const newKey = 'live_sk_' + Math.random().toString(36).substring(2, 15);
+                             setStreamingSettings({ ...streamingSettings, streamKey: newKey });
+                             toast.success('Stream key reset!');
+                          }}
+                          className="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 font-medium"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1.5">Keep this key secret. Anyone with it can stream to your channel.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-2">Max Bitrate</label>
+                      <select
+                        value={streamingSettings.maxBitrate || '6000'}
+                        onChange={(e) => setStreamingSettings({ ...streamingSettings, maxBitrate: e.target.value })}
+                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] bg-white"
+                      >
+                        <option value="4000">4000 kbps (Standard)</option>
+                        <option value="6000">6000 kbps (High)</option>
+                        <option value="8000">8000 kbps (Ultra)</option>
+                        <option value="auto">Auto-negotiate</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-3">

@@ -215,16 +215,12 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
             </div>
           </div>
 
-          {/* Views Chart */}
+          {/* Activity Chart */}
           <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-6">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-gray-900 text-lg">Views Over Time</h3>
-                <p className="text-gray-500 text-sm">Last 7 days</p>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-600 rounded-full text-sm">
-                <TrendingUp className="w-4 h-4" />
-                <span>+{analytics.views.change}%</span>
+                <h3 className="text-gray-900 text-lg">Activity Over Time</h3>
+                <p className="text-gray-500 text-sm">Combined interactions (Tickets + Interested + Shares)</p>
               </div>
             </div>
             
@@ -238,8 +234,8 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
                 return (
                   <div key={index} className="flex-1 flex flex-col items-center gap-2">
                     <div className="w-full bg-gradient-to-t from-purple-600 to-pink-600 rounded-t-lg hover:from-purple-700 hover:to-pink-700 transition-all relative group cursor-pointer" style={{ height: `${heightPercent}%` }}>
-                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {value} views
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                        {value} interactions
                       </div>
                     </div>
                     <span className="text-xs text-gray-500">{days[index]}</span>

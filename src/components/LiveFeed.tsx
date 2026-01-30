@@ -321,12 +321,13 @@ export function LiveFeed() {
         const profile = await getProfile(user.id);
         const currentPreferences = profile?.preferences || {};
         
-        await updateProfile(user.id, { 
-          preferences: { 
-            ...currentPreferences,
-            recentCountries: updated 
-          } 
-        });
+        // Commented out to avoid PGRST204 error (missing preferences column)
+        // await updateProfile(user.id, { 
+        //   preferences: { 
+        //     ...currentPreferences,
+        //     recentCountries: updated 
+        //   } 
+        // });
       } else {
         localStorage.setItem('eventz-recent-countries', JSON.stringify(updated));
       }
