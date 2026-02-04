@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, Search, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX, PlusCircle, Bell } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, PlusCircle, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getFollowedUserIds, getMutualFollows, Post as ApiPost, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, getFollowedUserIds, Post as ApiPost, incrementPostView } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
 import { Conversation } from '../types';
 
@@ -31,6 +31,8 @@ interface HighlightClip {
   videoUrl?: string;
   views: number;
 }
+
+type FilterTab = 'all' | 'organizers' | 'trending' | 'following';
 
 interface Post {
   id: number;
@@ -89,7 +91,7 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage, onMarkAsRead, onlineUsers = [], onDeleteConversation, currentUser: propCurrentUser, isOrganizer = false, onCreateEvent }: FeedProps) {
+export function Feed({ conversations: globalConversations, onStartConversation, onMarkAsRead, onlineUsers = [], onDeleteConversation, currentUser: propCurrentUser, isOrganizer = false, onCreateEvent }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [currentUser, setCurrentUser] = useState<any>(propCurrentUser || null);
@@ -98,13 +100,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [showMessages, setShowMessages] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
-  const [messageText, setMessageText] = useState('');
   const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
-  const [messageSearch, setMessageSearch] = useState('');
+  // const [messageSearch, setMessageSearch] = useState('');
   const [likeAnimation, setLikeAnimation] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
-  const [lastTap, setLastTap] = useState<number>(0);
   const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
   const [commentTexts, setCommentTexts] = useState<{ [key: number]: string }>({});
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
@@ -117,7 +117,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [rewindAnimation, setRewindAnimation] = useState<{ show: boolean; direction: 'left' | 'right' } | null>(null);
   const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [imageTouchStart, setImageTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [showChatMenu, setShowChatMenu] = useState(false);
+  // const [showChatMenu, setShowChatMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
@@ -364,43 +364,13 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   };
 
-  /*
-  const openPostDetail = (post: Post) => {
-    setSelectedPost(post);
-  };
-  */
+  // handleOpenUserProfile removed
 
   const closePostDetail = () => {
     setSelectedPost(null);
   };
 
-  const handleDoubleTap = (post: Post, e: React.MouseEvent) => {
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - lastTap;
-    
-    if (tapLength < 300 && tapLength > 0) {
-      // Double tap detected!
-      e.stopPropagation();
-      
-      // Only like if not already liked
-      if (!post.isLiked) {
-        toggleLike(post.id, e);
-      } else {
-        // If already liked, just show the animation again without API call
-         setLikeAnimation({
-          show: true,
-          x: e.clientX,
-          y: e.clientY,
-        });
-        
-        setTimeout(() => {
-          setLikeAnimation({ show: false, x: 0, y: 0 });
-        }, 1000);
-      }
-    }
-    
-    setLastTap(currentTime);
-  };
+  // handleDoubleTap removed
 
   const toggleComments = async (postId: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -481,44 +451,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   };
 
-  const handleSendMessage = () => {
-    if (!messageText.trim() || !activeConversation) return;
-
-    // Update the global state (which will sync back to us)
-    onSendMessage(activeConversation.id, messageText);
-
-    // Clear the input field
-    setMessageText('');
-  };
-
-  const handleDeleteChat = async () => {
-    if (!activeConversation) return;
-    
-    try {
-      await deleteConversation(activeConversation.id);
-      setActiveConversation(null);
-      setShowMessages(false);
-      toast.success('Chat deleted');
-    } catch (error) {
-      console.error('Error deleting conversation:', error);
-      toast.error('Failed to delete chat');
-    }
-  };
-
-  const handleMarkAsUnread = async () => {
-    if (!activeConversation || !currentUser) return;
-    
-    try {
-      await markConversationAsUnread(activeConversation.id, currentUser.id);
-      setActiveConversation(null);
-      setShowMessages(false);
-      toast.success('Marked as unread');
-    } catch (error) {
-      console.error('Error marking as unread:', error);
-      toast.error('Failed to mark as unread');
-    }
-  };
-
   const handleStartConversationLocal = async (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
@@ -537,7 +469,18 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
 
   const handleOpenUserProfile = (user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setSelectedUserProfile(user);
+    
+    // Map post user to profile modal format
+    const profileUser = {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      avatar: user.avatar,
+      verified: user.verified,
+      isOrganizer: user.isOrganizer
+    };
+    
+    setSelectedUserProfile(profileUser);
   };
 
 
@@ -645,7 +588,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             <div
           key={post.id}
           className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer"
-          onClick={() => openPostDetail(post)}
+          onClick={() => setSelectedPost(post)}
           style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}
         >
               {/* Unique Header with Actions on Right */}
@@ -861,11 +804,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                           className="w-full aspect-[16/10] object-cover pointer-events-none"
                         />
                       )}
-                      
-                      {/* Image Counter Badge */}
-                      <div className="absolute top-3 left-3 bg-[#8A2BE2]/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-medium pointer-events-none">
-                        {(carouselIndexes[post.id] || 0) + 1} / {post.content.images.length}
-                      </div>
                     </div>
 
                     {/* Navigation Arrows - Desktop Only */}
@@ -1115,7 +1053,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                     src={selectedPost.user.avatar}
                     name={selectedPost.user.name}
                     className="w-14 h-14 rounded-2xl object-cover ring-4 ring-purple-100 cursor-pointer hover:ring-purple-300 transition-all"
-                    onClick={(e) => handleOpenUserProfile(selectedPost.user, e)}
+                    onClick={(e) => {
+                      if (e) e.stopPropagation();
+                      handleOpenUserProfile(selectedPost.user, e);
+                    }}
                   />
                   <div>
                     <div className="flex items-center gap-2 mb-1">

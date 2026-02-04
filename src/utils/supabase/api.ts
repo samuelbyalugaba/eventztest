@@ -530,7 +530,10 @@ export const getEvents = async () => {
     .eq('status', 'published')
     .order('date', { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching events:', error);
+    throw error;
+  }
   return data;
 };
 
@@ -547,7 +550,10 @@ export const getOrganizerEvents = async (organizerId: string) => {
     .eq('organizer_id', organizerId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching organizer events:', error);
+    throw error;
+  }
   
   return data.map((event: any) => ({
     ...event,
@@ -847,7 +853,10 @@ export const getEventById = async (id: number) => {
     .eq('id', id)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching event by id:', error);
+    throw error;
+  }
   return data;
 };
 
@@ -1128,7 +1137,6 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
     .select(`
       *,
       user:profiles(*),
-      organizer_profile:organizer_profiles(*),
       event:events(*),
       likes:post_likes(count),
       comments:post_comments(count)
@@ -1145,29 +1153,59 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
 
   const { data: posts, error } = await query;
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching posts:', error);
+    throw error;
+  }
+
+  // Manually fetch organizer profiles for posts made as organizer
+  const organizerUserIds = Array.from(new Set(
+    posts
+      .filter((p: any) => p.posted_as_organizer)
+      .map((p: any) => p.user_id)
+  ));
+
+  let organizerProfilesMap: Record<string, any> = {};
+  
+  if (organizerUserIds.length > 0) {
+    const { data: orgProfiles } = await supabase
+      .from('organizer_profiles')
+      .select('*')
+      .in('id', organizerUserIds);
+      
+    if (orgProfiles) {
+      orgProfiles.forEach((op: any) => {
+        organizerProfilesMap[op.id] = op;
+      });
+    }
+  }
 
   let likedPostIds = new Set<number>();
   let savedPostIds = new Set<number>();
 
   if (options.currentUserId) {
-    const { data: likes } = await supabase
-      .from('post_likes')
-      .select('post_id')
-      .eq('user_id', options.currentUserId);
-    
-    if (likes) likes.forEach(l => likedPostIds.add(l.post_id));
+    try {
+      const { data: likes } = await supabase
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', options.currentUserId);
+      
+      if (likes) likes.forEach(l => likedPostIds.add(l.post_id));
 
-    const { data: saved } = await supabase
-      .from('saved_posts')
-      .select('post_id')
-      .eq('user_id', options.currentUserId);
+      const { data: saved } = await supabase
+        .from('saved_posts')
+        .select('post_id')
+        .eq('user_id', options.currentUserId);
 
-    if (saved) saved.forEach(s => savedPostIds.add(s.post_id));
+      if (saved) saved.forEach(s => savedPostIds.add(s.post_id));
+    } catch (e) {
+      console.warn('Error fetching user interactions:', e);
+    }
   }
 
-  return posts.map(p => ({
+  return posts.map((p: any) => ({
     ...p,
+    organizer_profile: organizerProfilesMap[p.user_id] || null,
     likes_count: p.likes?.[0]?.count || 0,
     comments_count: p.comments?.[0]?.count || 0,
     is_liked: likedPostIds.has(p.id),

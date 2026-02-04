@@ -4,7 +4,7 @@ interface UserAvatarProps {
   src?: string | null;
   name: string;
   className?: string;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent) => void;
 }
 
 export function UserAvatar({ src, name, className = '', onClick }: UserAvatarProps) {
