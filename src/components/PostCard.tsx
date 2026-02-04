@@ -229,21 +229,16 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                   </svg>
                 </div>
               )}
-              {post.user.isOrganizer && (
-                <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide">
-                  Organizer
-                </span>
-              )}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
-               {post.user.username && post.user.username !== '@unknown' && post.user.username !== 'unknown' ? (
-                  <span className="font-medium text-gray-500">@{post.user.username.replace(/^@/, '')}</span>
-               ) : (
-                  <span className="font-medium text-gray-500">@{post.user.name.replace(/\s+/g, '').toLowerCase()}</span>
+               {post.user.isOrganizer && (
+                  <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                    Organizer
+                  </span>
                )}
                {post.event && (
                 <>
-                  {post.user.username && post.user.username !== '@unknown' && <span>•</span>}
+                  {post.user.isOrganizer && <span>•</span>}
                   <span className="flex items-center gap-0.5 text-purple-600">
                     <MapPin className="w-3 h-3" />
                     {post.event.location.split(',')[0]}
