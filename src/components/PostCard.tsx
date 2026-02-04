@@ -278,17 +278,17 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       </div>
 
       {/* 3. POST CONTENT AREA - MEDIA */}
-      <div className="relative bg-black/5 aspect-[4/5] sm:aspect-square md:aspect-[4/3] overflow-hidden group">
+      <div className="relative bg-black/5 overflow-hidden group">
         <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/5"
+          className="relative w-full flex items-center justify-center bg-black/5"
           onDoubleClick={handleDoubleTap}
         >
           {isCurrentMediaVideo ? (
-            <div className="relative w-full h-full bg-black">
+            <div className="relative w-full bg-black">
               <video
                 ref={videoRef}
                 src={currentMedia}
-                className="w-full h-full object-contain"
+                className="w-full h-auto max-h-[80vh] object-contain"
                 loop
                 muted={isMuted}
                 playsInline
@@ -324,7 +324,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             <ImageWithFallback
               src={currentMedia}
               alt="Post content"
-              className="w-full h-full object-contain bg-black/5"
+              className="w-full h-auto max-h-[80vh] object-contain bg-black/5"
               fallbackType="image"
             />
           )}
