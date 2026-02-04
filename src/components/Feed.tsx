@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, Search, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, Search, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX, PlusCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getFollowedUserIds, getMutualFollows, Post as ApiPost, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
