@@ -5,7 +5,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { 
   Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, 
   Play, Volume2, VolumeX, Eye, MapPin, AlertCircle, UserPlus,
-  ChevronLeft, ChevronRight, Send
+  ChevronLeft, ChevronRight, Send, ThumbsUp
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -220,23 +220,30 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                 className="text-gray-900 font-bold text-sm cursor-pointer hover:text-purple-600 transition-colors"
                 onClick={() => onProfileClick(post.user)}
               >
-                {post.user.username || post.user.name}
+                {post.user.name}
               </span>
               {post.user.verified && (
-                <div className="bg-blue-500 rounded-full p-0.5">
+                <div className="bg-blue-500 rounded-full p-0.5" title="Verified">
                   <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                   </svg>
                 </div>
               )}
+              {post.user.isOrganizer && (
+                <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                  Organizer
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <span className="font-medium text-gray-600">{post.user.name}</span>
-              <span>•</span>
-              <span>{post.timestamp}</span>
-              {post.event && (
+               {post.user.username && post.user.username !== '@unknown' && post.user.username !== 'unknown' ? (
+                  <span className="font-medium text-gray-500">@{post.user.username.replace(/^@/, '')}</span>
+               ) : (
+                  <span className="font-medium text-gray-500">@{post.user.name.replace(/\s+/g, '').toLowerCase()}</span>
+               )}
+               {post.event && (
                 <>
-                  <span>•</span>
+                  {post.user.username && post.user.username !== '@unknown' && <span>•</span>}
                   <span className="flex items-center gap-0.5 text-purple-600">
                     <MapPin className="w-3 h-3" />
                     {post.event.location.split(',')[0]}
@@ -247,46 +254,27 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
           </div>
         </div>
 
-        {onFollow && currentUser && post.user.id !== currentUser.id && !isFollowed && (
-          <button
-            onClick={(e) => {
-               e.stopPropagation();
-               onFollow(post.user.id);
-            }}
-            className="ml-auto mr-2 px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors"
-          >
-            Follow
-          </button>
-        )}
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button 
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors active:scale-90"
-              aria-label="More options"
+        <div className="flex items-center gap-2">
+          {onFollow && currentUser && post.user.id !== currentUser.id && !isFollowed && (
+            <button
+              onClick={(e) => {
+                 e.stopPropagation();
+                 onFollow(post.user.id);
+              }}
+              className="px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors"
             >
-              <MoreHorizontal className="w-5 h-5" />
+              Follow
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-xl">
-            <DropdownMenuItem onClick={handleSave} className="cursor-pointer">
-              <Bookmark className="w-4 h-4 mr-2" />
-              {isSaved ? 'Unsave Post' : 'Save Post'}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onShare(post)} className="cursor-pointer">
-              <Share2 className="w-4 h-4 mr-2" />
-              Share Post
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onProfileClick(post.user)} className="cursor-pointer">
-              <Eye className="w-4 h-4 mr-2" />
-              View Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600 cursor-pointer">
-              <AlertCircle className="w-4 h-4 mr-2" />
-              Report
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+
+          <button 
+            onClick={handleSave}
+            className={`p-2 rounded-full transition-colors active:scale-75 ${isSaved ? 'text-purple-600 bg-purple-50' : 'text-gray-400 hover:bg-gray-50'}`}
+            aria-label={isSaved ? "Unsave post" : "Save post"}
+          >
+            <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-purple-600' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* 3. POST CONTENT AREA - MEDIA */}
@@ -336,15 +324,15 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             <ImageWithFallback
               src={currentMedia}
               alt="Post content"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-black/5"
               fallbackType="image"
             />
           )}
 
-          {/* Double Tap Heart Animation */}
+          {/* Double Tap ThumbsUp Animation */}
           {showLikeAnimation && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 animate-in zoom-in-50 duration-300">
-              <Heart className="w-24 h-24 text-white fill-white drop-shadow-xl animate-bounce" />
+              <ThumbsUp className="w-24 h-24 text-purple-600 fill-purple-600 drop-shadow-xl animate-bounce" />
             </div>
           )}
         </div>
@@ -391,7 +379,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             aria-label={isLiked ? "Unlike post" : "Like post"}
           >
             <div className={`p-2 rounded-full transition-colors active:scale-75 ${isLiked ? 'bg-purple-50 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}>
-              <Heart className={`w-6 h-6 transition-transform group-hover:scale-110 ${isLiked ? 'fill-purple-600' : ''}`} />
+              <ThumbsUp className={`w-6 h-6 transition-transform group-hover:scale-110 ${isLiked ? 'fill-purple-600' : ''}`} />
             </div>
             {likesCount > 0 && (
               <span className={`font-semibold text-sm ${isLiked ? 'text-purple-600' : 'text-gray-700'}`}>
@@ -502,14 +490,14 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                {post.views >= 1000 ? `${(post.views / 1000).toFixed(1)}k` : post.views} views
              </div>
           )}
-          <button 
-            onClick={handleSave}
-            className={`p-2 rounded-full transition-colors active:scale-75 ${isSaved ? 'text-purple-600 bg-purple-50' : 'text-gray-700 hover:bg-gray-100'}`}
-            aria-label={isSaved ? "Unsave post" : "Save post"}
-          >
-            <Bookmark className={`w-6 h-6 ${isSaved ? 'fill-purple-600' : ''}`} />
-          </button>
         </div>
+      </div>
+      
+      {/* 5. TIMESTAMP BOTTOM */}
+      <div className="px-4 pb-4">
+        <span className="text-xs text-gray-400 uppercase tracking-wide">
+          {post.timestamp}
+        </span>
       </div>
 
       {/* 3. POST CONTENT AREA - TEXT */}

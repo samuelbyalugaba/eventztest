@@ -978,7 +978,18 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       {showNotifications && (
         <div className="fixed inset-0 z-[60] flex flex-col bg-white md:max-w-md md:right-0 md:left-auto md:border-l border-gray-100 shadow-2xl animate-in slide-in-from-right-full duration-300">
           <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
-            <h2 className="text-lg font-bold text-gray-900">Notifications</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold text-gray-900">Notifications</h2>
+              <button 
+                className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 px-2 py-1 rounded-full transition-colors"
+                onClick={() => {
+                  setNotifications(notifications.map(n => ({ ...n, read: true })));
+                  toast.success('All notifications marked as read');
+                }}
+              >
+                Mark all as read
+              </button>
+            </div>
             <button 
               onClick={() => setShowNotifications(false)}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
