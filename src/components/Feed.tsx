@@ -610,9 +610,9 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                           {post.user.name}
                         </span>
                         {post.user.isOrganizerPage && (
-                          <div className="flex-shrink-0 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center" title="Event Organizer Page">
-                            <Star className="w-2.5 h-2.5 text-white fill-white" />
-                          </div>
+                          <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            Organizer
+                          </span>
                         )}
                         {post.user.verified && !post.user.isOrganizerPage && (
                           <div className="flex-shrink-0 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
@@ -622,9 +622,9 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                           </div>
                         )}
                         {post.user.isOrganizer && !post.user.isOrganizerPage && (
-                          <div className="flex-shrink-0 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center" title="Event Organizer">
-                            <Star className="w-2.5 h-2.5 text-white fill-white" />
-                          </div>
+                          <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            Organizer
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
@@ -1066,12 +1066,22 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                       >
                         {selectedPost.user.name}
                       </span>
-                      {selectedPost.user.verified && (
+                      {selectedPost.user.isOrganizerPage && (
+                        <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                          Organizer
+                        </span>
+                      )}
+                      {selectedPost.user.verified && !selectedPost.user.isOrganizerPage && (
                         <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                           <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                           </svg>
                         </div>
+                      )}
+                      {selectedPost.user.isOrganizer && !selectedPost.user.isOrganizerPage && (
+                        <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                          Organizer
+                        </span>
                       )}
                     </div>
                     <span className="text-gray-500 text-sm">{selectedPost.timestamp}</span>
