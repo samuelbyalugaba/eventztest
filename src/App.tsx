@@ -497,6 +497,7 @@ export default function App() {
   const handleCreateEvent = () => {
     setEditingEvent(null);
     setOrganizerView('createEvent');
+    setActiveTab('create');
   };
 
   const handleEditEvent = (event: Event) => {
@@ -545,7 +546,19 @@ export default function App() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto pb-20">
         {activeTab === 'event' && <EventDetails conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} />}
-        {activeTab === 'feed' && <Feed conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} onMarkAsRead={handleMarkAsRead} onlineUsers={onlineFriends} onDeleteConversation={handleDeleteConversation} />}
+        {activeTab === 'feed' && <Feed 
+          conversations={conversations} 
+          onStartConversation={handleStartConversation} 
+          onSendMessage={handleSendMessage} 
+          onMarkAsRead={handleMarkAsRead} 
+          onlineUsers={onlineFriends} 
+          onDeleteConversation={handleDeleteConversation} 
+          currentUser={currentUser}
+          isOrganizer={isOrganizer}
+          onCreateEvent={() => {
+            handleCreateEvent();
+          }}
+        />}
         {activeTab === 'live' && <LiveFeed />}
         {activeTab === 'create' && (
           !isOrganizer ? (

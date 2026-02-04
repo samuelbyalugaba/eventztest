@@ -90,6 +90,7 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, isOrganizer = 
         image_urls: mediaUrls,
         video_url: videoUrl,
         hashtags: [], // Parse hashtags from content if needed
+        posted_as_organizer: postAsOrganizer
       });
 
       toast.success('Post created successfully! 🎉');

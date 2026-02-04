@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, Search, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX, Bell } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, Search, X, Send, Eye, ArrowLeft, Calendar, Sparkles, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, UserPlus, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Mail, Trash2, Film, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getFollowedUserIds, getMutualFollows, Post as ApiPost, incrementPostView, incrementUserMediaView, getNotifications } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, deleteConversation, markConversationAsUnread, getFollowedUserIds, getMutualFollows, Post as ApiPost, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
 import { Conversation } from '../types';
 
@@ -12,7 +12,6 @@ import { ChatList } from './ChatList';
 import { ChatDetail } from './ChatDetail';
 import { UserProfileModal } from './UserProfileModal';
 import { ShareModal } from './ShareModal';
-import { NotificationsModal } from './NotificationsModal';
 
 interface Comment {
   id: number;
@@ -80,6 +79,9 @@ interface FeedProps {
   onMarkAsRead?: (conversationId: number) => void;
   onlineUsers?: { id: string; name: string; avatar: string; username: string }[];
   onDeleteConversation?: (conversationId: number) => void;
+  currentUser?: any;
+  isOrganizer?: boolean;
+  onCreateEvent?: () => void;
 }
 
 const isVideo = (url?: string) => {
@@ -87,10 +89,10 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage, onMarkAsRead, onlineUsers = [], onDeleteConversation }: FeedProps) {
+export function Feed({ conversations: globalConversations, onStartConversation, onSendMessage, onMarkAsRead, onlineUsers = [], onDeleteConversation, currentUser: propCurrentUser, isOrganizer = false, onCreateEvent }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(propCurrentUser || null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
@@ -117,8 +119,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [imageTouchStart, setImageTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   useEffect(() => {
     if (selectedPost) {
@@ -148,13 +148,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           try {
             const following = await getFollowedUserIds(user.id);
             setFollowingIds(new Set(following));
-
-            // Load notifications
-            getNotifications(user.id).then(data => {
-              if (data) {
-                setUnreadNotificationsCount(data.filter(n => !n.read).length);
-              }
-            });
           } catch (e) {
             console.error('Error loading following:', e);
           }
@@ -162,49 +155,58 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         
         const data = await getPosts({ currentUserId: user?.id });
         if (data && data.length > 0) {
-            const mappedPosts: Post[] = data.map((p: ApiPost) => ({
-            id: p.id,
-            user: {
-              id: p.user?.id || 'unknown',
-              name: p.user?.full_name || p.user?.username || 'Unknown User',
-              username: p.user?.username || '@unknown',
-                avatar: p.user?.avatar_url || '',
-              verified: p.user?.verified || false,
-              isOrganizer: p.user?.is_organizer || false,
-            },
-            event: p.event ? {
-              id: p.event.id,
-              name: p.event.title,
-              date: p.event.date,
-              time: p.event.time,
-              location: p.event.location,
-              image: p.event.image_url,
-              price: p.event.price_range,
-            } : undefined,
-            content: {
-              text: p.content,
-              images: p.image_urls,
-              image: p.image_urls?.[0],
-              hashtags: p.hashtags,
-            },
-            timestamp: (() => { try { const d = new Date(p.created_at); return isNaN(d.getTime()) ? 'Recently' : d.toLocaleDateString(); } catch { return 'Recently'; } })(),
-            likes: p.likes_count || 0,
-            comments: [], // Will load on expand
-            comments_count: p.comments_count || 0,
-            shares: 0,
-            views: p.views || 0,
-            isLiked: p.is_liked || false,
-            isSaved: p.is_saved || false,
-            isHighlight: !!p.video_url,
-            highlights: p.video_url ? [{
-              id: p.id,
-              thumbnail: (p.image_urls?.find(url => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', // Use first non-video image or fallback
-              duration: p.duration || '',
-              title: p.content || 'Video Highlight',
-              videoUrl: p.video_url,
-              views: p.views || 0,
-            }] : undefined,
-          }));
+            const mappedPosts: Post[] = data.map((p: ApiPost) => {
+              // Determine if we should show organizer profile or user profile
+              // If posted_as_organizer is true and organizer_profile exists, use it.
+              const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
+              const displayName = isOrganizerPage ? p.organizer_profile!.organizer_name : (p.user?.full_name || p.user?.username || 'Unknown User');
+              const avatarUrl = isOrganizerPage ? p.organizer_profile!.avatar_url : p.user?.avatar_url;
+              
+              return {
+                id: p.id,
+                user: {
+                  id: p.user?.id || 'unknown',
+                  name: displayName || 'Unknown',
+                  username: p.user?.username || '@unknown',
+                  avatar: avatarUrl || '',
+                  verified: p.user?.verified || false,
+                  isOrganizer: p.user?.is_organizer || false,
+                  isOrganizerPage: isOrganizerPage
+                },
+                event: p.event ? {
+                  id: p.event.id,
+                  name: p.event.title,
+                  date: p.event.date,
+                  time: p.event.time,
+                  location: p.event.location,
+                  image: p.event.image_url,
+                  price: p.event.price_range,
+                } : undefined,
+                content: {
+                  text: p.content,
+                  images: p.image_urls,
+                  image: p.image_urls?.[0],
+                  hashtags: p.hashtags,
+                },
+                timestamp: (() => { try { const d = new Date(p.created_at); return isNaN(d.getTime()) ? 'Recently' : d.toLocaleDateString(); } catch { return 'Recently'; } })(),
+                likes: p.likes_count || 0,
+                comments: [], // Will load on expand
+                comments_count: p.comments_count || 0,
+                shares: 0,
+                views: p.views || 0,
+                isLiked: p.is_liked || false,
+                isSaved: p.is_saved || false,
+                isHighlight: !!p.video_url,
+                highlights: p.video_url ? [{
+                  id: p.id,
+                  thumbnail: (p.image_urls?.find(url => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', // Use first non-video image or fallback
+                  duration: p.duration || '',
+                  title: p.content || 'Video Highlight',
+                  videoUrl: p.video_url,
+                  views: p.views || 0,
+                }] : undefined,
+              };
+          });
           setPosts(mappedPosts);
         } else {
           setPosts([]);
@@ -563,15 +565,15 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors relative"
-                  onClick={() => setShowNotifications(true)}
-                >
-                  <Bell className="w-5 h-5 text-gray-700" />
-                  {unreadNotificationsCount > 0 && (
-                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
-                  )}
-                </button>
+                {isOrganizer && onCreateEvent && (
+                  <button
+                    onClick={onCreateEvent}
+                    className="mr-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-xl hover:shadow-lg transition-all flex items-center gap-1.5 shadow-purple-200"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    CREATE
+                  </button>
+                )}
                 <button
                   className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors relative"
                   onClick={() => setShowMessages(!showMessages)}
@@ -1824,11 +1826,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         />
       )}
       {/* Notifications Modal */}
-      <NotificationsModal
-        isOpen={showNotifications}
-        onClose={() => setShowNotifications(false)}
-        userId={currentUser?.id}
-      />
     </>
   );
 }

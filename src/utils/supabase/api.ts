@@ -160,11 +160,13 @@ export type Post = {
   hashtags: string[];
   created_at: string;
   user?: Profile;
+  organizer_profile?: OrganizerProfile;
   event?: Event;
   likes_count?: number;
   comments_count?: number;
   is_liked?: boolean;
   is_saved?: boolean;
+  posted_as_organizer?: boolean;
 };
 
 // --- PROFILES ---
@@ -219,74 +221,6 @@ export const upsertOrganizerProfile = async (profile: Partial<OrganizerProfile> 
 
   if (error) throw error;
   return data as OrganizerProfile;
-};
-
-export type Notification = {
-  id: number;
-  user_id: string;
-  actor_id: string;
-  actor?: Profile;
-  type: string;
-  title: string;
-  message: string;
-  read: boolean;
-  created_at: string;
-  data?: any;
-};
-
-// --- NOTIFICATIONS ---
-
-
-
-export const getNotifications = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('notifications')
-    .select(`
-      *,
-      actor:profiles!notifications_actor_id_fkey(*)
-    `)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return data as Notification[];
-};
-
-export const markNotificationAsRead = async (notificationId: number) => {
-  const { error } = await supabase
-    .from('notifications')
-    .update({ read: true })
-    .eq('id', notificationId);
-
-  if (error) throw error;
-};
-
-export const markAllNotificationsAsRead = async (userId: string) => {
-  const { error } = await supabase
-    .from('notifications')
-    .update({ read: true })
-    .eq('user_id', userId)
-    .eq('read', false);
-
-  if (error) throw error;
-};
-
-export const subscribeToNotifications = (userId: string, callback: (payload: any) => void) => {
-  return supabase
-    .channel(`notifications:${userId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`
-      },
-      (payload) => {
-        callback(payload);
-      }
-    )
-    .subscribe();
 };
 
 // --- FOLLOWS ---
@@ -482,17 +416,6 @@ export const followUser = async (followerId: string, followingId: string) => {
 
   // Ignore unique constraint violation (already following)
   if (error && error.code !== '23505') throw error;
-
-  if (!error) {
-    await supabase.from('notifications').insert({
-      user_id: followingId,
-      actor_id: followerId,
-      type: 'follow',
-      title: 'New Follower',
-      message: 'started following you',
-      read: false
-    });
-  }
 };
 
 export const unfollowUser = async (followerId: string, followingId: string) => {
@@ -1205,6 +1128,7 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
     .select(`
       *,
       user:profiles(*),
+      organizer_profile:organizer_profiles(*),
       event:events(*),
       likes:post_likes(count),
       comments:post_comments(count)
@@ -1277,20 +1201,6 @@ export const toggleLikePost = async (postId: number, userId: string) => {
   } else {
     const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: userId });
     if (error) throw error;
-
-    // Notify post owner
-    const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single();
-    if (post && post.user_id !== userId) {
-      await supabase.from('notifications').insert({
-        user_id: post.user_id,
-        actor_id: userId,
-        type: 'like',
-        title: 'New Like',
-        message: 'liked your post',
-        read: false
-      });
-    }
-
     return true;
   }
 };
@@ -1339,19 +1249,6 @@ export const createPostComment = async (postId: number, userId: string, text: st
     .single();
 
   if (error) throw error;
-
-  // Notify post owner
-  const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single();
-  if (post && post.user_id !== userId) {
-    await supabase.from('notifications').insert({
-      user_id: post.user_id,
-      actor_id: userId,
-      type: 'comment',
-      title: 'New Comment',
-      message: 'commented on your post',
-      read: false
-    });
-  }
 
   return data;
 };
