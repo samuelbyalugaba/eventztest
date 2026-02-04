@@ -390,11 +390,11 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             className="group flex items-center gap-1.5 transition-colors focus:outline-none"
             aria-label={isLiked ? "Unlike post" : "Like post"}
           >
-            <div className={`p-2 rounded-full transition-colors active:scale-75 ${isLiked ? 'bg-pink-50 text-pink-500' : 'hover:bg-gray-100 text-gray-700'}`}>
-              <Heart className={`w-6 h-6 transition-transform group-hover:scale-110 ${isLiked ? 'fill-pink-500' : ''}`} />
+            <div className={`p-2 rounded-full transition-colors active:scale-75 ${isLiked ? 'bg-purple-50 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}>
+              <Heart className={`w-6 h-6 transition-transform group-hover:scale-110 ${isLiked ? 'fill-purple-600' : ''}`} />
             </div>
             {likesCount > 0 && (
-              <span className={`font-semibold text-sm ${isLiked ? 'text-pink-600' : 'text-gray-700'}`}>
+              <span className={`font-semibold text-sm ${isLiked ? 'text-purple-600' : 'text-gray-700'}`}>
                 {likesCount}
               </span>
             )}
