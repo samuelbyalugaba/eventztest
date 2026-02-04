@@ -1607,7 +1607,135 @@ export const subscribeToMessages = (conversationId: number, callback: (message: 
 };
 
 // --- NOTIFICATIONS ---
-// (consolidated above)
+
+export type Notification = {
+  id: string;
+  type: 'like' | 'comment' | 'follow' | 'event';
+  user: {
+    name: string;
+    avatar: string;
+  };
+  content: string;
+  time: string; // ISO string
+  read: boolean;
+  created_at: string;
+};
+
+export const getNotifications = async (userId: string) => {
+  const notifications: Notification[] = [];
+
+  // 1. Fetch Follows (New Followers)
+  const { data: follows } = await supabase
+    .from('follows')
+    .select(`
+      created_at,
+      follower:profiles!follower_id(full_name, avatar_url)
+    `)
+    .eq('following_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (follows) {
+    follows.forEach((follow: any) => {
+      if (follow.follower) {
+        notifications.push({
+          id: `follow-${follow.created_at}`,
+          type: 'follow',
+          user: { 
+            name: follow.follower.full_name || 'User', 
+            avatar: follow.follower.avatar_url 
+          },
+          content: 'started following you',
+          time: follow.created_at,
+          read: false,
+          created_at: follow.created_at
+        });
+      }
+    });
+  }
+
+  // 2. Fetch Interactions on User's Posts
+  // First get user's recent posts
+  const { data: userPosts } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  const postIds = userPosts?.map(p => p.id) || [];
+
+  if (postIds.length > 0) {
+    // Fetch Likes
+    const { data: likes } = await supabase
+      .from('post_likes')
+      .select(`
+        created_at,
+        user:profiles(id, full_name, avatar_url)
+      `)
+      .in('post_id', postIds)
+      .neq('user_id', userId) // Exclude self-likes
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (likes) {
+      likes.forEach((like: any) => {
+        if (like.user) {
+          notifications.push({
+            id: `like-${like.created_at}-${like.user.id}`,
+            type: 'like',
+            user: { 
+              name: like.user.full_name || 'User', 
+              avatar: like.user.avatar_url 
+            },
+            content: 'liked your post',
+            time: like.created_at,
+            read: false,
+            created_at: like.created_at
+          });
+        }
+      });
+    }
+
+    // Fetch Comments
+    const { data: comments } = await supabase
+      .from('post_comments')
+      .select(`
+        id,
+        created_at,
+        text,
+        user:profiles(id, full_name, avatar_url)
+      `)
+      .in('post_id', postIds)
+      .neq('user_id', userId) // Exclude self-comments
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (comments) {
+      comments.forEach((comment: any) => {
+        if (comment.user) {
+          notifications.push({
+            id: `comment-${comment.id}`,
+            type: 'comment',
+            user: { 
+              name: comment.user.full_name || 'User', 
+              avatar: comment.user.avatar_url 
+            },
+            content: `commented: "${comment.text.substring(0, 30)}${comment.text.length > 30 ? '...' : ''}"`,
+            time: comment.created_at,
+            read: false,
+            created_at: comment.created_at
+          });
+        }
+      });
+    }
+  }
+
+  // Sort by date desc
+  return notifications.sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+};
 
 
 // --- SEARCH ---

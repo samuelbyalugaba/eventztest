@@ -39,3 +39,63 @@ export interface Conversation {
   unreadCount: number;
   messages: Message[];
 }
+
+export interface Comment {
+  id: number;
+  user: {
+    name: string;
+    avatar: string;
+  };
+  text: string;
+  timestamp: string;
+}
+
+export interface HighlightClip {
+  id: number;
+  thumbnail: string;
+  duration: string;
+  title: string;
+  videoUrl?: string;
+  views: number;
+}
+
+export interface Post {
+  id: number;
+  user: {
+    id: string;
+    name: string;
+    username: string;
+    avatar: string;
+    verified: boolean;
+    isOrganizer?: boolean;
+    isOrganizerPage?: boolean;
+  };
+  event?: {
+    id: number;
+    name: string;
+    date: string;
+    time?: string;
+    location: string;
+    image: string;
+    price?: string;
+  };
+  content: {
+    text?: string;
+    image?: string;
+    images?: string[]; // For carousel posts with multiple images
+    hashtags?: string[];
+  };
+  timestamp: string;
+  likes: number;
+  comments: Comment[];
+  comments_count?: number;
+  shares: number;
+  views?: number;
+  isLiked: boolean;
+  isSaved: boolean;
+  recommended?: boolean;
+  isHighlight?: boolean;
+  highlights?: HighlightClip[];
+  totalHighlightViews?: number;
+  mutualFriends?: { name: string; avatar: string }[];
+}

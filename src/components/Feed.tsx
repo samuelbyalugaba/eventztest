@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
+import { PostCard } from './PostCard';
+import { PostSkeleton } from './PostSkeleton';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, PlusCircle, Volume2, VolumeX } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, PlusCircle, Volume2, VolumeX, Bell, Heart, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, getFollowedUserIds, Post as ApiPost, incrementPostView } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
 import { Conversation } from '../types';
 
@@ -99,6 +101,9 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [showMessages, setShowMessages] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -204,7 +209,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   title: p.content || 'Video Highlight',
                   videoUrl: p.video_url,
                   views: p.views || 0,
-                }] : undefined,
+                  }] : undefined,
+                  mutualFriends: [],
               };
           });
           setPosts(mappedPosts);
@@ -260,6 +266,59 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     if (!conv) return acc;
     return acc + (conv?.unreadCount || 0);
   }, 0);
+
+  useEffect(() => {
+    if (currentUser) {
+      const fetchNotifications = async () => {
+        setNotificationsLoading(true);
+        try {
+          const data = await getNotifications(currentUser.id);
+          setNotifications(data);
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+        } finally {
+          setNotificationsLoading(false);
+        }
+      };
+      
+      fetchNotifications();
+      
+      // Poll every minute if panel is open
+      let interval: NodeJS.Timeout;
+      if (showNotifications) {
+        interval = setInterval(fetchNotifications, 60000);
+      }
+      
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    }
+  }, [currentUser, showNotifications]);
+
+  const formatTimeAgo = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Recently';
+      
+      const now = new Date();
+      const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+      
+      if (seconds < 60) return 'Just now';
+      
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+      
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      
+      const days = Math.floor(hours / 24);
+      if (days < 7) return `${days}d ago`;
+      
+      return date.toLocaleDateString();
+    } catch {
+      return 'Recently';
+    }
+  };
 
 
 
@@ -451,6 +510,28 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   };
 
+  const handleFollow = async (userId: string) => {
+    if (!currentUser) {
+      toast.error('Please sign in to follow users');
+      return;
+    }
+    
+    // Optimistic update
+    const newFollowingIds = new Set(followingIds);
+    newFollowingIds.add(userId);
+    setFollowingIds(newFollowingIds);
+    toast.success('Following user');
+
+    try {
+      await toggleFollow(currentUser.id, userId);
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      toast.error('Failed to update follow status');
+      // Revert
+      setFollowingIds(followingIds);
+    }
+  };
+
   const handleStartConversationLocal = async (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
@@ -508,18 +589,23 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                {isOrganizer && onCreateEvent && (
-                  <button
-                    onClick={onCreateEvent}
-                    className="mr-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-xl hover:shadow-lg transition-all flex items-center gap-1.5 shadow-purple-200"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    CREATE
-                  </button>
-                )}
                 <button
-                  className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors relative"
-                  onClick={() => setShowMessages(!showMessages)}
+                  className={`p-2.5 rounded-xl transition-colors relative ${showNotifications ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    setShowMessages(false);
+                  }}
+                >
+                  <Bell className={`w-5 h-5 ${showNotifications ? 'text-purple-600' : 'text-gray-700'}`} />
+                  {/* Mock Notification Badge */}
+                  <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                </button>
+                <button
+                  className={`p-2.5 rounded-xl transition-colors relative ${showMessages ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
+                  onClick={() => {
+                    setShowMessages(!showMessages);
+                    setShowNotifications(false);
+                  }}
                 >
                   <MessageSquare className="w-5 h-5 text-gray-700" />
                   {unreadMessagesCount > 0 && (
@@ -584,401 +670,28 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
 
         {/* Unique Card-Based Posts */}
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-          {filteredPosts.map((post, index) => (
-            <div
-          key={post.id}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer"
-          onClick={() => setSelectedPost(post)}
-          style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}
-        >
-              {/* Unique Header with Actions on Right */}
-              <div className="px-4 pt-4 pb-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <UserAvatar
-                      src={post.user.avatar}
-                      name={post.user.name}
-                      className="w-11 h-11 ring-2 ring-purple-100 cursor-pointer hover:ring-purple-300 transition-all"
-                      onClick={() => handleOpenUserProfile(post.user)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span 
-                          className="text-gray-900 text-sm font-semibold truncate cursor-pointer hover:text-purple-600 transition-colors"
-                          onClick={(e) => handleOpenUserProfile(post.user, e)}
-                        >
-                          {post.user.name}
-                        </span>
-                        {post.user.isOrganizerPage && (
-                          <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
-                            Organizer
-                          </span>
-                        )}
-                        {post.user.verified && !post.user.isOrganizerPage && (
-                          <div className="flex-shrink-0 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                            <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                            </svg>
-                          </div>
-                        )}
-                        {post.user.isOrganizer && !post.user.isOrganizerPage && (
-                          <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
-                            Organizer
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-gray-500 text-xs">{post.timestamp}</span>
-                        {post.recommended && (
-                          <span className="text-purple-600 text-xs">• Recommended</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Unique Action Buttons - Only Save on Right */}
-                  <div className="flex items-center">
-                    <button
-                      onClick={(e) => toggleSave(post.id, e)}
-                      className={`p-2 rounded-lg transition-all ${
-                        post.isSaved 
-                          ? 'bg-purple-100 text-purple-600' 
-                          : 'bg-gray-50 text-gray-600 hover:bg-purple-50 hover:text-purple-600'
-                      }`}
-                      title="Save"
-                    >
-                      <Bookmark className={`w-4 h-4 ${post.isSaved ? 'fill-purple-600' : ''}`} />
-                    </button>
-                  </div>
-                </div>
+          {isLoading ? (
+            <>
+              <PostSkeleton />
+              <PostSkeleton />
+              <PostSkeleton />
+            </>
+          ) : (
+            filteredPosts.map((post, index) => (
+              <div key={post.id} style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}>
+                <PostCard
+                  post={post}
+                  currentUser={currentUser}
+                  onLike={(id) => toggleLike(id)}
+                  onSave={(id) => toggleSave(id)}
+                  onShare={(p) => sharePost(p)}
+                  onProfileClick={(user) => handleOpenUserProfile(user)}
+                  onFollow={handleFollow}
+                  isFollowed={followingIds.has(post.user.id)}
+                />
               </div>
-
-              {/* Post Content/Text */}
-              {post.content.text && (
-                <div className="px-4 pb-3">
-                  <p className="text-gray-800 text-[15px] leading-relaxed">
-                    {post.content.text}
-                  </p>
-                </div>
-              )}
-
-              {/* EVENT HIGHLIGHTS - SINGLE VERTICAL VIDEO (only for highlight posts) */}
-              {post.isHighlight && post.highlights && post.highlights.length > 0 && (
-                <div className="px-4 pb-4">
-                  {/* Single Vertical Highlight Card */}
-                  <div className="relative">
-                    <div
-                      className="relative cursor-pointer group"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPlayingVideo({ postId: post.id, clipIndex: 0, clips: post.highlights! });
-                      }}
-                    >
-                      {/* Vertical Highlight Card - Premium Style */}
-                      <div className="relative rounded-2xl overflow-hidden aspect-[4/5] bg-gradient-to-br from-purple-100 to-pink-100 shadow-lg">
-                        {/* Highlight Thumbnail */}
-                        <ImageWithFallback
-                          src={post.highlights[0].thumbnail}
-                          alt={post.highlights[0].title}
-                          className="w-full h-full object-cover"
-                          fallbackType="video"
-                        />
-                        
-                        {/* Cinematic Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80"></div>
-                        
-                        {/* EVENTZ Signature Border */}
-                        <div className="absolute inset-0 rounded-2xl ring-2 ring-purple-500/30 group-hover:ring-purple-500/60 transition-all"></div>
-                        
-                        {/* Play Button - Center */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-12 h-12 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all duration-300">
-                            <Play className="w-5 h-5 text-[#8A2BE2] fill-[#8A2BE2] ml-0.5" />
-                          </div>
-                        </div>
-                        
-                        {/* Duration Badge - Top Right */}
-                        {post.highlights[0].duration && (
-                          <div className="absolute top-3 right-3 px-2.5 py-1 bg-black/90 backdrop-blur-md rounded-lg border border-white/10">
-                            <span className="text-white text-xs font-bold">{post.highlights[0].duration}</span>
-                          </div>
-                        )}
-                        
-                        {/* Clip Info - Bottom Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent">
-                          <h4 className="text-white font-bold text-base mb-1.5 line-clamp-2 leading-tight">
-                            {post.highlights[0].title}
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full">
-                              <Eye className="w-3.5 h-3.5 text-white" />
-                              <span className="text-white text-xs font-bold">
-                                {post.highlights[0].views >= 1000 
-                                  ? `${(post.highlights[0].views / 1000).toFixed(1)}K` 
-                                  : post.highlights[0].views} views
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Image Carousel - Images & Videos */}
-              {post.content.images && post.content.images.length > 0 && !post.isHighlight && (
-                <div className="px-4 pb-4">
-                  <div className="relative rounded-xl overflow-hidden group">
-                    {/* Current Image/Video with Touch Handling */}
-                    <div 
-                      className="relative select-none"
-                      onTouchStart={(e) => {
-                        const touch = e.touches[0];
-                        setImageTouchStart({ x: touch.clientX, y: touch.clientY });
-                      }}
-                      onTouchEnd={(e) => {
-                        if (!imageTouchStart) return;
-                        
-                        const touch = e.changedTouches[0];
-                        const deltaX = touch.clientX - imageTouchStart.x;
-                        const deltaY = touch.clientY - imageTouchStart.y;
-                        
-                        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const currentIndex = carouselIndexes[post.id] || 0;
-                          
-                          if (deltaX > 0 && currentIndex > 0) {
-                            setCarouselIndexes({
-                              ...carouselIndexes,
-                              [post.id]: currentIndex - 1
-                            });
-                          } else if (deltaX < 0 && currentIndex < post.content.images!.length - 1) {
-                            setCarouselIndexes({
-                              ...carouselIndexes,
-                              [post.id]: currentIndex + 1
-                            });
-                          }
-                        } else if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
-                          // Only open fullscreen if it's not a video or if it's a tap on non-interactive area
-                          // For now, let's allow fullscreen for images only
-                          const currentUrl = post.content.images?.[carouselIndexes[post.id] || 0];
-                          if (!isVideo(currentUrl)) {
-                            setFullScreenImage({ 
-                              images: post.content.images!, 
-                              currentIndex: carouselIndexes[post.id] || 0,
-                              postId: post.id 
-                            });
-                          }
-                        }
-                        
-                        setImageTouchStart(null);
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // For mouse clicks
-                        const currentUrl = post.content.images![carouselIndexes[post.id] || 0];
-                        if (!('ontouchstart' in window) && !isVideo(currentUrl)) {
-                          setFullScreenImage({ 
-                            images: post.content.images!, 
-                            currentIndex: carouselIndexes[post.id] || 0,
-                            postId: post.id 
-                          });
-                        }
-                      }}
-                    >
-                      {post.content.images[carouselIndexes[post.id] || 0].match(/\.(mp4|webm|ogg|mov)$/i) ? (
-                        <video
-                          src={`${post.content.images[carouselIndexes[post.id] || 0]}#t=0.001`}
-                          className="w-full aspect-[16/10] object-cover"
-                          controls
-                          playsInline
-                          preload="metadata"
-                          onPlay={() => incrementPostView(post.id)}
-                        />
-                      ) : (
-                        <ImageWithFallback
-                          src={post.content.images[carouselIndexes[post.id] || 0]}
-                          alt={`Post image ${(carouselIndexes[post.id] || 0) + 1}`}
-                          className="w-full aspect-[16/10] object-cover pointer-events-none"
-                        />
-                      )}
-                    </div>
-
-                    {/* Navigation Arrows - Desktop Only */}
-                    {post.content.images.length > 1 && (
-                      <>
-                        {(carouselIndexes[post.id] || 0) > 0 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCarouselIndexes({
-                                ...carouselIndexes,
-                                [post.id]: (carouselIndexes[post.id] || 0) - 1
-                              });
-                            }}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          >
-                            <ChevronLeft className="w-5 h-5" />
-                          </button>
-                        )}
-                        
-                        {(carouselIndexes[post.id] || 0) < post.content.images.length - 1 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCarouselIndexes({
-                                ...carouselIndexes,
-                                [post.id]: (carouselIndexes[post.id] || 0) + 1
-                              });
-                            }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          >
-                            <ChevronRight className="w-5 h-5" />
-                          </button>
-                        )}
-                      </>
-                    )}
-
-                    {/* Dot Indicators */}
-                    {post.content.images.length > 1 && (
-                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 pointer-events-none z-20">
-                        {post.content.images.map((_, index) => (
-                          <div
-                            key={index}
-                            className={`transition-all duration-300 rounded-full ${
-                              index === (carouselIndexes[post.id] || 0)
-                                ? 'w-6 h-1.5 bg-white'
-                                : 'w-1.5 h-1.5 bg-white/50'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Engagement Bar - Revolutionary Purple Design */}
-              <div className="px-4 pb-4">
-                <div className="flex items-center justify-between bg-gradient-to-r from-purple-50 via-purple-100/50 to-purple-50 rounded-xl px-4 py-3 border border-purple-100">
-                  <button
-                    onClick={(e) => toggleLike(post.id, e)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
-                      post.isLiked
-                        ? 'bg-[#8A2BE2] text-white shadow-md'
-                        : 'bg-white text-gray-700 hover:bg-purple-50 hover:text-[#8A2BE2]'
-                    }`}
-                  >
-                    <ThumbsUp className={`w-4 h-4 ${post.isLiked ? 'fill-white' : ''}`} />
-                    <span className="text-sm font-semibold">{post.likes}</span>
-                  </button>
-
-                  <button
-                    onClick={(e) => toggleComments(post.id, e)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all bg-white text-gray-700 hover:bg-purple-50 hover:text-[#8A2BE2]`}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">{post.comments_count || post.comments.length}</span>
-                  </button>
-
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedPost(post);
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 hover:bg-purple-50 hover:text-[#8A2BE2] rounded-lg transition-all"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span className="text-sm font-medium">{post.views || 0}</span>
-                  </button>
-
-                  <button
-                    onClick={(e) => sharePost(post, e)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 rounded-lg transition-all"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={(e) => handleStartConversationLocal(post.user, e)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 hover:bg-purple-50 hover:text-[#8A2BE2] rounded-lg transition-all"
-                    title="Message"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Inline Comments Section - Slides Down */}
-              {expandedPostId === post.id && (
-                <div className="px-4 pb-4 space-y-4 animate-slideDown">
-                  {/* Add Comment Input */}
-                  <div className="flex gap-3 items-start">
-                    <UserAvatar
-                      src={currentUser?.user_metadata?.avatar_url || currentUser?.avatar_url}
-                      name={currentUser?.user_metadata?.full_name || currentUser?.full_name || currentUser?.email || 'User'}
-                      className="w-9 h-9 rounded-xl flex-shrink-0"
-                    />
-                    <div className="flex-1 flex gap-2">
-                      <textarea
-                        value={commentTexts[post.id] || ''}
-                        onChange={(e) => setCommentTexts({ ...commentTexts, [post.id]: e.target.value })}
-                        placeholder="Write a comment..."
-                        rows={1}
-                        className="flex-1 bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none border border-gray-200 focus:border-purple-300 focus:bg-white focus:ring-2 focus:ring-purple-100 resize-none transition-all"
-                      />
-                      <button
-                        onClick={() => handlePostComment(post.id)}
-                        disabled={!commentTexts[post.id]?.trim()}
-                        className={`p-3 rounded-xl transition-all flex-shrink-0 ${
-                          commentTexts[post.id]?.trim()
-                            ? 'bg-gradient-to-br from-[#6B21A8] via-[#7C2D9F] to-[#BE185D] hover:from-[#581C87] hover:to-[#9F1239] text-white shadow-lg shadow-purple-900/30'
-                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        }`}
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Comments List */}
-                  {post.comments.length > 0 && (
-                    <div className="space-y-3 pt-2 border-t border-gray-100">
-                      {post.comments.map((comment) => (
-                        <div key={comment.id} className="flex gap-3">
-                          <img
-                            src={comment.user.avatar}
-                            alt={comment.user.name}
-                            className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
-                          />
-                          <div className="flex-1">
-                            <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-gray-900 text-sm font-semibold">{comment.user.name}</span>
-                                <span className="text-gray-400 text-xs">• {comment.timestamp}</span>
-                              </div>
-                              <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Empty State */}
-                  {post.comments.length === 0 && (
-                    <div className="text-center py-6">
-                      <p className="text-gray-400 text-sm">
-                        No replies yet. Be the first! 💬
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+            ))
+          )}
 
           {/* Empty State */}
           {!isLoading && filteredPosts.length === 0 && (
@@ -1260,6 +973,73 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       )}
 
 
+
+      {/* Notifications Panel */}
+      {showNotifications && (
+        <div className="fixed inset-0 z-[60] flex flex-col bg-white md:max-w-md md:right-0 md:left-auto md:border-l border-gray-100 shadow-2xl animate-in slide-in-from-right-full duration-300">
+          <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+            <h2 className="text-lg font-bold text-gray-900">Notifications</h2>
+            <button 
+              onClick={() => setShowNotifications(false)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-2">
+            <div className="space-y-1">
+              {notificationsLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">No notifications yet</p>
+                </div>
+              ) : (
+                notifications.map((notification) => (
+                  <div 
+                    key={notification.id}
+                    className={`flex items-start gap-3 p-3 rounded-xl transition-colors cursor-pointer ${
+                      notification.read ? 'bg-white hover:bg-gray-50' : 'bg-purple-50/50 hover:bg-purple-50'
+                    }`}
+                  >
+                    <div className="relative">
+                      <UserAvatar 
+                        src={notification.user.avatar} 
+                        name={notification.user.name} 
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                      <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center ${
+                        notification.type === 'like' ? 'bg-pink-500' :
+                        notification.type === 'comment' ? 'bg-blue-500' :
+                        notification.type === 'follow' ? 'bg-purple-500' :
+                        'bg-orange-500'
+                      }`}>
+                        {notification.type === 'like' && <Heart className="w-3 h-3 text-white fill-white" />}
+                        {notification.type === 'comment' && <MessageCircle className="w-3 h-3 text-white fill-white" />}
+                        {notification.type === 'follow' && <UserPlus className="w-3 h-3 text-white" />}
+                        {notification.type === 'event' && <Calendar className="w-3 h-3 text-white" />}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900 leading-snug">
+                        <span className="font-semibold">{notification.user.name}</span>{' '}
+                        <span className="text-gray-600">{notification.content}</span>
+                      </p>
+                      <span className="text-xs text-gray-400 mt-0.5 block">{formatTimeAgo(notification.time)}</span>
+                    </div>
+                    {!notification.read && (
+                      <div className="w-2 h-2 bg-purple-600 rounded-full mt-2"></div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Professional Messages Panel */}
       {showMessages && (
