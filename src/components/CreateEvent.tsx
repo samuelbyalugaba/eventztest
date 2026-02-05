@@ -251,6 +251,22 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
   */
 
   const handlePublish = async () => {
+    // Basic validation
+    if (!formData.title || !formData.date || !formData.location || !formData.price) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Date validation
+    const selectedDate = new Date(formData.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      toast.error('Event date cannot be in the past');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();

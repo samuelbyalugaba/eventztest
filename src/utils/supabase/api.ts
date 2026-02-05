@@ -291,79 +291,23 @@ export const searchProfiles = async (query: string) => {
 // --- ORGANIZER STATS ---
 
 export const getOrganizerStats = async (userId: string) => {
-  // 1. Total Events
-  const { count: totalEvents, error: eventsError } = await supabase
-    .from('events')
-    .select('*', { count: 'exact', head: true })
-    .eq('organizer_id', userId);
-  
-  if (eventsError) throw eventsError;
+  const { data, error } = await supabase.rpc('get_organizer_stats', {
+    target_user_id: userId
+  });
 
-  // 2. Followers
-  const { count: followers, error: followersError } = await supabase
-    .from('follows')
-    .select('*', { count: 'exact', head: true })
-    .eq('following_id', userId);
-    
-  if (followersError) throw followersError;
+  if (error) {
+    console.error('Error fetching organizer stats:', error);
+    throw error;
+  }
 
-  // 3. Total Views (sum of event views + post views + media views)
-  const { data: events, error: viewsError } = await supabase
-    .from('events')
-    .select('views, streaming')
-    .eq('organizer_id', userId);
-    
-  if (viewsError) throw viewsError;
-  const eventViews = events?.reduce((sum, e) => sum + (e.views || 0), 0) || 0;
-
-  // Post Views
-  const { data: posts, error: postViewsError } = await supabase
-    .from('posts')
-    .select('views')
-    .eq('user_id', userId);
-
-  if (postViewsError) throw postViewsError;
-  const postViews = posts?.reduce((sum, p) => sum + (p.views || 0), 0) || 0;
-
-  // Media Views
-  const { data: media, error: mediaViewsError } = await supabase
-    .from('user_media')
-    .select('views')
-    .eq('user_id', userId);
-
-  if (mediaViewsError) throw mediaViewsError;
-  const mediaViews = media?.reduce((sum, m) => sum + (m.views || 0), 0) || 0;
-
-  const totalViews = eventViews + postViews + mediaViews;
-
-  // 4. Live Streams (count from fetched events)
-  const liveStreams = events?.filter((e: any) => e.streaming?.available).length || 0;
-
-  // 5. Tickets Sold & Revenue
-  const { data: soldTickets, error: ticketsError } = await supabase
-    .from('tickets')
-    .select('price, event:events!inner(organizer_id)')
-    .eq('event.organizer_id', userId);
-    
-  if (ticketsError) throw ticketsError;
-
-  const ticketsSold = soldTickets?.length || 0;
-  
-  const revenue = soldTickets?.reduce((sum, t) => {
-    // price is string like "TSh 50,000" or "Free"
-    if (!t.price || t.price === 'Free') return sum;
-    const num = parseInt(t.price.replace(/[^0-9]/g, ''));
-    return sum + (isNaN(num) ? 0 : num);
-  }, 0) || 0;
-  
   return {
-    totalEvents: totalEvents || 0,
-    followers: followers || 0,
-    totalViews,
-    ticketsSold,
-    revenue,
-    liveStreams,
-    avgRating: 0 // Placeholder until we have a ratings system
+    totalEvents: data.totalEvents,
+    followers: data.followers,
+    totalViews: data.totalViews,
+    ticketsSold: data.ticketsSold,
+    revenue: data.revenue,
+    liveStreams: data.liveStreams,
+    avgRating: data.avgRating
   };
 };
 
@@ -635,217 +579,75 @@ export const incrementUserMediaView = async (mediaId: number) => {
 };
 
 export const getEventAnalytics = async (eventId: number) => {
-  // Parallel fetch for efficiency
-  const [eventRes, savedRes, ticketsRes, postsRes] = await Promise.all([
-    supabase.from('events').select('views').eq('id', eventId).single(),
-    supabase.from('saved_events')
-      .select('user:profiles(location, birthdate), created_at', { count: 'exact' })
-      .eq('event_id', eventId),
-    supabase.from('tickets')
-      .select('price, user:profiles(location, birthdate), created_at')
-      .eq('event_id', eventId),
-    supabase.from('posts')
-      .select('id, created_at')
-      .eq('event_id', eventId)
-  ]);
+  const { data, error } = await supabase.rpc('get_event_analytics', {
+    target_event_id: eventId
+  });
 
-  const views = eventRes.data?.views || 0;
-  const interested = savedRes.count || 0;
-  
-  // Calculate revenue and tickets
-  const ticketsSold = ticketsRes.data?.length || 0;
-  const shares = postsRes.data?.length || 0;
+  if (error) {
+    console.error('Error fetching event analytics:', error);
+    throw error;
+  }
 
-  const revenue = ticketsRes.data?.reduce((sum, t) => {
-    if (!t.price || t.price === 'Free') return sum;
-    const num = parseInt(t.price.replace(/[^0-9]/g, ''));
-    return sum + (isNaN(num) ? 0 : num);
-  }, 0) || 0;
-
-  // Calculate Trends (Last 7 days vs Previous 7 days)
-  const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-  const calculateTrend = (dates: string[]) => {
-    const last7Days = dates.filter(d => new Date(d) >= sevenDaysAgo).length;
-    const prev7Days = dates.filter(d => {
-      const date = new Date(d);
-      return date >= fourteenDaysAgo && date < sevenDaysAgo;
-    }).length;
-
-    if (prev7Days === 0) return { change: last7Days > 0 ? 100 : 0, trend: 'neutral' };
-    
-    const change = Math.round(((last7Days - prev7Days) / prev7Days) * 100);
+  const calculateTrendFromStats = (last7: number, prev7: number) => {
+    if (prev7 === 0) return { change: last7 > 0 ? 100 : 0, trend: 'neutral' as const };
+    const change = Math.round(((last7 - prev7) / prev7) * 100);
     return {
       change: Math.abs(change),
-      trend: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral'
+      trend: (change > 0 ? 'up' : change < 0 ? 'down' : 'neutral') as 'up' | 'down' | 'neutral'
     };
   };
 
-  const interestedDates = savedRes.data?.map((s: any) => s.created_at) || [];
-  const ticketDates = ticketsRes.data?.map((t: any) => t.created_at) || [];
-  const shareDates = postsRes.data?.map((p: any) => p.created_at) || [];
-
-  const interestedTrend = calculateTrend(interestedDates);
-  const ticketsTrend = calculateTrend(ticketDates);
-  const sharesTrend = calculateTrend(shareDates);
-
-  // Calculate Daily Activity (Last 7 Days)
-  const dailyActivity = [0, 0, 0, 0, 0, 0, 0]; // Mon, Tue, Wed, Thu, Fri, Sat, Sun
-  // Note: This aligns with the UI's static labels 'Mon'...'Sun'. 
-  // Ideally we should rotate this based on today, but for now we'll map to the nearest day of week.
-  
-  const processDates = (dates: string[]) => {
-    dates.forEach(d => {
-      const date = new Date(d);
-      if (date >= sevenDaysAgo) {
-        // 0 = Sunday, 1 = Monday... 6 = Saturday
-        // We want to map to: 0=Mon, 1=Tue... 6=Sun
-        let dayIndex = date.getDay() - 1;
-        if (dayIndex === -1) dayIndex = 6; // Sunday
-        dailyActivity[dayIndex]++;
-      }
-    });
-  };
-
-  processDates(interestedDates);
-  processDates(ticketDates);
-  processDates(shareDates);
-
-  // Helper to process user data
-  const locationCounts: Record<string, number> = {};
-  const ageCounts: Record<string, number> = {
-    '18-24': 0,
-    '25-34': 0,
-    '35-44': 0,
-    '45+': 0
-  };
-  let totalLocations = 0;
-  let totalAges = 0;
-
-  const processUser = (user: any) => {
-    if (!user) return;
-
-    // Process Location
-    if (user.location) {
-      // Handle various formats: "City, Country", "City, State, Country", or just "City"
-      const parts = user.location.split(',');
-      const city = parts[0].trim();
-      
-      if (city && city.toLowerCase() !== 'unknown') {
-        // Capitalize first letter of each word
-        const normalizedCity = city.split(' ')
-          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ');
-          
-        locationCounts[normalizedCity] = (locationCounts[normalizedCity] || 0) + 1;
-        totalLocations++;
-      }
-    }
-
-    // Process Age
-    if (user.birthdate) {
-      const birthDate = new Date(user.birthdate);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-
-      if (age >= 18 && age <= 24) ageCounts['18-24']++;
-      else if (age >= 25 && age <= 34) ageCounts['25-34']++;
-      else if (age >= 35 && age <= 44) ageCounts['35-44']++;
-      else if (age >= 45) ageCounts['45+']++;
-      
-      totalAges++;
-    }
-  };
-
-  // Process tickets users
-  ticketsRes.data?.forEach((t: any) => {
-    processUser(t.user);
-  });
-
-  // Process saved events users
-  savedRes.data?.forEach((s: any) => {
-    processUser(s.user);
-  });
-
-  // Format Locations
-  let locations = Object.entries(locationCounts)
-    .map(([city, count]) => ({
-      city,
-      percent: Math.round((count / totalLocations) * 100)
-    }))
-    .sort((a, b) => b.percent - a.percent)
-    .slice(0, 4);
-
-  if (locations.length === 0) {
-    locations = [{ city: 'No data yet', percent: 100 }];
-  } else {
-    const top4Count = locations.reduce((sum, item) => sum + (locationCounts[item.city] || 0), 0);
-    const othersCount = totalLocations - top4Count;
-    if (othersCount > 0) {
-      locations.push({
-        city: 'Others',
-        percent: Math.round((othersCount / totalLocations) * 100)
-      });
-    }
-  }
-
-  // Format Age Distribution
-  let ageDistribution = [
-    { range: '18-24', percent: 0 },
-    { range: '25-34', percent: 0 },
-    { range: '35-44', percent: 0 },
-    { range: '45+', percent: 0 },
-  ];
-
-  if (totalAges > 0) {
-    ageDistribution = [
-      { range: '18-24', percent: Math.round((ageCounts['18-24'] / totalAges) * 100) },
-      { range: '25-34', percent: Math.round((ageCounts['25-34'] / totalAges) * 100) },
-      { range: '35-44', percent: Math.round((ageCounts['35-44'] / totalAges) * 100) },
-      { range: '45+', percent: Math.round((ageCounts['45+'] / totalAges) * 100) },
-    ];
-  }
+  const interestedTrend = calculateTrendFromStats(data.trends.interested.last7, data.trends.interested.prev7);
+  const ticketsTrend = calculateTrendFromStats(data.trends.tickets.last7, data.trends.tickets.prev7);
+  const sharesTrend = calculateTrendFromStats(data.trends.shares.last7, data.trends.shares.prev7);
 
   // Format revenue string
-  const revenueStr = revenue > 0 ? `TSh ${revenue.toLocaleString()}` : 'TSh 0';
+  const revenueStr = data.revenue > 0 ? `TSh ${data.revenue.toLocaleString()}` : 'TSh 0';
 
   return {
     views: {
-      total: views,
-      change: 0, 
+      total: data.views,
+      change: 0, // Views trend not tracked in RPC yet, placeholder
       trend: 'neutral',
-      daily: dailyActivity, // Now returns real combined activity
+      daily: data.dailyActivity
     },
     interested: {
-      total: interested,
+      total: data.interested,
       change: interestedTrend.change,
-      trend: interestedTrend.trend,
+      trend: interestedTrend.trend
     },
     shares: {
-      total: shares,
+      total: data.shares,
       change: sharesTrend.change,
-      trend: sharesTrend.trend,
+      trend: sharesTrend.trend
     },
     ticketsSold: {
-      total: ticketsSold,
+      total: data.ticketsSold,
       change: ticketsTrend.change,
-      trend: ticketsTrend.trend,
+      trend: ticketsTrend.trend
     },
     revenue: {
       total: revenueStr,
-      change: ticketsTrend.change, // Revenue trend roughly follows ticket trend
-      trend: ticketsTrend.trend,
+      change: ticketsTrend.change,
+      trend: ticketsTrend.trend
     },
     demographics: {
-      age: ageDistribution,
-      locations: locations,
-    },
+      locations: Object.entries(data.demographics.locations).map(([city, count]) => {
+        // Calculate percent
+        const total = Object.values(data.demographics.locations).reduce((a: any, b: any) => a + b, 0) as number;
+        return {
+          city,
+          percent: total > 0 ? Math.round(((count as number) / total) * 100) : 0
+        };
+      }),
+      ageGroups: Object.entries(data.demographics.ageGroups).map(([range, count]) => {
+        const total = Object.values(data.demographics.ageGroups).reduce((a: any, b: any) => a + b, 0) as number;
+        return {
+          range,
+          percent: total > 0 ? Math.round(((count as number) / total) * 100) : 0
+        };
+      })
+    }
   };
 };
 
@@ -925,7 +727,10 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
   const tryUpload = async (targetBucket: 'events' | 'avatars' | 'posts') => {
     const { error: uploadError } = await supabase.storage
       .from(targetBucket)
-      .upload(filePath, file);
+      .upload(filePath, file, {
+        contentType: file.type,
+        upsert: false
+      });
 
     if (uploadError) throw uploadError;
 
@@ -978,13 +783,33 @@ export const getUserTickets = async (userId: string) => {
 };
 
 export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'event'>) => {
-  const { data, error } = await supabase
-    .from('tickets')
-    .insert(ticket)
-    .select()
-    .single();
+  // Use the secure RPC function to purchase tickets (prevents free ticket glitch)
+  const { data, error } = await supabase.rpc('purchase_ticket', {
+    p_event_id: ticket.event_id,
+    p_ticket_type: ticket.ticket_type,
+    p_customer_name: ticket.customer_name,
+    p_customer_email: ticket.customer_email,
+    p_ticket_number: ticket.ticket_number,
+    p_qr_code: ticket.qr_code || null
+  });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error creating ticket:', error);
+    throw error;
+  }
+
+  // Fetch the fully created ticket to return to the frontend
+  if (data && data.id) {
+    const { data: fullTicket, error: fetchError } = await supabase
+      .from('tickets')
+      .select()
+      .eq('id', data.id)
+      .single();
+      
+    if (fetchError) throw fetchError;
+    return fullTicket;
+  }
+
   return data;
 };
 
@@ -1682,81 +1507,72 @@ export const getNotifications = async (userId: string) => {
     });
   }
 
-  // 2. Fetch Interactions on User's Posts
-  // First get user's recent posts
-  const { data: userPosts } = await supabase
-    .from('posts')
-    .select('id')
-    .eq('user_id', userId)
+  // 2. Fetch Interactions on User's Posts (Optimized)
+  
+  // Fetch Likes (All time, optimized by join)
+  const { data: likes } = await supabase
+    .from('post_likes')
+    .select(`
+      created_at,
+      user:profiles(id, full_name, avatar_url),
+      post:posts!inner(id) 
+    `)
+    .eq('post.user_id', userId)
+    .neq('user_id', userId) // Exclude self-likes
     .order('created_at', { ascending: false })
     .limit(20);
 
-  const postIds = userPosts?.map(p => p.id) || [];
+  if (likes) {
+    likes.forEach((like: any) => {
+      if (like.user) {
+        notifications.push({
+          id: `like-${like.created_at}-${like.user.id}`,
+          type: 'like',
+          user: { 
+            name: like.user.full_name || 'User', 
+            avatar: like.user.avatar_url 
+          },
+          content: 'liked your post',
+          time: like.created_at,
+          read: new Date(like.created_at).getTime() <= lastReadTime,
+          created_at: like.created_at
+        });
+      }
+    });
+  }
 
-  if (postIds.length > 0) {
-    // Fetch Likes
-    const { data: likes } = await supabase
-      .from('post_likes')
-      .select(`
-        created_at,
-        user:profiles(id, full_name, avatar_url)
-      `)
-      .in('post_id', postIds)
-      .neq('user_id', userId) // Exclude self-likes
-      .order('created_at', { ascending: false })
-      .limit(20);
+  // Fetch Comments (All time, optimized by join)
+  const { data: comments } = await supabase
+    .from('post_comments')
+    .select(`
+      id,
+      created_at,
+      text,
+      user:profiles(id, full_name, avatar_url),
+      post:posts!inner(id)
+    `)
+    .eq('post.user_id', userId)
+    .neq('user_id', userId) // Exclude self-comments
+    .order('created_at', { ascending: false })
+    .limit(20);
 
-    if (likes) {
-      likes.forEach((like: any) => {
-        if (like.user) {
-          notifications.push({
-            id: `like-${like.created_at}-${like.user.id}`,
-            type: 'like',
-            user: { 
-              name: like.user.full_name || 'User', 
-              avatar: like.user.avatar_url 
-            },
-            content: 'liked your post',
-            time: like.created_at,
-            read: new Date(like.created_at).getTime() <= lastReadTime,
-            created_at: like.created_at
-          });
-        }
-      });
-    }
-
-    // Fetch Comments
-    const { data: comments } = await supabase
-      .from('post_comments')
-      .select(`
-        id,
-        created_at,
-        text,
-        user:profiles(id, full_name, avatar_url)
-      `)
-      .in('post_id', postIds)
-      .neq('user_id', userId) // Exclude self-comments
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (comments) {
-      comments.forEach((comment: any) => {
-        if (comment.user) {
-          notifications.push({
-            id: `comment-${comment.id}`,
-            type: 'comment',
-            user: { 
-              name: comment.user.full_name || 'User', 
-              avatar: comment.user.avatar_url 
-            },
-            content: `commented: "${comment.text.substring(0, 30)}${comment.text.length > 30 ? '...' : ''}"`,
-            time: comment.created_at,
-            read: new Date(comment.created_at).getTime() <= lastReadTime,
-            created_at: comment.created_at
-          });
-        }
-      });
-    }
+  if (comments) {
+    comments.forEach((comment: any) => {
+      if (comment.user) {
+        notifications.push({
+          id: `comment-${comment.id}`,
+          type: 'comment',
+          user: { 
+            name: comment.user.full_name || 'User', 
+            avatar: comment.user.avatar_url 
+          },
+          content: `commented: "${comment.text.substring(0, 30)}${comment.text.length > 30 ? '...' : ''}"`,
+          time: comment.created_at,
+          read: new Date(comment.created_at).getTime() <= lastReadTime,
+          created_at: comment.created_at
+        });
+      }
+    });
   }
 
   // Sort by date desc

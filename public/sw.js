@@ -1,5 +1,5 @@
-const CACHE_NAME = 'eventz-v1';
-const RUNTIME_CACHE = 'eventz-runtime';
+const CACHE_NAME = 'eventz-v2';
+const RUNTIME_CACHE = 'eventz-runtime-v2';
 
 // Assets to cache on install
 const STATIC_CACHE_URLS = [
@@ -41,7 +41,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event
 self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
@@ -53,10 +53,42 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // 1. Navigation Requests (HTML pages) - Network First, Fallback to Cache
+  // This ensures users always get the latest version of the app shell
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Check if valid response
+          if (!response || response.status !== 200 || response.type === 'error') {
+            return response;
+          }
+          
+          // Cache the latest version
+          const responseToCache = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          
+          return response;
+        })
+        .catch(() => {
+          // Network failed, try cache
+          return caches.match(event.request).then((response) => {
+            return response || caches.match('/'); // Fallback to root if specific page fails
+          });
+        })
+    );
+    return;
+  }
+
+  // 2. Static Assets (JS, CSS, Images) - Stale-While-Revalidate
+  // Serve from cache immediately for speed, then update in background
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Return cached response and update cache in background
+        // Return cached response immediately
+        // Update cache in background
         fetch(event.request)
           .then((response) => {
             if (response && response.status === 200) {
@@ -66,23 +98,20 @@ self.addEventListener('fetch', (event) => {
             }
           })
           .catch(() => {
-            // Network failed, cached response is all we have
+            // Network failed, nothing to update
           });
+          
         return cachedResponse;
       }
 
       // Not in cache, fetch from network
       return fetch(event.request)
         .then((response) => {
-          // Don't cache if not a success response
           if (!response || response.status !== 200 || response.type === 'error') {
             return response;
           }
 
-          // Clone the response
           const responseToCache = response.clone();
-
-          // Cache the fetched response
           caches.open(RUNTIME_CACHE).then((cache) => {
             cache.put(event.request, responseToCache);
           });
@@ -90,10 +119,10 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Network request failed, return offline page if available
-          return caches.match('/').then((response) => {
-            return response || new Response('Offline - Please check your connection');
-          });
+          // Network request failed
+          if (event.request.headers.get('accept').includes('image')) {
+            // Could return a placeholder image here
+          }
         });
     })
   );

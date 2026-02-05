@@ -426,7 +426,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                         <div className="flex-1">
                           <div className="bg-white/60 p-3 rounded-2xl rounded-tl-none backdrop-blur-sm border border-white/40 shadow-sm">
                             <span className="font-semibold text-sm block mb-1">{comment.user.name}</span>
-                            <p className="text-sm text-gray-800">{comment.text}</p>
+                            <p className="text-sm text-gray-800 break-words">{comment.text}</p>
                           </div>
                           <div className="flex items-center gap-3 mt-1 ml-2 text-xs text-gray-500">
                             <span>{comment.timestamp}</span>
@@ -453,6 +453,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
+                      maxLength={500}
                     />
                     <button 
                       onClick={handlePostComment}
