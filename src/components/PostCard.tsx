@@ -3,10 +3,10 @@ import { Post, Comment } from '../types';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { 
-  MessageCircle, Share2, Bookmark, 
+  MessageSquare, Share2, Bookmark, 
   Play, Volume2, VolumeX, MapPin, 
   ChevronLeft, ChevronRight, Send, ThumbsUp,
-  Star, Trash2, MoreHorizontal
+  Star, Trash2
 } from 'lucide-react';
 import {
   Drawer,
@@ -15,12 +15,6 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "./ui/drawer";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
 import { getPostComments, createPostComment } from '../utils/supabase/api';
 import { toast } from 'sonner';
@@ -397,7 +391,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                 aria-label="View comments"
               >
                 <div className="p-2 rounded-full hover:bg-gray-100 text-gray-700 transition-colors active:scale-75">
-                  <MessageCircle className="w-6 h-6 transition-transform group-hover:scale-110" />
+                  <MessageSquare className="w-6 h-6 transition-transform group-hover:scale-110" />
                 </div>
                 {commentsCount > 0 && (
                   <span className="font-semibold text-sm text-gray-700">

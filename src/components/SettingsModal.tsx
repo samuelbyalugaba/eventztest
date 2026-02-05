@@ -140,25 +140,8 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
               localStorage.removeItem('eventz-privacy');
             }
 
-            // Notification Settings Migration
-            const localNotifications = localStorage.getItem('eventz-notifications');
-            if (profile.notification_settings) {
-              setNotifications(prev => ({
-                ...prev,
-                ticketSales: profile.notification_settings?.ticketSales ?? prev.ticketSales,
-                streamAlerts: profile.notification_settings?.streamAlerts ?? prev.streamAlerts,
-                weeklyReport: profile.notification_settings?.weeklyReport ?? prev.weeklyReport,
-                marketingEmails: profile.notification_settings?.marketingEmails ?? prev.marketingEmails,
-                newFollowers: profile.notification_settings?.newFollowers ?? prev.newFollowers,
-              }));
-              if (localNotifications) localStorage.removeItem('eventz-notifications');
-            } else if (localNotifications) {
-              const parsed = JSON.parse(localNotifications);
-              setNotifications(parsed);
-              profileUpdates.notification_settings = parsed;
-              hasUpdates = true;
-              localStorage.removeItem('eventz-notifications');
-            }
+            // Notification Settings Migration removed
+
 
             // Apply any migration updates
             if (hasUpdates) {
@@ -230,35 +213,8 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     }
   };
 
-  const handleSaveNotifications = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const profile = await getProfile(user.id);
-        const currentSettings = profile?.notification_settings || {};
-        
-        await updateProfile(user.id, {
-          notification_settings: {
-            ...currentSettings,
-            ...notifications,
-            // Ensure required fields are present if they were missing in currentSettings
-            ticketSales: currentSettings.ticketSales ?? false,
-            streamAlerts: currentSettings.streamAlerts ?? false,
-            weeklyReport: currentSettings.weeklyReport ?? false,
-            marketingEmails: currentSettings.marketingEmails ?? false,
-            newFollowers: currentSettings.newFollowers ?? false,
-          }
-        });
-      } else {
-        localStorage.setItem('eventz-notifications', JSON.stringify(notifications));
-      }
-      toast.success('Notification preferences saved! 🔔');
-      setCurrentView('main');
-    } catch (error) {
-      console.error('Error saving notifications:', error);
-      toast.error('Failed to save notifications');
-    }
-  };
+  // Notifications settings removed as per unused warning
+
 
   const handleSavePrivacy = async () => {
     try {
@@ -331,7 +287,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
       {/* Modal Content */}
       <div 
         className="relative w-full max-w-2xl bg-white rounded-t-3xl shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="relative px-6 pt-6 pb-4 border-b border-gray-100">

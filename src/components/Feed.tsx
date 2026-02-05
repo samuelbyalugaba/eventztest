@@ -6,7 +6,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification, deletePost } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification, deletePost } from '../utils/supabase/api';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -116,7 +116,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
   // const [messageSearch, setMessageSearch] = useState('');
   const [likeAnimation, setLikeAnimation] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
-  const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
   const [commentTexts, setCommentTexts] = useState<{ [key: number]: string }>({});
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);

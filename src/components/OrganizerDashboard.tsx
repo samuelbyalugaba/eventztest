@@ -8,11 +8,17 @@ import { HighlightViewerModal } from './HighlightViewerModal';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
 import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
-import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2 } from 'lucide-react';
+import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile, deletePost, deleteEvent } from '../utils/supabase/api';
 import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 interface OrganizerDashboardProps {
   onCreateEvent: () => void;
@@ -427,71 +433,80 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
               </div>
             </div>
             
-            {/* Grid Gallery - Instagram Style */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* List View - Organized & Accessible */}
+            <div className="flex flex-col gap-3">
               {highlights.map(highlight => (
                 <div 
                   key={highlight.id} 
-                  className="group relative overflow-hidden rounded-lg bg-gray-100 aspect-square cursor-pointer"
+                  className="group relative flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
                   onClick={() => setSelectedHighlight(highlight)}
                 >
-                  {/* Image */}
-                  <ImageWithFallback
-                    src={highlight.image}
-                    alt={highlight.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  
-                  {/* Video Play Icon - Always Visible for Videos */}
-                  {highlight.mediaType === 'video' && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                        <Play className="w-4 h-4 text-[#8A2BE2] ml-0.5" fill="currentColor" />
+                  {/* Image Thumbnail */}
+                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 relative bg-gray-100">
+                    <ImageWithFallback
+                      src={highlight.image}
+                      alt={highlight.title}
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Video Play Icon */}
+                    {highlight.mediaType === 'video' && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <div className="w-6 h-6 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm">
+                          <Play className="w-3 h-3 text-[#8A2BE2] ml-0.5" fill="currentColor" />
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  
-                  {/* Gradient Overlay - Appears on Hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  
-                  {/* Actions - Appears on Hover */}
-                  <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <button 
-                      onClick={(e) => handleDeletePost(highlight.id, e)}
-                      className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white flex items-center justify-center transition-all shadow-lg"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleShare(highlight); }}
-                      className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white flex items-center justify-center transition-all shadow-lg"
-                      title="Share"
-                    >
-                      <Share2 className="w-4 h-4 text-gray-700" />
-                    </button>
+                    )}
                   </div>
                   
-                  {/* Content Overlay - Appears on Hover */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                    <h3 className="text-white mb-2 line-clamp-2 leading-snug">{highlight.title}</h3>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-gray-900 font-medium mb-1 line-clamp-1">{highlight.title || 'Untitled Post'}</h3>
                     
                     {/* Stats */}
-                    <div className="flex items-center gap-4 text-white/90">
-                      <div className="flex items-center gap-1.5">
-                        <Heart className="w-4 h-4" />
-                        <span className="text-sm">{highlight.likes}</span>
+                    <div className="flex items-center gap-4 text-gray-500 text-xs">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-3.5 h-3.5" />
+                        <span>{highlight.likes}</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <MessageCircle className="w-4 h-4" />
-                        <span className="text-sm">{highlight.comments}</span>
+                      <div className="flex items-center gap-1">
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>{highlight.comments}</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Share2 className="w-4 h-4" />
-                        <span className="text-sm">{highlight.shares}</span>
+                      <div className="flex items-center gap-1">
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>{highlight.shares}</span>
                       </div>
                     </div>
                   </div>
+
+                  {/* Actions */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button 
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-500"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem 
+                        className="text-red-600 focus:text-red-600 cursor-pointer"
+                        onClick={(e: React.MouseEvent) => handleDeletePost(highlight.id, e)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); handleShare(highlight); }}
+                      >
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ))}
             </div>
@@ -590,28 +605,40 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div className="absolute top-3 right-3 flex gap-2">
-                          <button 
-                            onClick={() => setSelectedEventForAnalytics(event)}
-                            className="bg-white/90 backdrop-blur-sm p-2 rounded-lg text-gray-700 hover:text-[#8A2BE2] hover:bg-white transition-all shadow-sm"
-                            title="Analytics"
-                          >
-                            <BarChart3 className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => onEditEvent?.(event)}
-                            className="bg-white/90 backdrop-blur-sm p-2 rounded-lg text-gray-700 hover:text-[#8A2BE2] hover:bg-white transition-all shadow-sm"
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={(e) => handleDeleteEvent(event.id, e)}
-                            className="bg-white/90 backdrop-blur-sm p-2 rounded-lg text-gray-700 hover:text-red-600 hover:bg-white transition-all shadow-sm"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        <div className="absolute top-3 right-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button 
+                                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                className="bg-white/90 backdrop-blur-sm p-2 rounded-lg text-gray-700 hover:text-[#8A2BE2] hover:bg-white transition-all shadow-sm"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem 
+                                className="cursor-pointer"
+                                onClick={() => setSelectedEventForAnalytics(event)}
+                              >
+                                <BarChart3 className="w-4 h-4 mr-2" />
+                                Analytics
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="cursor-pointer"
+                                onClick={() => onEditEvent?.(event)}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-red-600 focus:text-red-600 cursor-pointer"
+                                onClick={(e: React.MouseEvent) => handleDeleteEvent(event.id, e)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                       <div className="p-4">
@@ -664,21 +691,33 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                           className="w-full h-full object-cover grayscale"
                         />
                         <div className="absolute inset-0 bg-black/10"></div>
-                        <div className="absolute top-3 right-3 flex gap-2">
-                          <button 
-                            onClick={() => onEditEvent?.(event)}
-                            className="bg-white p-2 rounded-lg text-gray-700 hover:text-[#8A2BE2] shadow-sm"
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={(e) => handleDeleteEvent(event.id, e)}
-                            className="bg-white p-2 rounded-lg text-gray-700 hover:text-red-600 shadow-sm"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        <div className="absolute top-3 right-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button 
+                                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                className="bg-white p-2 rounded-lg text-gray-700 hover:text-[#8A2BE2] shadow-sm"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem 
+                                className="cursor-pointer"
+                                onClick={() => onEditEvent?.(event)}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-red-600 focus:text-red-600 cursor-pointer"
+                                onClick={(e: React.MouseEvent) => handleDeleteEvent(event.id, e)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                         <div className="absolute bottom-3 left-3">
                           <span className="bg-gray-900/80 text-white text-xs px-2 py-1 rounded-md backdrop-blur-sm">

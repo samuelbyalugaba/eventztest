@@ -196,8 +196,7 @@ export const getProfile = async (userId: string) => {
 export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
   const { data, error } = await supabase
     .from('profiles')
-    .update(updates)
-    .eq('id', userId)
+    .upsert({ ...updates, id: userId })
     .select()
     .single();
 
@@ -1224,6 +1223,7 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
 };
 
 export const deletePost = async (postId: number) => {
+  // Delete the post (related data like likes/comments will be deleted via CASCADE)
   const { error } = await supabase
     .from('posts')
     .delete()
