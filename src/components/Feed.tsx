@@ -6,7 +6,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification, deletePost } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead } from '../utils/supabase/api';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -583,8 +583,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   }}
                 >
                   <Bell className={`w-5 h-5 ${showNotifications ? 'text-purple-600' : 'text-gray-700'}`} />
-                  {/* Mock Notification Badge */}
-                  <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                  {/* Notification Badge */}
+                  {notifications.filter(n => !n.read).length > 0 && (
+                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                  )}
                 </button>
                 <button
                   className={`p-2.5 rounded-xl transition-colors relative ${showMessages ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
@@ -985,9 +987,17 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               <h2 className="text-lg font-bold text-gray-900">Notifications</h2>
               <button 
                 className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 px-2 py-1 rounded-full transition-colors"
-                onClick={() => {
+                onClick={async () => {
                   setNotifications(notifications.map(n => ({ ...n, read: true })));
                   toast.success('All notifications marked as read');
+                  
+                  if (currentUser) {
+                    try {
+                      await markNotificationsAsRead(currentUser.id);
+                    } catch (error) {
+                      console.error('Error marking notifications as read:', error);
+                    }
+                  }
                 }}
               >
                 Mark all as read

@@ -1643,6 +1643,15 @@ export type Notification = {
 export const getNotifications = async (userId: string) => {
   const notifications: Notification[] = [];
 
+  // Get last read timestamp
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('last_notification_read_at')
+    .eq('id', userId)
+    .single();
+    
+  const lastReadTime = profile?.last_notification_read_at ? new Date(profile.last_notification_read_at).getTime() : 0;
+
   // 1. Fetch Follows (New Followers)
   const { data: follows } = await supabase
     .from('follows')
@@ -1666,7 +1675,7 @@ export const getNotifications = async (userId: string) => {
           },
           content: 'started following you',
           time: follow.created_at,
-          read: false,
+          read: new Date(follow.created_at).getTime() <= lastReadTime,
           created_at: follow.created_at
         });
       }
@@ -1709,7 +1718,7 @@ export const getNotifications = async (userId: string) => {
             },
             content: 'liked your post',
             time: like.created_at,
-            read: false,
+            read: new Date(like.created_at).getTime() <= lastReadTime,
             created_at: like.created_at
           });
         }
@@ -1742,7 +1751,7 @@ export const getNotifications = async (userId: string) => {
             },
             content: `commented: "${comment.text.substring(0, 30)}${comment.text.length > 30 ? '...' : ''}"`,
             time: comment.created_at,
-            read: false,
+            read: new Date(comment.created_at).getTime() <= lastReadTime,
             created_at: comment.created_at
           });
         }
@@ -1754,6 +1763,15 @@ export const getNotifications = async (userId: string) => {
   return notifications.sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
+};
+
+export const markNotificationsAsRead = async (userId: string) => {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ last_notification_read_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  if (error) throw error;
 };
 
 
