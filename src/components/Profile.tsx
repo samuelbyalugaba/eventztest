@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
@@ -188,22 +188,48 @@ export function Profile({ onLogout }: ProfileProps) {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
+      const files = Array.from(e.target.files);
       
       // Validate file type based on postType
-      if (postType === 'photo' && !file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
-      
-      if (postType === 'video' && !file.type.startsWith('video/')) {
-        toast.error('Please select a video file');
-        return;
-      }
+      const validFiles = files.filter(file => {
+        if (postType === 'photo' && !file.type.startsWith('image/')) {
+          toast.error(`Skipped ${file.name}: Not an image`);
+          return false;
+        }
+        if (postType === 'video' && !file.type.startsWith('video/')) {
+          toast.error(`Skipped ${file.name}: Not a video`);
+          return false;
+        }
+        return true;
+      });
 
-      setFilesToUpload([file]);
-      const url = URL.createObjectURL(file);
-      setSelectedFiles([url]);
+      if (validFiles.length === 0) return;
+
+      if (postType === 'video') {
+        if (validFiles.length > 1) {
+          toast.info("Only one video can be uploaded at a time.");
+        }
+        const file = validFiles[0];
+        setFilesToUpload([file]);
+        const url = URL.createObjectURL(file);
+        setSelectedFiles([url]);
+      } else {
+        setFilesToUpload(prev => [...prev, ...validFiles]);
+        const urls = validFiles.map(file => URL.createObjectURL(file));
+        setSelectedFiles(prev => [...prev, ...urls]);
+      }
+    }
+    // Reset input so the same file can be selected again if needed
+    e.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setFilesToUpload(prev => prev.filter((_, i) => i !== index));
+    
+    // If all files removed, go back to type selection
+    if (selectedFiles.length === 1) {
+      setPostType(null);
     }
   };
 
@@ -222,16 +248,23 @@ export function Profile({ onLogout }: ProfileProps) {
         return;
       }
 
-      // 1. Upload file
-      const file = filesToUpload[0];
-      // Use 'posts' bucket - api.ts handles fallback to 'events' if needed
-      const publicUrl = await uploadImage(file, 'posts');
+      // 1. Upload files
+      const uploadedUrls: string[] = [];
+      for (const file of filesToUpload) {
+        // Use 'posts' bucket - api.ts handles fallback to 'events' if needed
+        const publicUrl = await uploadImage(file, 'posts');
+        if (publicUrl) uploadedUrls.push(publicUrl);
+      }
+
+      if (uploadedUrls.length === 0) {
+        throw new Error('Failed to upload files');
+      }
 
       // 2. Create post
       await createPost({
         content: postCaption,
-        image_urls: postType === 'photo' ? [publicUrl] : [],
-        video_url: postType === 'video' ? publicUrl : undefined,
+        image_urls: postType === 'photo' ? uploadedUrls : [],
+        video_url: postType === 'video' ? uploadedUrls[0] : undefined,
         hashtags: [],
         user_id: user.id
       });
@@ -867,6 +900,7 @@ export function Profile({ onLogout }: ProfileProps) {
               type="file"
               ref={fileInputRef}
               className="hidden"
+              multiple={postType === 'photo'}
               accept={postType === 'photo' ? 'image/*' : 'video/*'}
               onChange={handleFileSelect}
             />
@@ -960,21 +994,55 @@ export function Profile({ onLogout }: ProfileProps) {
                 <div className="space-y-5">
                   {/* Preview Area */}
                   {selectedFiles.length > 0 && (
-                    <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-100 shadow-lg">
-                      <img 
-                        src={selectedFiles[0]} 
-                        alt="Preview" 
-                        className="w-full h-full object-cover"
-                      />
-                      {postType === 'video' && (
-                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                          <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl">
-                            <Play className="w-8 h-8 text-purple-600 fill-purple-600 ml-1" />
+                    <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-100 shadow-lg group">
+                      {postType === 'video' ? (
+                          <div className="relative w-full h-full">
+                             <video src={selectedFiles[0]} className="w-full h-full object-cover" />
+                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl">
+                                  <Play className="w-8 h-8 text-purple-600 fill-purple-600 ml-1" />
+                                </div>
+                             </div>
                           </div>
-                        </div>
+                      ) : (
+                          <div className="flex overflow-x-auto snap-x snap-mandatory w-full h-full scrollbar-hide">
+                             {selectedFiles.map((url, idx) => (
+                                <div key={idx} className="flex-shrink-0 w-full h-full snap-center relative group/slide">
+                                   <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                                   <button 
+                                      onClick={() => removeFile(idx)}
+                                      className="absolute top-3 right-3 p-1.5 bg-black/50 backdrop-blur-sm hover:bg-red-500/80 rounded-full text-white transition-all opacity-0 group-hover/slide:opacity-100 z-10"
+                                      title="Remove image"
+                                   >
+                                      <X className="w-4 h-4" />
+                                   </button>
+                                </div>
+                             ))}
+                          </div>
                       )}
+
+                      {/* Add Button for Photos */}
+                      {postType === 'photo' && (
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="absolute bottom-4 right-4 p-3 bg-white/90 backdrop-blur-sm shadow-lg rounded-full text-purple-600 hover:bg-white hover:scale-105 active:scale-95 transition-all z-20"
+                          title="Add more photos"
+                        >
+                          <Plus className="w-5 h-5" />
+                        </button>
+                      )}
+
+                      {/* Carousel Indicators */}
+                      {selectedFiles.length > 1 && (
+                         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                           {selectedFiles.map((_, idx) => (
+                             <div key={idx} className="w-1.5 h-1.5 rounded-full bg-white/50 backdrop-blur-sm shadow-sm" />
+                           ))}
+                         </div>
+                      )}
+
                       {/* Type Badge */}
-                      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg">
+                      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg z-20">
                         <div className="flex items-center gap-2">
                           {postType === 'photo' ? (
                             <ImageIcon className="w-4 h-4 text-purple-600" />
@@ -982,6 +1050,11 @@ export function Profile({ onLogout }: ProfileProps) {
                             <Video className="w-4 h-4 text-pink-600" />
                           )}
                           <span className="text-sm capitalize text-gray-900">{postType}</span>
+                           {selectedFiles.length > 1 && (
+                             <span className="text-xs text-gray-500 border-l border-gray-300 pl-2 ml-1">
+                               {selectedFiles.length} items
+                             </span>
+                           )}
                         </div>
                       </div>
                     </div>
