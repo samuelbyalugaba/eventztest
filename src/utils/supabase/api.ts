@@ -194,6 +194,23 @@ export const getProfile = async (userId: string) => {
 };
 
 export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
+  // Input Validation
+  if (updates.username && updates.username.length < 3) {
+    throw new Error('Username must be at least 3 characters');
+  }
+  
+  if (updates.full_name && updates.full_name.length > 50) {
+    throw new Error('Name cannot exceed 50 characters');
+  }
+
+  if (updates.birthdate) {
+    const birthDate = new Date(updates.birthdate);
+    const today = new Date();
+    if (birthDate > today) {
+      throw new Error('Birthdate cannot be in the future');
+    }
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .upsert({ ...updates, id: userId })
@@ -219,6 +236,11 @@ export const getOrganizerProfile = async (userId: string) => {
 };
 
 export const upsertOrganizerProfile = async (profile: Partial<OrganizerProfile> & { id: string }) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.id !== profile.id) {
+    throw new Error('Unauthorized: You can only update your own organizer profile');
+  }
+
   const { data, error } = await supabase
     .from('organizer_profiles')
     .upsert(profile)
@@ -514,47 +536,19 @@ export const getOrganizerEvents = async (organizerId: string) => {
 };
 
 export const incrementEventView = async (eventId: number) => {
-  // Try RPC first (atomic increment)
+  // RPC (atomic increment)
   const { error } = await supabase.rpc('increment_event_view', { event_id: eventId });
-  
+
   if (error) {
-    // Fallback: Read-Modify-Write (if RPC doesn't exist)
-    // Note: This is less safe for concurrency but works without custom SQL functions
-    console.warn('RPC increment_event_view failed, falling back to update', error);
-    
-    const { data: event } = await supabase
-      .from('events')
-      .select('views')
-      .eq('id', eventId)
-      .single();
-      
-    if (event) {
-      const newViews = (event.views || 0) + 1;
-      await supabase
-        .from('events')
-        .update({ views: newViews })
-        .eq('id', eventId);
-    }
+    console.warn('RPC increment_event_view failed:', error);
   }
 };
 
 export const incrementPostView = async (postId: number) => {
   const { error } = await supabase.rpc('increment_post_view', { post_id: postId });
-  
+
   if (error) {
-    const { data: post } = await supabase
-      .from('posts')
-      .select('views')
-      .eq('id', postId)
-      .single();
-      
-    if (post) {
-      const newViews = (post.views || 0) + 1;
-      await supabase
-        .from('posts')
-        .update({ views: newViews })
-        .eq('id', postId);
-    }
+    console.warn('RPC increment_post_view failed:', error);
   }
 };
 
@@ -562,19 +556,7 @@ export const incrementUserMediaView = async (mediaId: number) => {
   const { error } = await supabase.rpc('increment_media_view', { media_id: mediaId });
   
   if (error) {
-    const { data: media } = await supabase
-      .from('user_media')
-      .select('views')
-      .eq('id', mediaId)
-      .single();
-      
-    if (media) {
-      const newViews = (media.views || 0) + 1;
-      await supabase
-        .from('user_media')
-        .update({ views: newViews })
-        .eq('id', mediaId);
-    }
+    console.warn('RPC increment_media_view failed:', error);
   }
 };
 
@@ -680,6 +662,22 @@ export const getEventAttendees = async (eventId: number, limit = 5) => {
 };
 
 export const createEvent = async (eventData: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => {
+  // Input Validation
+  if (new Date(eventData.date) < new Date(new Date().setHours(0,0,0,0))) {
+    throw new Error('Event date cannot be in the past');
+  }
+
+  if (eventData.title.length < 3 || eventData.title.length > 100) {
+    throw new Error('Title must be between 3 and 100 characters');
+  }
+
+  if (Array.isArray(eventData.ticket_tiers)) {
+    eventData.ticket_tiers.forEach((tier: any) => {
+      if (tier.price < 0) throw new Error('Ticket price cannot be negative');
+      if (tier.quantity < 0) throw new Error('Ticket quantity cannot be negative');
+    });
+  }
+
   const { data, error } = await supabase
     .from('events')
     .insert(eventData)
@@ -694,6 +692,20 @@ export const createEvent = async (eventData: Omit<Event, 'id' | 'created_at' | '
 };
 
 export const updateEvent = async (eventId: number, eventData: Partial<Event>) => {
+  // Input Validation
+  if (eventData.date) {
+    if (new Date(eventData.date) < new Date(new Date().setHours(0,0,0,0))) {
+      throw new Error('Event date cannot be in the past');
+    }
+  }
+
+  if (eventData.ticket_tiers && Array.isArray(eventData.ticket_tiers)) {
+    eventData.ticket_tiers.forEach((tier: any) => {
+      if (tier.price < 0) throw new Error('Ticket price cannot be negative');
+      if (tier.quantity < 0) throw new Error('Ticket quantity cannot be negative');
+    });
+  }
+
   const { data, error } = await supabase
     .from('events')
     .update(eventData)
@@ -709,17 +721,60 @@ export const updateEvent = async (eventId: number, eventData: Partial<Event>) =>
 };
 
 export const deleteEvent = async (id: number) => {
+  // 1. Fetch event to get image URL
+  const { data: event } = await supabase
+    .from('events')
+    .select('image_url')
+    .eq('id', id)
+    .single();
+
+  // 2. Delete event row
   const { error } = await supabase
     .from('events')
     .delete()
     .eq('id', id);
 
   if (error) throw error;
+
+  // 3. Delete image from storage
+  if (event?.image_url) {
+    await deleteFile('events', event.image_url);
+  }
 };
 
 // --- STORAGE ---
 
+export const deleteFile = async (bucket: 'events' | 'avatars' | 'posts', url: string) => {
+  try {
+    // Extract path from URL
+    // Format: .../storage/v1/object/public/{bucket}/{path}
+    const path = url.split(`${bucket}/`).pop();
+    if (!path) return;
+
+    const { error } = await supabase.storage
+      .from(bucket)
+      .remove([path]);
+
+    if (error) {
+      console.error(`Error deleting file from ${bucket}:`, error);
+    }
+  } catch (err) {
+    console.error(`Error in deleteFile for ${bucket}:`, err);
+  }
+};
+
 export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'posts', path?: string) => {
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.');
+  }
+
+  // Validate file size (10MB limit)
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error('File size too large. Maximum size is 10MB.');
+  }
+
   const fileExt = file.name.split('.').pop();
   const fileName = `${crypto.randomUUID()}_${Date.now()}.${fileExt}`;
   const filePath = path ? `${path}/${fileName}` : fileName;
@@ -900,15 +955,7 @@ export const subscribeToSavedEvents = (userId: string, callback: () => void) => 
 };
 
 export const deleteConversation = async (conversationId: number) => {
-  // First delete all messages in the conversation to avoid foreign key constraints
-  const { error: messagesError } = await supabase
-    .from('messages')
-    .delete()
-    .eq('conversation_id', conversationId);
-
-  if (messagesError) throw messagesError;
-
-  // Then delete the conversation itself
+  // Messages will be deleted automatically via ON DELETE CASCADE
   const { error } = await supabase
     .from('conversations')
     .delete()
@@ -1048,19 +1095,43 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
 };
 
 export const deletePost = async (postId: number) => {
-  // Delete the post (related data like likes/comments will be deleted via CASCADE)
+  // 1. Fetch post to get image URLs
+  const { data: post } = await supabase
+    .from('posts')
+    .select('image_urls')
+    .eq('id', postId)
+    .single();
+
+  // 2. Delete post row (CASCADE handles comments/likes)
   const { error } = await supabase
     .from('posts')
     .delete()
     .eq('id', postId);
 
   if (error) throw error;
+
+  // 3. Delete images from storage (Best effort)
+  if (post?.image_urls && Array.isArray(post.image_urls)) {
+    await Promise.all(post.image_urls.map(url => deleteFile('posts', url)));
+  }
 };
 
 export const createPost = async (post: Omit<Post, 'id' | 'created_at' | 'user' | 'event' | 'likes_count' | 'comments_count' | 'is_liked'>) => {
+  // Input Validation
+  if (!post.content?.trim() && (!post.image_urls || post.image_urls.length === 0)) {
+    throw new Error('Post must contain text or an image');
+  }
+
+  if (post.content && post.content.length > 2000) {
+    throw new Error('Post content cannot exceed 2000 characters');
+  }
+
   const { data, error } = await supabase
     .from('posts')
-    .insert(post)
+    .insert({
+      ...post,
+      content: post.content?.trim() // Trim whitespace
+    })
     .select()
     .single();
 
@@ -1121,9 +1192,19 @@ export const getPostComments = async (postId: number) => {
 };
 
 export const createPostComment = async (postId: number, userId: string, text: string) => {
+  // Input Validation
+  const trimmedText = text.trim();
+  if (!trimmedText) {
+    throw new Error('Comment cannot be empty');
+  }
+
+  if (trimmedText.length > 500) {
+    throw new Error('Comment cannot exceed 500 characters');
+  }
+
   const { data, error } = await supabase
     .from('post_comments')
-    .insert({ post_id: postId, user_id: userId, text })
+    .insert({ post_id: postId, user_id: userId, text: trimmedText })
     .select(`
       *,
       user:profiles(*)
@@ -1143,15 +1224,10 @@ export const getLiveStreams = async () => {
       organizer:profiles(*)
     `)
     .eq('status', 'published')
-    // We can't query JSONB easily with simple .eq for nested properties in all cases, 
-    // but we can filter in application or use arrow operators if enabled.
-    // Assuming standard Supabase postgrest filter:
-    .not('streaming', 'is', null); 
+    .contains('streaming', { available: true, isLive: true });
 
   if (error) throw error;
-  
-  // Client-side filtering for now to be safe with JSONB structure
-  return data.filter((e: any) => e.streaming?.available && e.streaming?.isLive);
+  return data;
 };
 
 export const getUpcomingStreams = async () => {
@@ -1162,13 +1238,15 @@ export const getUpcomingStreams = async () => {
       organizer:profiles(*)
     `)
     .eq('status', 'published')
-    .not('streaming', 'is', null)
+    .contains('streaming', { available: true })
     .gt('date', new Date().toISOString().split('T')[0]);
 
   if (error) throw error;
 
-  // Filter for streaming available but NOT live yet
-  return data.filter((e: any) => e.streaming?.available && !e.streaming?.isLive);
+  // Filter for NOT live (since we can't easily do "not contains" or "value is false" mixed with other JSON checks efficiently without complex syntax,
+  // but usually "upcoming" means date is future, so checking isLive might be redundant if date > today.
+  // However, strict check:
+  return data.filter((e: any) => !e.streaming?.isLive);
 };
 
 // --- STREAMING CHAT ---
@@ -1201,12 +1279,16 @@ export const sendStreamMessage = async (eventId: number, message: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
+  const trimmedMessage = message.trim();
+  if (!trimmedMessage) throw new Error('Message cannot be empty');
+  if (trimmedMessage.length > 200) throw new Error('Message too long (max 200 chars)');
+
   const { data, error } = await supabase
     .from('stream_chat_messages')
     .insert({
       event_id: eventId,
       user_id: user.id,
-      message
+      message: trimmedMessage
     })
     .select(`
       *,
@@ -1363,13 +1445,21 @@ export const sendMessage = async (conversationId: number, text: string, imageUrl
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
+  const trimmedText = text.trim();
+  if (!trimmedText && !imageUrl) {
+    throw new Error('Message cannot be empty');
+  }
+  if (trimmedText.length > 5000) {
+    throw new Error('Message too long (max 5000 chars)');
+  }
+
   // Insert message
   const { data, error } = await supabase
     .from('messages')
     .insert({
       conversation_id: conversationId,
       sender_id: user.id,
-      content: text,
+      content: trimmedText,
       image_url: imageUrl
     })
     .select('*')
@@ -1575,10 +1665,10 @@ export const getNotifications = async (userId: string) => {
     });
   }
 
-  // Sort by date desc
-  return notifications.sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+  // Sort by date (newest first) to ensure a correct timeline
+  notifications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  return notifications;
 };
 
 export const markNotificationsAsRead = async (userId: string) => {

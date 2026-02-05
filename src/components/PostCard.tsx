@@ -59,15 +59,36 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
     }
   };
   
-  // Intersection Observer for Video Autoplay
+  // Intersection Observer for Video Autoplay & Concurrency Management
   useEffect(() => {
+    // Listen for other videos playing
+    const handleOtherVideoPlay = (e: CustomEvent) => {
+      if (e.detail.postId !== post.id && videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    };
+
+    window.addEventListener('video-play', handleOtherVideoPlay as EventListener);
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (videoRef.current) {
             if (entry.isIntersecting) {
-              videoRef.current.play().catch(() => {});
-              setIsPlaying(true);
+              // Only auto-play if no other video is playing? 
+              // Or just take over. "Taking over" is standard feed behavior.
+              const playPromise = videoRef.current.play();
+              if (playPromise !== undefined) {
+                playPromise.then(() => {
+                  setIsPlaying(true);
+                  // Notify others to stop
+                  window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
+                }).catch(() => {
+                  // Auto-play prevented
+                  setIsPlaying(false);
+                });
+              }
             } else {
               videoRef.current.pause();
               setIsPlaying(false);
@@ -83,11 +104,26 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
     }
 
     return () => {
+      window.removeEventListener('video-play', handleOtherVideoPlay as EventListener);
       if (videoRef.current) {
         observer.unobserve(videoRef.current);
       }
     };
-  }, [carouselIndex]);
+  }, [carouselIndex, post.id]);
+
+  const handleManualPlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+        window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
 
   const handleLike = async () => {
     // Optimistic UI
@@ -286,16 +322,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                 loop
                 muted={isMuted}
                 playsInline
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (videoRef.current?.paused) {
-                    videoRef.current.play();
-                    setIsPlaying(true);
-                  } else {
-                    videoRef.current?.pause();
-                    setIsPlaying(false);
-                  }
-                }}
+                onClick={handleManualPlay}
               />
               {/* Video Controls Overlay */}
               <div className="absolute bottom-4 right-4 z-10">
