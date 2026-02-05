@@ -400,8 +400,8 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                 )}
               </button>
             </DrawerTrigger>
-            <DrawerContent className="max-h-[85vh]">
-              <DrawerHeader className="border-b border-gray-100 pb-4">
+            <DrawerContent className="max-h-[85vh] bg-white/85 backdrop-blur-xl border-t border-white/20 shadow-2xl">
+              <DrawerHeader className="border-b border-white/20 pb-4">
                 <DrawerTitle className="text-center">Comments</DrawerTitle>
               </DrawerHeader>
               <div className="p-4 overflow-y-auto flex-1 min-h-[300px]">
@@ -420,12 +420,12 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                         <UserAvatar 
                           src={comment.user.avatar} 
                           name={comment.user.name} 
-                          className="w-8 h-8 rounded-full"
+                          className="w-8 h-8 rounded-full ring-2 ring-white/50"
                         />
                         <div className="flex-1">
-                          <div className="bg-gray-50 p-3 rounded-2xl rounded-tl-none">
+                          <div className="bg-white/60 p-3 rounded-2xl rounded-tl-none backdrop-blur-sm border border-white/40 shadow-sm">
                             <span className="font-semibold text-sm block mb-1">{comment.user.name}</span>
-                            <p className="text-sm text-gray-700">{comment.text}</p>
+                            <p className="text-sm text-gray-800">{comment.text}</p>
                           </div>
                           <div className="flex items-center gap-3 mt-1 ml-2 text-xs text-gray-500">
                             <span>{comment.timestamp}</span>
@@ -438,17 +438,17 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                   </div>
                 )}
               </div>
-              <div className="p-4 border-t border-gray-100 bg-white">
+              <div className="p-4 border-t border-white/20 bg-white/30 backdrop-blur-lg">
                 <div className="flex items-center gap-2">
                   <UserAvatar 
                     src={currentUser?.user_metadata?.avatar_url} 
                     name={currentUser?.user_metadata?.full_name || 'Me'} 
-                    className="w-8 h-8 rounded-full"
+                    className="w-8 h-8 rounded-full ring-2 ring-white/50"
                   />
                   <div className="flex-1 relative">
                     <Input 
                       placeholder="Add a comment..." 
-                      className="pr-10 rounded-full bg-gray-50 border-transparent focus:bg-white focus:border-purple-200"
+                      className="pr-10 rounded-full bg-white/60 border-white/30 focus:bg-white focus:border-purple-200 shadow-inner"
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
