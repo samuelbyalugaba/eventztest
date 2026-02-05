@@ -179,6 +179,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
   const videoUrl = post.isHighlight && post.highlights?.[0]?.videoUrl;
   const currentMedia = videoUrl || post.content.images?.[carouselIndex] || post.content.image;
   const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
+  const isCarousel = (post.content.images?.length ?? 0) > 1;
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6 hover:shadow-md transition-shadow duration-300">
@@ -273,15 +274,15 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       {/* 3. POST CONTENT AREA - MEDIA */}
       <div className="relative overflow-hidden group">
         <div 
-          className="relative w-full flex items-center justify-center"
+          className={`relative w-full flex items-center justify-center ${isCarousel ? 'aspect-square bg-gray-100' : ''}`}
           onDoubleClick={handleDoubleTap}
         >
           {isCurrentMediaVideo ? (
-            <div className="relative w-full bg-black">
+            <div className={`relative w-full bg-black ${isCarousel ? 'h-full' : ''}`}>
               <video
                 ref={videoRef}
                 src={currentMedia}
-                className="w-full h-auto"
+                className={`w-full ${isCarousel ? 'h-full object-cover' : 'h-auto'}`}
                 loop
                 muted={isMuted}
                 playsInline
@@ -317,7 +318,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             <ImageWithFallback
               src={currentMedia}
               alt="Post content"
-              className="w-full h-auto"
+              className={`w-full ${isCarousel ? 'h-full object-cover' : 'h-auto'}`}
               fallbackType="image"
             />
           )}
