@@ -15,8 +15,8 @@ interface CreatePostModalProps {
 
 export function CreatePostModal({ isOpen, onClose, onPostCreated, isOrganizer = false, organizerName }: CreatePostModalProps) {
   const [content, setContent] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [fileType, setFileType] = useState<'image' | 'video' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [postAsOrganizer, setPostAsOrganizer] = useState(false);
@@ -25,30 +25,64 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, isOrganizer = 
   if (!isOpen) return null;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const hasVideo = files.some(f => f.type.startsWith('video/'));
+    
+    // If selecting a video
+    if (hasVideo) {
+      if (files.length > 1 || selectedFiles.length > 0) {
+        toast.error('You can only upload one video at a time');
+        return;
+      }
+      
+      const file = files[0];
       if (file.size > 50 * 1024 * 1024) { // 50MB limit for videos
         toast.error('File size should be less than 50MB');
         return;
       }
       
-      const isVideo = file.type.startsWith('video/');
-      const isImage = file.type.startsWith('image/');
+      setSelectedFiles([file]);
+      setFileType('video');
+      setPreviewUrls([URL.createObjectURL(file)]);
+      return;
+    }
 
-      if (!isVideo && !isImage) {
-        toast.error('Please select an image or video file');
+    // If selecting images
+    const validImages = files.filter(f => f.type.startsWith('image/'));
+    if (validImages.length === 0) {
+        toast.error('Please select valid image files');
         return;
-      }
+    }
 
-      setSelectedFile(file);
-      setFileType(isVideo ? 'video' : 'image');
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
+    if (fileType === 'video') {
+      toast.error('Cannot mix video and images. Remove the video first.');
+      return;
+    }
+
+    const newPreviewUrls = validImages.map(f => URL.createObjectURL(f));
+    
+    setSelectedFiles(prev => [...prev, ...validImages]);
+    setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+    setFileType('image');
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => {
+      const newUrls = [...prev];
+      URL.revokeObjectURL(newUrls[index]);
+      return newUrls.filter((_, i) => i !== index);
+    });
+    
+    if (selectedFiles.length === 1) {
+      setFileType(null);
     }
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() && !selectedFile) {
+    if (!content.trim() && selectedFiles.length === 0) {
       toast.error('Please add some content or media');
       return;
     }
@@ -64,19 +98,15 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, isOrganizer = 
       let mediaUrls: string[] = [];
       let videoUrl: string | undefined;
 
-      if (selectedFile) {
+      if (selectedFiles.length > 0) {
         try {
-          // Use 'posts' bucket - api.ts handles fallback to 'events' if needed
-          const publicUrl = await uploadImage(selectedFile, 'posts', `user_${user.id}`);
-          
           if (fileType === 'video') {
-            videoUrl = publicUrl;
-            // For videos, we might want to generate a thumbnail later, 
-            // but for now we'll leave image_urls empty or maybe put the video url there too if needed by UI
-            // The API expects image_urls to be an array of strings
-            mediaUrls = []; 
+             const publicUrl = await uploadImage(selectedFiles[0], 'posts', `user_${user.id}`);
+             videoUrl = publicUrl;
           } else {
-            mediaUrls.push(publicUrl);
+             // Upload all images
+             const uploadPromises = selectedFiles.map(file => uploadImage(file, 'posts', `user_${user.id}`));
+             mediaUrls = await Promise.all(uploadPromises);
           }
         } catch (error) {
           console.error('Error uploading media:', error);
@@ -99,8 +129,8 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, isOrganizer = 
       window.dispatchEvent(new Event('postsUpdated'));
       onClose();
       setContent('');
-      setSelectedFile(null);
-      setPreviewUrl(null);
+      setSelectedFiles([]);
+      setPreviewUrls([]);
       setFileType(null);
     } catch (error) {
       console.error('Error creating post:', error);
@@ -134,23 +164,33 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, isOrganizer = 
           />
 
           {/* Image/Video Preview */}
-          {previewUrl && (
-            <div className="relative mt-4 rounded-xl overflow-hidden bg-gray-100">
+          {previewUrls.length > 0 && (
+            <div className="mt-4">
               {fileType === 'video' ? (
-                <video src={previewUrl} controls className="w-full h-48 object-cover" />
+                <div className="relative rounded-xl overflow-hidden bg-gray-100">
+                  <video src={previewUrls[0]} controls className="w-full h-48 object-cover" />
+                  <button
+                    onClick={() => removeFile(0)}
+                    className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               ) : (
-                <img src={previewUrl} alt="Preview" className="w-full h-48 object-cover" />
+                <div className="flex gap-2 overflow-x-auto pb-2 snap-x scrollbar-hide">
+                  {previewUrls.map((url, index) => (
+                    <div key={url} className="relative flex-shrink-0 w-48 h-48 rounded-xl overflow-hidden bg-gray-100 snap-center group">
+                      <img src={url} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
-              <button
-                onClick={() => {
-                  setSelectedFile(null);
-                  setPreviewUrl(null);
-                  setFileType(null);
-                }}
-                className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
           )}
         </div>
@@ -171,6 +211,7 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, isOrganizer = 
               onChange={handleFileSelect}
               accept="image/*,video/*"
               className="hidden"
+              multiple
             />
           </div>
 
@@ -200,7 +241,7 @@ export function CreatePostModal({ isOpen, onClose, onPostCreated, isOrganizer = 
 
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || (!content.trim() && !selectedFile)}
+              disabled={isSubmitting || (!content.trim() && selectedFiles.length === 0)}
               className="flex items-center gap-2 bg-[#8A2BE2] text-white px-5 py-2 rounded-xl hover:bg-[#7B27CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? (

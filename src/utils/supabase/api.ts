@@ -40,6 +40,13 @@ export type Profile = {
     showStats: boolean;
     showActivity?: boolean;
   };
+  notification_settings?: {
+    ticketSales: boolean;
+    streamAlerts: boolean;
+    weeklyReport: boolean;
+    marketingEmails: boolean;
+    newFollowers: boolean;
+  };
   payment_settings?: {
     bankName?: string;
     accountNumber?: string;
@@ -933,16 +940,19 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
   try {
     return await tryUpload(bucket);
   } catch (error: any) {
-    // Fallback logic for both posts and events buckets
+    // Fallback logic for buckets
     if (
-      (bucket === 'posts' || bucket === 'events') &&
+      (bucket === 'posts' || bucket === 'events' || bucket === 'avatars') &&
       error &&
       typeof error.message === 'string' &&
       (error.message.toLowerCase().includes('bucket not found') || 
        error.message.toLowerCase().includes('row-level security policy'))
     ) {
-      // Try the other bucket
-      const fallbackBucket = bucket === 'posts' ? 'events' : 'posts';
+      // Try a fallback bucket
+      let fallbackBucket: 'events' | 'avatars' | 'posts' = 'events';
+      if (bucket === 'events') fallbackBucket = 'posts';
+      // If avatars fails, default to events (which is the most likely to exist)
+      
       return await tryUpload(fallbackBucket);
     }
     throw error;
@@ -1211,6 +1221,15 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
     is_liked: likedPostIds.has(p.id),
     is_saved: savedPostIds.has(p.id)
   }));
+};
+
+export const deletePost = async (postId: number) => {
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('id', postId);
+
+  if (error) throw error;
 };
 
 export const createPost = async (post: Omit<Post, 'id' | 'created_at' | 'user' | 'event' | 'likes_count' | 'comments_count' | 'is_liked'>) => {

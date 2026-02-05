@@ -8,9 +8,9 @@ import { HighlightViewerModal } from './HighlightViewerModal';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
 import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
-import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, MoreVertical, Edit, TrendingUp } from 'lucide-react';
+import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile } from '../utils/supabase/api';
+import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile, deletePost, deleteEvent } from '../utils/supabase/api';
 import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
 
@@ -242,6 +242,36 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
     }
   };
 
+  const handleDeletePost = async (postId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    
+    try {
+      await deletePost(postId);
+      setOrganizerPosts(organizerPosts.filter(p => p.id !== postId));
+      toast.success('Post deleted');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    
+    try {
+      await deleteEvent(eventId);
+      setPublishedEvents(publishedEvents.filter(ev => ev.id !== eventId));
+      setDraftEvents(draftEvents.filter(ev => ev.id !== eventId));
+      toast.success('Event deleted');
+      setStats(prev => ({ ...prev, totalEvents: prev.totalEvents - 1 }));
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error('Failed to delete event');
+    }
+  };
+
   return (
     <>
       {/* Settings Button - Portal to document.body to TRULY ESCAPE all parent containers */}
@@ -424,16 +454,23 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                   {/* Gradient Overlay - Appears on Hover */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   
-                  {/* Share Button - Appears on Hover */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleShare(highlight);
-                    }}
-                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white flex items-center justify-center transition-all shadow-lg opacity-0 group-hover:opacity-100"
-                  >
-                    <Share2 className="w-4 h-4 text-[#8A2BE2]" />
-                  </button>
+                  {/* Actions - Appears on Hover */}
+                  <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <button 
+                      onClick={(e) => handleDeletePost(highlight.id, e)}
+                      className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white flex items-center justify-center transition-all shadow-lg"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleShare(highlight); }}
+                      className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white flex items-center justify-center transition-all shadow-lg"
+                      title="Share"
+                    >
+                      <Share2 className="w-4 h-4 text-gray-700" />
+                    </button>
+                  </div>
                   
                   {/* Content Overlay - Appears on Hover */}
                   <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
@@ -568,6 +605,13 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                           >
                             <Edit className="w-4 h-4" />
                           </button>
+                          <button 
+                            onClick={(e) => handleDeleteEvent(event.id, e)}
+                            className="bg-white/90 backdrop-blur-sm p-2 rounded-lg text-gray-700 hover:text-red-600 hover:bg-white transition-all shadow-sm"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                       <div className="p-4">
@@ -620,12 +664,20 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                           className="w-full h-full object-cover grayscale"
                         />
                         <div className="absolute inset-0 bg-black/10"></div>
-                        <div className="absolute top-3 right-3">
+                        <div className="absolute top-3 right-3 flex gap-2">
                           <button 
                             onClick={() => onEditEvent?.(event)}
                             className="bg-white p-2 rounded-lg text-gray-700 hover:text-[#8A2BE2] shadow-sm"
+                            title="Edit"
                           >
                             <Edit className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={(e) => handleDeleteEvent(event.id, e)}
+                            className="bg-white p-2 rounded-lg text-gray-700 hover:text-red-600 shadow-sm"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                         <div className="absolute bottom-3 left-3">
@@ -667,6 +719,8 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         <HighlightViewerModal
           highlight={selectedHighlight}
           onClose={() => setSelectedHighlight(null)}
+          onLike={handleLike}
+          onShare={handleShare}
         />
       )}
 

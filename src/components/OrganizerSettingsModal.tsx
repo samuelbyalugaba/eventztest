@@ -40,7 +40,7 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { updateProfile, getProfile, checkUsernameUnique, getOrganizerProfile, upsertOrganizerProfile } from '../utils/supabase/api';
+import { updateProfile, getProfile, checkUsernameUnique, getOrganizerProfile, upsertOrganizerProfile, uploadImage } from '../utils/supabase/api';
 
 interface OrganizerSettingsModalProps {
   onClose: () => void;
@@ -115,21 +115,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         return;
       }
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      const publicUrl = await uploadImage(file, 'avatars');
 
       setProfileData({ ...profileData, avatarUrl: publicUrl });
       toast.success('Profile photo updated successfully');

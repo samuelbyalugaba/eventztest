@@ -3,10 +3,16 @@ import { UserAvatar } from './UserAvatar';
 import { PostCard } from './PostCard';
 import { PostSkeleton } from './PostSkeleton';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, TrendingUp, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, PlusCircle, Volume2, VolumeX, Bell, Heart, UserPlus } from 'lucide-react';
+import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, getPostComments, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification, deletePost } from '../utils/supabase/api';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { handleShare } from '../utils/share';
 import { Conversation } from '../types';
 
@@ -93,7 +99,7 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export function Feed({ conversations: globalConversations, onStartConversation, onMarkAsRead, onlineUsers = [], onDeleteConversation, currentUser: propCurrentUser, isOrganizer = false, onCreateEvent }: FeedProps) {
+export function Feed({ conversations: globalConversations, onStartConversation, onMarkAsRead, onlineUsers = [], onDeleteConversation, currentUser: propCurrentUser }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [currentUser, setCurrentUser] = useState<any>(propCurrentUser || null);
@@ -115,13 +121,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
   const [fullScreenTouchStart, setFullScreenTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [carouselIndexes, setCarouselIndexes] = useState<{ [key: number]: number }>({});
   const [isPlaying, setIsPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [lastVideoTap, setLastVideoTap] = useState<number>(0);
   const [rewindAnimation, setRewindAnimation] = useState<{ show: boolean; direction: 'left' | 'right' } | null>(null);
   const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [imageTouchStart, setImageTouchStart] = useState<{ x: number; y: number } | null>(null);
   // const [showChatMenu, setShowChatMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
@@ -284,7 +288,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       fetchNotifications();
       
       // Poll every minute if panel is open
-      let interval: NodeJS.Timeout;
+      let interval: ReturnType<typeof setInterval>;
       if (showNotifications) {
         interval = setInterval(fetchNotifications, 60000);
       }
@@ -429,45 +433,28 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     setSelectedPost(null);
   };
 
-  // handleDoubleTap removed
-
-  const toggleComments = async (postId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeletePost = async (postId: number) => {
+    // Optimistic update
+    const previousPosts = [...posts];
+    setPosts(posts.filter(p => p.id !== postId));
     
-    if (expandedPostId === postId) {
-      setExpandedPostId(null);
-      return;
+    // Close detail if open
+    if (selectedPost && selectedPost.id === postId) {
+      setSelectedPost(null);
     }
-
-    setExpandedPostId(postId);
     
-    // Load comments for this post
     try {
-      const comments = await getPostComments(postId);
-      if (comments) {
-        setPosts(posts.map(post => {
-          if (post.id === postId) {
-            return {
-              ...post,
-              comments: comments.map((c: any) => ({
-                id: c.id,
-                user: {
-                  name: c.user?.full_name || c.user?.username || 'Unknown',
-                  avatar: c.user?.avatar_url || '',
-                },
-                text: c.text,
-                timestamp: (() => { try { const d = new Date(c.created_at); return isNaN(d.getTime()) ? 'Recently' : d.toLocaleDateString(); } catch { return 'Recently'; } })(),
-              }))
-            };
-          }
-          return post;
-        }));
-      }
+      await deletePost(postId);
+      toast.success('Post deleted');
     } catch (error) {
-      console.error('Error loading comments:', error);
-      toast.error('Failed to load comments');
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+      // Revert
+      setPosts(previousPosts);
     }
   };
+
+  // handleDoubleTap removed
 
   const handlePostComment = async (postId: number) => {
     const text = commentTexts[postId];
@@ -687,6 +674,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   onShare={(p) => sharePost(p)}
                   onProfileClick={(user) => handleOpenUserProfile(user)}
                   onFollow={handleFollow}
+                  onDelete={handleDeletePost}
                   isFollowed={followingIds.has(post.user.id)}
                 />
               </div>
@@ -739,6 +727,29 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   >
                     <Bookmark className={`w-4 h-4 ${selectedPost.isSaved ? 'fill-white' : ''}`} />
                   </button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {currentUser?.id === selectedPost.user.id ? (
+                        <DropdownMenuItem 
+                          onClick={() => handleDeletePost(selectedPost.id)} 
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Post
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem className="cursor-pointer">
+                          Report Post
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
@@ -773,28 +784,21 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
+                      {selectedPost.user.isOrganizer && (
+                        <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
+                      )}
                       <span 
                         className="text-gray-900 font-bold cursor-pointer hover:text-purple-600 transition-colors"
                         onClick={(e) => handleOpenUserProfile(selectedPost.user, e)}
                       >
                         {selectedPost.user.name}
                       </span>
-                      {selectedPost.user.isOrganizerPage && (
-                        <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
-                          Organizer
-                        </span>
-                      )}
-                      {selectedPost.user.verified && !selectedPost.user.isOrganizerPage && (
-                        <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                      {selectedPost.user.verified && !selectedPost.user.isOrganizer && (
+                        <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
                           <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                           </svg>
                         </div>
-                      )}
-                      {selectedPost.user.isOrganizer && !selectedPost.user.isOrganizerPage && (
-                        <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
-                          Organizer
-                        </span>
                       )}
                     </div>
                     <span className="text-gray-500 text-sm">{selectedPost.timestamp}</span>

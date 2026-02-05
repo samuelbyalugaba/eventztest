@@ -1,7 +1,7 @@
 import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { supabase, getProfile, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
+import { supabase, getProfile, updateProfile, checkUsernameUnique, uploadImage } from '../utils/supabase/api';
 
 type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
 
@@ -51,21 +51,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
         return;
       }
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      const publicUrl = await uploadImage(file, 'avatars');
 
       setProfileData(prev => ({ ...prev, avatarUrl: publicUrl }));
       toast.success('Profile photo updated successfully');
@@ -84,6 +70,15 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     showPhone: false,
     allowMessages: true,
     showActivity: true,
+  });
+
+  // Notification state
+  const [notifications, setNotifications] = useState({
+    ticketSales: true,
+    streamAlerts: true,
+    weeklyReport: false,
+    marketingEmails: false,
+    newFollowers: true,
   });
 
   useEffect(() => {
@@ -145,6 +140,26 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
               localStorage.removeItem('eventz-privacy');
             }
 
+            // Notification Settings Migration
+            const localNotifications = localStorage.getItem('eventz-notifications');
+            if (profile.notification_settings) {
+              setNotifications(prev => ({
+                ...prev,
+                ticketSales: profile.notification_settings?.ticketSales ?? prev.ticketSales,
+                streamAlerts: profile.notification_settings?.streamAlerts ?? prev.streamAlerts,
+                weeklyReport: profile.notification_settings?.weeklyReport ?? prev.weeklyReport,
+                marketingEmails: profile.notification_settings?.marketingEmails ?? prev.marketingEmails,
+                newFollowers: profile.notification_settings?.newFollowers ?? prev.newFollowers,
+              }));
+              if (localNotifications) localStorage.removeItem('eventz-notifications');
+            } else if (localNotifications) {
+              const parsed = JSON.parse(localNotifications);
+              setNotifications(parsed);
+              profileUpdates.notification_settings = parsed;
+              hasUpdates = true;
+              localStorage.removeItem('eventz-notifications');
+            }
+
             // Apply any migration updates
             if (hasUpdates) {
               await updateProfile(user.id, profileUpdates);
@@ -159,6 +174,9 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
 
           const storedPrivacy = localStorage.getItem('eventz-privacy');
           if (storedPrivacy) setPrivacy(JSON.parse(storedPrivacy));
+
+          const storedNotifications = localStorage.getItem('eventz-notifications');
+          if (storedNotifications) setNotifications(JSON.parse(storedNotifications));
         }
       } catch (error) {
         console.error('Error loading settings:', error);

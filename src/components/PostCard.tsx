@@ -3,28 +3,26 @@ import { Post, Comment } from '../types';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { 
-  Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, 
-  Play, Volume2, VolumeX, Eye, MapPin, AlertCircle, UserPlus,
-  ChevronLeft, ChevronRight, Send, ThumbsUp
+  MessageCircle, Share2, Bookmark, 
+  Play, Volume2, VolumeX, MapPin, 
+  ChevronLeft, ChevronRight, Send, ThumbsUp,
+  Star, Trash2, MoreHorizontal
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-  DrawerFooter,
-  DrawerClose,
 } from "./ui/drawer";
-import { Button } from "./ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
-import { getPostComments, createPostComment, incrementPostView } from '../utils/supabase/api';
+import { getPostComments, createPostComment } from '../utils/supabase/api';
 import { toast } from 'sonner';
 
 interface PostCardProps {
@@ -35,6 +33,7 @@ interface PostCardProps {
   onShare: (post: Post) => Promise<void>;
   onProfileClick: (user: Post['user']) => void;
   onFollow?: (userId: string) => Promise<void>;
+  onDelete?: (postId: number) => Promise<void>;
   isFollowed?: boolean;
 }
 
@@ -43,7 +42,7 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, isFollowed = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onDelete, isFollowed = false }: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(post.isLiked);
@@ -222,7 +221,10 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
               >
                 {post.user.name}
               </span>
-              {post.user.verified && (
+              {post.user.isOrganizer && (
+                <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
+              )}
+              {post.user.verified && !post.user.isOrganizer && (
                 <div className="bg-blue-500 rounded-full p-0.5" title="Verified">
                   <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
@@ -231,19 +233,11 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
               )}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
-               {post.user.isOrganizer && (
-                  <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide">
-                    Organizer
-                  </span>
-               )}
                {post.event && (
-                <>
-                  {post.user.isOrganizer && <span>•</span>}
-                  <span className="flex items-center gap-0.5 text-purple-600">
-                    <MapPin className="w-3 h-3" />
-                    {post.event.location.split(',')[0]}
-                  </span>
-                </>
+                <span className="flex items-center gap-0.5 text-purple-600">
+                  <MapPin className="w-3 h-3" />
+                  {post.event.location.split(',')[0]}
+                </span>
               )}
             </div>
           </div>
@@ -259,6 +253,16 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
               className="px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors"
             >
               Follow
+            </button>
+          )}
+
+          {currentUser?.id === post.user.id && onDelete && (
+            <button 
+              onClick={() => onDelete(post.id)} 
+              className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors focus:outline-none"
+              title="Delete Post"
+            >
+              <Trash2 className="w-5 h-5" />
             </button>
           )}
 
@@ -348,7 +352,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             {carouselIndex > 0 && (
               <button 
                 onClick={(e) => { e.stopPropagation(); setCarouselIndex(prev => prev - 1); }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 bg-black/30 backdrop-blur-sm rounded-full text-white hover:bg-black/50 transition-colors opacity-0 group-hover:opacity-100"
+                className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 bg-black/30 backdrop-blur-sm rounded-full text-white hover:bg-black/50 transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -356,7 +360,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             {carouselIndex < (post.content.images.length - 1) && (
               <button 
                 onClick={(e) => { e.stopPropagation(); setCarouselIndex(prev => prev + 1); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 bg-black/30 backdrop-blur-sm rounded-full text-white hover:bg-black/50 transition-colors opacity-0 group-hover:opacity-100"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 bg-black/30 backdrop-blur-sm rounded-full text-white hover:bg-black/50 transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -383,7 +387,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             )}
           </button>
 
-          <Drawer open={showComments} onOpenChange={(open) => {
+          <Drawer open={showComments} onOpenChange={(open: boolean) => {
             setShowComments(open);
             if (open) loadComments();
           }}>
@@ -480,7 +484,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
         </div>
 
         <div className="flex items-center gap-3">
-          {post.views !== undefined && post.views > 0 && (
+          {post.views !== undefined && post.views > 0 && !(post.content.image || (post.content.images && post.content.images.length > 0)) && (
              <div className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-full">
                {post.views >= 1000 ? `${(post.views / 1000).toFixed(1)}k` : post.views} views
              </div>
@@ -499,7 +503,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       {post.content.text && (
         <div className="px-4 pb-4">
           <p className={`text-gray-800 text-[15px] leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-2'}`}>
-            <span className="font-semibold mr-2">{post.user.username || post.user.name}</span>
+            <span className="font-semibold mr-2">{post.user.name}</span>
             {post.content.text}
           </p>
           {post.content.text.length > 100 && (

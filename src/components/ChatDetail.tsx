@@ -52,13 +52,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
         .map((result: any) => result[0])
         .map((result: any) => result.transcript)
         .join('');
-      setMessageText(prev => {
-         // If we are getting interim results, we might want to just replace current text 
-         // or append if we want continuous dictation. 
-         // For simple "voice message" style, replacing or appending to empty is fine.
-         // Let's just set it to the transcript for now to keep it simple.
-         return transcript;
-      });
+      setMessageText(transcript);
     };
 
     recognition.onerror = (event: any) => {
