@@ -41,6 +41,7 @@ import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
 import { updateProfile, getProfile, checkUsernameUnique, getOrganizerProfile, upsertOrganizerProfile, uploadImage } from '../utils/supabase/api';
+import { isSafeUrl } from '../utils/sanitize';
 
 interface OrganizerSettingsModalProps {
   onClose: () => void;
