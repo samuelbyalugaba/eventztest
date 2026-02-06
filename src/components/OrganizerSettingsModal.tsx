@@ -222,6 +222,18 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         }
       }
 
+      // Validate URLs
+      if (profileData.website && !isSafeUrl(profileData.website)) {
+        toast.error('Please enter a valid website URL (starting with http:// or https://)');
+        return;
+      }
+      
+      if (profileData.avatarUrl && !isSafeUrl(profileData.avatarUrl)) {
+        // Should be impossible if uploaded via our tool, but good for safety
+        toast.error('Invalid avatar URL');
+        return;
+      }
+
       const finalOrganizerType = profileData.venueSubType
         ? `${profileData.organizerType} - ${profileData.venueSubType}`
         : profileData.organizerType;

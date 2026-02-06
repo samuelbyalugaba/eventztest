@@ -6,7 +6,7 @@ import {
   MessageSquare, Share2, Bookmark, 
   Play, Volume2, VolumeX, MapPin, 
   ChevronLeft, ChevronRight, Send, ThumbsUp,
-  Star, Trash2
+  Star, Trash2, Eye, MessageCircle
 } from 'lucide-react';
 import {
   Drawer,
@@ -17,6 +17,7 @@ import {
 } from "./ui/drawer";
 import { Input } from "./ui/input";
 import { getPostComments, createPostComment } from '../utils/supabase/api';
+import { sanitizeText } from '../utils/sanitize';
 import { toast } from 'sonner';
 
 interface PostCardProps {
@@ -28,6 +29,7 @@ interface PostCardProps {
   onProfileClick: (user: Post['user']) => void;
   onFollow?: (userId: string) => Promise<void>;
   onDelete?: (postId: number) => Promise<void>;
+  onMessage?: (user: any) => void;
   isFollowed?: boolean;
 }
 
@@ -36,7 +38,7 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onDelete, isFollowed = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onDelete, onMessage, isFollowed = false }: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(post.isLiked);
@@ -191,8 +193,14 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
   const handlePostComment = async () => {
     if (!newComment.trim() || !currentUser) return;
     
+    const sanitizedComment = sanitizeText(newComment.trim());
+    if (!sanitizedComment) {
+      toast.error('Invalid comment content');
+      return;
+    }
+
     try {
-      const commentData = await createPostComment(post.id, currentUser.id, newComment.trim());
+      const commentData = await createPostComment(post.id, currentUser.id, sanitizedComment);
       const addedComment: Comment = {
         id: commentData.id,
         user: {
@@ -218,25 +226,10 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
   const isCarousel = (post.content.images?.length ?? 0) > 1;
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6 hover:shadow-md transition-shadow duration-300">
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6 hover:shadow-md transition-shadow duration-300 p-4">
       
-      {/* 1. SOCIAL CONTEXT */}
-      {post.mutualFriends && post.mutualFriends.length > 0 && (
-        <div className="px-4 pt-3 pb-1 flex items-center gap-2 text-xs text-gray-500">
-          <div className="flex -space-x-2">
-            {post.mutualFriends.slice(0, 3).map((friend, i) => (
-              <img key={i} src={friend.avatar} alt={friend.name} className="w-5 h-5 rounded-full border-2 border-white" />
-            ))}
-          </div>
-          <span>
-            Followed by <span className="font-semibold text-gray-700">{post.mutualFriends[0].name}</span>
-            {post.mutualFriends.length > 1 && ` and ${post.mutualFriends.length - 1} others`}
-          </span>
-        </div>
-      )}
-
-      {/* 2. POST HEADER */}
-      <div className="px-4 py-3 flex items-center justify-between">
+      {/* 1. HEADER */}
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <UserAvatar 
             src={post.user.avatar} 
@@ -253,35 +246,30 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                 {post.user.name}
               </span>
               {post.user.isOrganizer && (
-                <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
+                <Star className="w-3.5 h-3.5 text-purple-600 fill-purple-600" />
               )}
               {post.user.verified && !post.user.isOrganizer && (
                 <div className="bg-blue-500 rounded-full p-0.5" title="Verified">
-                  <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                   </svg>
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-               {post.event && (
-                <span className="flex items-center gap-0.5 text-purple-600">
-                  <MapPin className="w-3 h-3" />
-                  {post.event.location.split(',')[0]}
-                </span>
-              )}
-            </div>
+            <span className="text-xs text-gray-400">
+              {post.timestamp}
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {onFollow && currentUser && post.user.id !== currentUser.id && !isFollowed && (
             <button
               onClick={(e) => {
                  e.stopPropagation();
                  onFollow(post.user.id);
               }}
-              className="px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors mr-1"
             >
               Follow
             </button>
@@ -290,7 +278,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
           {currentUser?.id === post.user.id && onDelete && (
             <button 
               onClick={() => onDelete(post.id)} 
-              className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors focus:outline-none"
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors focus:outline-none"
               title="Delete Post"
             >
               <Trash2 className="w-5 h-5" />
@@ -307,8 +295,25 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
         </div>
       </div>
 
-      {/* 3. POST CONTENT AREA - MEDIA */}
-      <div className="relative overflow-hidden group">
+      {/* 2. TEXT CONTENT */}
+      {post.content.text && (
+        <div className="mb-3 px-1">
+          <p className={`text-gray-800 text-[15px] leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-3'}`}>
+            {post.content.text}
+          </p>
+          {post.content.text.length > 150 && (
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-gray-500 text-sm mt-1 hover:text-gray-700 font-medium"
+            >
+              {isExpanded ? 'Show less' : 'Show more'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 3. MEDIA CONTENT */}
+      <div className="relative overflow-hidden group rounded-2xl bg-gray-50">
         <div 
           className={`relative w-full flex items-center justify-center ${isCarousel ? 'aspect-square bg-gray-100' : ''}`}
           onDoubleClick={handleDoubleTap}
@@ -391,41 +396,26 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
         )}
       </div>
 
-      {/* 4. ENGAGEMENT ACTION BAR */}
-      <div className="px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={handleLike}
-            className="group flex items-center gap-1.5 transition-colors focus:outline-none"
-            aria-label={isLiked ? "Unlike post" : "Like post"}
-          >
-            <div className={`p-2 rounded-full transition-colors active:scale-75 ${isLiked ? 'bg-purple-50 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}>
-              <ThumbsUp className={`w-6 h-6 transition-transform group-hover:scale-110 ${isLiked ? 'fill-purple-600' : ''}`} />
-            </div>
-            {likesCount > 0 && (
-              <span className={`font-semibold text-sm ${isLiked ? 'text-purple-600' : 'text-gray-700'}`}>
-                {likesCount}
-              </span>
-            )}
-          </button>
+      {/* 4. FOOTER ACTION BAR */}
+      <div className="mt-4 bg-purple-50 rounded-2xl p-2 flex items-center justify-between gap-2">
+        <button 
+          onClick={handleLike}
+          className="flex-1 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+        >
+           <ThumbsUp className={`w-5 h-5 ${isLiked ? 'text-purple-600 fill-purple-600' : 'text-gray-600'}`} />
+           <span className={`text-sm font-bold ${isLiked ? 'text-purple-600' : 'text-gray-700'}`}>{likesCount}</span>
+        </button>
 
-          <Drawer open={showComments} onOpenChange={(open: boolean) => {
+        <Drawer open={showComments} onOpenChange={(open: boolean) => {
             setShowComments(open);
             if (open) loadComments();
           }}>
             <DrawerTrigger asChild>
               <button 
-                className="group flex items-center gap-1.5 transition-colors focus:outline-none"
-                aria-label="View comments"
+                className="flex-1 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
               >
-                <div className="p-2 rounded-full hover:bg-gray-100 text-gray-700 transition-colors active:scale-75">
-                  <MessageSquare className="w-6 h-6 transition-transform group-hover:scale-110" />
-                </div>
-                {commentsCount > 0 && (
-                  <span className="font-semibold text-sm text-gray-700">
-                    {commentsCount}
-                  </span>
-                )}
+                <MessageSquare className="w-5 h-5 text-gray-600" />
+                <span className="text-sm font-bold text-gray-700">{commentsCount}</span>
               </button>
             </DrawerTrigger>
             <DrawerContent className="max-h-[85vh] bg-white/85 backdrop-blur-xl border-t border-white/20 shadow-2xl">
@@ -495,51 +485,21 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             </DrawerContent>
           </Drawer>
 
-          <button 
-            onClick={() => onShare(post)}
-            className="group flex items-center gap-1.5 transition-colors focus:outline-none"
-            aria-label="Share post"
-          >
-            <div className="p-2 rounded-full hover:bg-gray-100 text-gray-700 transition-colors active:scale-75">
-              <Share2 className="w-6 h-6 transition-transform group-hover:scale-110" />
-            </div>
-          </button>
-        </div>
+        <button 
+          onClick={() => onShare(post)}
+          className="flex-1 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+        >
+          <Share2 className="w-5 h-5 text-gray-600" />
+        </button>
+        
+         <button 
+           onClick={() => onMessage?.(post.user)}
+           className="flex-1 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+         >
+          <MessageCircle className="w-5 h-5 text-gray-600" /> 
+        </button>
 
-        <div className="flex items-center gap-3">
-          {post.views !== undefined && post.views > 0 && !(post.content.image || (post.content.images && post.content.images.length > 0)) && (
-             <div className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-full">
-               {post.views >= 1000 ? `${(post.views / 1000).toFixed(1)}k` : post.views} views
-             </div>
-          )}
-        </div>
       </div>
-      
-      {/* 5. TIMESTAMP BOTTOM */}
-      <div className="px-4 pb-4">
-        <span className="text-xs text-gray-400 uppercase tracking-wide">
-          {post.timestamp}
-        </span>
-      </div>
-
-      {/* 3. POST CONTENT AREA - TEXT */}
-      {post.content.text && (
-        <div className="px-4 pb-4">
-          <p className={`text-gray-800 text-[15px] leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-2'}`}>
-            <span className="font-semibold mr-2">{post.user.name}</span>
-            {post.content.text}
-          </p>
-          {post.content.text.length > 100 && (
-            <button 
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-500 text-sm mt-1 hover:text-gray-700"
-            >
-              {isExpanded ? 'less' : 'more'}
-            </button>
-          )}
-        </div>
-      )}
-
     </div>
   );
 });

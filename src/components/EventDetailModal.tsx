@@ -8,6 +8,7 @@ import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
 import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, Event as ApiEvent } from '../utils/supabase/api';
+import { validateYouTubeUrl, getYouTubeVideoId } from '../utils/sanitize';
 
 export interface EventDetailModalProps {
   event: ApiEvent;
@@ -286,12 +287,13 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   >
                     {highlight.mediaType === 'video' ? (
                       <>
-                        {highlight.video?.includes('youtube.com') || highlight.video?.includes('youtu.be') ? (
+                        {validateYouTubeUrl(highlight.video || '') ? (
                           <iframe
-                            src={highlight.video}
+                            src={`https://www.youtube.com/embed/${getYouTubeVideoId(highlight.video || '')}`}
                             className="w-full h-full"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
+                            sandbox="allow-scripts allow-same-origin allow-presentation"
                             style={{ border: 'none', pointerEvents: 'none' }}
                           />
                         ) : (

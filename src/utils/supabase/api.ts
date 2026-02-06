@@ -1665,6 +1665,80 @@ export const getNotifications = async (userId: string) => {
     });
   }
 
+  // 3. Fetch Ticket Sales (For Organizers)
+  const { data: ticketSales } = await supabase
+    .from('tickets')
+    .select(`
+      id,
+      created_at,
+      ticket_type,
+      event:events!inner(id, title, organizer_id),
+      user:profiles(id, full_name, avatar_url)
+    `)
+    .eq('event.organizer_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (ticketSales) {
+    ticketSales.forEach((ticket: any) => {
+      // Use profile if available, otherwise fallback to "Guest"
+      const buyerName = ticket.user?.full_name || 'Guest User';
+      const buyerAvatar = ticket.user?.avatar_url || '';
+      
+      notifications.push({
+        id: `sale-${ticket.id}`,
+        type: 'event', // reusing 'event' type for sales
+        user: { 
+          name: buyerName, 
+          avatar: buyerAvatar
+        },
+        content: `bought a ${ticket.ticket_type} ticket for "${ticket.event?.title || 'Event'}"`,
+        time: ticket.created_at,
+        read: new Date(ticket.created_at).getTime() <= lastReadTime,
+        created_at: ticket.created_at
+      });
+    });
+  }
+
+  // 4. Fetch Event Reminders (Upcoming events for ticket holders)
+  const { data: upcomingTickets } = await supabase
+    .from('tickets')
+    .select(`
+      id,
+      event:events!inner(id, title, date, time, image_url)
+    `)
+    .eq('user_id', userId)
+    .eq('status', 'valid')
+    .gte('event.date', new Date().toISOString().split('T')[0]); // Events in future or today
+
+  if (upcomingTickets) {
+    const now = new Date();
+    const twoDaysFromNow = new Date();
+    twoDaysFromNow.setDate(now.getDate() + 2);
+
+    upcomingTickets.forEach((ticket: any) => {
+      if (ticket.event) {
+        const eventDate = new Date(`${ticket.event.date}T${ticket.event.time || '00:00:00'}`);
+        
+        // If event is within next 48 hours
+        if (eventDate > now && eventDate <= twoDaysFromNow) {
+           notifications.push({
+            id: `reminder-${ticket.event.id}`,
+            type: 'event',
+            user: {
+              name: 'Eventz Reminder',
+              avatar: ticket.event.image_url || '/logo.png' // Fallback to logo or event image
+            },
+            content: `Event "${ticket.event.title}" is coming up on ${new Date(ticket.event.date).toLocaleDateString()}`,
+            time: new Date().toISOString(), // Current time as notification time
+            read: false, // Always show as new for urgency (or logic to check if seen)
+            created_at: new Date().toISOString()
+          });
+        }
+      }
+    });
+  }
+
   // Sort by date (newest first) to ensure a correct timeline
   notifications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 

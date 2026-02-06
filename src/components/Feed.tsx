@@ -676,6 +676,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   onProfileClick={(user) => handleOpenUserProfile(user)}
                   onFollow={handleFollow}
                   onDelete={handleDeletePost}
+                  onMessage={(user) => handleStartConversationLocal(user)}
                   isFollowed={followingIds.has(post.user.id)}
                 />
               </div>
