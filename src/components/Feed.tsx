@@ -411,6 +411,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   };
 
   const handleDeletePost = async (postId: number) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+
     // Optimistic update
     const previousPosts = [...posts];
     setPosts(posts.filter(p => p.id !== postId));

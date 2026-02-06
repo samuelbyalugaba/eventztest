@@ -250,31 +250,39 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
 
   const handleDeletePost = async (postId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    if (!window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) return;
     
     try {
       await deletePost(postId);
       setOrganizerPosts(organizerPosts.filter(p => p.id !== postId));
-      toast.success('Post deleted');
-    } catch (error) {
+      toast.success('Post deleted successfully');
+    } catch (error: any) {
       console.error('Error deleting post:', error);
-      toast.error('Failed to delete post');
+      if (error?.code === '23503') { // Foreign key violation
+        toast.error('Cannot delete post: It has active comments or interactions.');
+      } else {
+        toast.error(`Failed to delete post: ${error?.message || 'Unknown error'}`);
+      }
     }
   };
 
   const handleDeleteEvent = async (eventId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
     
     try {
       await deleteEvent(eventId);
       setPublishedEvents(publishedEvents.filter(ev => ev.id !== eventId));
       setDraftEvents(draftEvents.filter(ev => ev.id !== eventId));
-      toast.success('Event deleted');
+      toast.success('Event deleted successfully');
       setStats(prev => ({ ...prev, totalEvents: prev.totalEvents - 1 }));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting event:', error);
-      toast.error('Failed to delete event');
+      if (error?.code === '23503') { // Foreign key violation
+        toast.error('Cannot delete event: It has active tickets or dependencies. Please contact support.');
+      } else {
+        toast.error(`Failed to delete event: ${error?.message || 'Unknown error'}`);
+      }
     }
   };
 

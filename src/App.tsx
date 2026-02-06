@@ -84,11 +84,21 @@ export default function App() {
     const fetchProfile = async () => {
       if (isAuthenticated && currentUser) {
         try {
-          const profile = await getProfile(currentUser.id);
+          const [profile, organizerProfile] = await Promise.all([
+            getProfile(currentUser.id),
+            getOrganizerProfile(currentUser.id)
+          ]);
+          
           if (profile) {
-            setIsOrganizer(profile.is_organizer || false);
-            // Check if they have completed organizer profile setup (e.g. have an organizer type)
-            setHasOrganizerProfile(!!profile.organizer_type);
+            // Determine if user is an organizer:
+            // 1. Check if they have an organizer profile record (primary source of truth)
+            // 2. Fallback to is_organizer flag (legacy/backend triggered)
+            const isOrg = !!organizerProfile || profile.is_organizer || false;
+            setIsOrganizer(isOrg);
+            
+            // Check if they have completed organizer profile setup
+            // If we found an organizer profile, they have definitely completed setup
+            setHasOrganizerProfile(!!organizerProfile || !!profile.organizer_type);
           }
         } catch (error) {
           console.error('Error fetching profile:', error);

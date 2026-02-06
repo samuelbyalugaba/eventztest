@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Send, Star } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Send, Star, Bell } from 'lucide-react';
 import { OrganizerProfile } from './OrganizerProfile';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, Event as ApiEvent } from '../utils/supabase/api';
+import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, getOrganizerProfile, Event as ApiEvent } from '../utils/supabase/api';
 import { validateYouTubeUrl, getYouTubeVideoId } from '../utils/sanitize';
 
 export interface EventDetailModalProps {
@@ -28,12 +28,38 @@ const locations = [
 
 export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation }: EventDetailModalProps) {
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
+  
+  const isEventPast = (() => {
+    try {
+      const dateStr = event.date;
+      const timeStr = event.time ? event.time.replace(' ', '') : '23:59';
+      return new Date(`${dateStr} ${timeStr}`) < new Date();
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  const [organizerDisplayName, setOrganizerDisplayName] = useState(event.organizer?.full_name || 'Organizer');
   const [recentAttendees, setRecentAttendees] = useState<any[]>([]);
   const [eventPosts, setEventPosts] = useState<any[]>([]);
 
   useEffect(() => {
     // Increment view count
     incrementEventView(event.id);
+
+    const fetchOrganizerDetails = async () => {
+      if (event.organizer_id) {
+        try {
+          const orgProfile = await getOrganizerProfile(event.organizer_id);
+          if (orgProfile?.organizer_name) {
+             setOrganizerDisplayName(orgProfile.organizer_name);
+          }
+        } catch (e) {
+          console.error('Error fetching organizer profile:', e);
+        }
+      }
+    };
+    fetchOrganizerDetails();
 
     const fetchAttendees = async () => {
       try {
@@ -169,14 +195,14 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               onClick={() => setShowOrganizerProfile(true)}
               className="absolute top-4 left-4 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg z-20 hover:bg-white transition-all cursor-pointer group"
             >
-              <p className="text-gray-900 text-sm group-hover:text-[#8A2BE2] transition-colors">by {event.organizer.full_name || 'Organizer'}</p>
+              <p className="text-gray-900 text-sm group-hover:text-[#8A2BE2] transition-colors">by {organizerDisplayName}</p>
             </button>
           )}
           
           {/* Organizer Profile Modal */}
           {showOrganizerProfile && event.organizer && (
             <OrganizerProfile
-              organizerName={event.organizer.full_name || 'Organizer'}
+              organizerName={organizerDisplayName}
               organizerId={event.organizer_id || event.organizer.id}
               onClose={() => setShowOrganizerProfile(false)}
               onMessage={async (organizer) => {
@@ -424,11 +450,12 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 {/* Virtual Ticket CTA */}
                 {/* Removed hasTicket check */}
                   <button 
-                    onClick={() => onPurchaseTicket(event)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white py-4 rounded-xl hover:from-purple-700 hover:to-cyan-600 transition-all flex items-center justify-center gap-2 shadow-lg"
+                    onClick={() => !isEventPast && onPurchaseTicket(event)}
+                    disabled={isEventPast}
+                    className={`w-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:from-purple-700 hover:to-cyan-600'}`}
                   >
                     <Tv className="w-5 h-5" />
-                    <span>Get Virtual Ticket - {event.streaming.virtualPrice}</span>
+                    <span>{isEventPast ? 'Event Ended' : `Get Virtual Ticket - ${event.streaming.virtualPrice}`}</span>
                   </button>
 
                 {/* Info Badge */}
@@ -451,8 +478,9 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               <div className="space-y-3">
                 {/* Standard Ticket */}
                 <button
-                  onClick={() => onPurchaseNormalTicket(event)}
-                  className="w-full bg-white border-2 border-purple-100 rounded-xl p-4 flex items-center justify-between hover:border-purple-600 transition-all shadow-sm hover:shadow-md group"
+                  onClick={() => !isEventPast && onPurchaseNormalTicket(event)}
+                  disabled={isEventPast}
+                  className={`w-full bg-white border-2 border-purple-100 rounded-xl p-4 flex items-center justify-between transition-all shadow-sm group ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-600 hover:shadow-md'}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
@@ -469,8 +497,9 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 {/* VIP Ticket Option - If applicable */}
                 {event.vipPrice && (
                   <button
-                    onClick={() => onPurchaseTicket(event)}
-                    className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-all transform hover:scale-[1.02]"
+                    onClick={() => !isEventPast && onPurchaseTicket(event)}
+                    disabled={isEventPast}
+                    className={`w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl p-4 flex items-center justify-between transition-all transform ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:scale-[1.02]'}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -488,21 +517,20 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             </div>
           )}
 
-          {/* Organizer Actions */}
-          <div className="flex gap-3">
+          {/* Action Buttons */}
+          <div className="flex gap-3 mt-4">
             <button 
-              onClick={() => {
-                if (event.organizer && onStartConversation) {
-                  onStartConversation(event.organizer);
-                  onClose();
-                } else {
-                  toast.error('Cannot contact organizer');
-                }
-              }}
-              className="flex-1 bg-white border border-gray-200 text-gray-900 py-4 rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+              onClick={() => !isEventPast && onPurchaseNormalTicket(event)}
+              disabled={isEventPast}
+              className={`flex-1 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg active:scale-95 ${isEventPast ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#8A2BE2] hover:bg-[#7a25c9] hover:shadow-xl'}`}
             >
-              <MessageCircle className="w-5 h-5" />
-              <span>Contact Organizer</span>
+              {isEventPast ? 'Event Ended' : `Get Ticket - ${event.price_range}`}
+            </button>
+            <button 
+              onClick={handleToggleSave}
+              className={`w-16 bg-[#FF4081] text-white rounded-2xl flex items-center justify-center hover:bg-[#f50057] transition-all shadow-lg hover:shadow-xl active:scale-95 ${isSaved ? 'ring-2 ring-offset-2 ring-[#FF4081]' : ''}`}
+            >
+              <Bell className={`w-7 h-7 ${isSaved ? 'fill-white' : ''}`} />
             </button>
           </div>
         </div>

@@ -6,7 +6,7 @@ import {
   MessageSquare, Share2, Bookmark, 
   Play, Volume2, VolumeX, MapPin, 
   ChevronLeft, ChevronRight, Send, ThumbsUp,
-  Star, Trash2, Eye, MessageCircle
+  Star, Eye, MessageCircle
 } from 'lucide-react';
 import {
   Drawer,
@@ -272,16 +272,6 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
               className="px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors mr-1"
             >
               Follow
-            </button>
-          )}
-
-          {currentUser?.id === post.user.id && onDelete && (
-            <button 
-              onClick={() => onDelete(post.id)} 
-              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors focus:outline-none"
-              title="Delete Post"
-            >
-              <Trash2 className="w-5 h-5" />
             </button>
           )}
 

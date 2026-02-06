@@ -148,6 +148,31 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     return locationMatch && categoryMatch && subcategoryMatch;
   });
 
+  // Sort events into upcoming and past
+  const now = new Date();
+  const getEventDateTime = (event: ApiEvent) => {
+    try {
+      // Assuming date is YYYY-MM-DD
+      const dateStr = event.date;
+      // Try to parse time, default to end of day if looking for past events, but here we want precise
+      const timeStr = event.time ? event.time.replace(' ', '') : '00:00';
+      // simple check if time is AM/PM or 24h. 
+      // If the date string is just text like "Mon, Feb 3", this will fail.
+      // Based on HTML snippet "2026-02-03", it is ISO.
+      return new Date(`${dateStr} ${timeStr}`);
+    } catch (e) {
+      return new Date(event.date);
+    }
+  };
+
+  const upcomingEvents = filteredEvents
+    .filter(e => getEventDateTime(e) >= now)
+    .sort((a, b) => getEventDateTime(a).getTime() - getEventDateTime(b).getTime());
+
+  const pastEvents = filteredEvents
+    .filter(e => getEventDateTime(e) < now)
+    .sort((a, b) => getEventDateTime(b).getTime() - getEventDateTime(a).getTime());
+
   // Filter locations based on search query
   const filteredLocations = locations.filter(location => 
     location.name.toLowerCase().includes(locationSearch.toLowerCase())
@@ -606,16 +631,50 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
         )}
 
-        {/* Events Grid - Cleaner Layout */}
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          {filteredEvents.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              onClick={setSelectedEvent}
-            />
-          ))}
-        </div>
+        {/* Upcoming Events Grid */}
+        {upcomingEvents.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-gray-900 font-semibold mb-4 ml-1">Upcoming Events</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {upcomingEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onClick={setSelectedEvent}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Past Events Grid */}
+        {pastEvents.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-gray-900 font-semibold mb-4 ml-1">Past Events</h3>
+            <div className="grid grid-cols-2 gap-3 opacity-80">
+              {pastEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onClick={setSelectedEvent}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Fallback if logic fails or both empty but filteredEvents has items (shouldn't happen) */}
+        {upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
+           <div className="grid grid-cols-2 gap-3 mb-8">
+             {filteredEvents.map((event) => (
+               <EventCard
+                 key={event.id}
+                 event={event}
+                 onClick={setSelectedEvent}
+               />
+             ))}
+           </div>
+        )}
 
         {/* Empty State */}
         {filteredEvents.length === 0 && (

@@ -2,7 +2,7 @@ import { Sparkles, Users, Zap, TrendingUp, CheckCircle, ArrowRight, Video, Dolla
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase/client';
-import { updateProfile, getPlatformStats } from '../utils/supabase/api';
+import { updateProfile, getPlatformStats, getProfile } from '../utils/supabase/api';
 
 interface BecomeOrganizerProps {
   onComplete: () => void;
@@ -38,16 +38,18 @@ export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
         return;
       }
 
-      await updateProfile(user.id, { is_organizer: true });
-      
-      toast.success('Welcome to EVENTZ Organizers! 🎉', {
-        description: 'You can now create and manage events',
-        duration: 3000,
-      });
+      // Check if profile exists first
+      const profile = await getProfile(user.id);
+      if (!profile) {
+        toast.error('User profile not found. Please update your profile first.');
+        return;
+      }
+
+      // Proceed to setup directly - we don't update profile here due to RLS policies
       onComplete();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error becoming organizer:', error);
-      toast.error('Failed to update profile. Please try again.');
+      toast.error(error.message || 'Failed to proceed. Please try again.');
     }
   };
 

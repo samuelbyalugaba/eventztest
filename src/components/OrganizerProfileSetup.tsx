@@ -342,12 +342,11 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
         }
       });
 
-      // Update main profile to mark as organizer, but DO NOT overwrite full_name or other user details
+      // Update main profile with basic info only, avoiding privileged fields like is_organizer
       await updateProfile(user.id, {
-        username: profileData.username, // Username is still shared for login/uniqueness
-        is_organizer: true,
-        organizer_type: finalOrganizerType,
-        // We do NOT update full_name, bio, location etc here to keep User Profile separate
+        username: profileData.username,
+        // We do NOT set is_organizer: true here as it's a privileged field
+        // The existence of an organizer_profile record is the source of truth
       });
       
       toast.success('Profile setup complete! 🎉', {
@@ -356,9 +355,9 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
       });
       
       onComplete();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving organizer profile:', error);
-      toast.error('Failed to save profile. Please try again.');
+      toast.error(error.message || 'Failed to save profile. Please try again.');
     }
   };
 
