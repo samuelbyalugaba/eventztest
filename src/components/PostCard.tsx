@@ -400,7 +400,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       <div className="mt-4 bg-purple-50 rounded-2xl p-2 flex items-center justify-between gap-2">
         <button 
           onClick={handleLike}
-          className="flex-1 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
         >
            <ThumbsUp className={`w-5 h-5 ${isLiked ? 'text-purple-600 fill-purple-600' : 'text-gray-600'}`} />
            <span className={`text-sm font-bold ${isLiked ? 'text-purple-600' : 'text-gray-700'}`}>{likesCount}</span>
@@ -412,7 +412,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
           }}>
             <DrawerTrigger asChild>
               <button 
-                className="flex-1 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
               >
                 <MessageSquare className="w-5 h-5 text-gray-600" />
                 <span className="text-sm font-bold text-gray-700">{commentsCount}</span>
@@ -487,14 +487,14 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
 
         <button 
           onClick={() => onShare(post)}
-          className="flex-1 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
         >
           <Share2 className="w-5 h-5 text-gray-600" />
         </button>
         
          <button 
            onClick={() => onMessage?.(post.user)}
-           className="flex-1 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+           className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
          >
           <MessageCircle className="w-5 h-5 text-gray-600" /> 
         </button>

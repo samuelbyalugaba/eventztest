@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { handleShare } from '../utils/share';
+import { formatTimeAgo } from '../utils/format';
 import { Conversation } from '../types';
 
 import { ChatList } from './ChatList';
@@ -196,7 +197,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   image: p.image_urls?.[0],
                   hashtags: p.hashtags,
                 },
-                timestamp: (() => { try { const d = new Date(p.created_at); return isNaN(d.getTime()) ? 'Recently' : d.toLocaleDateString(); } catch { return 'Recently'; } })(),
+                timestamp: formatTimeAgo(p.created_at),
                 likes: p.likes_count || 0,
                 comments: [], // Will load on expand
                 comments_count: p.comments_count || 0,
@@ -298,30 +299,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   }, [currentUser, showNotifications]);
 
-  const formatTimeAgo = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Recently';
-      
-      const now = new Date();
-      const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-      
-      if (seconds < 60) return 'Just now';
-      
-      const minutes = Math.floor(seconds / 60);
-      if (minutes < 60) return `${minutes}m ago`;
-      
-      const hours = Math.floor(minutes / 60);
-      if (hours < 24) return `${hours}h ago`;
-      
-      const days = Math.floor(hours / 24);
-      if (days < 7) return `${days}d ago`;
-      
-      return date.toLocaleDateString();
-    } catch {
-      return 'Recently';
-    }
-  };
+ 
 
 
 

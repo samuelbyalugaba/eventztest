@@ -1498,6 +1498,15 @@ export const startConversation = async (otherUserId: string) => {
   return data;
 };
 
+export const deleteMessage = async (messageId: number) => {
+  const { error } = await supabase
+    .from('messages')
+    .delete()
+    .eq('id', messageId);
+
+  if (error) throw error;
+};
+
 export const markMessagesAsRead = async (conversationId: number, userId: string) => {
   const { error } = await supabase
     .from('messages')

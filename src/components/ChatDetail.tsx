@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
-import { Message, Profile, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage } from '../utils/supabase/api';
+import { Message, Profile, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage, deleteMessage } from '../utils/supabase/api';
 import { toast } from 'sonner';
 
 interface ChatDetailProps {
@@ -169,6 +169,22 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
     }
   };
 
+  const handleDeleteMessage = async (messageId: number) => {
+    if (!confirm('Delete this message?')) return;
+    
+    // Optimistic update
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    
+    try {
+      await deleteMessage(messageId);
+      toast.success('Message deleted');
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast.error('Failed to delete message');
+      getMessages(conversationId).then(setMessages);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-white z-[60] flex flex-col h-full animate-in slide-in-from-right duration-300">
       {/* Header */}
@@ -245,7 +261,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
             const isMe = msg.sender_id === currentUser.id;
             
             return (
-              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
                 <div className={`flex flex-col max-w-[75%] ${isMe ? 'items-end' : 'items-start'}`}>
                   <div 
                     className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
@@ -270,6 +286,15 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                      <span className="text-[10px] text-gray-400 font-medium">
                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                      </span>
+                     {isMe && (
+                       <button 
+                         onClick={() => handleDeleteMessage(msg.id)}
+                         className="ml-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                         title="Delete message"
+                       >
+                         <Trash2 className="w-3 h-3" />
+                       </button>
+                     )}
                      {isMe && msg.is_read && (
                        <span className="text-blue-500 text-[10px] font-bold">✓✓</span>
                      )}
