@@ -228,6 +228,16 @@ export function LiveFeed() {
   const [recentCountries, setRecentCountries] = useState<string[]>(['Tanzania', 'United Arab Emirates', 'United States']);
   const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
   const [upcomingStreams, setUpcomingStreams] = useState<LiveStream[]>([]);
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [eventToPurchase, setEventToPurchase] = useState<ApiEvent | null>(null);
+
+  const handlePurchaseTicket = (event: ApiEvent) => {
+    setEventToPurchase(event);
+    setShowTicketModal(true);
+    if (selectedEvent) {
+      setSelectedEvent(null);
+    }
+  };
 
   const fetchStreams = async () => {
     try {
