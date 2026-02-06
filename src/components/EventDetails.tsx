@@ -109,7 +109,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showTierTicketModal, setShowTierTicketModal] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<'Normal' | 'VIP' | 'VVIP' | null>(null);
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [tierTicketQuantity, setTierTicketQuantity] = useState(1);
   const [tierTicketStep, setTierTicketStep] = useState<'tier' | 'quantity' | 'details' | 'confirm'>('tier');
   const [showMediaViewer, setShowMediaViewer] = useState(false);
@@ -485,7 +485,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           customerName: ticketFormData.name,
           customerEmail: ticketFormData.email,
           price: tierData.price,
-          ticketType: selectedTier as any,
+          ticketType: selectedTier,
         };
         tickets.push(ticket);
       }

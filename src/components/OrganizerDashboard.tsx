@@ -788,6 +788,30 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
           title="Followers"
           users={followersList}
           loading={loadingFollowers}
+          onUserSelect={(user) => {
+            setSelectedUser({
+              ...user,
+              type: user.is_organizer ? 'Organizer' : 'Attendee',
+              name: user.full_name || user.username || 'User',
+              avatar: user.avatar_url || '',
+              verified: user.verified || false
+            });
+            setShowUserProfileModal(true);
+          }}
+        />
+      )}
+
+      {showUserProfileModal && selectedUser && (
+        <UserProfileModal
+          user={selectedUser}
+          onClose={() => {
+            setShowUserProfileModal(false);
+            setSelectedUser(null);
+          }}
+          onFollow={() => {
+            // Refresh followers list if needed
+            handleShowFollowers();
+          }}
         />
       )}
     </>

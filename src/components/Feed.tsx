@@ -20,6 +20,7 @@ import { Conversation } from '../types';
 import { ChatList } from './ChatList';
 import { ChatDetail } from './ChatDetail';
 import { UserProfileModal } from './UserProfileModal';
+import { OrganizerProfile } from './OrganizerProfile';
 import { ShareModal } from './ShareModal';
 
 interface Comment {
@@ -113,6 +114,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean } | null>(null);
+  const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
+  const [selectedOrganizer, setSelectedOrganizer] = useState<{ id: string; name: string } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
   // const [messageSearch, setMessageSearch] = useState('');
@@ -514,20 +517,25 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   };
 
-  const handleOpenUserProfile = (user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
+  const handleOpenUserProfile = (user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; isOrganizerPage?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
-    // Map post user to profile modal format
-    const profileUser = {
+    // If this post was made as an Organizer Page, open OrganizerProfile instead
+    if (user.isOrganizerPage) {
+      setSelectedOrganizer({ id: user.id, name: user.name });
+      setShowOrganizerProfile(true);
+      return;
+    }
+
+    // Otherwise open the standard UserProfile modal
+    setSelectedUserProfile({
       id: user.id,
       name: user.name,
       username: user.username,
       avatar: user.avatar,
       verified: user.verified,
       isOrganizer: user.isOrganizer
-    };
-    
-    setSelectedUserProfile(profileUser);
+    });
   };
 
 
@@ -959,6 +967,32 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       )}
 
 
+
+      {/* Organizer Profile Modal */}
+      {showOrganizerProfile && selectedOrganizer && (
+        <OrganizerProfile
+          organizerName={selectedOrganizer.name}
+          organizerId={selectedOrganizer.id}
+          onClose={() => {
+            setShowOrganizerProfile(false);
+            setSelectedOrganizer(null);
+          }}
+          onMessage={async (organizer) => {
+            setShowOrganizerProfile(false);
+            setSelectedOrganizer(null);
+            const conv = await onStartConversation({
+              name: organizer.name,
+              avatar: organizer.avatar,
+              verified: organizer.verified,
+              isOrganizer: true
+            });
+            if (conv) {
+              setActiveConversation(conv);
+              setShowMessages(true);
+            }
+          }}
+        />
+      )}
 
       {/* Notifications Panel */}
       {showNotifications && (

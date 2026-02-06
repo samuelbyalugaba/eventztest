@@ -214,6 +214,8 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       }
 
       // Check username uniqueness if changed
+      // REMOVED: Username updates are disabled in Organizer Settings to prevent syncing with User Profile
+      /*
       const currentProfile = await getProfile(user.id);
       if (profileData.username !== currentProfile?.username) {
         const isUnique = await checkUsernameUnique(profileData.username, user.id);
@@ -222,6 +224,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
           return;
         }
       }
+      */
 
       // Validate URLs
       if (profileData.website && !isSafeUrl(profileData.website)) {
@@ -252,14 +255,11 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         phone: profileData.phone,
       });
 
-      // Update main profile - ONLY update username and ensure is_organizer is true
-      // DO NOT overwrite full_name or other user fields with organizer data
-      await updateProfile(user.id, {
-        username: profileData.username,
-        is_organizer: true,
-        organizer_type: finalOrganizerType,
-        // We do NOT update full_name, bio, location etc here to keep User Profile separate
-      });
+      // REMOVED: Do not update User Profile username from here.
+      // await updateProfile(user.id, {
+      //   username: profileData.username
+      // });
+      
       toast.success('Profile updated successfully! ✅');
     } catch (error: any) {
       console.error('Error updating profile:', error);
@@ -426,20 +426,8 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <h4 className="text-gray-900 font-medium mb-6">Personal Information</h4>
                   <div className="space-y-5">
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-2">Username</label>
-                      <div className="relative">
-                        <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                          type="text"
-                          value={profileData.username}
-                          onChange={(e) => setProfileData({ ...profileData, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
-                          className="w-full pl-10 pr-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
-                          placeholder="username"
-                        />
-                      </div>
-                    </div>
-
+                    {/* Username Field Removed to prevent sync issues with User Profile */}
+                    
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-2">Organizer Name</label>
                       <input

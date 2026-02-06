@@ -107,7 +107,7 @@ export type Event = {
     playback_url?: string;
   };
   ticket_tiers?: {
-    name: 'Normal' | 'VIP' | 'VVIP';
+    name: string;
     price: string;
     priceNumeric: number;
     available: number;
@@ -264,21 +264,29 @@ export const getFollowedUserIds = async (userId: string) => {
 };
 
 export const toggleFollow = async (followerId: string, followingId: string) => {
-  const { data: existing } = await supabase
+  const { data: existing, error: fetchError } = await supabase
     .from('follows')
     .select('id')
     .eq('follower_id', followerId)
-    .eq('following_id', followingId)
-    .single();
+    .eq('following_id', followingId);
 
-  if (existing) {
-    const { error } = await supabase.from('follows').delete().eq('id', existing.id);
+  if (fetchError) throw fetchError;
+
+  if (existing && existing.length > 0) {
+    // If exists (even multiple), delete all
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', followerId)
+      .eq('following_id', followingId);
     if (error) throw error;
-    return false;
+    return false; // Unfollowed
   } else {
-    const { error } = await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId });
+    const { error } = await supabase
+      .from('follows')
+      .insert({ follower_id: followerId, following_id: followingId });
     if (error) throw error;
-    return true;
+    return true; // Followed
   }
 };
 

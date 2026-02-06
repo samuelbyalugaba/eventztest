@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Globe, Instagram, Facebook, Twitter, ArrowRight, Building2, Mic2, Store, Users, Briefcase, Trophy, Check, Music, Wine, Coffee, UtensilsCrossed, Headphones, Radio, Mic, Heart, GraduationCap, School, Building, Church, Laptop, ShoppingBag, Plane, Film, Dumbbell, Activity, Flame, Target, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateProfile, supabase, getProfile, checkUsernameUnique, getOrganizerProfile, upsertOrganizerProfile } from '../utils/supabase/api';
+import { supabase, getProfile, getOrganizerProfile, upsertOrganizerProfile } from '../utils/supabase/api';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;
 }
 
 interface OrganizerProfile {
-  username: string;
   organizerName: string;
   organizerType: string;
   venueSubType?: string;
@@ -24,7 +23,6 @@ interface OrganizerProfile {
 
 export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps) {
   const [profileData, setProfileData] = useState<OrganizerProfile>({
-    username: '',
     organizerName: '',
     organizerType: '',
     venueSubType: '',
@@ -258,7 +256,6 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
           // Determine values, preferring organizer profile if available
           setProfileData(prev => ({
             ...prev,
-            username: profile.username || '',
             organizerName: organizerProfile?.organizer_name || profile.full_name || '',
             email: organizerProfile?.contact_email || profile.contact_email || profile.email || '',
             phone: organizerProfile?.phone || profile.phone || '',
@@ -280,9 +277,9 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
   };
 
   const handleSubmit = async () => {
-    if (!profileData.username || !profileData.organizerName || !profileData.organizerType || !profileData.email || !profileData.phone) {
+    if (!profileData.organizerName || !profileData.organizerType || !profileData.email || !profileData.phone) {
       toast.error('Please fill in all required fields', {
-        description: 'Username, organizer name, type, email, and phone are required',
+        description: 'Organizer name, type, email, and phone are required',
       });
       return;
     }
@@ -315,16 +312,6 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
         return;
       }
 
-      // Check username uniqueness if changed
-      const currentProfile = await getProfile(user.id);
-      if (profileData.username !== currentProfile?.username) {
-        const isUnique = await checkUsernameUnique(profileData.username, user.id);
-        if (!isUnique) {
-          toast.error('Username already taken');
-          return;
-        }
-      }
-
       // Save organizer profile to separate table
       await upsertOrganizerProfile({
         id: user.id,
@@ -342,12 +329,8 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
         }
       });
 
-      // Update main profile with basic info only, avoiding privileged fields like is_organizer
-      await updateProfile(user.id, {
-        username: profileData.username,
-        // We do NOT set is_organizer: true here as it's a privileged field
-        // The existence of an organizer_profile record is the source of truth
-      });
+      // We do NOT update the user profile's username here anymore.
+      // The organizer profile is completely separate.
       
       toast.success('Profile setup complete! 🎉', {
         description: 'You can now start creating events',
@@ -405,24 +388,6 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
             <span className="w-2 h-2 bg-red-500 rounded-full"></span>
             Required Information
           </h2>
-
-          {/* Username */}
-          <div className="mb-5">
-            <label className="block text-gray-900 mb-2">
-              Username <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <AtSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={profileData.username}
-                onChange={(e) => handleInputChange('username', e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
-                placeholder="username"
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
-              />
-            </div>
-            <p className="text-gray-500 text-xs mt-1">Your unique handle on Eventz</p>
-          </div>
 
           {/* Organizer Name */}
           <div className="mb-5">

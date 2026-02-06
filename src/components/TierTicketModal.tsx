@@ -1,7 +1,7 @@
 import { X, Check, Users, Sparkles, Crown, ArrowRight } from 'lucide-react';
 
 interface TicketTier {
-  name: 'Normal' | 'VIP' | 'VVIP';
+  name: string;
   price: string;
   priceNumeric: number;
   available: number;
@@ -18,10 +18,10 @@ interface TierTicketModalProps {
     ticketTiers?: TicketTier[];
   };
   step: 'tier' | 'quantity' | 'details' | 'confirm';
-  selectedTier: 'Normal' | 'VIP' | 'VVIP' | null;
+  selectedTier: string | null;
   quantity: number;
   formData: { name: string; email: string };
-  onSelectTier: (tier: 'Normal' | 'VIP' | 'VVIP') => void;
+  onSelectTier: (tier: string) => void;
   onQuantityChange: (quantity: number) => void;
   onFormDataChange: (field: 'name' | 'email', value: string) => void;
   onNext: () => void;
@@ -47,13 +47,15 @@ export function TierTicketModal({
   if (!event.ticketTiers || event.ticketTiers.length === 0) return null;
 
   const getTierIcon = (tierName: string) => {
-    if (tierName === 'VVIP') return <Crown className="w-6 h-6" />;
-    if (tierName === 'VIP') return <Sparkles className="w-6 h-6" />;
+    const name = tierName.toLowerCase();
+    if (name.includes('vvip')) return <Crown className="w-6 h-6" />;
+    if (name.includes('vip')) return <Sparkles className="w-6 h-6" />;
     return <Users className="w-6 h-6" />;
   };
 
   const getTierColor = (tierName: string) => {
-    if (tierName === 'VVIP') return {
+    const name = tierName.toLowerCase();
+    if (name.includes('vvip')) return {
       bg: 'bg-gradient-to-br from-yellow-50 to-amber-50',
       border: 'border-yellow-400',
       iconBg: 'bg-gradient-to-br from-yellow-400 to-amber-500',
@@ -61,7 +63,7 @@ export function TierTicketModal({
       button: 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600',
       badge: 'bg-yellow-100 text-yellow-700'
     };
-    if (tierName === 'VIP') return {
+    if (name.includes('vip')) return {
       bg: 'bg-gradient-to-br from-purple-50 to-pink-50',
       border: 'border-purple-400',
       iconBg: 'bg-[#8A2BE2]',

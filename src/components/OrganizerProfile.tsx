@@ -4,7 +4,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
 import { toast } from 'sonner';
-import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile } from '../utils/supabase/api';
+import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 
 interface OrganizerData {
@@ -209,23 +209,9 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     }
 
     try {
-      if (isFollowing) {
-        const { error } = await supabase
-          .from('follows')
-          .delete()
-          .eq('follower_id', currentUser.id)
-          .eq('following_id', organizerId);
-        if (error) throw error;
-        setIsFollowing(false);
-        toast.success('Unfollowed');
-      } else {
-        const { error } = await supabase
-          .from('follows')
-          .insert({ follower_id: currentUser.id, following_id: organizerId });
-        if (error) throw error;
-        setIsFollowing(true);
-        toast.success('Following');
-      }
+      const isFollowingNow = await toggleFollow(currentUser.id, organizerId);
+      setIsFollowing(isFollowingNow);
+      toast.success(isFollowingNow ? 'Following' : 'Unfollowed');
     } catch (error) {
       console.error('Error toggling follow:', error);
       toast.error('Failed to update follow status');
@@ -484,7 +470,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             <div className="grid grid-cols-3 gap-2">
               {combinedGallery.map((item) => (
                 <div 
-                  key={item.id} 
+                  key={item.uniqueId} 
                   className="group relative overflow-hidden rounded-lg bg-gray-100 aspect-square cursor-pointer"
                   onClick={() => {
                     // Filter by media type first, then find the index within that filtered array
@@ -579,13 +565,38 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     </div>
 
     {/* Followers Modal */}
-    <UserListModal 
-      isOpen={showFollowersModal}
-      onClose={() => setShowFollowersModal(false)}
-      title="Followers"
-      users={followersList}
-      loading={loadingFollowers}
-    />
+    {showFollowersModal && (
+      <UserListModal
+        isOpen={showFollowersModal}
+        onClose={() => setShowFollowersModal(false)}
+        title="Followers"
+        users={followersList}
+        loading={loadingFollowers}
+        onUserSelect={(user) => {
+          setSelectedUser({
+            ...user,
+            type: user.is_organizer ? 'Organizer' : 'Attendee',
+            name: user.full_name || user.username || 'User',
+            avatar: user.avatar_url || '',
+            verified: user.verified || false
+          });
+          setShowUserProfileModal(true);
+        }}
+      />
+    )}
+
+    {showUserProfileModal && selectedUser && (
+      <UserProfileModal
+        user={selectedUser}
+        onClose={() => {
+          setShowUserProfileModal(false);
+          setSelectedUser(null);
+        }}
+        onFollow={() => {
+          handleShowFollowers();
+        }}
+      />
+    )}
 
     {/* Media Viewer - Rendered outside modal for engaging photo viewing */}
     {showMediaViewer && (

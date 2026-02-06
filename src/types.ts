@@ -10,7 +10,7 @@ export interface PurchasedTicket {
   customerName: string;
   customerEmail: string;
   price: string;
-  ticketType?: 'Normal' | 'VIP' | 'VVIP' | 'General Admission';
+  ticketType?: string;
 }
 
 export interface Message {

@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3 } from 'lucide-react';
+import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3, Plus, Trash2, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
 import { createEvent, updateEvent, uploadImage, getProfile, getEventAnalytics } from '../utils/supabase/api';
+
+interface TicketTier {
+  name: string;
+  price: string;
+  priceNumeric: number;
+  available: number;
+  features: string[];
+}
 
 interface EventForm {
   title: string;
@@ -18,6 +26,7 @@ interface EventForm {
   price: string;
   description: string;
   coverImage: string | null;
+  ticketTiers: TicketTier[];
 }
 
 interface CreateEventProps {
@@ -36,7 +45,49 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     price: event?.price_range || event?.price || '',
     description: event?.description || '',
     coverImage: event?.image_url || event?.coverImage || null,
+    ticketTiers: event?.ticket_tiers || [],
   });
+
+  const calculatePriceRange = (tiers: TicketTier[]) => {
+    if (tiers.length === 0) return '';
+    const prices = tiers.map(t => t.priceNumeric).filter(p => !isNaN(p));
+    if (prices.length === 0) return '';
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    return min === max ? `TSh ${min.toLocaleString()}` : `TSh ${min.toLocaleString()} - ${max.toLocaleString()}`;
+  };
+
+  const handleAddTier = () => {
+    setFormData(prev => ({
+      ...prev,
+      ticketTiers: [...prev.ticketTiers, { name: '', price: 'TSh 0', priceNumeric: 0, available: 100, features: [] }]
+    }));
+  };
+
+  const handleRemoveTier = (index: number) => {
+    setFormData(prev => {
+      const newTiers = [...prev.ticketTiers];
+      newTiers.splice(index, 1);
+      const newPrice = newTiers.length > 0 ? calculatePriceRange(newTiers) : '';
+      return { ...prev, ticketTiers: newTiers, price: newPrice };
+    });
+  };
+
+  const handleUpdateTier = (index: number, field: keyof TicketTier, value: any) => {
+    setFormData(prev => {
+      const newTiers = [...prev.ticketTiers];
+      const updatedTier = { ...newTiers[index], [field]: value };
+      
+      if (field === 'priceNumeric') {
+        updatedTier.price = `TSh ${Number(value).toLocaleString()}`;
+      }
+      
+      newTiers[index] = updatedTier;
+      
+      const newPrice = calculatePriceRange(newTiers);
+      return { ...prev, ticketTiers: newTiers, price: newPrice || prev.price };
+    });
+  };
 
   const [savedEventId, setSavedEventId] = useState<number | undefined>(event?.id);
   const [currentStatus, setCurrentStatus] = useState<string>(event?.status || 'draft');
@@ -99,6 +150,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           price_range: formData.price,
           organizer_id: user.id,
           status: 'draft' as const,
+          ticket_tiers: formData.ticketTiers,
         };
 
         if (savedEventId) {
@@ -287,6 +339,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         price_range: formData.price,
         organizer_id: user.id,
         status: 'published' as const,
+        ticket_tiers: formData.ticketTiers,
       };
 
       if (isEditing && savedEventId) {
@@ -779,18 +832,94 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           </div>
         </div>
 
-        {/* Price */}
+        {/* Ticket Strategy & Price */}
         <div className="mb-6">
-          <label className="block text-gray-900 mb-3">Price</label>
+          <label className="block text-gray-900 mb-3">Ticket Pricing</label>
+          
+          {/* Tiers List */}
+          {formData.ticketTiers.length > 0 && (
+            <div className="space-y-4 mb-4">
+              {formData.ticketTiers.map((tier, index) => (
+                <div key={index} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group animate-in fade-in slide-in-from-top-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Ticket Name</label>
+                      <input
+                        type="text"
+                        value={tier.name}
+                        onChange={(e) => handleUpdateTier(index, 'name', e.target.value)}
+                        placeholder="e.g. VIP, Regular"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Price (TSh)</label>
+                      <input
+                        type="number"
+                        value={tier.priceNumeric || ''}
+                        onChange={(e) => handleUpdateTier(index, 'priceNumeric', parseFloat(e.target.value))}
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Quantity Available</label>
+                      <input
+                        type="number"
+                        value={tier.available}
+                        onChange={(e) => handleUpdateTier(index, 'available', parseInt(e.target.value))}
+                        placeholder="100"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                    <div>
+                       <label className="block text-xs font-medium text-gray-500 mb-1">Features (comma separated)</label>
+                       <input
+                        type="text"
+                        value={tier.features.join(', ')}
+                        onChange={(e) => handleUpdateTier(index, 'features', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                        placeholder="e.g. Free Drink, Front Row"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={() => handleRemoveTier(index)}
+                    className="absolute -top-2 -right-2 bg-white text-red-500 p-1 rounded-full shadow-md border border-gray-100 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add Tier Button */}
+          <button
+            onClick={handleAddTier}
+            className="flex items-center gap-2 text-purple-600 font-medium hover:text-purple-700 transition-colors mb-4"
+          >
+             <Plus className="w-4 h-4" />
+             Add Ticket Type
+          </button>
+
+          {/* Fallback/Summary Price Input */}
           <div className="relative">
             <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               value={formData.price}
               onChange={(e) => handleInputChange('price', e.target.value)}
-              placeholder="e.g., $45 - $120 or Free"
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+              placeholder={formData.ticketTiers.length > 0 ? "Auto-calculated from tiers" : "e.g., $45 - $120 or Free"}
+              readOnly={formData.ticketTiers.length > 0}
+              className={`w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all ${formData.ticketTiers.length > 0 ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
             />
+            {formData.ticketTiers.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1 ml-1">Price range is auto-calculated from ticket tiers.</p>
+            )}
           </div>
         </div>
 
