@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, Wifi } from 'lucide-react';
 import { toast } from 'sonner';
-import { Event, generateStreamKeys } from '../utils/supabase/api';
+import { Event, generateStreamKeys, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, Profile } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface StreamManagerProps {
@@ -17,6 +17,11 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
   const [streamHealth, setStreamHealth] = useState<'good' | 'poor' | 'offline'>(isLive ? 'good' : 'offline');
+  
+  // Chat State
+  const [messages, setMessages] = useState<StreamMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -62,6 +67,47 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     };
     fetchKeys();
   }, [event.id, event.streaming?.stream_key]);
+
+  // Load and Subscribe to Chat
+  useEffect(() => {
+    const loadChat = async () => {
+      try {
+        const msgs = await getStreamMessages(event.id);
+        if (msgs) setMessages(msgs);
+      } catch (error) {
+        console.error('Failed to load chat messages:', error);
+      }
+    };
+    loadChat();
+
+    const subscription = subscribeToStreamMessages(event.id, (message) => {
+      setMessages(prev => [...prev, message]);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [event.id]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!newMessage.trim()) return;
+
+    try {
+      await sendStreamMessage(event.id, newMessage);
+      setNewMessage('');
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast.error('Failed to send message');
+    }
+  };
 
   useEffect(() => {
     if (streamMethod === 'webcam') {
@@ -317,39 +363,51 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             </h3>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Mock Chat Messages */}
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-bold">JD</div>
-              <div>
-                <p className="text-gray-400 text-xs mb-0.5">John Doe • 2m ago</p>
-                <p className="text-gray-200 text-sm">Can't wait for this to start! 🔥</p>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={chatContainerRef}>
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-gray-500 text-center p-4">
+                <MessageCircle className="w-8 h-8 mb-2 opacity-50" />
+                <p className="text-sm">No messages yet.</p>
+                <p className="text-xs">Start the conversation!</p>
               </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center text-xs text-white font-bold">SA</div>
-              <div>
-                <p className="text-gray-400 text-xs mb-0.5">Sarah A. • 1m ago</p>
-                <p className="text-gray-200 text-sm">Is the audio working? I can hear background noise.</p>
-              </div>
-            </div>
-
-             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-xs text-white font-bold">MK</div>
-              <div>
-                <p className="text-gray-400 text-xs mb-0.5">Mike K. • Just now</p>
-                <p className="text-gray-200 text-sm">Lets goooo! 🚀🚀</p>
-              </div>
-            </div>
+            ) : (
+              messages.map((msg) => (
+                <div key={msg.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {msg.user?.avatar_url ? (
+                      <img src={msg.user.avatar_url} alt={msg.user.username} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs text-white font-bold">{(msg.user?.username || 'U').charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-xs mb-0.5">
+                      {msg.user?.username || 'User'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <p className="text-gray-200 text-sm break-words">{msg.message}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="p-4 bg-gray-900 border-t border-gray-800">
-             <input 
-               type="text" 
-               placeholder="Send a message as host..." 
-               className="w-full bg-black/30 border border-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
-             />
+             <form onSubmit={handleSendMessage} className="relative">
+               <input 
+                 type="text" 
+                 value={newMessage}
+                 onChange={(e) => setNewMessage(e.target.value)}
+                 placeholder="Send a message as host..." 
+                 className="w-full bg-black/30 border border-gray-800 rounded-lg px-4 py-2.5 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+               />
+               <button 
+                 type="submit"
+                 disabled={!newMessage.trim()}
+                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-purple-500 hover:text-purple-400 disabled:opacity-50 transition-colors"
+               >
+                 <MessageCircle className="w-4 h-4" />
+               </button>
+             </form>
           </div>
         </div>
       </div>

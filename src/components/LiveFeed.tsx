@@ -226,19 +226,41 @@ export function LiveFeed() {
   const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
   const [upcomingStreams, setUpcomingStreams] = useState<LiveStream[]>([]);
 
+  const fetchStreams = async () => {
+    try {
+      const live = await getLiveStreams();
+      if (live) setLiveStreams(live as unknown as LiveStream[]);
+      
+      const upcoming = await getUpcomingStreams();
+      if (upcoming) setUpcomingStreams(upcoming as unknown as LiveStream[]);
+    } catch (error) {
+      console.error('Error fetching streams:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchStreams = async () => {
-      try {
-        const live = await getLiveStreams();
-        if (live) setLiveStreams(live as unknown as LiveStream[]);
-        
-        const upcoming = await getUpcomingStreams();
-        if (upcoming) setUpcomingStreams(upcoming as unknown as LiveStream[]);
-      } catch (error) {
-        console.error('Error fetching streams:', error);
-      }
-    };
     fetchStreams();
+
+    // Subscribe to real-time updates for live streams
+    const channel = supabase
+      .channel('live-feed-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT/UPDATE/DELETE) to ensure feed is always fresh
+          schema: 'public',
+          table: 'events',
+        },
+        () => {
+           // Refetch on any event change to ensure we catch go-live status updates
+           fetchStreams();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {

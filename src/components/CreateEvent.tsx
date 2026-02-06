@@ -36,6 +36,8 @@ interface CreateEventProps {
   event?: any;
 }
 
+import { currencies } from '../utils/currencies';
+
 export function CreateEvent({ onBack, event }: CreateEventProps) {
   const [formData, setFormData] = useState<EventForm>({
     title: event?.title || '',
@@ -516,11 +518,13 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                    </div>
                    <div>
                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Price</label>
-                     <p className="text-gray-900 mt-1 flex items-center gap-2">
-                       <DollarSign className="w-4 h-4 text-purple-600" />
-                       {formData.price || 'Free'}
-                     </p>
-                   </div>
+                    <p className="text-gray-900 mt-1 flex items-center gap-2">
+                      <span className="text-purple-600 font-bold text-sm">
+                        {currencies.find(c => c.code === formData.currency)?.symbol || '$'}
+                      </span>
+                      {formData.price || 'Free'}
+                    </p>
+                  </div>
                  </div>
 
                  <div>
@@ -905,7 +909,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                       <label className="block text-xs font-medium text-gray-500 mb-1">Price ({currencies.find(c => c.code === formData.currency)?.symbol || formData.currency})</label>
                       <input
                         type="number"
-                        value={tier.priceNumeric || ''}
+                        value={tier.priceNumeric === undefined || isNaN(tier.priceNumeric) ? '' : tier.priceNumeric}
                         onChange={(e) => handleUpdateTier(index, 'priceNumeric', parseFloat(e.target.value))}
                         placeholder="0"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
