@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Filter, Play, Clock, Check, MapPin, Search, Lock, Unlock, X, CheckCircle2 } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
+import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
 import { toast } from 'sonner';
-import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile, Event as ApiEvent } from '../utils/supabase/api';
+import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, Event as ApiEvent } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 
 interface LiveStream {
@@ -730,8 +731,17 @@ export function LiveFeed() {
         <EventDetailModal
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
-          onPurchaseTicket={() => {}}
+          onPurchaseTicket={handlePurchaseTicket}
           onPurchaseNormalTicket={() => {}}
+        />
+      )}
+
+      {/* Virtual Ticket Purchase Modal */}
+      {showTicketModal && eventToPurchase && (
+        <VirtualTicketPurchaseModal
+          isOpen={showTicketModal}
+          onClose={() => setShowTicketModal(false)}
+          event={eventToPurchase}
         />
       )}
 
