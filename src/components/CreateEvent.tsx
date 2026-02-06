@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
+import { currencies } from '../utils/currencies';
 import { createEvent, updateEvent, uploadImage, getProfile, getEventAnalytics } from '../utils/supabase/api';
 
 interface TicketTier {
@@ -27,6 +28,7 @@ interface EventForm {
   description: string;
   coverImage: string | null;
   ticketTiers: TicketTier[];
+  currency: string;
 }
 
 interface CreateEventProps {
@@ -46,29 +48,59 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     description: event?.description || '',
     coverImage: event?.image_url || event?.coverImage || null,
     ticketTiers: event?.ticket_tiers || [],
+    currency: event?.currency || 'TZS',
   });
 
-  const calculatePriceRange = (tiers: TicketTier[]) => {
+  const calculatePriceRange = (tiers: TicketTier[], currencyCode: string) => {
     if (tiers.length === 0) return '';
     const prices = tiers.map(t => t.priceNumeric).filter(p => !isNaN(p));
     if (prices.length === 0) return '';
     const min = Math.min(...prices);
     const max = Math.max(...prices);
-    return min === max ? `TSh ${min.toLocaleString()}` : `TSh ${min.toLocaleString()} - ${max.toLocaleString()}`;
+    
+    const currency = currencies.find(c => c.code === currencyCode) || { symbol: currencyCode };
+    const symbol = currency.symbol;
+    
+    return min === max ? `${symbol} ${min.toLocaleString()}` : `${symbol} ${min.toLocaleString()} - ${max.toLocaleString()}`;
+  };
+
+  const handleCurrencyChange = (currencyCode: string) => {
+    setFormData(prev => {
+      const newCurrency = currencyCode;
+      const currencyData = currencies.find(c => c.code === newCurrency) || { symbol: newCurrency };
+      
+      // Update all existing tiers' display price string
+      const newTiers = prev.ticketTiers.map(tier => ({
+        ...tier,
+        price: `${currencyData.symbol} ${tier.priceNumeric.toLocaleString()}`
+      }));
+
+      const newPriceRange = calculatePriceRange(newTiers, newCurrency);
+      
+      return {
+        ...prev,
+        currency: newCurrency,
+        ticketTiers: newTiers,
+        price: newPriceRange
+      };
+    });
   };
 
   const handleAddTier = () => {
-    setFormData(prev => ({
-      ...prev,
-      ticketTiers: [...prev.ticketTiers, { name: '', price: 'TSh 0', priceNumeric: 0, available: 100, features: [] }]
-    }));
+    setFormData(prev => {
+      const currency = currencies.find(c => c.code === prev.currency) || { symbol: prev.currency };
+      return {
+        ...prev,
+        ticketTiers: [...prev.ticketTiers, { name: '', price: `${currency.symbol} 0`, priceNumeric: 0, available: 100, features: [] }]
+      };
+    });
   };
 
   const handleRemoveTier = (index: number) => {
     setFormData(prev => {
       const newTiers = [...prev.ticketTiers];
       newTiers.splice(index, 1);
-      const newPrice = newTiers.length > 0 ? calculatePriceRange(newTiers) : '';
+      const newPrice = newTiers.length > 0 ? calculatePriceRange(newTiers, prev.currency) : '';
       return { ...prev, ticketTiers: newTiers, price: newPrice };
     });
   };
@@ -79,12 +111,13 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       const updatedTier = { ...newTiers[index], [field]: value };
       
       if (field === 'priceNumeric') {
-        updatedTier.price = `TSh ${Number(value).toLocaleString()}`;
+        const currency = currencies.find(c => c.code === prev.currency) || { symbol: prev.currency };
+        updatedTier.price = `${currency.symbol} ${Number(value).toLocaleString()}`;
       }
       
       newTiers[index] = updatedTier;
       
-      const newPrice = calculatePriceRange(newTiers);
+      const newPrice = calculatePriceRange(newTiers, prev.currency);
       return { ...prev, ticketTiers: newTiers, price: newPrice || prev.price };
     });
   };
@@ -835,6 +868,22 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         {/* Ticket Strategy & Price */}
         <div className="mb-6">
           <label className="block text-gray-900 mb-3">Ticket Pricing</label>
+
+          {/* Currency Selection */}
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Currency</label>
+            <select
+              value={formData.currency}
+              onChange={(e) => handleCurrencyChange(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white appearance-none"
+            >
+              {currencies.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} - {c.name} ({c.symbol})
+                </option>
+              ))}
+            </select>
+          </div>
           
           {/* Tiers List */}
           {formData.ticketTiers.length > 0 && (
@@ -853,7 +902,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Price (TSh)</label>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Price ({currencies.find(c => c.code === formData.currency)?.symbol || formData.currency})</label>
                       <input
                         type="number"
                         value={tier.priceNumeric || ''}
