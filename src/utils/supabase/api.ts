@@ -105,6 +105,8 @@ export type Event = {
     replayAvailable?: boolean;
     features?: string[];
     playback_url?: string;
+    stream_key?: string; // Private: For organizer OBS setup
+    ingest_url?: string; // Private: RTMP URL
   };
   ticket_tiers?: {
     name: string;
@@ -1255,6 +1257,72 @@ export const getUpcomingStreams = async () => {
   // but usually "upcoming" means date is future, so checking isLive might be redundant if date > today.
   // However, strict check:
   return data.filter((e: any) => !e.streaming?.isLive);
+};
+
+export const updateEventStreamingStatus = async (eventId: number, isLive: boolean) => {
+  const updates: any = {
+    streaming: {
+      isLive,
+      available: true, // Ensure streaming is marked available
+      liveViewers: isLive ? 0 : undefined,
+      startedAt: isLive ? new Date().toISOString() : undefined,
+    }
+  };
+
+  // If going live, ensure we have stream keys (mock or real)
+  if (isLive) {
+    updates.streaming.stream_key = `live_${eventId}_${Math.random().toString(36).substr(2, 9)}`;
+    updates.streaming.ingest_url = "rtmp://global-live.mux.com:5222/app";
+    updates.streaming.playback_url = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"; // Demo HLS stream
+    updates.streaming.quality = 'HD';
+  }
+
+  // We need to merge with existing streaming data, not overwrite
+  // But Supabase simple update overwrites the column. 
+  // Ideally we fetch first, but for now let's assume we want to set these specific fields.
+  // A better approach with JSONB is to use postgres jsonb_set but supabase js client 
+  // usually requires fetching or sending the whole object.
+  // Let's fetch first to be safe.
+  const { data: currentEvent } = await supabase.from('events').select('streaming').eq('id', eventId).single();
+  
+  const currentStreaming = currentEvent?.streaming || {};
+  const newStreaming = { ...currentStreaming, ...updates.streaming };
+
+  const { data, error } = await supabase
+    .from('events')
+    .update({ streaming: newStreaming })
+    .eq('id', eventId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const generateStreamKeys = async (eventId: number) => {
+  // In a real app, this would call a backend function (Edge Function) to talk to Mux/AWS
+  const streamKey = `sk_${Math.random().toString(36).substr(2, 12)}`;
+  const ingestUrl = "rtmp://global-live.mux.com:5222/app";
+  const playbackUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"; // Demo stream for testing
+
+  const updates = {
+    stream_key: streamKey,
+    ingest_url: ingestUrl,
+    playback_url: playbackUrl
+  };
+
+  const { data: currentEvent } = await supabase.from('events').select('streaming').eq('id', eventId).single();
+  const newStreaming = { ...(currentEvent?.streaming || {}), ...updates };
+
+  const { error } = await supabase
+    .from('events')
+    .update({ streaming: newStreaming })
+    .eq('id', eventId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return { streamKey, ingestUrl, playbackUrl };
 };
 
 // --- STREAMING CHAT ---

@@ -63,9 +63,14 @@ export function EventCard({ event, onClick, className = '' }: EventCardProps) {
           <span className="line-clamp-1">{event.date}</span>
         </div>
         
-        <div className="flex items-center gap-1.5 text-gray-600 text-xs">
-          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="line-clamp-1">{event.location}</span>
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-1.5 text-gray-600 text-xs">
+            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="line-clamp-1">{event.location}</span>
+          </div>
+          <span className="text-[#8A2BE2] font-bold text-xs bg-purple-50 px-2 py-0.5 rounded-full">
+            {event.price_range === 'Free' ? 'Free' : event.price_range}
+          </span>
         </div>
       </div>
     </div>

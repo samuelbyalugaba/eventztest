@@ -3,7 +3,6 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
 import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { sanitizeText } from '../utils/sanitize';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
@@ -12,6 +11,7 @@ import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
 import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Event, Ticket, Post, getFollowers, getFollowing } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
+import { UserProfileModal } from './UserProfileModal';
 
 const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"; // Generic event background
 
@@ -51,6 +51,10 @@ export function Profile({ onLogout }: ProfileProps) {
   const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [followList, setFollowList] = useState<any[]>([]);
   const [isLoadingFollowList, setIsLoadingFollowList] = useState(false);
+
+  // User Profile Modal State
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
 
   const handleShowFollowers = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -415,6 +419,16 @@ export function Profile({ onLogout }: ProfileProps) {
             title="Followers"
             users={followList}
             loading={isLoadingFollowList}
+            onUserSelect={(user) => {
+              setSelectedUserForModal({
+                ...user,
+                type: user.is_organizer ? 'Organizer' : 'Attendee',
+                name: user.full_name || user.username || 'User',
+                avatar: user.avatar_url || '',
+                verified: false
+              });
+              setShowUserProfileModal(true);
+            }}
           />
 
           <UserListModal 
@@ -423,7 +437,31 @@ export function Profile({ onLogout }: ProfileProps) {
             title="Following"
             users={followList}
             loading={isLoadingFollowList}
+            onUserSelect={(user) => {
+              setSelectedUserForModal({
+                ...user,
+                type: user.is_organizer ? 'Organizer' : 'Attendee',
+                name: user.full_name || user.username || 'User',
+                avatar: user.avatar_url || '',
+                verified: false
+              });
+              setShowUserProfileModal(true);
+            }}
           />
+
+          {showUserProfileModal && selectedUserForModal && (
+            <UserProfileModal
+              user={selectedUserForModal}
+              onClose={() => {
+                setShowUserProfileModal(false);
+                setSelectedUserForModal(null);
+              }}
+              onFollow={() => {
+                 if (showFollowersModal) handleShowFollowers();
+                 if (showFollowingModal) handleShowFollowing();
+              }}
+            />
+          )}
 
           {/* Modern Tab Navigation */}
           <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl">

@@ -14,6 +14,7 @@ import { supabase } from './utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
   getProfile, 
+  getOrganizerProfile,
   getConversations, 
   getMessages, 
   sendMessage, 

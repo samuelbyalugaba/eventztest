@@ -4,9 +4,9 @@ import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { 
   MessageSquare, Share2, Bookmark, 
-  Play, Volume2, VolumeX, MapPin, 
+  Play, Volume2, VolumeX, 
   ChevronLeft, ChevronRight, Send, ThumbsUp,
-  Star, Eye, MessageCircle
+  Star, MessageCircle, Trash2
 } from 'lucide-react';
 import {
   Drawer,
@@ -272,6 +272,25 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
               className="px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors mr-1"
             >
               Follow
+            </button>
+          )}
+
+          {/* Delete Button for Author */}
+          {onDelete && currentUser && post.user.id === currentUser.id && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+                  onDelete(post.id).catch(err => {
+                    console.error('Error deleting post:', err);
+                    toast.error('Failed to delete post');
+                  });
+                }
+              }}
+              className="p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors mr-1"
+              title="Delete Post"
+            >
+              <Trash2 className="w-5 h-5" />
             </button>
           )}
 

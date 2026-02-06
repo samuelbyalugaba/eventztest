@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
@@ -875,14 +875,59 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                       />
                     </div>
                     <div>
-                       <label className="block text-xs font-medium text-gray-500 mb-1">Features (comma separated)</label>
-                       <input
-                        type="text"
-                        value={tier.features.join(', ')}
-                        onChange={(e) => handleUpdateTier(index, 'features', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                        placeholder="e.g. Free Drink, Front Row"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
-                      />
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Features</label>
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2 min-h-[24px]">
+                          {tier.features.map((feature, fIdx) => (
+                            <span key={fIdx} className="bg-purple-50 text-purple-700 border border-purple-100 px-2 py-1 rounded-md text-xs flex items-center gap-1">
+                              {feature}
+                              <button 
+                                onClick={() => {
+                                  const newFeatures = [...tier.features];
+                                  newFeatures.splice(fIdx, 1);
+                                  handleUpdateTier(index, 'features', newFeatures);
+                                }}
+                                className="hover:text-red-500 transition-colors"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Add features (comma separated)"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const val = e.currentTarget.value;
+                                const newFeatures = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                                if (newFeatures.length > 0) {
+                                  handleUpdateTier(index, 'features', [...tier.features, ...newFeatures]);
+                                  e.currentTarget.value = '';
+                                }
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                              const val = input.value;
+                              const newFeatures = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                              if (newFeatures.length > 0) {
+                                handleUpdateTier(index, 'features', [...tier.features, ...newFeatures]);
+                                input.value = '';
+                              }
+                            }}
+                            className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-purple-100 hover:text-purple-600 transition-colors"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   

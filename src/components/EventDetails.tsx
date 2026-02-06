@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Send, Star } from 'lucide-react';
+import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star } from 'lucide-react';
 import { EventCard } from './EventCard';
-import { OrganizerProfile } from './OrganizerProfile';
 import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
 import { PremiumSearchModal } from './PremiumSearchModal';
@@ -11,9 +10,8 @@ import { TierTicketModal } from './TierTicketModal';
 import { MediaViewer } from './MediaViewer';
 import { ShareModal } from './ShareModal';
 import { EventDetailModal } from './EventDetailModal';
-import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getSavedEvents, toggleSaveEvent, createTicket, getEventAttendees, getPosts, Event as ApiEvent, incrementEventView } from '../utils/supabase/api';
+import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView } from '../utils/supabase/api';
 
 
 
@@ -78,6 +76,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
   const [eventPosts, setEventPosts] = useState<any[]>([]);
 
+
+
   useEffect(() => {
     if (selectedEvent) {
       // Increment view count
@@ -98,6 +98,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     }
   }, [selectedEvent]);
 
+
+
   const [showFilters, setShowFilters] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [showTicketModal, setShowTicketModal] = useState(false);
@@ -108,6 +110,18 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [normalTicketStep, setNormalTicketStep] = useState<'quantity' | 'details' | 'confirm'>('quantity');
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  
+  // Organizer stats hook
+  const organizerStats = selectedUser?.is_organizer ? {
+    followers: selectedUser.followers || 1200,
+    totalEvents: selectedUser.totalEvents || 15,
+    ticketsSold: selectedUser.ticketsSold || 3450,
+    avgRating: selectedUser.avgRating || 4.8
+  } : null;
+
+  // Organizer events hook
+  const organizerEvents = selectedUser?.is_organizer ? (selectedUser.upcomingEvents || []) : [];
+
   const [showTierTicketModal, setShowTierTicketModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [tierTicketQuantity, setTierTicketQuantity] = useState(1);
@@ -361,6 +375,19 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     setTicketFormData({ name: '', email: '' });
     if (selectedEvent) {
       setSelectedEvent(null); // Close the event detail modal
+    }
+  };
+
+  // Handle specific tier selection from modal
+  const handleTierSelection = (event: ApiEvent, tierName: string) => {
+    setEventToPurchase(event);
+    setShowTierTicketModal(true);
+    setSelectedTier(tierName);
+    setTierTicketStep('quantity');
+    setTierTicketQuantity(1);
+    setTicketFormData({ name: '', email: '' });
+    if (selectedEvent) {
+      setSelectedEvent(null);
     }
   };
 
@@ -930,6 +957,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           onPurchaseTicket={handlePurchaseTicket}
           onPurchaseNormalTicket={handleNormalTicketPurchase}
           onStartConversation={handleStartConversationLocal}
+          onTierSelect={handleTierSelection}
         />
       )}
 

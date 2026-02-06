@@ -10,9 +10,11 @@ import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile, deletePost, deleteEvent } from '../utils/supabase/api';
+import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile, deletePost, deleteEvent, updateEventStreamingStatus } from '../utils/supabase/api';
 import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
+import { UserProfileModal } from './UserProfileModal';
+import { StreamManager } from './StreamManager';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +32,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
   const [draftEvents, setDraftEvents] = useState<any[]>([]);
   const [selectedEventForAnalytics, setSelectedEventForAnalytics] = useState<any>(null);
+  const [selectedEventForStream, setSelectedEventForStream] = useState<any>(null);
   const [selectedHighlight, setSelectedHighlight] = useState<any>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -37,6 +40,11 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [organizerPosts, setOrganizerPosts] = useState<any[]>([]);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'published' | 'drafts'>('published');
+  
+  // User Profile Modal State
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
   const [stats, setStats] = useState({
     totalEvents: 0,
     followers: 0,
@@ -196,6 +204,35 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
 
   const highlights = organizerPosts.length > 0 ? organizerPosts : [];
 
+  const handleGoLive = () => {
+    // 1. Check if there are any published events
+    if (publishedEvents.length === 0) {
+      toast.error('No events to stream', {
+        description: 'Please create and publish an event first.'
+      });
+      return;
+    }
+
+    // 2. Try to find a "Live" event first
+    const liveEvent = publishedEvents.find(e => e.streaming?.isLive);
+    if (liveEvent) {
+      setSelectedEventForStream(liveEvent);
+      return;
+    }
+
+    // 3. Try to find an event happening today
+    const today = new Date().toISOString().split('T')[0];
+    const todaysEvent = publishedEvents.find(e => e.date === today);
+    if (todaysEvent) {
+      setSelectedEventForStream(todaysEvent);
+      return;
+    }
+
+    // 4. Default to the most upcoming event
+    // Assuming publishedEvents are sorted by date
+    setSelectedEventForStream(publishedEvents[0]);
+  };
+
   const handleShare = async (highlight: typeof highlights[0]) => {
     const shared = await shareUtil({
       title: highlight.title,
@@ -346,7 +383,10 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                 </button>
                 
                 {/* Premium Go Live Button - Optimized for iPhone 16 (392x852) */}
-                <button className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-xl hover:shadow-xl hover:shadow-red-500/30 transition-all group relative overflow-hidden min-w-[110px] flex-shrink-0">
+                <button 
+                  onClick={handleGoLive}
+                  className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-xl hover:shadow-xl hover:shadow-red-500/30 transition-all group relative overflow-hidden min-w-[110px] flex-shrink-0"
+                >
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
                   <div className="relative flex items-center gap-1.5 justify-center w-full">
                     <div className="relative flex-shrink-0">
@@ -625,6 +665,13 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-40">
                               <DropdownMenuItem 
+                            className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                            onClick={() => setSelectedEventForStream(event)}
+                          >
+                            <Radio className="w-4 h-4 mr-2" />
+                            Go Live
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
                                 className="cursor-pointer"
                                 onClick={() => setSelectedEventForAnalytics(event)}
                               >
@@ -753,6 +800,40 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
       {/* Modals */}
       {showSettings && (
         <OrganizerSettingsModal onClose={() => setShowSettings(false)} />
+      )}
+
+      {selectedEventForStream && (
+        <StreamManager
+          event={selectedEventForStream}
+          onClose={() => setSelectedEventForStream(null)}
+          onUpdateStatus={async (isLive) => {
+            // Optimistic update
+            const updatedEvents = publishedEvents.map(e => 
+              e.id === selectedEventForStream.id 
+                ? { ...e, streaming: { ...e.streaming, isLive } }
+                : e
+            );
+            setPublishedEvents(updatedEvents);
+
+            // Actual DB update
+            try {
+              await updateEventStreamingStatus(selectedEventForStream.id, isLive);
+              
+              // If going live, refresh stats/profile to show live status
+              if (isLive) {
+                setStats(prev => ({ ...prev, liveStreams: prev.liveStreams + 1 }));
+                toast.success('Event is now LIVE on the platform!');
+              } else {
+                toast.info('Event stream ended.');
+              }
+            } catch (error) {
+              console.error('Failed to update streaming status:', error);
+              toast.error('Failed to update stream status');
+              // Revert
+              setPublishedEvents(publishedEvents);
+            }
+          }}
+        />
       )}
 
       {selectedEventForAnalytics && (

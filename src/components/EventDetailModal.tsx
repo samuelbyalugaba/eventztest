@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, ChevronLeft, X, Filter, Radio, Tv, Play, Eye, CheckCircle2, Search, MessageCircle, Send, Star, Bell } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, X, Radio, Tv, Play, Eye, CheckCircle2, Star, Bell, Ticket } from 'lucide-react';
 import { OrganizerProfile } from './OrganizerProfile';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
+import { LiveStreamViewer } from './LiveStreamViewer';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
@@ -16,6 +17,7 @@ export interface EventDetailModalProps {
   onPurchaseTicket: (event: ApiEvent) => void;
   onPurchaseNormalTicket: (event: ApiEvent) => void;
   onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => void;
+  onTierSelect?: (event: ApiEvent) => void;
 }
 
 const locations = [
@@ -26,7 +28,7 @@ const locations = [
   { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
 ];
 
-export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation }: EventDetailModalProps) {
+export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation, onTierSelect }: EventDetailModalProps) {
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
   
   const isEventPast = (() => {
@@ -88,6 +90,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
+  const [showLiveStream, setShowLiveStream] = useState(false);
 
   // Convert event highlights to format expected by MediaViewer
   const photosForViewer = [
@@ -180,7 +183,26 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl animate-in slide-in-from-bottom max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      {/* Live Stream Viewer Overlay */}
+      {showLiveStream && event.streaming && (
+        <div className="fixed inset-0 z-[60]" onClick={(e) => e.stopPropagation()}>
+          <LiveStreamViewer 
+            stream={{
+              id: event.id,
+              title: event.title,
+              thumbnail: event.image_url,
+              viewers: event.streaming.liveViewers,
+              host: organizerDisplayName,
+              quality: event.streaming.quality || 'HD',
+              playback_url: event.streaming.playback_url
+            }}
+            onClose={() => setShowLiveStream(false)}
+          />
+        </div>
+      )}
+
+      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl animate-in slide-in-from-bottom max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="overflow-y-auto flex-1 relative">
         {/* Cover Image with Overlays */}
         <div className="relative w-full h-96">
           <ImageWithFallback
@@ -352,8 +374,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             </div>
           )}
 
-
-
           {/* Price & Attendees Info */}
           <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
             <div className="flex items-center justify-between">
@@ -367,6 +387,53 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               </div>
             </div>
           </div>
+
+          {/* Ticket Tiers Section - DYNAMIC PRICING */}
+          {event.ticket_tiers && event.ticket_tiers.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-gray-900 font-semibold mb-3 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-purple-600" />
+                Ticket Options
+              </h3>
+              <div className="space-y-3">
+                {event.ticket_tiers.map((tier, index) => (
+                  <div key={index} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-purple-50 hover:border-purple-200 transition-colors group">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900">{tier.name}</span>
+                        {tier.available < 10 && (
+                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full font-medium">
+                            Only {tier.available} left
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-2">
+                        {tier.features.slice(0, 2).map((feature, idx) => (
+                          <span key={idx} className="flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            {feature}
+                          </span>
+                        ))}
+                        {tier.features.length > 2 && (
+                          <span className="text-xs text-gray-400">+{tier.features.length - 2} more</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right flex flex-col items-end gap-2">
+                      <span className="block text-lg font-bold text-purple-600">{tier.price}</span>
+                      <button
+                        onClick={() => !isEventPast && onTierSelect && onTierSelect(event, tier.name)}
+                        disabled={isEventPast}
+                        className={`px-4 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors ${isEventPast ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        Buy
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* HD Live Streaming Section - CORE DIFFERENTIATOR */}
           {event.streaming?.available ? (
@@ -448,7 +515,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 )}
 
                 {/* Virtual Ticket CTA */}
-                {/* Removed hasTicket check */}
                   <button 
                     onClick={() => !isEventPast && onPurchaseTicket(event)}
                     disabled={isEventPast}
@@ -466,11 +532,11 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               </div>
             </div>
           ) : (
-            /* Regular Ticket Section */
+            (!event.ticket_tiers || event.ticket_tiers.length === 0) && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-900">Get Tickets</h3>
-                {event.ticketsSold && event.ticketsSold > 100 && (
+                {(event as any).ticketsSold && (event as any).ticketsSold > 100 && (
                   <span className="text-orange-500 text-sm font-medium animate-pulse">Selling fast! 🔥</span>
                 )}
               </div>
@@ -484,7 +550,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
-                      <TicketIcon className="w-5 h-5 text-purple-600 group-hover:text-white" />
+                      <Ticket className="w-5 h-5 text-purple-600 group-hover:text-white" />
                     </div>
                     <div className="text-left">
                       <p className="text-gray-900 font-medium">Standard Entry</p>
@@ -495,7 +561,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 </button>
                 
                 {/* VIP Ticket Option - If applicable */}
-                {event.vipPrice && (
+                {(event as any).vipPrice && (
                   <button
                     onClick={() => !isEventPast && onPurchaseTicket(event)}
                     disabled={isEventPast}
@@ -510,29 +576,53 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                         <p className="text-gray-400 text-xs">Premium access & perks</p>
                       </div>
                     </div>
-                    <span className="text-yellow-400 font-bold">{event.vipPrice}</span>
+                    <span className="text-yellow-400 font-bold">{(event as any).vipPrice}</span>
                   </button>
                 )}
               </div>
             </div>
+            )
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 mt-4">
-            <button 
-              onClick={() => !isEventPast && onPurchaseNormalTicket(event)}
-              disabled={isEventPast}
-              className={`flex-1 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg active:scale-95 ${isEventPast ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#8A2BE2] hover:bg-[#7a25c9] hover:shadow-xl'}`}
-            >
-              {isEventPast ? 'Event Ended' : `Get Ticket - ${event.price_range}`}
-            </button>
-            <button 
+          {/* Spacer */}
+          <div className="h-6"></div>
+        </div>
+        </div>
+
+        {/* Sticky Action Bar */}
+        <div className="p-4 border-t border-gray-100 bg-white flex gap-3 z-30 rounded-b-3xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+           {event.streaming?.isLive ? (
+             <button 
+               onClick={() => setShowLiveStream(true)}
+               className="flex-1 bg-red-600 text-white py-3 rounded-xl font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2 animate-pulse shadow-lg shadow-red-200"
+             >
+               <Tv className="w-5 h-5" />
+               Watch Live
+             </button>
+           ) : (
+             !isEventPast && (
+               <button 
+                 onClick={() => onPurchaseNormalTicket(event)}
+                 className="flex-1 bg-[#8A2BE2] text-white py-3 rounded-xl font-medium hover:bg-[#7b26c9] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+               >
+                 <Ticket className="w-5 h-5" />
+                 {event.price_range === 'Free' ? 'Register' : `Get Tickets - ${event.price_range}`}
+               </button>
+             )
+           )}
+           
+           {isEventPast && (
+              <div className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-medium text-center cursor-not-allowed">
+                Event Ended
+              </div>
+           )}
+
+           <button 
               onClick={handleToggleSave}
-              className={`w-16 bg-[#FF4081] text-white rounded-2xl flex items-center justify-center hover:bg-[#f50057] transition-all shadow-lg hover:shadow-xl active:scale-95 ${isSaved ? 'ring-2 ring-offset-2 ring-[#FF4081]' : ''}`}
+              className={`w-14 bg-white border-2 ${isSaved ? 'border-[#FF4081] bg-[#FF4081]/10' : 'border-gray-200'} text-gray-700 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-all`}
             >
-              <Bell className={`w-7 h-7 ${isSaved ? 'fill-white' : ''}`} />
+              <Bell className={`w-6 h-6 ${isSaved ? 'fill-[#FF4081] text-[#FF4081]' : 'text-gray-400'}`} />
             </button>
-          </div>
         </div>
 
         {/* Media Viewer - Rendered outside modal for engaging photo/video viewing */}
@@ -555,14 +645,5 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
         />
       </div>
     </div>
-  );
-}
-
-// Icon component helper
-function TicketIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-    </svg>
   );
 }

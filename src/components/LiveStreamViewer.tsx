@@ -1,11 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
-import { supabase } from '../utils/supabase/client';
+import { useState, useEffect, useRef } from 'react';
+import { X, Heart, Share2, Send, Users, MoreVertical, Maximize2, Minimize2, Volume2, VolumeX, Play, Pause } from 'lucide-react';
+import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { X, Lock, Users, Heart, MessageCircle, Send, Volume2, VolumeX, Maximize, MoreVertical, Share2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { ShareModal } from './ShareModal';
-import { handleShare as shareUtil } from '../utils/share';
-import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage } from '../utils/supabase/api';
 
 interface LiveStreamViewerProps {
   stream: {
@@ -14,454 +10,261 @@ interface LiveStreamViewerProps {
     thumbnail: string;
     viewers?: number;
     host: string;
-    quality: 'HD' | '4K' | 'SD';
-    isPaid?: boolean;
-    price?: number;
+    quality: string;
     playback_url?: string;
   };
   onClose: () => void;
-  isUnlockedOverride?: boolean;
 }
 
-export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveStreamViewerProps) {
-  const [activeStream, setActiveStream] = useState(stream);
-  const [isUnlocked, setIsUnlocked] = useState(!stream.isPaid || isUnlockedOverride);
-  const [isMuted, setIsMuted] = useState(true);
-  const [showChat, setShowChat] = useState(false); // Start with chat hidden
-  const [chatMessage, setChatMessage] = useState('');
-  const [messages, setMessages] = useState<StreamMessage[]>([]);
-  const [reactions, setReactions] = useState(0);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<{ user: string; text: string; avatar?: string }[]>([
+    { user: 'Alice', text: 'This is amazing! 🔥', avatar: 'https://i.pravatar.cc/150?u=a' },
+    { user: 'Bob', text: 'Can wait for the main event!', avatar: 'https://i.pravatar.cc/150?u=b' },
+    { user: 'Charlie', text: 'Hello from London 🇬🇧', avatar: 'https://i.pravatar.cc/150?u=c' },
+  ]);
+  const [likes, setLikes] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setActiveStream(stream);
-  }, [stream]);
-
-  // Subscribe to real-time updates for viewer count and stream status
-  useEffect(() => {
-    const channel = supabase
-      .channel(`live_stream_updates:${stream.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'events',
-          filter: `id=eq.${stream.id}`
-        },
-        (payload) => {
-          const newData = payload.new;
-          if (newData.streaming) {
-            setActiveStream(prev => ({
-              ...prev,
-              viewers: newData.streaming.liveViewers || prev.viewers,
-              playback_url: newData.streaming.playback_url,
-              // We can also update other fields if needed
-            }));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [stream.id]);
-
-  useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  // Load initial messages
-  useEffect(() => {
-    if (isUnlocked) {
-      getStreamMessages(stream.id)
-        .then(setMessages)
-        .catch(console.error);
-    }
-  }, [stream.id, isUnlocked]);
-
-  // Subscribe to new messages
-  useEffect(() => {
-    if (!isUnlocked) return;
-
-    const subscription = subscribeToStreamMessages(stream.id, (newMessage) => {
-      setMessages((prev) => [...prev, newMessage]);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [stream.id, isUnlocked]);
-
-  // Play video when unlocked
-  useEffect(() => {
-    if (isUnlocked && videoRef.current) {
-      // Force play on mobile - handle promise properly
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('Video playing successfully');
-            setIsBuffering(false);
-          })
-          .catch(err => {
-            console.log('Video autoplay prevented, user tap required:', err);
-            // On mobile, we may need user interaction - add click handler
-            const handleFirstPlay = () => {
-              if (videoRef.current) {
-                videoRef.current.play();
-                videoRef.current.removeEventListener('click', handleFirstPlay);
-              }
-            };
-            videoRef.current?.addEventListener('click', handleFirstPlay);
-          });
-      }
-    }
-  }, [isUnlocked]);
-
-  // Update video mute state
+  // Handle Play/Pause
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.muted = isMuted;
+      if (isPlaying) {
+        videoRef.current.play().catch(() => setIsPlaying(false));
+      } else {
+        videoRef.current.pause();
+      }
     }
-  }, [isMuted]);
+  }, [isPlaying]);
 
-  // Messages are handled by subscription above
+  // Auto-scroll chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
+  // Hide controls on idle
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    const resetTimer = () => {
+      setShowControls(true);
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setShowControls(false), 3000);
+    };
 
-  const handleUnlock = () => {
-    setIsUnlocked(true);
-    toast.success('Stream unlocked! Enjoy the show 🎉');
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('touchstart', resetTimer);
+    resetTimer();
+
+    return () => {
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('touchstart', resetTimer);
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  const handleSendMessage = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!message.trim()) return;
+
+    setMessages(prev => [...prev, {
+      user: 'You',
+      text: message,
+      avatar: 'https://i.pravatar.cc/150?u=me'
+    }]);
+    setMessage('');
   };
 
-  const sendMessage = async () => {
-    if (!chatMessage.trim() || !isUnlocked) return;
-    
-    try {
-      await sendStreamMessage(stream.id, chatMessage);
-      setChatMessage('');
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+  const handleLike = () => {
+    setLikes(prev => prev + 1);
+    // Show floating heart animation logic could go here
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
     }
-  };
-
-  const addReaction = () => {
-    if (!isUnlocked) return;
-    setReactions(prev => prev + 1);
-    setTimeout(() => setReactions(prev => Math.max(0, prev - 1)), 2000);
-  };
-
-  const handleShare = async () => {
-    const shared = await shareUtil({
-      title: activeStream.title,
-      text: `Watch ${activeStream.title} live on EVENTZ!\nViewing now: ${activeStream.viewers} people`,
-      url: window.location.href,
-    });
-    
-    // If native share not available, show custom modal
-    if (!shared) {
-      setShowShareModal(true);
-    }
-  };
-
-  // Get appropriate video URL based on stream content
-  const getVideoUrl = () => {
-    return activeStream.playback_url || '';
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
-      <div className="h-full flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent absolute top-0 left-0 right-0 z-10">
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors backdrop-blur-sm"
-          >
-            <X className="w-5 h-5 text-white" />
-          </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleShare}
-              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors backdrop-blur-sm"
-            >
-              <Share2 className="w-4 h-4 text-white" />
-            </button>
-            <button className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors backdrop-blur-sm">
-              <MoreVertical className="w-4 h-4 text-white" />
-            </button>
+    <div ref={containerRef} className="fixed inset-0 z-[100] bg-black flex flex-col md:flex-row">
+      {/* Video Player Area */}
+      <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
+        {/* Main Video */}
+        {stream.playback_url ? (
+          <video
+            ref={videoRef}
+            src={stream.playback_url}
+            className="w-full h-full object-contain"
+            autoPlay={isPlaying}
+            muted={isMuted}
+            loop
+            playsInline
+          />
+        ) : (
+          <div className="absolute inset-0">
+            <ImageWithFallback
+              src={stream.thumbnail}
+              alt={stream.title}
+              className="w-full h-full object-cover opacity-50 blur-sm"
+            />
+             <div className="absolute inset-0 flex items-center justify-center">
+                <p className="text-white/70">Stream Preview</p>
+             </div>
           </div>
-        </div>
+        )}
 
-        {/* Video Player Container - iPhone 16 Pro Max optimized */}
-        <div className="flex-1 flex items-start justify-center relative pt-14">
-          <div className="w-full h-full relative bg-black">
-            {/* Real Video Player (ALWAYS RENDERED for instant playback) */}
-            <video
-              ref={videoRef}
-              className={`w-full h-full object-contain transition-opacity duration-300 ${isUnlocked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-              loop
-              playsInline
-              muted={isMuted}
-              preload="auto"
-              onWaiting={() => setIsBuffering(true)}
-              onPlaying={() => setIsBuffering(false)}
-              onCanPlay={() => setIsBuffering(false)}
-            >
-              <source src={getVideoUrl()} type="video/mp4" />
-            </video>
-
-            {/* Offline/No Stream Message */}
-            {isUnlocked && !getVideoUrl() && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black z-20">
-                <div className="text-center px-6">
-                  <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto mb-4">
-                    <VolumeX className="w-8 h-8 text-white/50" />
-                  </div>
-                  <h3 className="text-white text-xl mb-2">Stream Offline</h3>
-                  <p className="text-white/60 text-sm">The stream hasn't started or has ended.</p>
+        {/* Overlays & Controls */}
+        <div className={`absolute inset-0 transition-opacity duration-300 flex flex-col justify-between p-4 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          
+          {/* Top Bar */}
+          <div className="flex items-start justify-between bg-gradient-to-b from-black/60 to-transparent pt-2 pb-12 px-2 -mx-2 -mt-2">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={onClose}
+                className="p-2 hover:bg-white/10 rounded-full text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <div>
+                <h2 className="text-white font-semibold text-lg line-clamp-1">{stream.title}</h2>
+                <div className="flex items-center gap-2 text-white/80 text-sm">
+                  <span className="flex items-center gap-1 bg-red-600 px-2 py-0.5 rounded text-xs font-bold">
+                    LIVE
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    {stream.viewers?.toLocaleString()} watching
+                  </span>
                 </div>
-              </div>
-            )}
-
-            {/* Blurred Thumbnail (when locked) */}
-            {!isUnlocked && (
-              <>
-                <ImageWithFallback
-                  src={activeStream.thumbnail}
-                  alt={activeStream.title}
-                  className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 transition-all duration-500"
-                />
-                {/* Dimmed overlay for locked state */}
-                <div className="absolute inset-0 bg-black/60"></div>
-              </>
-            )}
-
-            {/* Buffering Indicator */}
-            {isBuffering && isUnlocked && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
-                <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-              </div>
-            )}
-
-            {/* Top overlay - Live indicator, viewers, quality */}
-            <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                {/* LIVE Badge */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500 shadow-lg">
-                  <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-                  <span className="text-white text-sm tracking-wide">LIVE</span>
-                </div>
-
-                {/* FREE Badge */}
-                {!activeStream.isPaid && (
-                  <div className="px-3 py-1.5 rounded-full bg-green-500 shadow-lg">
-                    <span className="text-white text-sm">FREE</span>
-                  </div>
-                )}
-
-                {/* Viewers count */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md">
-                  <Users className="w-4 h-4 text-white" />
-                  <span className="text-white text-sm">{activeStream.viewers.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Quality Badge */}
-              <div className="px-3 py-1.5 rounded-full bg-purple-600 shadow-lg">
-                <span className="text-white text-sm">{activeStream.quality}</span>
               </div>
             </div>
-
-            {/* Locked State - Center */}
-            {!isUnlocked && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center px-6">
-                  {/* Lock Icon */}
-                  <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto mb-4 border border-white/20">
-                    <Lock className="w-10 h-10 text-white" />
-                  </div>
-
-                  {/* Text */}
-                  <h3 className="text-white text-2xl mb-2">Unlock to watch live</h3>
-                  <p className="text-white/80 text-sm mb-6">Get instant access to this live stream</p>
-
-                  {/* Unlock Button */}
-                  <button
-                    onClick={handleUnlock}
-                    className="px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-2xl hover:scale-105 transition-all"
-                  >
-                    Unlock Stream – TZS {activeStream.price?.toLocaleString()}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Bottom overlay - Title, Host, Controls */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5">
-              <div className="flex items-end justify-between">
-                <div className="flex-1 pr-4">
-                  <h2 className="text-white text-xl mb-1 line-clamp-1">{activeStream.title}</h2>
-                  <p className="text-white/80 text-sm">{activeStream.host}</p>
-                </div>
-
-                {/* Video Controls */}
-                {isUnlocked && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setIsMuted(!isMuted)}
-                      className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-colors"
-                    >
-                      {isMuted ? (
-                        <VolumeX className="w-5 h-5 text-white" />
-                      ) : (
-                        <Volume2 className="w-5 h-5 text-white" />
-                      )}
-                    </button>
-                    <button className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-colors">
-                      <Maximize className="w-5 h-5 text-white" />
-                    </button>
-                  </div>
-                )}
-              </div>
+            
+            <div className="flex items-center gap-2">
+               <div className="bg-black/30 backdrop-blur-md px-3 py-1 rounded-full text-white/90 text-sm border border-white/10">
+                 {stream.quality}
+               </div>
+               <button className="p-2 hover:bg-white/10 rounded-full text-white transition-colors">
+                 <MoreVertical className="w-6 h-6" />
+               </button>
             </div>
-
-            {/* Floating Reactions */}
-            {reactions > 0 && (
-              <div className="absolute right-4 bottom-24 flex flex-col-reverse gap-2">
-                {[...Array(Math.min(reactions, 5))].map((_, i) => (
-                  <div
-                    key={i}
-                    className="animate-float-up"
-                    style={{ animationDelay: `${i * 0.2}s` }}
-                  >
-                    <Heart className="w-8 h-8 text-red-500 fill-red-500" />
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Chat Panel - Right Side */}
-          {showChat && isUnlocked && (
-            <div className="absolute right-8 top-0 bottom-0 w-80 bg-white rounded-2xl shadow-2xl flex flex-col">
-              {/* Chat Header */}
-              <div className="px-5 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5 text-purple-600" />
-                    <h3 className="text-gray-900">Live Chat</h3>
-                  </div>
-                  <button
-                    onClick={() => setShowChat(false)}
-                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                  >
-                    <X className="w-4 h-4 text-gray-600" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-                {messages.map((msg) => (
-                  <div key={msg.id} className="text-sm">
-                    <span className="text-purple-600 font-medium">
-                      {msg.user?.username || msg.user?.full_name || 'Anonymous'}
-                    </span>
-                    <span className="text-gray-900 ml-2">{msg.message}</span>
-                  </div>
-                ))}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Chat Input */}
-              <div className="p-4 border-t border-gray-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <button
-                    onClick={addReaction}
-                    className="px-4 py-2 rounded-full bg-pink-50 hover:bg-pink-100 transition-colors"
-                  >
-                    <Heart className="w-4 h-4 text-pink-500" />
-                  </button>
-                  <span className="text-gray-500 text-xs">Send reactions</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={chatMessage}
-                    onChange={(e) => setChatMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder="Say something..."
-                    className="flex-1 px-4 py-2 rounded-full bg-gray-100 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-purple-600"
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={!chatMessage.trim()}
-                    className="w-10 h-10 rounded-full bg-purple-600 disabled:bg-gray-200 flex items-center justify-center transition-colors"
-                  >
-                    <Send className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-              </div>
+          {/* Bottom Bar (Video Controls) */}
+          <div className="flex items-center justify-between text-white pb-2 px-2">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsPlaying(!isPlaying)} 
+                className="hover:text-purple-400 transition-colors p-1"
+              >
+                {isPlaying ? <Pause className="w-6 h-6 fill-white" /> : <Play className="w-6 h-6 fill-white" />}
+              </button>
+              
+              <button 
+                onClick={() => setIsMuted(!isMuted)} 
+                className="hover:text-purple-400 transition-colors p-1"
+              >
+                {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+              </button>
             </div>
-          )}
 
-          {/* Chat Toggle (when hidden) */}
-          {!showChat && isUnlocked && (
-            <button
-              onClick={() => setShowChat(true)}
-              className="absolute right-6 bottom-32 w-14 h-14 rounded-full bg-[#8A2BE2] hover:bg-[#7B24CC] flex items-center justify-center shadow-2xl transition-all hover:scale-110 z-20"
-            >
-              <MessageCircle className="w-6 h-6 text-white" />
-            </button>
-          )}
-
-          {/* Locked Chat Indicator */}
-          {!isUnlocked && (
-            <div className="absolute right-8 bottom-8 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
-              <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-white/60" />
-                <span className="text-white/60 text-sm">Chat locked</span>
-              </div>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={toggleFullscreen} 
+                className="hover:text-purple-400 transition-colors p-1"
+              >
+                {isFullscreen ? <Minimize2 className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Add CSS for floating animation */}
-      <style>{`
-        @keyframes float-up {
-          0% {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(-100px) scale(1.2);
-            opacity: 0;
-          }
-        }
-        .animate-float-up {
-          animation: float-up 2s ease-out forwards;
-        }
-      `}</style>
+      {/* Sidebar (Chat & Interactions) - Hidden on landscape mobile if needed, but we'll keep it simple */}
+      <div className="w-full md:w-96 bg-gray-900 border-l border-gray-800 flex flex-col h-[40vh] md:h-full z-10">
+        
+        {/* Host Info */}
+        <div className="p-4 border-b border-gray-800 bg-gray-900 flex items-center justify-between">
+           <div className="flex items-center gap-3">
+             <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                {stream.host.charAt(0)}
+             </div>
+             <div>
+               <p className="text-white font-medium">{stream.host}</p>
+               <p className="text-gray-400 text-xs">Host</p>
+             </div>
+           </div>
+           <button className="px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full hover:bg-purple-700">
+             Follow
+           </button>
+        </div>
 
-      {/* Share Modal */}
-      <ShareModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        title={stream.title}
-        text={`Watch ${stream.title} live on EVENTZ!\nViewing now: ${stream.viewers} people`}
-        url={window.location.href}
-      />
+        {/* Chat Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="text-center text-gray-500 text-sm my-4">
+            Welcome to the live chat! 👋
+          </div>
+          {messages.map((msg, i) => (
+            <div key={i} className="flex items-start gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
+              <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                <UserAvatar src={msg.avatar} name={msg.user} className="w-full h-full" />
+              </div>
+              <div className="flex-1">
+                <p className="text-gray-400 text-xs mb-0.5">{msg.user}</p>
+                <p className="text-white text-sm">{msg.text}</p>
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Interaction Bar */}
+        <div className="p-4 bg-gray-900 border-t border-gray-800">
+          
+          {/* Floating Actions */}
+          <div className="flex items-center justify-end gap-3 mb-4">
+             <button 
+               onClick={handleLike}
+               className="p-3 bg-gray-800 rounded-full text-pink-500 hover:bg-gray-700 transition-colors relative group"
+             >
+               <Heart className={`w-6 h-6 ${likes > 0 ? 'fill-pink-500' : ''}`} />
+               <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                 {likes}
+               </span>
+             </button>
+             <button className="p-3 bg-gray-800 rounded-full text-white hover:bg-gray-700 transition-colors">
+               <Share2 className="w-6 h-6" />
+             </button>
+          </div>
+
+          {/* Chat Input */}
+          <form onSubmit={handleSendMessage} className="relative">
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Say something..."
+              className="w-full bg-gray-800 text-white border-none rounded-full py-3 pl-4 pr-12 focus:ring-2 focus:ring-purple-600 focus:outline-none placeholder-gray-500"
+            />
+            <button 
+              type="submit"
+              disabled={!message.trim()}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-600 rounded-full text-white disabled:opacity-50 disabled:bg-gray-700 transition-all"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

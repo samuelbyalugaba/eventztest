@@ -39,6 +39,7 @@
             "clsx": "*",
             "cmdk": "^1.1.1",
             "embla-carousel-react": "^8.6.0",
+            "hls.js": "^1.6.15",
             "hono": "*",
             "input-otp": "^1.4.2",
             "lucide-react": "^0.487.0",
@@ -68,8 +69,8 @@
             "build": "vite build",
             "preview": "vite preview",
             "generate-icons": "node scripts/generate-icons.js",
-    "generate-native-assets": "capacitor-assets generate",
-    "cap:sync": "npm run build && npx cap sync",
+            "generate-native-assets": "capacitor-assets generate",
+            "cap:sync": "npm run build && npx cap sync",
             "cap:open:android": "npx cap open android",
             "cap:open:ios": "npx cap open ios"
       }

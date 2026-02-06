@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, Users, CheckCircle2, Share2, Play, MessageCircle, Phone } from 'lucide-react';
+import { X, MapPin, Calendar, Users, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
 import { toast } from 'sonner';
-import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow } from '../utils/supabase/api';
+import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
+import { UserProfileModal } from './UserProfileModal';
 
 interface OrganizerData {
   id?: string;
@@ -65,6 +66,8 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [followersList, setFollowersList] = useState<any[]>([]);
   const [loadingFollowers, setLoadingFollowers] = useState(false);
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const handleShowFollowers = async () => {
     if (!organizerId) return;
@@ -78,6 +81,29 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       toast.error('Failed to load followers');
     } finally {
       setLoadingFollowers(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: number) => {
+    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    
+    try {
+      const success = await deleteEvent(eventId);
+      if (success) {
+        toast.success('Event deleted successfully');
+        // Update local state to remove event
+        if (organizerData) {
+          setOrganizerData({
+            ...organizerData,
+            upcomingEvents: organizerData.upcomingEvents.filter(e => e.id !== eventId)
+          });
+        }
+      } else {
+        toast.error('Failed to delete event');
+      }
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error('An error occurred while deleting the event');
     }
   };
 
@@ -462,6 +488,37 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             <p className="text-sm text-gray-600 leading-relaxed">{organizerData.bio}</p>
           </div>
 
+          <UserListModal 
+            isOpen={showFollowersModal}
+            onClose={() => setShowFollowersModal(false)}
+            title="Followers"
+            users={followersList}
+            loading={loadingFollowers}
+            onUserSelect={(user) => {
+              setSelectedUser({
+                ...user,
+                type: user.is_organizer ? 'Organizer' : 'Attendee',
+                name: user.full_name || user.username || 'User',
+                avatar: user.avatar_url || '',
+                verified: false
+              });
+              setShowUserProfileModal(true);
+            }}
+          />
+
+          {showUserProfileModal && selectedUser && (
+            <UserProfileModal
+              user={selectedUser}
+              onClose={() => {
+                setShowUserProfileModal(false);
+                setSelectedUser(null);
+              }}
+              onFollow={() => {
+                 if (showFollowersModal) handleShowFollowers();
+              }}
+            />
+          )}
+
           {/* Event Highlights & Posts - COMBINED INSTAGRAM-STYLE GRID */}
           <div className="mb-6">
             <h3 className="text-gray-900 mb-4">Event Highlights & Posts</h3>
@@ -545,14 +602,28 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                     </div>
                     <div className="flex items-center justify-between mt-3">
                       <span className="text-gray-900 font-semibold text-sm">{event.price}</span>
-                      <button className="bg-[#8A2BE2] text-white px-4 py-1.5 rounded-full text-xs font-medium hover:bg-[#7526c7] transition-colors"
-                        onClick={() => {
-                          setSelectedEvent(event);
-                          setShowTicketModal(true);
-                        }}
-                      >
-                        Get Ticket
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {currentUser && currentUser.id === organizerId && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteEvent(event.id);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                            title="Delete Event"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button className="bg-[#8A2BE2] text-white px-4 py-1.5 rounded-full text-xs font-medium hover:bg-[#7526c7] transition-colors"
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            setShowTicketModal(true);
+                          }}
+                        >
+                          Get Ticket
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -563,27 +634,6 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         </div>
       </div>
     </div>
-
-    {/* Followers Modal */}
-    {showFollowersModal && (
-      <UserListModal
-        isOpen={showFollowersModal}
-        onClose={() => setShowFollowersModal(false)}
-        title="Followers"
-        users={followersList}
-        loading={loadingFollowers}
-        onUserSelect={(user) => {
-          setSelectedUser({
-            ...user,
-            type: user.is_organizer ? 'Organizer' : 'Attendee',
-            name: user.full_name || user.username || 'User',
-            avatar: user.avatar_url || '',
-            verified: user.verified || false
-          });
-          setShowUserProfileModal(true);
-        }}
-      />
-    )}
 
     {showUserProfileModal && selectedUser && (
       <UserProfileModal
