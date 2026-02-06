@@ -6,7 +6,7 @@ import {
   MessageSquare, Share2, Bookmark, 
   Play, Volume2, VolumeX, 
   ChevronLeft, ChevronRight, Send, ThumbsUp,
-  Star, MessageCircle, Trash2
+  Star, MessageCircle
 } from 'lucide-react';
 import {
   Drawer,
@@ -38,7 +38,7 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onDelete, onMessage, isFollowed = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onMessage, isFollowed = false }: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(post.isLiked);
@@ -245,7 +245,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
               >
                 {post.user.name}
               </span>
-              {post.user.isOrganizer && (
+              {(post.user.isOrganizer || post.user.isOrganizerPage) && (
                 <Star className="w-3.5 h-3.5 text-purple-600 fill-purple-600" />
               )}
               {post.user.verified && !post.user.isOrganizer && (

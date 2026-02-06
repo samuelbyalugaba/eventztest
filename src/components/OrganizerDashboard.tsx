@@ -325,20 +325,8 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
 
   return (
     <>
-      {/* Settings Button - Portal to document.body to TRULY ESCAPE all parent containers */}
-      {createPortal(
-        <div className="fixed top-4 right-4 z-[99999]" style={{ position: 'fixed' }}>
-          <button 
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-2 bg-white shadow-xl text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-50 hover:shadow-2xl transition-all border border-gray-200 flex-shrink-0 backdrop-blur-sm"
-          >
-            <Settings className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm font-medium whitespace-nowrap hidden xs:inline">Manage Page</span>
-          </button>
-        </div>,
-        document.body
-      )}
-
+      {/* Settings Button - Portal removed */}
+      
       {/* Create Post Modal */}
       <CreatePostModal
         isOpen={showCreatePostModal}
@@ -374,6 +362,13 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                 </div>
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto">
+                <button 
+                  onClick={() => setShowSettings(true)}
+                  className="flex items-center gap-2 bg-white/10 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition-all border border-white/20 backdrop-blur-sm"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="text-sm font-semibold whitespace-nowrap">Manage</span>
+                </button>
                 <button
                   onClick={onCreateEvent}
                   className="flex items-center gap-2 bg-white/10 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition-all border border-white/20 backdrop-blur-sm"

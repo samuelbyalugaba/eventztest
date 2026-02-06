@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3, Plus, Trash2, X } from 'lucide-react';
+import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3, Plus, Trash2, X, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
@@ -29,14 +29,18 @@ interface EventForm {
   coverImage: string | null;
   ticketTiers: TicketTier[];
   currency: string;
+  streaming: {
+    available: boolean;
+    virtualPrice: string;
+    virtualPriceNumeric: number;
+    quality: 'HD' | '4K' | 'SD';
+  };
 }
 
 interface CreateEventProps {
   onBack?: () => void;
   event?: any;
 }
-
-import { currencies } from '../utils/currencies';
 
 export function CreateEvent({ onBack, event }: CreateEventProps) {
   const [formData, setFormData] = useState<EventForm>({
@@ -51,6 +55,12 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     coverImage: event?.image_url || event?.coverImage || null,
     ticketTiers: event?.ticket_tiers || [],
     currency: event?.currency || 'TZS',
+    streaming: {
+      available: event?.streaming?.available || false,
+      virtualPrice: event?.streaming?.virtualPrice || '',
+      virtualPriceNumeric: parseFloat(event?.streaming?.virtualPrice?.replace(/[^0-9.]/g, '') || '0'),
+      quality: event?.streaming?.quality || 'HD',
+    }
   });
 
   const calculatePriceRange = (tiers: TicketTier[], currencyCode: string) => {
@@ -186,6 +196,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           organizer_id: user.id,
           status: 'draft' as const,
           ticket_tiers: formData.ticketTiers,
+          streaming: {
+            available: formData.streaming.available,
+            quality: formData.streaming.quality,
+            virtualPrice: formData.streaming.virtualPrice
+          }
         };
 
         if (savedEventId) {
@@ -339,7 +354,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   const handlePublish = async () => {
     // Basic validation
-    if (!formData.title || !formData.date || !formData.location || !formData.price) {
+    if (!formData.title || !formData.date || !formData.price) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -375,6 +390,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         organizer_id: user.id,
         status: 'published' as const,
         ticket_tiers: formData.ticketTiers,
+        streaming: {
+          available: formData.streaming.available,
+          quality: formData.streaming.quality,
+          virtualPrice: formData.streaming.virtualPrice
+        }
       };
 
       if (isEditing && savedEventId) {
@@ -490,7 +510,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                    <p className="text-lg font-semibold text-gray-900 mt-1">{formData.title || 'Untitled'}</p>
                  </div>
                  
-                 <div className="grid grid-cols-2 gap-6">
+                 <div>
                    <div>
                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</label>
                      <p className="text-gray-900 mt-1 flex items-center gap-2">
@@ -498,13 +518,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                        {formData.date || 'TBD'} • {formData.time || '--:--'}
                      </p>
                    </div>
-                   <div>
-                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Location</label>
-                     <p className="text-gray-900 mt-1 flex items-center gap-2">
-                       <MapPin className="w-4 h-4 text-purple-600" />
-                       {formData.location || 'TBD'}
-                     </p>
-                   </div>
+
                  </div>
 
                  <div className="grid grid-cols-2 gap-6">
@@ -518,11 +532,10 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                    </div>
                    <div>
                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Price</label>
-                    <p className="text-gray-900 mt-1 flex items-center gap-2">
+                    <p className="text-gray-900 mt-1">
                       <span className="text-purple-600 font-bold text-sm">
-                        {currencies.find(c => c.code === formData.currency)?.symbol || '$'}
+                        {formData.price || 'Free'}
                       </span>
-                      {formData.price || 'Free'}
                     </p>
                   </div>
                  </div>
@@ -578,10 +591,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     <Calendar className="w-4 h-4" />
                     <span>{formData.date || 'TBD'}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    <span>{formData.location || 'TBD'}</span>
-                  </div>
+
                 </div>
               </div>
             </div>
@@ -635,7 +645,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               onClick={async () => {
                 const shared = await shareUtil({
                   title: formData.title,
-                  text: `${formData.date} at ${formData.location}\nPrice: ${formData.price}`,
+                  text: `${formData.date}\nPrice: ${formData.price}`,
                   url: window.location.href,
                 });
                 
@@ -863,7 +873,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               type="text"
               value={formData.location}
               onChange={(e) => handleInputChange('location', e.target.value)}
-              placeholder="e.g., Central Park, New York"
+              placeholder="e.g., Mlimani City Hall, Dar es Salaam"
               className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
             />
           </div>
@@ -1019,6 +1029,69 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 <p className="text-xs text-gray-500 mt-1 ml-1">Price range is auto-calculated from ticket tiers.</p>
             )}
           </div>
+        </div>
+
+        {/* Virtual Access / Streaming */}
+        <div className="mb-6 bg-purple-50 p-6 rounded-2xl border border-purple-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center">
+                <Tv className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-gray-900 font-semibold">Virtual Access</h3>
+                <p className="text-gray-600 text-sm">Enable live streaming for this event</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer"
+                checked={formData.streaming.available}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    streaming: {
+                      ...prev.streaming,
+                      available: e.target.checked
+                    }
+                  }));
+                }}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          {formData.streaming.available && (
+            <div className="animate-in fade-in slide-in-from-top-2">
+              <label className="block text-gray-900 mb-3 text-sm font-medium">Virtual Ticket Price ({currencies.find(c => c.code === formData.currency)?.symbol || formData.currency})</label>
+              <div className="relative">
+                <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="number"
+                  value={formData.streaming.virtualPriceNumeric || ''}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    const currency = currencies.find(c => c.code === formData.currency) || { symbol: formData.currency };
+                    setFormData(prev => ({
+                      ...prev,
+                      streaming: {
+                        ...prev.streaming,
+                        virtualPriceNumeric: val,
+                        virtualPrice: isNaN(val) ? '' : `${currency.symbol} ${val.toLocaleString()}`
+                      }
+                    }));
+                  }}
+                  placeholder="0"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                <CheckCircle className="w-3 h-3 text-green-500" />
+                Virtual ticket holders will get a unique link to join the stream.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Description */}

@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Filter, Play, Clock, Check, MapPin, Search, Lock, Unlock, X, CheckCircle2 } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
+import { EventDetailModal } from './EventDetailModal';
 import { toast } from 'sonner';
-import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile } from '../utils/supabase/api';
+import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile, Event as ApiEvent } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 
 interface LiveStream {
@@ -213,12 +214,13 @@ const countries = [
 
 export function LiveFeed() {
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedCountry, setSelectedCountry] = useState('Tanzania');
+  const [selectedCountry, setSelectedCountry] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [reminders, setReminders] = useState<Set<number>>(new Set());
   const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [streamToUnlock, setStreamToUnlock] = useState<LiveStream | null>(null);
   const [unlockedStreams, setUnlockedStreams] = useState<Set<number>>(new Set());
@@ -229,10 +231,30 @@ export function LiveFeed() {
   const fetchStreams = async () => {
     try {
       const live = await getLiveStreams();
-      if (live) setLiveStreams(live as unknown as LiveStream[]);
+      if (live) {
+        const mappedLive = live.map((e: any) => ({
+          ...e,
+          thumbnail: e.image_url,
+          host: e.organizer?.organizer_name || 'Unknown Host',
+          viewers: e.streaming?.liveViewers || 0,
+          isLive: true,
+          country: e.location?.split(',').pop()?.trim() || 'Tanzania' // Try to guess country
+        }));
+        setLiveStreams(mappedLive as unknown as LiveStream[]);
+      }
       
       const upcoming = await getUpcomingStreams();
-      if (upcoming) setUpcomingStreams(upcoming as unknown as LiveStream[]);
+      if (upcoming) {
+        const mappedUpcoming = upcoming.map((e: any) => ({
+          ...e,
+          thumbnail: e.image_url,
+          scheduledTime: `${e.date} at ${e.time}`,
+          host: e.organizer?.organizer_name || 'Unknown Host',
+          country: e.location?.split(',').pop()?.trim() || 'Tanzania', // Try to guess country
+          countdown: Math.max(0, Math.floor((new Date(`${e.date}T${e.time}`).getTime() - new Date().getTime()) / (1000 * 60)))
+        }));
+        setUpcomingStreams(mappedUpcoming as unknown as LiveStream[]);
+      }
     } catch (error) {
       console.error('Error fetching streams:', error);
     }
@@ -399,12 +421,18 @@ export function LiveFeed() {
   };
 
   const handleStreamClick = (stream: LiveStream) => {
-    // Check if stream is paid and not unlocked
-    if (stream.isPaid && !unlockedStreams.has(stream.id)) {
-      setStreamToUnlock(stream);
-      setShowUnlockModal(true);
+    // Check if stream is live or upcoming
+    if (stream.isLive) {
+      // Check if stream is paid and not unlocked
+      if (stream.isPaid && !unlockedStreams.has(stream.id)) {
+        setStreamToUnlock(stream);
+        setShowUnlockModal(true);
+      } else {
+        setSelectedStream(stream);
+      }
     } else {
-      setSelectedStream(stream);
+      // It's an upcoming event, open details
+      setSelectedEvent(stream as unknown as ApiEvent);
     }
   };
 
@@ -542,6 +570,7 @@ export function LiveFeed() {
               {filteredUpcomingStreams.map((stream: LiveStream) => (
                 <div
                   key={stream.id}
+                  onClick={() => handleStreamClick(stream)}
                   className="relative overflow-hidden rounded-2xl bg-white hover:shadow-md transition-all cursor-pointer border border-gray-200"
                 >
                   <div className="flex gap-4 p-4">
@@ -693,6 +722,16 @@ export function LiveFeed() {
           stream={selectedStream}
           onClose={() => setSelectedStream(null)}
           isUnlockedOverride={unlockedStreams.has(selectedStream.id)}
+        />
+      )}
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onPurchaseTicket={() => {}}
+          onPurchaseNormalTicket={() => {}}
         />
       )}
 

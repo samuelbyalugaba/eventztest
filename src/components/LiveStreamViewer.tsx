@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Heart, Share2, Send, Users, MoreVertical, Maximize2, Minimize2, Volume2, VolumeX, Play, Pause } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { supabase } from '../utils/supabase/client';
+import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage } from '../utils/supabase/api';
+import { toast } from 'sonner';
 
 interface LiveStreamViewerProps {
   stream: {
@@ -22,15 +25,42 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<{ user: string; text: string; avatar?: string }[]>([
-    { user: 'Alice', text: 'This is amazing! 🔥', avatar: 'https://i.pravatar.cc/150?u=a' },
-    { user: 'Bob', text: 'Can wait for the main event!', avatar: 'https://i.pravatar.cc/150?u=b' },
-    { user: 'Charlie', text: 'Hello from London 🇬🇧', avatar: 'https://i.pravatar.cc/150?u=c' },
-  ]);
+  const [messages, setMessages] = useState<{ user: string; text: string; avatar?: string }[]>([]);
   const [likes, setLikes] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Load chat messages
+  useEffect(() => {
+    const loadChat = async () => {
+      try {
+        const msgs = await getStreamMessages(stream.id);
+        if (msgs) {
+          setMessages(msgs.map((m: any) => ({
+            user: m.user?.full_name || m.user?.username || 'User',
+            text: m.message,
+            avatar: m.user?.avatar_url
+          })));
+        }
+      } catch (error) {
+        console.error('Failed to load chat:', error);
+      }
+    };
+    loadChat();
+
+    const subscription = subscribeToStreamMessages(stream.id, (msg) => {
+      setMessages(prev => [...prev, {
+        user: msg.user?.full_name || msg.user?.username || 'User',
+        text: msg.message,
+        avatar: msg.user?.avatar_url
+      }]);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [stream.id]);
 
   // Handle Play/Pause
   useEffect(() => {
@@ -68,16 +98,18 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     };
   }, []);
 
-  const handleSendMessage = (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!message.trim()) return;
 
-    setMessages(prev => [...prev, {
-      user: 'You',
-      text: message,
-      avatar: 'https://i.pravatar.cc/150?u=me'
-    }]);
-    setMessage('');
+    try {
+      await sendStreamMessage(stream.id, message);
+      setMessage('');
+      // Message will appear via subscription
+    } catch (error) {
+      toast.error('Failed to send message');
+      console.error(error);
+    }
   };
 
   const handleLike = () => {
