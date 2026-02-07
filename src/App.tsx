@@ -26,7 +26,7 @@ import {
   subscribeToOnlineUsers,
   deleteConversation,
   Event
-} from './utils/supabase/api';
+} from '@/utils/supabase/api';
 import { Message, Conversation } from './types';
 
 type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile';
