@@ -88,18 +88,15 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     if (!window.confirm('Are you sure you want to delete this event?')) return;
     
     try {
-      const success = await deleteEvent(eventId);
-      if (success) {
-        toast.success('Event deleted successfully');
-        // Update local state to remove event
-        if (organizerData) {
-          setOrganizerData({
-            ...organizerData,
-            upcomingEvents: organizerData.upcomingEvents.filter(e => e.id !== eventId)
-          });
-        }
-      } else {
-        toast.error('Failed to delete event');
+      await deleteEvent(eventId);
+      
+      toast.success('Event deleted successfully');
+      // Update local state to remove event
+      if (organizerData) {
+        setOrganizerData({
+          ...organizerData,
+          upcomingEvents: organizerData.upcomingEvents.filter(e => e.id !== eventId)
+        });
       }
     } catch (error) {
       console.error('Error deleting event:', error);

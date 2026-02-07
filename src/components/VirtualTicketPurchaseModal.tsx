@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, ChevronLeft, Tv, Calendar, MapPin, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { createTicket, Event as ApiEvent, PurchasedTicket } from '../utils/supabase/api';
+import { createTicket, Event as ApiEvent } from '../utils/supabase/api';
 
 interface VirtualTicketPurchaseModalProps {
   isOpen: boolean;

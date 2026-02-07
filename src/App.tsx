@@ -82,7 +82,7 @@ export default function App() {
       if (event === 'SIGNED_IN' && session) {
         setCurrentUser(session.user);
         setIsAuthenticated(true);
-      } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
         setIsAuthenticated(false);
         setIsOrganizer(false);
