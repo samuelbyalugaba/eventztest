@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
@@ -9,7 +9,7 @@ import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Event, Ticket, Post, getFollowers, getFollowing } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Event, Ticket, Post, getFollowers, getFollowing, deletePost } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 
@@ -296,6 +296,30 @@ export function Profile({ onLogout }: ProfileProps) {
       toast.error('Failed to share post');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleDeletePost = async (postId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+
+    try {
+      // Optimistic update
+      setUserPosts(prev => prev.filter(p => p.id !== postId));
+
+      await deletePost(postId);
+      toast.success('Post deleted');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+      
+      // Revert/Reload
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const posts = await getPosts({ authorId: user.id });
+        if (posts) setUserPosts(posts);
+      }
     }
   };
 
@@ -623,6 +647,13 @@ export function Profile({ onLogout }: ProfileProps) {
                   />
                   {/* Hover Overlay */}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button 
+                      onClick={(e) => handleDeletePost(photo.postId, e)}
+                      className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
+                      title="Delete post"
+                    >
+                      <Trash className="w-3.5 h-3.5" />
+                    </button>
                     <div className="flex items-center gap-1 text-white text-sm">
                       <Heart className="w-4 h-4 fill-white" />
                       <span>{photo.likes}</span>
@@ -669,8 +700,15 @@ export function Profile({ onLogout }: ProfileProps) {
                     {video.duration}
                   </div>
                   {/* Hover Stats */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                    <div className="flex flex-col items-center gap-1 text-white text-xs">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button 
+                      onClick={(e) => handleDeletePost(video.postId, e)}
+                      className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
+                      title="Delete post"
+                    >
+                      <Trash className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="flex flex-col items-center gap-1 text-white text-xs pointer-events-none">
                       <div className="flex items-center gap-1">
                         <Play className="w-3 h-3" />
                         <span>{video.views.toLocaleString()}</span>

@@ -5,6 +5,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { supabase } from '../utils/supabase/client';
 import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage } from '../utils/supabase/api';
 import { toast } from 'sonner';
+import Hls from 'hls.js';
 
 interface LiveStreamViewerProps {
   stream: {
@@ -17,9 +18,10 @@ interface LiveStreamViewerProps {
     playback_url?: string;
   };
   onClose: () => void;
+  isUnlockedOverride?: boolean;
 }
 
-export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
+export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveStreamViewerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -27,9 +29,11 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<{ user: string; text: string; avatar?: string }[]>([]);
   const [likes, setLikes] = useState(0);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   // Load chat messages
   useEffect(() => {
@@ -62,11 +66,115 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     };
   }, [stream.id]);
 
+  // Initialize HLS video player
+  useEffect(() => {
+    if (!stream.playback_url || !videoRef.current) return;
+
+    const video = videoRef.current;
+    const url = stream.playback_url;
+
+    // Check if URL is HLS (.m3u8)
+    const isHLS = url.includes('.m3u8') || url.endsWith('/master.m3u8');
+
+    if (isHLS) {
+      // Check if browser natively supports HLS (Safari)
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (Safari)
+        video.src = url;
+        if (isPlaying) {
+          video.play().catch((err) => {
+            console.error('Error playing video:', err);
+            setVideoError('Failed to play video');
+            setIsPlaying(false);
+          });
+        }
+      } else if (Hls.isSupported()) {
+        // Use hls.js for browsers that don't support HLS natively
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90,
+        });
+        
+        hlsRef.current = hls;
+        
+        hls.loadSource(url);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (isPlaying) {
+            video.play().catch((err) => {
+              console.error('Error playing video:', err);
+              setVideoError('Failed to play video');
+              setIsPlaying(false);
+            });
+          }
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.error('Fatal network error, trying to recover...');
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.error('Fatal media error, trying to recover...');
+                hls.recoverMediaError();
+                break;
+              default:
+                console.error('Fatal error, destroying HLS instance');
+                hls.destroy();
+                setVideoError('Failed to load video stream');
+                break;
+            }
+          }
+        });
+
+        return () => {
+          hls.destroy();
+        };
+      } else {
+        // HLS not supported
+        setVideoError('HLS video playback is not supported in this browser');
+      }
+    } else {
+      // Regular video (MP4, WebM, etc.)
+      video.src = url;
+      if (isPlaying) {
+        video.play().catch((err) => {
+          console.error('Error playing video:', err);
+          setVideoError('Failed to play video');
+          setIsPlaying(false);
+        });
+      }
+    }
+
+    // Error handler for video element
+    const handleError = () => {
+      setVideoError('Failed to load video');
+      setIsPlaying(false);
+    };
+
+    video.addEventListener('error', handleError);
+
+    return () => {
+      video.removeEventListener('error', handleError);
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [stream.playback_url, isPlaying]);
+
   // Handle Play/Pause
   useEffect(() => {
     if (videoRef.current) {
       if (isPlaying) {
-        videoRef.current.play().catch(() => setIsPlaying(false));
+        videoRef.current.play().catch(() => {
+          setIsPlaying(false);
+          setVideoError('Failed to play video');
+        });
       } else {
         videoRef.current.pause();
       }
@@ -132,15 +240,14 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
       {/* Video Player Area */}
       <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
         {/* Main Video */}
-        {stream.playback_url ? (
+        {stream.playback_url && !videoError ? (
           <video
             ref={videoRef}
-            src={stream.playback_url}
             className="w-full h-full object-contain"
             autoPlay={isPlaying}
             muted={isMuted}
-            loop
             playsInline
+            controls={false}
           />
         ) : (
           <div className="absolute inset-0">
@@ -149,8 +256,23 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
               alt={stream.title}
               className="w-full h-full object-cover opacity-50 blur-sm"
             />
-             <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-white/70">Stream Preview</p>
+             <div className="absolute inset-0 flex items-center justify-center flex-col">
+                {videoError ? (
+                  <>
+                    <p className="text-red-400 mb-2">{videoError}</p>
+                    <button
+                      onClick={() => {
+                        setVideoError(null);
+                        setIsPlaying(true);
+                      }}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    >
+                      Retry
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-white/70">Stream Preview</p>
+                )}
              </div>
           </div>
         )}

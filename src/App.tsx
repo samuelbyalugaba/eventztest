@@ -58,6 +58,10 @@ export default function App() {
         if (error) {
           console.error('Session check error:', error);
           setIsAuthenticated(false);
+          // If refresh token is invalid, ensure we clear local state
+          if (error.message && (error.message.includes("Invalid Refresh Token") || error.message.includes("Refresh Token Not Found"))) {
+             await supabase.auth.signOut();
+          }
         } else if (session?.access_token) {
           setCurrentUser(session.user);
           setIsAuthenticated(true);
@@ -73,6 +77,25 @@ export default function App() {
     };
 
     checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setCurrentUser(session.user);
+        setIsAuthenticated(true);
+      } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        setIsOrganizer(false);
+        setHasOrganizerProfile(false);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        setCurrentUser(session.user);
+        setIsAuthenticated(true);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleAuthSuccess = (_token: string, user: any) => {

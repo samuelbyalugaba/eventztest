@@ -249,6 +249,7 @@ export function LiveFeed() {
           host: e.organizer?.organizer_name || 'Unknown Host',
           viewers: e.streaming?.liveViewers || 0,
           isLive: true,
+          playback_url: e.streaming?.playback_url,
           country: e.location?.split(',').pop()?.trim() || 'Tanzania' // Try to guess country
         }));
         setLiveStreams(mappedLive as unknown as LiveStream[]);
@@ -572,10 +573,11 @@ export function LiveFeed() {
         {/* Upcoming - Minimal Cards */}
         {filteredUpcomingStreams.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 mb-5">
+            {/* Hidden as requested */}
+            {/* <div className="flex items-center gap-2 mb-5">
               <Clock className="w-5 h-5 text-purple-600" />
               <h2 className="text-gray-900 text-lg">Upcoming</h2>
-            </div>
+            </div> */}
 
             <div className="space-y-3">
               {filteredUpcomingStreams.map((stream: LiveStream) => (

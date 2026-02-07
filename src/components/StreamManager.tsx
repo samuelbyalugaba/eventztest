@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, Wifi } from 'lucide-react';
 import { toast } from 'sonner';
-import { Event, generateStreamKeys, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, Profile } from '../utils/supabase/api';
+import { Event, generateStreamKeys, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, Profile, updateEventStreamingStatus } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface StreamManagerProps {
@@ -174,19 +174,35 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     toast.success(`${label} copied to clipboard`);
   };
 
-  const toggleLive = () => {
+  const toggleLive = async () => {
     const newState = !isLive;
+    
+    // Optimistic update
     setIsLive(newState);
     setStreamHealth(newState ? 'good' : 'offline');
     onUpdateStatus(newState);
     
-    if (newState) {
-      toast.success("You are now LIVE! 🔴", {
-        description: "Your followers have been notified."
-      });
-    } else {
-      toast.info("Stream ended", {
-        description: "The broadcast has stopped."
+    // Persist to database
+    try {
+      await updateEventStreamingStatus(event.id, newState);
+      
+      if (newState) {
+        toast.success("You are now LIVE! 🔴", {
+          description: "Your followers have been notified."
+        });
+      } else {
+        toast.info("Stream ended", {
+          description: "The broadcast has stopped."
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update streaming status:', error);
+      // Revert on error
+      setIsLive(!newState);
+      setStreamHealth(!newState ? 'good' : 'offline');
+      onUpdateStatus(!newState);
+      toast.error("Failed to update stream status", {
+        description: "Please try again."
       });
     }
   };

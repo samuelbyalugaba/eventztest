@@ -72,9 +72,10 @@ export function EventCard({ event, onClick, className = '' }: EventCardProps) {
           ) : (
             <div></div>
           )}
-          <span className="text-[#8A2BE2] font-bold text-xs bg-purple-50 px-2 py-0.5 rounded-full">
+          {/* Price badge hidden as requested */}
+          {/* <span className="text-[#8A2BE2] font-bold text-xs bg-purple-50 px-2 py-0.5 rounded-full">
             {event.price_range === 'Free' ? 'Free' : event.price_range}
-          </span>
+          </span> */}
         </div>
       </div>
     </div>
