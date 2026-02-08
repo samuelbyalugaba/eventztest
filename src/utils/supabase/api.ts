@@ -758,13 +758,26 @@ export const deleteEvent = async (id: number) => {
     .eq('id', id)
     .single();
 
-  // 2. Delete event row
-  const { error } = await supabase
-    .from('events')
-    .delete()
-    .eq('id', id);
+  // 2. Use RPC to delete event and all related data (bypassing RLS for child records)
+  const { error } = await supabase.rpc('delete_event_complete', {
+    target_event_id: id
+  });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error deleting event via RPC:', error);
+    // Fallback for older DB versions or if RPC missing (though this will likely fail with FK violation)
+    if (error.code === '42883') { // undefined_function
+      console.warn('RPC delete_event_complete not found, falling back to manual delete...');
+      // Try manual cleanup (will fail if RLS blocks deletion of other users' data)
+      await supabase.from('stream_chat_messages').delete().eq('event_id', id);
+      await supabase.from('saved_events').delete().eq('event_id', id);
+      await supabase.from('tickets').delete().eq('event_id', id);
+      const { error: deleteError } = await supabase.from('events').delete().eq('id', id);
+      if (deleteError) throw deleteError;
+    } else {
+      throw error;
+    }
+  }
 
   // 3. Delete image from storage
   if (event?.image_url) {
