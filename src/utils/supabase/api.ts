@@ -795,14 +795,20 @@ export const deleteFile = async (bucket: 'events' | 'avatars' | 'posts', url: st
 
 export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'posts', path?: string) => {
   // Validate file type
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const allowedTypes = [
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'video/mp4', 'video/webm', 'video/quicktime'
+  ];
   if (!allowedTypes.includes(file.type)) {
-    throw new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.');
+    throw new Error('Invalid file type. Only JPEG, PNG, WebP, GIF, MP4, WebM, and MOV are allowed.');
   }
 
-  // Validate file size (10MB limit)
-  if (file.size > 10 * 1024 * 1024) {
-    throw new Error('File size too large. Maximum size is 10MB.');
+  // Validate file size (100MB limit for videos, 10MB for images)
+  const isVideo = file.type.startsWith('video/');
+  const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+  
+  if (file.size > maxSize) {
+    throw new Error(`File size too large. Maximum size is ${isVideo ? '100MB' : '10MB'}.`);
   }
 
   const fileExt = file.name.split('.').pop();
