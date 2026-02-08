@@ -606,8 +606,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                  className="flex-1 bg-[#8A2BE2] text-white py-3 rounded-xl font-medium hover:bg-[#7b26c9] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
                >
                  <Ticket className="w-5 h-5" />
-                 {event.price_range === 'Free' ? 'Register' : `Get Tickets - ${event.price_range}`}
-               </button>
+                {event.price_range === 'Free' ? 'Register' : 'Get Tickets Now'}
+              </button>
              )
            )}
            
