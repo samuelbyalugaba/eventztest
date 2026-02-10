@@ -96,6 +96,8 @@ interface FeedProps {
   onCreateEvent?: () => void;
 }
 
+let feedCacheMemory: { posts: any[]; timestamp: number } | null = null;
+
 const isVideo = (url?: string) => {
   if (!url) return false;
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
@@ -132,6 +134,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   // const [showChatMenu, setShowChatMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [renderCount, setRenderCount] = useState(20);
+  const [viewportHeight, setViewportHeight] = useState<number>(typeof window !== 'undefined' ? window.innerHeight : 800);
+  const [scrollTop, setScrollTop] = useState<number>(0);
+  const estimatedItemHeight = 560;
+  const overscan = 3;
 
   useEffect(() => {
     if (selectedPost) {
@@ -149,10 +155,81 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   }, [playingVideo?.clipIndex, playingVideo?.clips]);
 
   useEffect(() => {
-    // Load posts
-    const loadPosts = async () => {
+    const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
+    const FEED_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+    const mapPosts = (data: any[]) => {
+      return data.map((p: ApiPost) => {
+        const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
+        const displayName = isOrganizerPage ? p.organizer_profile!.organizer_name : (p.user?.full_name || p.user?.username || 'Unknown User');
+        const avatarUrl = isOrganizerPage ? p.organizer_profile!.avatar_url : p.user?.avatar_url;
+        return {
+          id: p.id,
+          user: {
+            id: p.user?.id || 'unknown',
+            name: displayName || 'Unknown',
+            username: p.user?.username || '@unknown',
+            avatar: avatarUrl || '',
+            verified: p.user?.verified || false,
+            isOrganizer: p.user?.is_organizer || false,
+            isOrganizerPage: isOrganizerPage
+          },
+          event: p.event ? {
+            id: p.event.id,
+            name: p.event.title,
+            date: p.event.date,
+            time: p.event.time,
+            location: p.event.location,
+            image: p.event.image_url,
+            price: p.event.price_range,
+          } : undefined,
+          content: {
+            text: p.content,
+            images: p.image_urls,
+            image: p.image_urls?.[0],
+            hashtags: p.hashtags,
+          },
+          timestamp: formatTimeAgo(p.created_at),
+          likes: p.likes_count || 0,
+          comments: [],
+          comments_count: p.comments_count || 0,
+          shares: 0,
+          views: p.views || 0,
+          isLiked: p.is_liked || false,
+          isSaved: p.is_saved || false,
+          isHighlight: !!p.video_url,
+          highlights: p.video_url ? [{
+            id: p.id,
+            thumbnail: (p.image_urls?.find(url => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
+            duration: p.duration || '',
+            title: p.content || 'Video Highlight',
+            videoUrl: p.video_url,
+            views: p.views || 0,
+          }] : undefined,
+          mutualFriends: [],
+        };
+      });
+    };
+
+    const loadPosts = async (useCacheFirst: boolean) => {
       setIsLoading(true);
       try {
+        if (useCacheFirst && feedCacheMemory && (Date.now() - feedCacheMemory.timestamp < FEED_CACHE_TTL_MS)) {
+          setPosts(feedCacheMemory.posts as Post[]);
+          setIsLoading(false);
+        }
+
+        if (useCacheFirst) {
+          const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
+          if (cachedRaw) {
+            const cached = JSON.parse(cachedRaw);
+            if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS && Array.isArray(cached.posts)) {
+              setPosts(cached.posts);
+              setIsLoading(false);
+            }
+          }
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
         
@@ -166,82 +243,43 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           }
         }
         
-        const data = await getPosts({ currentUserId: user?.id });
-        if (data && data.length > 0) {
-            const mappedPosts: Post[] = data.map((p: ApiPost) => {
-              // Determine if we should show organizer profile or user profile
-              // If posted_as_organizer is true and organizer_profile exists, use it.
-              const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
-              const displayName = isOrganizerPage ? p.organizer_profile!.organizer_name : (p.user?.full_name || p.user?.username || 'Unknown User');
-              const avatarUrl = isOrganizerPage ? p.organizer_profile!.avatar_url : p.user?.avatar_url;
-              
-              return {
-                id: p.id,
-                user: {
-                  id: p.user?.id || 'unknown',
-                  name: displayName || 'Unknown',
-                  username: p.user?.username || '@unknown',
-                  avatar: avatarUrl || '',
-                  verified: p.user?.verified || false,
-                  isOrganizer: p.user?.is_organizer || false,
-                  isOrganizerPage: isOrganizerPage
-                },
-                event: p.event ? {
-                  id: p.event.id,
-                  name: p.event.title,
-                  date: p.event.date,
-                  time: p.event.time,
-                  location: p.event.location,
-                  image: p.event.image_url,
-                  price: p.event.price_range,
-                } : undefined,
-                content: {
-                  text: p.content,
-                  images: p.image_urls,
-                  image: p.image_urls?.[0],
-                  hashtags: p.hashtags,
-                },
-                timestamp: formatTimeAgo(p.created_at),
-                likes: p.likes_count || 0,
-                comments: [], // Will load on expand
-                comments_count: p.comments_count || 0,
-                shares: 0,
-                views: p.views || 0,
-                isLiked: p.is_liked || false,
-                isSaved: p.is_saved || false,
-                isHighlight: !!p.video_url,
-                highlights: p.video_url ? [{
-                  id: p.id,
-                  thumbnail: (p.image_urls?.find(url => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', // Use first non-video image or fallback
-                  duration: p.duration || '',
-                  title: p.content || 'Video Highlight',
-                  videoUrl: p.video_url,
-                  views: p.views || 0,
-                  }] : undefined,
-                  mutualFriends: [],
-              };
-          });
-          setPosts(mappedPosts);
-        } else {
-          setPosts([]);
-        }
+        const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: 0 });
+        const mapped = fresh && fresh.length > 0 ? mapPosts(fresh) : [];
+        setPosts(mapped);
+        const payload = { posts: mapped, timestamp: Date.now() };
+        feedCacheMemory = payload;
+        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(payload));
       } catch (error) {
         console.error('Error loading posts:', error);
         toast.error('Failed to load posts');
-        setPosts([]);
       } finally {
         setIsLoading(false);
       }
     };
-    loadPosts();
+    loadPosts(true);
 
     const handlePostsUpdated = () => {
-      loadPosts();
+      loadPosts(false);
     };
     window.addEventListener('postsUpdated', handlePostsUpdated);
 
     return () => {
       window.removeEventListener('postsUpdated', handlePostsUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const doc = document.documentElement;
+      setScrollTop(doc.scrollTop || window.scrollY || 0);
+    };
+    const onResize = () => setViewportHeight(window.innerHeight);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    onScroll();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
     };
   }, []);
 
@@ -251,7 +289,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   useEffect(() => {
     if (activeConversation) {
       const updatedConv = globalConversations.find(c => c.id === activeConversation.id);
-      if (updatedConv) {
         // Update local state to match global state (handles new messages, ID updates, etc.)
         // We use JSON.stringify to avoid unnecessary updates if deep equality is same, 
         // but simpler is just to check if it's a different object reference or length changed.
@@ -267,13 +304,26 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         }
       }
     }
-  }, [globalConversations, activeConversation, onMarkAsRead]);
   
 
   const unreadMessagesCount = (globalConversations || []).reduce((acc, conv) => {
     if (!conv) return acc;
     return acc + (conv?.unreadCount || 0);
   }, 0);
+
+  useEffect(() => {
+    const sentinel = document.getElementById('feed-sentinel');
+    if (!sentinel) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setRenderCount((c) => c + 20);
+        }
+      });
+    }, { threshold: 0.1 });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [renderCount, posts.length, activeFilter]);
 
   useEffect(() => {
     if (currentUser) {
@@ -547,6 +597,12 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     if (activeFilter === 'following') return followingIds.has(post.user.id);
     return true;
   });
+  const totalToRender = Math.min(filteredPosts.length, renderCount);
+  const visibleStart = Math.max(0, Math.floor(scrollTop / estimatedItemHeight));
+  const visibleCount = Math.ceil(viewportHeight / estimatedItemHeight) + overscan;
+  const visibleEnd = Math.min(totalToRender, visibleStart + visibleCount);
+  const topSpacer = visibleStart * estimatedItemHeight;
+  const bottomSpacer = (totalToRender - visibleEnd) * estimatedItemHeight;
 
   return (
     <>
@@ -654,32 +710,34 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               <PostSkeleton />
             </>
           ) : (
-            filteredPosts.slice(0, renderCount).map((post, index) => (
-              <div key={post.id} style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}>
-                <PostCard
-                  post={post}
-                  currentUser={currentUser}
-                  onLike={(id) => toggleLike(id)}
-                  onSave={(id) => toggleSave(id)}
-                  onShare={(p) => sharePost(p)}
-                  onProfileClick={(user) => handleOpenUserProfile(user)}
-                  onFollow={handleFollow}
-                  onDelete={handleDeletePost}
-                  onMessage={(user) => handleStartConversationLocal(user)}
-                  isFollowed={followingIds.has(post.user.id)}
-                />
-              </div>
-            ))
+            <>
+              <div style={{ height: `${topSpacer}px` }} />
+              {filteredPosts.slice(visibleStart, visibleEnd).map((post, index) => (
+                <div key={post.id} style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}>
+                  <PostCard
+                    post={post}
+                    currentUser={currentUser}
+                    onLike={(id) => toggleLike(id)}
+                    onSave={(id) => toggleSave(id)}
+                    onShare={(p) => sharePost(p)}
+                    onProfileClick={(user) => handleOpenUserProfile(user)}
+                    onFollow={handleFollow}
+                    onDelete={handleDeletePost}
+                    onMessage={(user) => handleStartConversationLocal(user)}
+                    isFollowed={followingIds.has(post.user.id)}
+                  />
+                </div>
+              ))}
+              <div style={{ height: `${bottomSpacer}px` }} />
+            </>
           )}
           
+          {/* Infinite scroll sentinel (auto-load more when near bottom) */}
           {filteredPosts.length > renderCount && (
-            <div className="flex justify-center py-4">
-              <button
-                onClick={() => setRenderCount((c) => c + 20)}
-                className="px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-purple-300 hover:text-purple-700 transition-colors"
-              >
-                Load more
-              </button>
+            <div id="feed-sentinel" className="py-6">
+              <div className="flex justify-center">
+                <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              </div>
             </div>
           )}
 
@@ -1282,7 +1340,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               muted={isMuted}
               playsInline
               loop
-              preload="auto"
+              preload="metadata"
               className="w-full h-full object-contain"
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
@@ -1312,6 +1370,13 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 )}
               </button>
             </div>
+            {isMuted && (
+              <div className={`absolute top-4 left-4 z-20 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-black/50 text-white backdrop-blur-md">
+                  Tap to unmute
+                </span>
+              </div>
+            )}
 
             {/* Play/Pause Icon - Center (Shows briefly when tapped) */}
             <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity ${

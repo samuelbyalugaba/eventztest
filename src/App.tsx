@@ -28,6 +28,8 @@ import {
   Event
 } from '@/utils/supabase/api';
 import { Message, Conversation } from './types';
+import { getPosts } from '@/utils/supabase/api';
+import { formatTimeAgo } from './utils/format';
 
 type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile';
 type OrganizerView = 'dashboard' | 'createEvent';
@@ -104,6 +106,82 @@ export default function App() {
     setIsAuthenticated(true);
   };
 
+  useEffect(() => {
+    const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
+    const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
+    const isVideo = (url?: string) => {
+      if (!url) return false;
+      return /\.(mp4|webm|ogg|mov)$/i.test(url);
+    };
+    const prefetchFeed = async () => {
+      try {
+        const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS) {
+            return;
+          }
+        }
+        const { data: { user } } = await supabase.auth.getUser();
+        const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: 0 });
+        const mapped = (fresh || []).map((p: any) => {
+          const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
+          const displayName = isOrganizerPage ? p.organizer_profile?.organizer_name : (p.user?.full_name || p.user?.username || 'Unknown User');
+          const avatarUrl = isOrganizerPage ? p.organizer_profile?.avatar_url : p.user?.avatar_url;
+          return {
+            id: p.id,
+            user: {
+              id: p.user?.id || 'unknown',
+              name: displayName || 'Unknown',
+              username: p.user?.username || '@unknown',
+              avatar: avatarUrl || '',
+              verified: p.user?.verified || false,
+              isOrganizer: p.user?.is_organizer || false,
+              isOrganizerPage: isOrganizerPage
+            },
+            event: p.event ? {
+              id: p.event.id,
+              name: p.event.title,
+              date: p.event.date,
+              time: p.event.time,
+              location: p.event.location,
+              image: p.event.image_url,
+              price: p.event.price_range,
+            } : undefined,
+            content: {
+              text: p.content,
+              images: p.image_urls,
+              image: p.image_urls?.[0],
+              hashtags: p.hashtags,
+            },
+            timestamp: formatTimeAgo(p.created_at),
+            likes: p.likes_count || 0,
+            comments: [],
+            comments_count: p.comments_count || 0,
+            shares: 0,
+            views: p.views || 0,
+            isLiked: p.is_liked || false,
+            isSaved: p.is_saved || false,
+            isHighlight: !!p.video_url,
+            highlights: p.video_url ? [{
+              id: p.id,
+              thumbnail: (p.image_urls?.find((url: string) => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
+              duration: p.duration || '',
+              title: p.content || 'Video Highlight',
+              videoUrl: p.video_url,
+              views: p.views || 0,
+            }] : undefined,
+            mutualFriends: [],
+          };
+        });
+        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ posts: mapped, timestamp: Date.now() }));
+      } catch (e) {
+        // Silent fail: prefetch is best-effort
+        console.warn('Prefetch feed failed', e);
+      }
+    };
+    prefetchFeed();
+  }, []);
   // Fetch user profile to determine organizer status
   useEffect(() => {
     const fetchProfile = async () => {

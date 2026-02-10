@@ -12,6 +12,10 @@ try {
   console.error("SW Registration Failed:", e);
 }
 
+// Prevent ReferenceError if any legacy code checks a global flag
+(window as any).showuserprofilemodal = (window as any).showuserprofilemodal ?? false;
+(window as any).showUserProfileModal = (window as any).showUserProfileModal ?? (window as any).showuserprofilemodal;
+
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
     <App />
