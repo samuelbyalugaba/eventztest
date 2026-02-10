@@ -45,7 +45,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
   const [likesCount, setLikesCount] = useState(post.likes);
   const [isSaved, setIsSaved] = useState(post.isSaved);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [comments, setComments] = useState<Comment[]>(post.comments || []);
@@ -87,8 +87,16 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                   // Notify others to stop
                   window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
                 }).catch(() => {
-                  // Auto-play prevented
-                  setIsPlaying(false);
+                  // Autoplay with sound may be blocked; retry muted for smooth playback
+                  if (videoRef.current) {
+                    videoRef.current.muted = true;
+                    setIsMuted(true);
+                    videoRef.current.play().then(() => {
+                      setIsPlaying(true);
+                    }).catch(() => {
+                      setIsPlaying(false);
+                    });
+                  }
                 });
               }
             } else {

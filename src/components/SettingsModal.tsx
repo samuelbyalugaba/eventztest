@@ -54,7 +54,13 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
       const publicUrl = await uploadImage(file, 'avatars');
 
       setProfileData(prev => ({ ...prev, avatarUrl: publicUrl }));
-      toast.success('Profile photo updated successfully');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await updateProfile(user.id, { avatar_url: publicUrl });
+        toast.success('Profile photo updated successfully');
+      } else {
+        toast.success('Profile photo updated locally');
+      }
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
       toast.error(error.message || 'Error uploading avatar');
@@ -209,7 +215,8 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
       setCurrentView('main');
     } catch (error) {
       console.error('Error saving profile:', error);
-      toast.error('Failed to save profile');
+      const message = (error as any)?.message || (error as any)?.error_description || (error as any)?.details || 'Failed to save profile';
+      toast.error(message);
     }
   };
 

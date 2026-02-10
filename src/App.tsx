@@ -34,6 +34,7 @@ type OrganizerView = 'dashboard' | 'createEvent';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('event');
+  const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set(['event']));
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [hasOrganizerProfile, setHasOrganizerProfile] = useState(false);
   const [organizerView, setOrganizerView] = useState<OrganizerView>('dashboard');
@@ -532,6 +533,7 @@ export default function App() {
     setEditingEvent(null);
     setOrganizerView('createEvent');
     setActiveTab('create');
+    setVisitedTabs(prev => new Set(prev).add('create'));
   };
 
   const handleEditEvent = (event: Event) => {
@@ -579,36 +581,54 @@ export default function App() {
       />
       {/* Main Content */}
       <div className="max-w-7xl mx-auto pb-20">
-        {activeTab === 'event' && <EventDetails conversations={conversations} onStartConversation={handleStartConversation} onSendMessage={handleSendMessage} />}
-        {activeTab === 'feed' && <Feed 
-          conversations={conversations} 
-          onStartConversation={handleStartConversation} 
-          onSendMessage={handleSendMessage} 
-          onMarkAsRead={handleMarkAsRead} 
-          onlineUsers={onlineFriends} 
-          onDeleteConversation={handleDeleteConversation} 
-          currentUser={currentUser}
-          isOrganizer={isOrganizer}
-          onCreateEvent={() => {
-            handleCreateEvent();
-          }}
-        />}
-        {activeTab === 'live' && <LiveFeed />}
-        {activeTab === 'create' && (
-          !isOrganizer ? (
-            <BecomeOrganizer onComplete={handleBecomeOrganizer} />
-          ) : !hasOrganizerProfile ? (
-            <OrganizerProfileSetup onComplete={handleProfileComplete} />
-          ) : organizerView === 'dashboard' ? (
-            <OrganizerDashboard onCreateEvent={handleCreateEvent} onEditEvent={handleEditEvent} />
-          ) : (
-            <CreateEvent onBack={handleBackToDashboard} event={editingEvent} />
-          )
+        {(activeTab === 'event' || visitedTabs.has('event')) && (
+          <div className={activeTab === 'event' ? '' : 'hidden'}>
+            <EventDetails 
+              conversations={conversations} 
+              onStartConversation={handleStartConversation} 
+              onSendMessage={handleSendMessage} 
+            />
+          </div>
         )}
-        {activeTab === 'profile' && (
-          <Profile
-            onLogout={handleLogout}
-          />
+        {(activeTab === 'feed' || visitedTabs.has('feed')) && (
+          <div className={activeTab === 'feed' ? '' : 'hidden'}>
+            <Feed 
+              conversations={conversations} 
+              onStartConversation={handleStartConversation} 
+              onSendMessage={handleSendMessage} 
+              onMarkAsRead={handleMarkAsRead} 
+              onlineUsers={onlineFriends} 
+              onDeleteConversation={handleDeleteConversation} 
+              currentUser={currentUser}
+              isOrganizer={isOrganizer}
+              onCreateEvent={() => {
+                handleCreateEvent();
+              }}
+            />
+          </div>
+        )}
+        {(activeTab === 'live' || visitedTabs.has('live')) && (
+          <div className={activeTab === 'live' ? '' : 'hidden'}>
+            <LiveFeed />
+          </div>
+        )}
+        {(activeTab === 'create' || visitedTabs.has('create')) && (
+          <div className={activeTab === 'create' ? '' : 'hidden'}>
+            {!isOrganizer ? (
+              <BecomeOrganizer onComplete={handleBecomeOrganizer} />
+            ) : !hasOrganizerProfile ? (
+              <OrganizerProfileSetup onComplete={handleProfileComplete} />
+            ) : organizerView === 'dashboard' ? (
+              <OrganizerDashboard onCreateEvent={handleCreateEvent} onEditEvent={handleEditEvent} />
+            ) : (
+              <CreateEvent onBack={handleBackToDashboard} event={editingEvent} />
+            )}
+          </div>
+        )}
+        {(activeTab === 'profile' || visitedTabs.has('profile')) && (
+          <div className={activeTab === 'profile' ? '' : 'hidden'}>
+            <Profile onLogout={handleLogout} />
+          </div>
         )}
       </div>
 
@@ -617,7 +637,11 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-2 sm:px-4">
           <div className="flex justify-around items-center h-16">
             <button
-              onClick={() => setActiveTab('event')}
+              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('event'))}
+              onClick={() => {
+                setActiveTab('event');
+                setVisitedTabs(prev => new Set(prev).add('event'));
+              }}
               className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'event' ? 'text-purple-600' : 'text-gray-500'
               }`}
@@ -626,7 +650,11 @@ export default function App() {
               <span className="text-xs">Events</span>
             </button>
             <button
-              onClick={() => setActiveTab('feed')}
+              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('feed'))}
+              onClick={() => {
+                setActiveTab('feed');
+                setVisitedTabs(prev => new Set(prev).add('feed'));
+              }}
               className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'feed' ? 'text-purple-600' : 'text-gray-500'
               }`}
@@ -635,7 +663,11 @@ export default function App() {
               <span className="text-xs">Feed</span>
             </button>
             <button
-              onClick={() => setActiveTab('live')}
+              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('live'))}
+              onClick={() => {
+                setActiveTab('live');
+                setVisitedTabs(prev => new Set(prev).add('live'));
+              }}
               className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors relative ${
                 activeTab === 'live' ? 'text-purple-600' : 'text-gray-500'
               }`}
@@ -648,7 +680,11 @@ export default function App() {
               )}
             </button>
             <button
-              onClick={() => setActiveTab('create')}
+              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('create'))}
+              onClick={() => {
+                setActiveTab('create');
+                setVisitedTabs(prev => new Set(prev).add('create'));
+              }}
               className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'create' ? 'text-purple-600' : 'text-gray-500'
               }`}
@@ -657,7 +693,11 @@ export default function App() {
               <span className="text-xs">Create</span>
             </button>
             <button
-              onClick={() => setActiveTab('profile')}
+              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('profile'))}
+              onClick={() => {
+                setActiveTab('profile');
+                setVisitedTabs(prev => new Set(prev).add('profile'));
+              }}
               className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'profile' ? 'text-purple-600' : 'text-gray-500'
               }`}

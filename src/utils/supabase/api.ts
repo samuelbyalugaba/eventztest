@@ -219,8 +219,39 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
+  if (!error) return data;
+
+  const baseFields: Partial<Profile> = {
+    username: updates.username,
+    full_name: updates.full_name,
+    avatar_url: updates.avatar_url,
+    bio: updates.bio,
+    location: updates.location,
+    contact_email: updates.contact_email,
+    phone: updates.phone,
+    website: updates.website,
+    organizer_type: updates.organizer_type,
+    social_links: updates.social_links
+  };
+
+  const { data: data2, error: error2 } = await supabase
+    .from('profiles')
+    .upsert({ ...baseFields, id: userId })
+    .select()
+    .single();
+
+  if (!error2) return data2;
+
+  if (updates.avatar_url) {
+    const { data: data3, error: error3 } = await supabase
+      .from('profiles')
+      .upsert({ id: userId, avatar_url: updates.avatar_url })
+      .select()
+      .single();
+    if (!error3) return data3;
+  }
+
+  throw error2 || error;
 };
 
 export const getOrganizerProfile = async (userId: string) => {
@@ -1061,7 +1092,7 @@ export type PostComment = {
 
 // --- POSTS ---
 
-export const getPosts = async (options: { currentUserId?: string; eventId?: number; authorId?: string } = {}) => {
+export const getPosts = async (options: { currentUserId?: string; eventId?: number; authorId?: string; limit?: number; offset?: number } = {}) => {
   let query = supabase
     .from('posts')
     .select(`
@@ -1079,6 +1110,12 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
 
   if (options.authorId) {
     query = query.eq('user_id', options.authorId);
+  }
+  
+  if (typeof options.limit === 'number') {
+    const start = options.offset || 0;
+    const end = start + Math.max(0, options.limit - 1);
+    query = query.range(start, end);
   }
 
   const { data: posts, error } = await query;

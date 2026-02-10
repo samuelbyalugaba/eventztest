@@ -130,7 +130,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [rewindAnimation, setRewindAnimation] = useState<{ show: boolean; direction: 'left' | 'right' } | null>(null);
   const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
   // const [showChatMenu, setShowChatMenu] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [renderCount, setRenderCount] = useState(20);
 
   useEffect(() => {
     if (selectedPost) {
@@ -653,7 +654,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               <PostSkeleton />
             </>
           ) : (
-            filteredPosts.map((post, index) => (
+            filteredPosts.slice(0, renderCount).map((post, index) => (
               <div key={post.id} style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}>
                 <PostCard
                   post={post}
@@ -669,6 +670,17 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 />
               </div>
             ))
+          )}
+          
+          {filteredPosts.length > renderCount && (
+            <div className="flex justify-center py-4">
+              <button
+                onClick={() => setRenderCount((c) => c + 20)}
+                className="px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-700 hover:border-purple-300 hover:text-purple-700 transition-colors"
+              >
+                Load more
+              </button>
+            </div>
           )}
 
           {/* Empty State */}
