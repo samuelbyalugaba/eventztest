@@ -133,11 +133,32 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
   // const [showChatMenu, setShowChatMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [renderCount, setRenderCount] = useState(20);
   const [viewportHeight, setViewportHeight] = useState<number>(typeof window !== 'undefined' ? window.innerHeight : 800);
   const [scrollTop, setScrollTop] = useState<number>(0);
   const estimatedItemHeight = 560;
   const overscan = 3;
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      setAudioUnlocked(true);
+      // Remove listeners after first interaction
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedPost) {
@@ -724,6 +745,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                     onDelete={handleDeletePost}
                     onMessage={(user) => handleStartConversationLocal(user)}
                     isFollowed={followingIds.has(post.user.id)}
+                    audioUnlocked={audioUnlocked}
                   />
                 </div>
               ))}

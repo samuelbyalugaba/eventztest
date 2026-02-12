@@ -31,6 +31,7 @@ interface PostCardProps {
   onDelete?: (postId: number) => Promise<void>;
   onMessage?: (user: any) => void;
   isFollowed?: boolean;
+  audioUnlocked?: boolean;
 }
 
 const isVideo = (url?: string) => {
@@ -38,7 +39,7 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onMessage, isFollowed = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onMessage, isFollowed = false, audioUnlocked = false }: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(post.isLiked);
@@ -78,26 +79,37 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
         entries.forEach((entry) => {
           if (videoRef.current) {
             if (entry.isIntersecting) {
-              // Only auto-play if no other video is playing? 
-              // Or just take over. "Taking over" is standard feed behavior.
-              const playPromise = videoRef.current.play();
-              if (playPromise !== undefined) {
-                playPromise.then(() => {
-                  setIsPlaying(true);
-                  // Notify others to stop
-                  window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
-                }).catch(() => {
-                  // Autoplay with sound may be blocked; retry muted for smooth playback
-                  if (videoRef.current) {
-                    videoRef.current.muted = true;
-                    setIsMuted(true);
-                    videoRef.current.play().then(() => {
-                      setIsPlaying(true);
-                    }).catch(() => {
-                      setIsPlaying(false);
-                    });
-                  }
-                });
+              // Try to play with sound first
+              if (videoRef.current.paused) {
+                // Ensure we try unmuted first
+                videoRef.current.muted = false;
+                setIsMuted(false);
+                
+                const playPromise = videoRef.current.play();
+                if (playPromise !== undefined) {
+                  playPromise.then(() => {
+                    setIsPlaying(true);
+                    // Notify others to stop
+                    window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
+                  }).catch((error) => {
+                    console.log("Autoplay with sound failed, falling back to muted", error);
+                    // Autoplay with sound blocked; fallback to muted
+                    if (videoRef.current) {
+                      videoRef.current.muted = true;
+                      setIsMuted(true);
+                      videoRef.current.play().then(() => {
+                        setIsPlaying(true);
+                      }).catch((e) => {
+                        console.error("Autoplay muted failed", e);
+                        setIsPlaying(false);
+                      });
+                    }
+                  });
+                }
+              } else if (audioUnlocked && videoRef.current.muted) {
+                // If already playing and audio is unlocked, ensure we are unmuted
+                videoRef.current.muted = false;
+                setIsMuted(false);
               }
             } else {
               videoRef.current.pause();
@@ -106,7 +118,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
           }
         });
       },
-      { threshold: 0.6 }
+      { threshold: 0.7 }
     );
 
     if (videoRef.current) {
@@ -119,7 +131,15 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
         observer.unobserve(videoRef.current);
       }
     };
-  }, [carouselIndex, post.id]);
+  }, [carouselIndex, post.id, audioUnlocked]);
+
+  // Effect to handle audio unlock when already playing
+  useEffect(() => {
+    if (audioUnlocked && isPlaying && videoRef.current && videoRef.current.muted) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
+    }
+  }, [audioUnlocked, isPlaying]);
 
   const handleManualPlay = (e: React.MouseEvent) => {
     e.stopPropagation();
