@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, Users, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2 } from 'lucide-react';
+import { X, MapPin, Calendar, Users, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
 import { toast } from 'sonner';
-import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent } from '../utils/supabase/api';
+import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiatePayment } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 
@@ -111,8 +111,13 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<OrganizerData['upcomingEvents'][0] | null>(null);
   const [ticketQuantity, setTicketQuantity] = useState(1);
-  const [ticketStep, setTicketStep] = useState<'quantity' | 'details' | 'confirm'>('quantity');
+  const [ticketStep, setTicketStep] = useState<'quantity' | 'details' | 'payment' | 'confirm'>('quantity');
   const [ticketFormData, setTicketFormData] = useState({ name: '', email: '' });
+  
+  // Payment State
+  const [paymentPhone, setPaymentPhone] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('Azampesa');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -248,9 +253,56 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     }
 
     try {
+      setIsProcessingPayment(true);
       const quantity = ticketQuantity || 1;
       const name = ticketFormData.name || currentUser.user_metadata?.full_name || 'Customer';
       const email = ticketFormData.email || currentUser.email || 'email@example.com';
+      
+      // Calculate total price (parse "TSh 10,000" or similar)
+      const priceString = event.price?.toString().replace(/[^0-9.]/g, '') || '0';
+      const priceNumeric = parseFloat(priceString);
+      const totalPrice = priceNumeric * quantity;
+
+      // Only process payment if price > 0
+      if (totalPrice > 0) {
+          if (!paymentPhone || paymentPhone.length < 10) {
+            toast.error('Please enter a valid phone number for payment');
+            setIsProcessingPayment(false);
+            return;
+          }
+
+          // 1. Create Transaction
+          const transactionData = {
+            user_id: currentUser.id,
+            event_id: event.id,
+            amount: totalPrice,
+            currency: 'TZS',
+            provider: selectedProvider,
+            status: 'pending',
+            metadata: {
+              customer_name: name,
+              customer_email: email,
+              customer_phone: paymentPhone,
+              ticket_type: 'General Admission',
+              quantity: quantity
+            }
+          };
+
+          const transaction = await createTransaction(transactionData);
+
+          // 2. Initiate Payment
+          toast.info('Initiating payment request...');
+          await initiatePayment({
+            amount: totalPrice,
+            accountNumber: paymentPhone,
+            provider: selectedProvider,
+            externalId: transaction.id.toString()
+          });
+
+          toast.success(`Payment request sent to ${paymentPhone}! Please approve on your phone.`);
+          
+          // For MVP/Demo: Assume success and proceed to create tickets
+      }
 
       // Create tickets loop
       for (let i = 0; i < quantity; i++) {
@@ -289,11 +341,19 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         onTicketPurchase(purchasedTicket);
       }
       
-      toast.success('Ticket purchased successfully!');
+      toast.success(`${quantity} Ticket${quantity > 1 ? 's' : ''} purchased successfully!`);
       setShowTicketModal(false);
-    } catch (error) {
+      
+      // Reset state
+      setTicketStep('quantity');
+      setPaymentPhone('');
+      setSelectedProvider('Azampesa');
+
+    } catch (error: any) {
       console.error('Error purchasing ticket:', error);
-      toast.error('Failed to purchase ticket');
+      toast.error(`Purchase failed: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -790,10 +850,70 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                     />
                   </div>
                   <button
-                    onClick={() => setTicketStep('confirm')}
+                    onClick={() => {
+                        const priceString = selectedEvent.price?.toString().replace(/[^0-9.]/g, '') || '0';
+                        const priceNumeric = parseFloat(priceString);
+                        if (priceNumeric > 0) {
+                            setTicketStep('payment');
+                        } else {
+                            setTicketStep('confirm');
+                        }
+                    }}
                     className="mt-4 bg-[#8A2BE2] text-white px-5 py-2 rounded-full text-sm hover:bg-[#7526c7] transition-colors"
                   >
                     Next
+                  </button>
+                </div>
+              )}
+              {ticketStep === 'payment' && (
+                <div>
+                  <h3 className="text-gray-900 mb-2">Payment Method</h3>
+                  <div className="space-y-4">
+                     {/* Provider Selection */}
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        {['Azampesa', 'Airtel', 'Tigo', 'Halopesa'].map((provider) => (
+                          <button
+                            key={provider}
+                            onClick={() => setSelectedProvider(provider)}
+                            className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${
+                              selectedProvider === provider
+                                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                : 'border-gray-200 hover:border-purple-200 text-gray-600'
+                            }`}
+                          >
+                            <CreditCard className={`w-5 h-5 ${selectedProvider === provider ? 'text-purple-600' : 'text-gray-400'}`} />
+                            <span className="text-xs font-medium">{provider}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Phone Input */}
+                      <div>
+                        <label className="block text-xs text-gray-700 mb-1 font-medium">Mobile Number</label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Smartphone className="w-4 h-4 text-gray-400" />
+                          </div>
+                          <input
+                            type="tel"
+                            value={paymentPhone}
+                            onChange={(e) => setPaymentPhone(e.target.value)}
+                            placeholder="2557..."
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-sm"
+                          />
+                        </div>
+                      </div>
+                  </div>
+                  <button
+                    onClick={() => setTicketStep('confirm')}
+                    disabled={!paymentPhone || paymentPhone.length < 10}
+                    className={`mt-4 w-full px-5 py-2 rounded-full text-sm transition-colors ${
+                        !paymentPhone || paymentPhone.length < 10 
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-[#8A2BE2] text-white hover:bg-[#7526c7]'
+                    }`}
+                  >
+                    Review Order
                   </button>
                 </div>
               )}
@@ -809,12 +929,15 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                     <p className="text-sm text-gray-600">Quantity: {ticketQuantity}</p>
                     <p className="text-sm text-gray-600">Name: {ticketFormData.name}</p>
                     <p className="text-sm text-gray-600">Email: {ticketFormData.email}</p>
+                    {paymentPhone && <p className="text-sm text-gray-600">Payment: {selectedProvider} ({paymentPhone})</p>}
                   </div>
                   <button
                     onClick={() => handleBuyTicket(selectedEvent)}
-                    className="mt-4 w-full bg-[#8A2BE2] text-white px-5 py-3 rounded-xl font-bold hover:bg-[#7526c7] transition-colors shadow-lg"
+                    disabled={isProcessingPayment}
+                    className="mt-4 w-full bg-[#8A2BE2] text-white px-5 py-3 rounded-xl font-bold hover:bg-[#7526c7] transition-colors shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Confirm & Pay
+                    {isProcessingPayment ? 'Processing...' : (paymentPhone ? 'Pay & Confirm' : 'Confirm')}
+                    {!isProcessingPayment && <ArrowRight className="w-4 h-4" />}
                   </button>
                 </div>
               )}

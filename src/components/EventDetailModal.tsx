@@ -41,7 +41,11 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     }
   })();
 
-  const [organizerDisplayName, setOrganizerDisplayName] = useState(event.organizer?.full_name || 'Organizer');
+  const [organizerDisplayName, setOrganizerDisplayName] = useState(
+    event.organizer?.organizer_details?.organizer_name || 
+    event.organizer?.full_name || 
+    'Event Organizer'
+  );
   const [recentAttendees, setRecentAttendees] = useState<any[]>([]);
   const [eventPosts, setEventPosts] = useState<any[]>([]);
 
@@ -53,11 +57,12 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       if (event.organizer_id) {
         try {
           const orgProfile = await getOrganizerProfile(event.organizer_id);
-          if (orgProfile?.organizer_name) {
+          if (orgProfile && orgProfile.organizer_name) {
              setOrganizerDisplayName(orgProfile.organizer_name);
           }
         } catch (e) {
           console.error('Error fetching organizer profile:', e);
+          // Keep default or set to fallback if needed
         }
       }
     };
@@ -212,7 +217,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           />
           
           {/* Organizer Badge */}
-          {event.organizer && (
+          {(event.organizer || event.organizer_id) && (
             <button
               onClick={() => setShowOrganizerProfile(true)}
               className="absolute top-4 left-4 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg z-20 hover:bg-white transition-all cursor-pointer group"
@@ -222,10 +227,10 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           )}
           
           {/* Organizer Profile Modal */}
-          {showOrganizerProfile && event.organizer && (
+          {showOrganizerProfile && (event.organizer || event.organizer_id) && (
             <OrganizerProfile
               organizerName={organizerDisplayName}
-              organizerId={event.organizer_id || event.organizer.id}
+              organizerId={event.organizer_id || (event.organizer ? event.organizer.id : '')}
               onClose={() => setShowOrganizerProfile(false)}
               onMessage={async (organizer) => {
                 setShowOrganizerProfile(false);

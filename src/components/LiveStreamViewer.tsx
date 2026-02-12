@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Heart, Share2, Send, Users, MoreVertical, Maximize2, Minimize2, Volume2, VolumeX, Play, Pause } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { supabase } from '../utils/supabase/client';
-import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage } from '../utils/supabase/api';
+import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import Hls from 'hls.js';
 
@@ -18,10 +17,9 @@ interface LiveStreamViewerProps {
     playback_url?: string;
   };
   onClose: () => void;
-  isUnlockedOverride?: boolean;
 }
 
-export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveStreamViewerProps) {
+export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -111,7 +109,7 @@ export function LiveStreamViewer({ stream, onClose, isUnlockedOverride }: LiveSt
           }
         });
 
-        hls.on(Hls.Events.ERROR, (event, data) => {
+        hls.on(Hls.Events.ERROR, (_event, data) => {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:

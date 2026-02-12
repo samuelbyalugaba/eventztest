@@ -126,7 +126,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [showTierTicketModal, setShowTierTicketModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [tierTicketQuantity, setTierTicketQuantity] = useState(1);
-  const [tierTicketStep, setTierTicketStep] = useState<'tier' | 'quantity' | 'details' | 'confirm'>('tier');
+  const [tierTicketStep, setTierTicketStep] = useState<'tier' | 'quantity' | 'details' | 'payment' | 'confirm'>('tier');
+  const [paymentPhone, setPaymentPhone] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('Azampesa');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex] = useState(0);
   const [mediaViewerType] = useState<'photo' | 'video'>('photo');
@@ -396,8 +399,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   // Handle tier ticket purchase submit
   const handleTierTicketSubmit = async () => {
-    if (!eventToPurchase || !selectedTier || !ticketFormData.name || !ticketFormData.email) {
-      toast.error('Please fill in all fields');
+    if (!eventToPurchase || !selectedTier || !ticketFormData.name || !ticketFormData.email || !paymentPhone) {
+      toast.error('Please fill in all fields including payment details');
       return;
     }
 
@@ -405,14 +408,50 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     if (!tierData) return;
 
     try {
+      setIsProcessingPayment(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Please sign in to purchase tickets');
+        setIsProcessingPayment(false);
         return;
       }
 
+      const totalPrice = tierData.priceNumeric * tierTicketQuantity;
+
+      // 1. Create Transaction
+      const transactionData = {
+        user_id: user.id,
+        event_id: eventToPurchase.id,
+        amount: totalPrice,
+        currency: 'TZS',
+        provider: selectedProvider,
+        status: 'pending',
+        metadata: {
+          customer_name: ticketFormData.name,
+          customer_email: ticketFormData.email,
+          customer_phone: paymentPhone,
+          ticket_tier: selectedTier,
+          quantity: tierTicketQuantity
+        }
+      };
+
+      const transaction = await createTransaction(transactionData);
+
+      // 2. Initiate Payment
+      toast.info('Initiating payment request...');
+      await initiatePayment({
+        amount: totalPrice,
+        accountNumber: paymentPhone,
+        provider: selectedProvider,
+        externalId: transaction.id.toString()
+      });
+
+      toast.success(`Payment request sent to ${paymentPhone}! Please approve on your phone.`);
+
+      // For MVP/Demo: Assume success and proceed to create tickets
+      // In production, we would wait for webhook/polling
+
       // Generate tickets for each quantity
-      const tickets: PurchasedTicket[] = [];
       for (let i = 0; i < tierTicketQuantity; i++) {
         const ticketNumber = `${selectedTier.toUpperCase()}-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
         const barcode = crypto.randomUUID();
@@ -430,27 +469,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           status: 'active'
         };
 
-        const newTicket = await createTicket(ticketData);
-
-        const ticket: PurchasedTicket = {
-          id: newTicket.id.toString(),
-          eventId: eventToPurchase.id,
-          eventTitle: eventToPurchase.title,
-          eventDate: eventToPurchase.date,
-          eventLocation: eventToPurchase.location,
-          ticketNumber,
-          barcode,
-          purchaseDate: ticketData.purchase_date,
-          customerName: ticketFormData.name,
-          customerEmail: ticketFormData.email,
-          price: tierData.price,
-          ticketType: selectedTier,
-        };
-        tickets.push(ticket);
+        await createTicket(ticketData);
       }
-
-      // Save all tickets
-      // tickets.forEach(ticket => onTicketPurchase(ticket));
 
       // Show success toast
       toast.success(`${tierTicketQuantity} ${selectedTier} Ticket${tierTicketQuantity > 1 ? 's' : ''} Purchased! 🎉`, {
@@ -465,9 +485,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       setTierTicketQuantity(1);
       setSelectedTier(null);
       setTierTicketStep('tier');
-    } catch (error) {
+      setPaymentPhone('');
+      setSelectedProvider('Azampesa');
+    } catch (error: any) {
       console.error('Error purchasing ticket:', error);
-      toast.error('Failed to purchase tickets');
+      toast.error(`Purchase failed: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -756,20 +780,29 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           selectedTier={selectedTier}
           quantity={tierTicketQuantity}
           formData={ticketFormData}
+          paymentPhone={paymentPhone}
+          selectedProvider={selectedProvider}
+          isProcessingPayment={isProcessingPayment}
           onSelectTier={(tier) => setSelectedTier(tier)}
           onQuantityChange={(qty) => setTierTicketQuantity(qty)}
           onFormDataChange={(field, value) => setTicketFormData(prev => ({ ...prev, [field]: value }))}
+          onPaymentPhoneChange={setPaymentPhone}
+          onProviderChange={setSelectedProvider}
           onNext={() => {
             if (tierTicketStep === 'tier' && selectedTier) {
               setTierTicketStep('quantity');
             } else if (tierTicketStep === 'quantity') {
               setTierTicketStep('details');
             } else if (tierTicketStep === 'details') {
+              setTierTicketStep('payment');
+            } else if (tierTicketStep === 'payment') {
               setTierTicketStep('confirm');
             }
           }}
           onBack={() => {
             if (tierTicketStep === 'confirm') {
+              setTierTicketStep('payment');
+            } else if (tierTicketStep === 'payment') {
               setTierTicketStep('details');
             } else if (tierTicketStep === 'details') {
               setTierTicketStep('quantity');
@@ -784,6 +817,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             setTierTicketQuantity(1);
             setTierTicketStep('tier');
             setTicketFormData({ name: '', email: '' });
+            setPaymentPhone('');
+            setSelectedProvider('Azampesa');
+            setIsProcessingPayment(false);
           }}
           onSubmit={handleTierTicketSubmit}
         />

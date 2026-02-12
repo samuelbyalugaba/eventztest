@@ -58,6 +58,7 @@ export type Profile = {
     recentCountries?: string[];
     pwaDismissed?: string;
   };
+  organizer_details?: OrganizerProfile;
 };
 
 export type OrganizerProfile = {
@@ -547,6 +548,28 @@ export const getEvents = async () => {
     console.error('Error fetching events:', error);
     throw error;
   }
+
+  // Manually join organizer_profiles to avoid missing FK relationship error
+  const organizerIds = [...new Set(data.map((e: any) => e.organizer_id).filter(Boolean))];
+  
+  if (organizerIds.length > 0) {
+    const { data: orgDetails } = await supabase
+      .from('organizer_profiles')
+      .select('*')
+      .in('id', organizerIds);
+
+    if (orgDetails) {
+      const orgMap = new Map(orgDetails.map((o: any) => [o.id, o]));
+      return data.map((event: any) => ({
+        ...event,
+        organizer: {
+          ...event.organizer,
+          organizer_details: orgMap.get(event.organizer_id)
+        }
+      }));
+    }
+  }
+
   return data;
 };
 
@@ -567,9 +590,26 @@ export const getOrganizerEvents = async (organizerId: string) => {
     console.error('Error fetching organizer events:', error);
     throw error;
   }
+
+  // Fetch organizer details explicitly
+  let organizerDetails: any = null;
+  try {
+    const { data: orgData } = await supabase
+      .from('organizer_profiles')
+      .select('*')
+      .eq('id', organizerId)
+      .single();
+    organizerDetails = orgData;
+  } catch (e) {
+    console.warn('Could not fetch organizer_profiles manually:', e);
+  }
   
   return data.map((event: any) => ({
     ...event,
+    organizer: {
+      ...event.organizer,
+      organizer_details: organizerDetails
+    },
     interested: event.saved_events?.[0]?.count || 0,
     shares: event.posts?.[0]?.count || 0,
     attendees: (event.attendees || 0) + (event.tickets?.[0]?.count || 0)
@@ -945,6 +985,41 @@ export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'e
     return fullTicket;
   }
 
+  return data;
+};
+
+// --- TRANSACTIONS / PAYMENTS ---
+
+export const createTransaction = async (transactionData: {
+  user_id: string;
+  event_id: number;
+  amount: number;
+  currency: string;
+  provider: string;
+  status: string;
+  metadata?: any;
+}) => {
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert([transactionData])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const initiatePayment = async (params: {
+  amount: number;
+  accountNumber: string; // e.g., "2557..."
+  provider: string; // "Airtel", "Tigo", "Halantel", "Azampesa"
+  externalId: string; // Transaction ID
+}) => {
+  const { data, error } = await supabase.functions.invoke('azampay-payment', {
+    body: params,
+  });
+
+  if (error) throw error;
   return data;
 };
 

@@ -1,6 +1,7 @@
-import { Calendar, MapPin, Tv } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, MapPin, Tv, User } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Event as ApiEvent } from '../utils/supabase/api';
+import { Event as ApiEvent, getOrganizerProfile } from '../utils/supabase/api';
 
 interface EventCardProps {
   event: ApiEvent;
@@ -9,6 +10,46 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, onClick, className = '' }: EventCardProps) {
+  const [organizerName, setOrganizerName] = useState<string>(
+    event.organizer?.organizer_details?.organizer_name || ''
+  );
+
+  useEffect(() => {
+    if (event.organizer?.organizer_details?.organizer_name) {
+      setOrganizerName(event.organizer.organizer_details.organizer_name);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchOrganizer = async () => {
+      if (!event.organizer_id) {
+        if (isMounted) setOrganizerName('Event Organizer');
+        return;
+      }
+
+      try {
+        const profile = await getOrganizerProfile(event.organizer_id);
+        if (isMounted) {
+          if (profile && profile.organizer_name) {
+            setOrganizerName(profile.organizer_name);
+          } else {
+            setOrganizerName('Event Organizer');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching organizer for card:', error);
+        if (isMounted) setOrganizerName('Event Organizer');
+      }
+    };
+
+    fetchOrganizer();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [event.organizer_id]);
+
   const getCategoryColor = (category: string) => {
     switch (category.toLowerCase()) {
       case 'entertainment': return 'bg-purple-500 text-white';
@@ -57,6 +98,11 @@ export function EventCard({ event, onClick, className = '' }: EventCardProps) {
         <h3 className="text-gray-900 mb-2 text-sm line-clamp-2 font-medium">
           {event.title}
         </h3>
+        
+        {/* Organizer Name */}
+        <div className="flex items-center gap-1.5 mb-1.5 text-gray-500 text-xs">
+          <span className="line-clamp-1">by {organizerName || 'Loading...'}</span>
+        </div>
         
         <div className="flex items-center gap-1.5 mb-1.5 text-gray-600 text-xs">
           <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
