@@ -3,6 +3,7 @@ import { X, MapPin, Calendar, Users, CheckCircle2, Share2, Play, MessageCircle, 
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
+import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
 import { toast } from 'sonner';
 import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiatePayment } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
@@ -358,11 +359,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   };
 
   if (loading) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <ProfileSkeleton onClose={onClose} />;
   }
 
   if (error) {

@@ -288,12 +288,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   // Sync activeConversation with global conversations updates and mark as read
   useEffect(() => {
     if (activeConversation) {
-      const updatedConv = globalConversations.find(c => c.id === activeConversation.id);
+      const updatedConv = globalConversations?.find(c => c.id === activeConversation.id);
+      
+      if (updatedConv) {
         // Update local state to match global state (handles new messages, ID updates, etc.)
-        // We use JSON.stringify to avoid unnecessary updates if deep equality is same, 
-        // but simpler is just to check if it's a different object reference or length changed.
-        // Given App.tsx creates new references on update, this is safe.
-        // But to avoid infinite loops if set triggers update, we check if it's actually different.
         if (updatedConv !== activeConversation) {
           setActiveConversation(updatedConv);
         }
@@ -304,6 +302,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         }
       }
     }
+  }, [activeConversation, globalConversations, onMarkAsRead]);
   
 
   const unreadMessagesCount = (globalConversations || []).reduce((acc, conv) => {

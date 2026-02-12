@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { UserAvatar } from './UserAvatar';
+import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
 import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Video, Play, MessageCircle } from 'lucide-react';
 import { MediaViewer } from './MediaViewer';
 import { getOrganizerStats, getOrganizerEvents, getPosts, getUserTickets, followUser, unfollowUser, isFollowing as checkIsFollowing, getProfile, supabase, type Event, type Post, type Profile } from '../utils/supabase/api';
@@ -148,6 +149,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
     postId: post.id,
     isLiked: post.is_liked
   }));
+
+  if (loading) {
+    return <ProfileSkeleton onClose={onClose} />;
+  }
 
   return (
     <>
