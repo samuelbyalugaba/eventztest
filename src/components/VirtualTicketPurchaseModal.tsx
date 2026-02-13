@@ -13,8 +13,9 @@ interface VirtualTicketPurchaseModalProps {
 const PAYMENT_PROVIDERS = [
   { id: 'Airtel', name: 'Airtel Money', color: 'bg-red-500' },
   { id: 'Tigo', name: 'Tigo Pesa', color: 'bg-blue-500' },
-  { id: 'Halantel', name: 'HaloPesa', color: 'bg-orange-500' },
-  { id: 'Azampesa', name: 'AzamPesa', color: 'bg-blue-600' }
+  { id: 'Halopesa', name: 'HaloPesa', color: 'bg-orange-500' },
+  { id: 'Azampesa', name: 'AzamPesa', color: 'bg-blue-600' },
+  { id: 'Mpesa', name: 'M-Pesa', color: 'bg-red-600' }
 ];
 
 export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTicketPurchaseModalProps) {

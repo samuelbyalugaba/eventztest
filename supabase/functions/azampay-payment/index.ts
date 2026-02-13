@@ -108,7 +108,17 @@ serve(async (req: Request) => {
     
     if (!checkoutResponse.ok) {
       console.error('AzamPay Checkout Error:', checkoutData);
-      throw new Error(`AzamPay Checkout Failed: ${checkoutResponse.status} - ${checkoutText}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `AzamPay Checkout Failed: ${checkoutResponse.status}`,
+          details: checkoutData 
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200, // Return 200 so client receives the error body
+        },
+      )
     }
 
     return new Response(
@@ -126,10 +136,13 @@ serve(async (req: Request) => {
   } catch (error) {
     console.error('Payment Function Error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 200, // Return 200 so client receives the error body
       },
     )
   }

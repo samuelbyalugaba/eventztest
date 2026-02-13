@@ -1047,6 +1047,11 @@ export const initiatePayment = async (params: {
   });
 
   if (error) throw error;
+
+  if (data && !data.success) {
+    throw new Error(data.error || 'Payment initiation failed');
+  }
+
   return data;
 };
 
