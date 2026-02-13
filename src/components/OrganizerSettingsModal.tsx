@@ -123,7 +123,19 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       const publicUrl = await uploadImage(file, 'avatars', `organizers/${user.id}`);
 
       setProfileData({ ...profileData, avatarUrl: publicUrl });
-      toast.success('Profile photo updated successfully');
+      
+      // Auto-save the avatar URL to the database
+      // This ensures the avatar is persisted even if the user forgets to click "Save Changes"
+      try {
+        await upsertOrganizerProfile({
+          id: user.id,
+          organizer_avatar_url: publicUrl
+        });
+        toast.success('Profile photo updated successfully');
+      } catch (saveError) {
+        console.warn('Auto-save of avatar failed (likely new profile), user must click Save:', saveError);
+        toast.success('Photo uploaded. Please click Save to finish setup.');
+      }
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
       toast.error(error.message || 'Error uploading avatar');
