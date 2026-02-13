@@ -51,16 +51,18 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
         return;
       }
 
-      const publicUrl = await uploadImage(file, 'avatars');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('You must be logged in to update your profile photo');
+        return;
+      }
+
+      // Use user-specific path to separate from organizer photos
+      const publicUrl = await uploadImage(file, 'avatars', `users/${user.id}`);
 
       setProfileData(prev => ({ ...prev, avatarUrl: publicUrl }));
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await updateProfile(user.id, { avatar_url: publicUrl });
-        toast.success('Profile photo updated successfully');
-      } else {
-        toast.success('Profile photo updated locally');
-      }
+      await updateProfile(user.id, { avatar_url: publicUrl });
+      toast.success('Profile photo updated successfully');
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
       toast.error(error.message || 'Error uploading avatar');

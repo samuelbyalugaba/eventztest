@@ -116,7 +116,11 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         return;
       }
 
-      const publicUrl = await uploadImage(file, 'avatars');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Use organizer-specific path
+      const publicUrl = await uploadImage(file, 'avatars', `organizers/${user.id}`);
 
       setProfileData({ ...profileData, avatarUrl: publicUrl });
       toast.success('Profile photo updated successfully');
@@ -169,7 +173,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
               location: organizerProfile?.location || '',
               bio: organizerProfile?.bio || '',
               website: organizerProfile?.website || '',
-              avatarUrl: organizerProfile?.avatar_url || '',
+              avatarUrl: organizerProfile?.organizer_avatar_url || '',
               birthdate: profile.birthdate || '',
             });
 
@@ -247,7 +251,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         id: user.id,
         organizer_name: profileData.organizerName,
         organizer_type: finalOrganizerType,
-        avatar_url: profileData.avatarUrl,
+        organizer_avatar_url: profileData.avatarUrl,
         bio: profileData.bio,
         location: profileData.location,
         website: profileData.website,

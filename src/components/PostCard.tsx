@@ -253,6 +253,21 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
   const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
   const isCarousel = (post.content.images?.length ?? 0) > 1;
 
+  // Determine display profile (User vs Organizer)
+  const displayProfile = post.posted_as_organizer && post.organizer_profile 
+    ? {
+        name: post.organizer_profile.organizer_name || 'Organizer',
+        avatar: post.organizer_profile.organizer_avatar_url,
+        id: post.organizer_profile.id,
+        isOrganizer: true
+      }
+    : {
+        name: post.user.name || post.user.username || 'User',
+        avatar: post.user.avatar,
+        id: post.user.id,
+        isOrganizer: false
+      };
+
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6 hover:shadow-md transition-shadow duration-300 p-4">
       
@@ -260,8 +275,8 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <UserAvatar 
-            src={post.user.avatar} 
-            name={post.user.name} 
+            src={displayProfile.avatar} 
+            name={displayProfile.name} 
             className="w-10 h-10 ring-2 ring-purple-50 cursor-pointer"
             onClick={() => onProfileClick(post.user)}
           />
@@ -271,9 +286,9 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                 className="text-gray-900 font-bold text-sm cursor-pointer hover:text-purple-600 transition-colors"
                 onClick={() => onProfileClick(post.user)}
               >
-                {post.user.name}
+                {displayProfile.name}
               </span>
-              {(post.user.isOrganizer || post.user.isOrganizerPage) && (
+              {(displayProfile.isOrganizer || post.user.isOrganizerPage) && (
                 <Star className="w-3.5 h-3.5 text-purple-600 fill-purple-600" />
               )}
               {post.user.verified && !post.user.isOrganizer && (

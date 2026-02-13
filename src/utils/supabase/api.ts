@@ -65,7 +65,7 @@ export type OrganizerProfile = {
   id: string;
   organizer_name: string;
   organizer_type: string;
-  avatar_url?: string;
+  organizer_avatar_url?: string; // Renamed from avatar_url to prevent confusion
   cover_url?: string;
   bio?: string;
   description?: string;
@@ -266,7 +266,8 @@ export const getOrganizerProfile = async (userId: string) => {
     if (error.code === 'PGRST116') return null;
     throw error;
   }
-  return data as OrganizerProfile;
+  
+  return { ...data, organizer_avatar_url: data.organizer_avatar_url || data.avatar_url } as OrganizerProfile;
 };
 
 export const upsertOrganizerProfile = async (profile: Partial<OrganizerProfile> & { id: string }) => {
@@ -282,6 +283,7 @@ export const upsertOrganizerProfile = async (profile: Partial<OrganizerProfile> 
     .single();
 
   if (error) throw error;
+  
   return data as OrganizerProfile;
 };
 
@@ -748,6 +750,31 @@ export const getEventById = async (id: number) => {
     console.error('Error fetching event by id:', error);
     throw error;
   }
+
+  // Fetch organizer details explicitly to ensure we have role-specific data (like avatar)
+  if (data.organizer_id) {
+    const { data: orgData } = await supabase
+      .from('organizer_profiles')
+      .select('*')
+      .eq('id', data.organizer_id)
+      .single();
+    
+    if (orgData) {
+      // Map DB field avatar_url to type field organizer_avatar_url if needed
+      // but here we just attach the whole object as organizer_details
+      // The client code expects organizer_details to have organizer_avatar_url (which comes from DB avatar_url column currently? 
+      // Wait, in migration I am renaming or just mapping?
+      // In api.ts I mapped it for getOrganizerProfile.
+      // Here I am attaching raw DB response.
+      // The raw DB response has 'organizer_avatar_url' column (after migration).
+      // So it should be fine.
+      data.organizer = {
+        ...data.organizer,
+        organizer_details: orgData
+      };
+    }
+  }
+
   return data;
 };
 

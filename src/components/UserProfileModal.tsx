@@ -4,7 +4,7 @@ import { UserAvatar } from './UserAvatar';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
 import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Video, Play, MessageCircle } from 'lucide-react';
 import { MediaViewer } from './MediaViewer';
-import { getOrganizerStats, getOrganizerEvents, getPosts, getUserTickets, followUser, unfollowUser, isFollowing as checkIsFollowing, getProfile, supabase, type Event, type Post, type Profile } from '../utils/supabase/api';
+import { getOrganizerStats, getOrganizerEvents, getPosts, getUserTickets, followUser, unfollowUser, isFollowing as checkIsFollowing, getProfile, getOrganizerProfile, supabase, type Event, type Post, type Profile, type OrganizerProfile } from '../utils/supabase/api';
 
 interface UserProfile {
   id: string;
@@ -39,6 +39,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
   const [attendedEvents, setAttendedEvents] = useState<any[]>([]);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -59,17 +60,20 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
         }
 
         if (user.type === 'Organizer' || (profileData && profileData.is_organizer)) {
-          // Fetch organizer stats and events
-          const [statsData, eventsData] = await Promise.all([
+          // Fetch organizer details, stats and events
+          const [statsData, eventsData, orgProfileData] = await Promise.all([
             getOrganizerStats(user.id),
-            getOrganizerEvents(user.id)
+            getOrganizerEvents(user.id),
+            getOrganizerProfile(user.id)
           ]);
           setStats(statsData);
           setOrganizerEvents(eventsData || []);
+          setOrganizerProfile(orgProfileData);
         } else {
           // Fetch attendee data (tickets -> attended events)
           const tickets = await getUserTickets(user.id);
           setAttendedEvents(tickets?.map(t => t.event).filter(Boolean) || []);
+          setOrganizerProfile(null);
         }
 
         // Fetch posts for photos/videos tab
@@ -150,6 +154,19 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
     isLiked: post.is_liked
   }));
 
+  // Determine display data based on role
+  const isOrganizerView = !!organizerProfile && (user.type === 'Organizer' || profile?.is_organizer);
+  
+  const displayData = {
+    name: isOrganizerView ? organizerProfile!.organizer_name : (profile?.full_name || user.name),
+    // STRICT: No fallback to user avatar for organizers
+    avatar: isOrganizerView ? (organizerProfile!.organizer_avatar_url || 'https://images.unsplash.com/photo-1475721027767-f4242310f17a?w=400&h=400&fit=crop') : (profile?.avatar_url || user.avatar),
+    cover: isOrganizerView ? (organizerProfile!.cover_url || profile?.cover_url || user.coverImage) : (profile?.cover_url || user.coverImage),
+    bio: isOrganizerView ? (organizerProfile!.bio || organizerProfile!.description) : (profile?.bio || user.bio),
+    location: isOrganizerView ? organizerProfile!.location : profile?.location,
+    verified: profile?.verified ?? user.verified
+  };
+
   if (loading) {
     return <ProfileSkeleton onClose={onClose} />;
   }
@@ -163,8 +180,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
           {/* Hero Section with Cover */}
           <div className="relative h-52 rounded-t-3xl overflow-hidden">
             <ImageWithFallback
-              src={profile?.cover_url || user.coverImage || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200'}
-              alt={profile?.full_name || user.name}
+              src={displayData.cover || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200'}
+              alt={displayData.name}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
@@ -187,14 +204,14 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
               <div className="flex items-center gap-3">
                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/50">
                     <UserAvatar 
-                       src={profile?.avatar_url || user.avatar}
-                       name={profile?.full_name || user.name}
+                       src={displayData.avatar}
+                       name={displayData.name}
                        className="w-full h-full"
                     />
                  </div>
                  <div>
-                    <h2 className="text-white font-bold drop-shadow-lg text-lg leading-tight">{profile?.full_name || user.name}</h2>
-                    {(profile?.verified ?? user.verified) && (
+                    <h2 className="text-white font-bold drop-shadow-lg text-lg leading-tight">{displayData.name}</h2>
+                    {displayData.verified && (
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-white fill-[#8A2BE2]" />
                         <span className="text-white/80 text-xs">Verified</span>
@@ -253,11 +270,11 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
             {/* About */}
             <div className="mb-6">
               <h3 className="text-gray-900 mb-2">About</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{profile?.bio || user.bio || 'No bio available'}</p>
-              {profile?.location && (
+              <p className="text-sm text-gray-600 leading-relaxed">{displayData.bio || 'No bio available'}</p>
+              {displayData.location && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
                   <MapPin className="w-4 h-4" />
-                  <span>{profile.location}</span>
+                  <span>{displayData.location}</span>
                 </div>
               )}
             </div>

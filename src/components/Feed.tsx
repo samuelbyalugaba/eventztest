@@ -105,6 +105,8 @@ const isVideo = (url?: string) => {
 
 export function Feed({ conversations: globalConversations, onStartConversation, onMarkAsRead, onlineUsers = [], onDeleteConversation, currentUser: propCurrentUser }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [currentUser, setCurrentUser] = useState<any>(propCurrentUser || null);
   const [isLoading, setIsLoading] = useState(true);
@@ -175,108 +177,147 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     }
   }, [playingVideo?.clipIndex, playingVideo?.clips]);
 
-  useEffect(() => {
-    const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
-    const FEED_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
+  const FEED_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-    const mapPosts = (data: any[]) => {
-      return data.map((p: ApiPost) => {
-        const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
-        const displayName = isOrganizerPage ? p.organizer_profile!.organizer_name : (p.user?.full_name || p.user?.username || 'Unknown User');
-        const avatarUrl = isOrganizerPage ? p.organizer_profile!.avatar_url : p.user?.avatar_url;
-        return {
+  const mapPosts = (data: any[]) => {
+    return data.map((p: ApiPost) => {
+      const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
+      const displayName = isOrganizerPage ? p.organizer_profile!.organizer_name : (p.user?.full_name || p.user?.username || 'Unknown User');
+      // Use mapped organizer_avatar_url, strictly no fallback to user avatar
+      const avatarUrl = isOrganizerPage ? p.organizer_profile!.organizer_avatar_url : p.user?.avatar_url;
+      return {
+        id: p.id,
+        user: {
+          id: p.user?.id || 'unknown',
+          name: displayName || 'Unknown',
+          username: p.user?.username || '@unknown',
+          avatar: avatarUrl || '',
+          verified: p.user?.verified || false,
+          isOrganizer: p.user?.is_organizer || false,
+          isOrganizerPage: isOrganizerPage
+        },
+        event: p.event ? {
+          id: p.event.id,
+          name: p.event.title,
+          date: p.event.date,
+          time: p.event.time,
+          location: p.event.location,
+          image: p.event.image_url,
+          price: p.event.price_range,
+        } : undefined,
+        content: {
+          text: p.content,
+          images: p.image_urls,
+          image: p.image_urls?.[0],
+          hashtags: p.hashtags,
+        },
+        timestamp: formatTimeAgo(p.created_at),
+        likes: p.likes_count || 0,
+        comments: [],
+        comments_count: p.comments_count || 0,
+        shares: 0,
+        views: p.views || 0,
+        isLiked: p.is_liked || false,
+        isSaved: p.is_saved || false,
+        isHighlight: !!p.video_url,
+        highlights: p.video_url ? [{
           id: p.id,
-          user: {
-            id: p.user?.id || 'unknown',
-            name: displayName || 'Unknown',
-            username: p.user?.username || '@unknown',
-            avatar: avatarUrl || '',
-            verified: p.user?.verified || false,
-            isOrganizer: p.user?.is_organizer || false,
-            isOrganizerPage: isOrganizerPage
-          },
-          event: p.event ? {
-            id: p.event.id,
-            name: p.event.title,
-            date: p.event.date,
-            time: p.event.time,
-            location: p.event.location,
-            image: p.event.image_url,
-            price: p.event.price_range,
-          } : undefined,
-          content: {
-            text: p.content,
-            images: p.image_urls,
-            image: p.image_urls?.[0],
-            hashtags: p.hashtags,
-          },
-          timestamp: formatTimeAgo(p.created_at),
-          likes: p.likes_count || 0,
-          comments: [],
-          comments_count: p.comments_count || 0,
-          shares: 0,
+          thumbnail: (p.image_urls?.find(url => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
+          duration: p.duration || '',
+          title: p.content || 'Video Highlight',
+          videoUrl: p.video_url,
           views: p.views || 0,
-          isLiked: p.is_liked || false,
-          isSaved: p.is_saved || false,
-          isHighlight: !!p.video_url,
-          highlights: p.video_url ? [{
-            id: p.id,
-            thumbnail: (p.image_urls?.find(url => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
-            duration: p.duration || '',
-            title: p.content || 'Video Highlight',
-            videoUrl: p.video_url,
-            views: p.views || 0,
-          }] : undefined,
-          mutualFriends: [],
-        };
-      });
-    };
+        }] : undefined,
+        mutualFriends: [],
+      };
+    });
+  };
 
-    const loadPosts = async (useCacheFirst: boolean) => {
-      setIsLoading(true);
-      try {
-        if (useCacheFirst && feedCacheMemory && (Date.now() - feedCacheMemory.timestamp < FEED_CACHE_TTL_MS)) {
-          setPosts(feedCacheMemory.posts as Post[]);
-          setIsLoading(false);
-        }
-
-        if (useCacheFirst) {
-          const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
-          if (cachedRaw) {
-            const cached = JSON.parse(cachedRaw);
-            if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS && Array.isArray(cached.posts)) {
-              setPosts(cached.posts);
-              setIsLoading(false);
-            }
-          }
-        }
-
-        const { data: { user } } = await supabase.auth.getUser();
-        setCurrentUser(user);
-        
-        if (user) {
-          // Load following
-          try {
-            const following = await getFollowedUserIds(user.id);
-            setFollowingIds(new Set(following));
-          } catch (e) {
-            console.error('Error loading following:', e);
-          }
-        }
-        
-        const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: 0 });
-        const mapped = fresh && fresh.length > 0 ? mapPosts(fresh) : [];
-        setPosts(mapped);
-        const payload = { posts: mapped, timestamp: Date.now() };
-        feedCacheMemory = payload;
-        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(payload));
-      } catch (error) {
-        console.error('Error loading posts:', error);
-        toast.error('Failed to load posts');
-      } finally {
+  const loadPosts = async (useCacheFirst: boolean) => {
+    setIsLoading(true);
+    try {
+      if (useCacheFirst && feedCacheMemory && (Date.now() - feedCacheMemory.timestamp < FEED_CACHE_TTL_MS)) {
+        setPosts(feedCacheMemory.posts as Post[]);
         setIsLoading(false);
       }
-    };
+
+      if (useCacheFirst) {
+        const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS && Array.isArray(cached.posts)) {
+            setPosts(cached.posts);
+            setIsLoading(false);
+          }
+        }
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+      
+      if (user) {
+        // Load following
+        try {
+          const following = await getFollowedUserIds(user.id);
+          setFollowingIds(new Set(following));
+        } catch (e) {
+          console.error('Error loading following:', e);
+        }
+      }
+      
+      const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: 0 });
+      
+      if (fresh && fresh.length < 20) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
+      const mapped = fresh && fresh.length > 0 ? mapPosts(fresh) : [];
+      setPosts(mapped);
+      const payload = { posts: mapped, timestamp: Date.now() };
+      feedCacheMemory = payload;
+      localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(payload));
+    } catch (error) {
+      console.error('Error loading posts:', error);
+      toast.error('Failed to load posts');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (isLoadingMore || !hasMore) return;
+    
+    setIsLoadingMore(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      // Use current posts length as offset
+      const offset = posts.length;
+      const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset });
+      
+      if (!fresh || fresh.length < 20) {
+        setHasMore(false);
+      }
+      
+      if (fresh && fresh.length > 0) {
+        const mapped = mapPosts(fresh);
+        // Append new posts, avoid duplicates
+        setPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newPosts = mapped.filter(p => !existingIds.has(p.id));
+          return [...prev, ...newPosts];
+        });
+      }
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
     loadPosts(true);
 
     const handlePostsUpdated = () => {
@@ -288,23 +329,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       window.removeEventListener('postsUpdated', handlePostsUpdated);
     };
   }, []);
-
-  useEffect(() => {
-    const onScroll = () => {
-      const doc = document.documentElement;
-      setScrollTop(doc.scrollTop || window.scrollY || 0);
-    };
-    const onResize = () => setViewportHeight(window.innerHeight);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onResize);
-    onScroll();
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onResize);
-    };
-  }, []);
-
-
 
   // Sync activeConversation with global conversations updates and mark as read
   useEffect(() => {
@@ -338,12 +362,15 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           setRenderCount((c) => c + 20);
+          if (hasMore && !isLoadingMore) {
+            handleLoadMore();
+          }
         }
       });
     }, { threshold: 0.1 });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [renderCount, posts.length, activeFilter]);
+  }, [renderCount, posts.length, activeFilter, hasMore, isLoadingMore]);
 
   useEffect(() => {
     if (currentUser) {
@@ -731,8 +758,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             </>
           ) : (
             <>
-              <div style={{ height: `${topSpacer}px` }} />
-              {filteredPosts.slice(visibleStart, visibleEnd).map((post, index) => (
+              {filteredPosts.map((post, index) => (
                 <div key={post.id} style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}>
                   <PostCard
                     post={post}
@@ -749,12 +775,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                   />
                 </div>
               ))}
-              <div style={{ height: `${bottomSpacer}px` }} />
             </>
           )}
           
           {/* Infinite scroll sentinel (auto-load more when near bottom) */}
-          {filteredPosts.length > renderCount && (
+          {hasMore && (
             <div id="feed-sentinel" className="py-6">
               <div className="flex justify-center">
                 <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
