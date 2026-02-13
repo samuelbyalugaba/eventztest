@@ -163,13 +163,12 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
             setProfileData({
               username: profile.username || '',
-              // Explicitly do NOT fallback to user profile for organizer-specific fields
-              // to enforce the "separate page" concept requested by user.
+              // STRICT: No fallback to user profile for organizer-specific fields
               organizerName: organizerProfile?.organizer_name || '', 
               organizerType: type,
               venueSubType: subType,
-              email: organizerProfile?.contact_email || profile.contact_email || user.email || '',
-              phone: organizerProfile?.phone || profile.phone || '',
+              email: organizerProfile?.contact_email || user.email || '',
+              phone: organizerProfile?.phone || '',
               location: organizerProfile?.location || '',
               bio: organizerProfile?.bio || '',
               website: organizerProfile?.website || '',

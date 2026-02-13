@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, MapPin, Tv, User } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Event as ApiEvent, getOrganizerProfile } from '../utils/supabase/api';
+import { Event as ApiEvent, getOrganizerProfile, getProfile } from '../utils/supabase/api';
 
 interface EventCardProps {
   event: ApiEvent;
@@ -11,7 +11,8 @@ interface EventCardProps {
 
 export function EventCard({ event, onClick, className = '' }: EventCardProps) {
   const [organizerName, setOrganizerName] = useState<string>(
-    event.organizer?.organizer_details?.organizer_name || ''
+    event.organizer?.organizer_details?.organizer_name || 
+    ''
   );
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export function EventCard({ event, onClick, className = '' }: EventCardProps) {
       setOrganizerName(event.organizer.organizer_details.organizer_name);
       return;
     }
-
+    
     let isMounted = true;
 
     const fetchOrganizer = async () => {
@@ -29,13 +30,15 @@ export function EventCard({ event, onClick, className = '' }: EventCardProps) {
       }
 
       try {
-        const profile = await getOrganizerProfile(event.organizer_id);
+        // Try to get organizer profile first
+        const orgProfile = await getOrganizerProfile(event.organizer_id);
+        if (isMounted && orgProfile && orgProfile.organizer_name) {
+          setOrganizerName(orgProfile.organizer_name);
+          return;
+        }
+
         if (isMounted) {
-          if (profile && profile.organizer_name) {
-            setOrganizerName(profile.organizer_name);
-          } else {
-            setOrganizerName('Event Organizer');
-          }
+          setOrganizerName('Event Organizer');
         }
       } catch (error) {
         console.error('Error fetching organizer for card:', error);

@@ -180,17 +180,17 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         
         setOrganizerData({
           id: profile.id,
-          name: organizerProfile?.organizer_name || profile.full_name || profile.username || 'Organizer',
-          bio: organizerProfile?.bio || profile.bio || 'No bio available',
-          coverImage: organizerProfile?.cover_url || profile.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
-          avatar: organizerProfile?.organizer_avatar_url || 'https://images.unsplash.com/photo-1475721027767-f4242310f17a?w=400&h=400&fit=crop', // Default organizer placeholder, strictly no user fallback
-          location: organizerProfile?.location || profile.location || 'Tanzania',
+          name: organizerProfile?.organizer_name || 'Organizer',
+          bio: organizerProfile?.bio || 'No bio available',
+          coverImage: organizerProfile?.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
+          avatar: organizerProfile?.organizer_avatar_url || 'https://images.unsplash.com/photo-1475721027767-f4242310f17a?w=400&h=400&fit=crop',
+          location: organizerProfile?.location || 'Tanzania',
           totalEvents: stats.totalEvents,
           followers: stats.followers,
           verified: profile.verified || false,
           rating: stats.avgRating || 0,
-          phone: organizerProfile?.phone || profile.phone,
-          whatsapp: organizerProfile?.phone || profile.phone, // Assuming phone is whatsapp for now
+          phone: organizerProfile?.phone,
+          whatsapp: organizerProfile?.phone, // Assuming phone is whatsapp for now
           highlights: posts.slice(0, 5).map(p => ({
             id: p.id,
             image: p.image_urls?.[0] || '',

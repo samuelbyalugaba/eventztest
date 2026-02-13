@@ -116,7 +116,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
              const profile = await getProfile(user.id);
              if (profile) {
                setOrganizerProfile({
-                 organizerName: 'Your Organization', // Default to generic name to distinguish from user profile
+                 organizerName: profile.full_name || profile.username || 'Your Organization', // Default to user name as requested
                  organizerType: 'Event Organizer',
                  location: profile.location || 'Location not set',
                  avatar_url: profile.avatar_url,
@@ -131,7 +131,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
            const profile = await getProfile(user.id);
            if (profile) {
              setOrganizerProfile({
-               organizerName: 'Your Organization',
+               organizerName: profile.full_name || profile.username || 'Your Organization',
                organizerType: 'Event Organizer',
                location: profile.location || 'Location not set',
                avatar_url: profile.avatar_url,

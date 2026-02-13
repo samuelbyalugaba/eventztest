@@ -183,8 +183,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const mapPosts = (data: any[]) => {
     return data.map((p: ApiPost) => {
       const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
-      const displayName = isOrganizerPage ? p.organizer_profile!.organizer_name : (p.user?.full_name || p.user?.username || 'Unknown User');
-      // Use mapped organizer_avatar_url, strictly no fallback to user avatar
+      const displayName = isOrganizerPage ? (p.organizer_profile!.organizer_name || 'Unknown Organizer') : (p.user?.full_name || p.user?.username || 'Unknown User');
+      // STRICT: No fallback to user avatar for organizers
       const avatarUrl = isOrganizerPage ? p.organizer_profile!.organizer_avatar_url : p.user?.avatar_url;
       return {
         id: p.id,

@@ -246,25 +246,21 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
     const fetchProfileData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Fetch both user profile and organizer profile
-        const [profile, organizerProfile] = await Promise.all([
-          getProfile(user.id),
-          getOrganizerProfile(user.id)
-        ]);
+        // Fetch organizer profile only
+        const organizerProfile = await getOrganizerProfile(user.id);
         
-        if (profile) {
-          // Determine values, preferring organizer profile if available
+        if (organizerProfile) {
           setProfileData(prev => ({
             ...prev,
-            organizerName: organizerProfile?.organizer_name || profile.full_name || '',
-            email: organizerProfile?.contact_email || profile.contact_email || profile.email || '',
-            phone: organizerProfile?.phone || profile.phone || '',
-            location: organizerProfile?.location || profile.location || '',
-            bio: organizerProfile?.bio || profile.bio || '',
-            website: organizerProfile?.website || profile.website || '',
-            instagram: organizerProfile?.social_links?.instagram || profile.social_links?.instagram || '',
-            facebook: organizerProfile?.social_links?.facebook || profile.social_links?.facebook || '',
-            twitter: organizerProfile?.social_links?.twitter || profile.social_links?.twitter || '',
+            organizerName: organizerProfile.organizer_name || '',
+            email: organizerProfile.contact_email || '',
+            phone: organizerProfile.phone || '',
+            location: organizerProfile.location || '',
+            bio: organizerProfile.bio || '',
+            website: organizerProfile.website || '',
+            instagram: organizerProfile.social_links?.instagram || '',
+            facebook: organizerProfile.social_links?.facebook || '',
+            twitter: organizerProfile.social_links?.twitter || '',
           }));
         }
       }
