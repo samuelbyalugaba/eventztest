@@ -1,4 +1,5 @@
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { VideoPreview } from './VideoPreview';
 import { UserAvatar } from './UserAvatar';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
@@ -59,6 +60,17 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [followersList, setFollowersList] = useState<any[]>([]);
   const [loadingFollowers, setLoadingFollowers] = useState(false);
 
+  const PLACEHOLDERS = [
+    "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=800&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1459749411177-8c275d849fae?w=800&auto=format&fit=crop&q=60"
+  ];
+  
+  const getFallbackImage = (index: number) => PLACEHOLDERS[index % PLACEHOLDERS.length];
+
   const handleShowFollowers = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -94,7 +106,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
               organizerName: orgProfile.organizer_name || 'Organizer',
               organizerType: orgProfile.organizer_type || 'Event Organizer',
               location: orgProfile.location || 'Location not set',
-              avatar_url: orgProfile.avatar_url,
+              avatar_url: orgProfile.organizer_avatar_url,
               cover_url: orgProfile.cover_url,
               ...orgProfile
             });
@@ -153,19 +165,22 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         // Load posts (highlights)
         const userPosts = await getPosts({ currentUserId: user.id, authorId: user.id });
         if (userPosts) {
-          setOrganizerPosts(userPosts.map((p: any) => ({
+          setOrganizerPosts(userPosts.map((p: any, index: number) => ({
              id: p.id,
              type: 'post',
              mediaType: p.video_url ? 'video' : (p.image_urls && p.image_urls.length > 0 ? 'image' : 'text'),
              title: p.content ? p.content.substring(0, 30) + '...' : 'New Post',
              description: p.content,
-             image: p.image_urls ? p.image_urls[0] : 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
+             image: p.image_urls?.[0] || '',
              video: p.video_url,
              likes: p.likes_count || 0,
              comments: p.comments_count || 0,
              shares: 0,
              timestamp: new Date(p.created_at).toLocaleDateString(),
-             isLiked: p.is_liked
+             isLiked: p.is_liked,
+             fallbackSrc: p.video_url 
+               ? "https://images.unsplash.com/photo-1536240478700-b869070f9279?w=800&auto=format&fit=crop&q=60" 
+               : getFallbackImage(index)
           })));
         }
 
@@ -476,80 +491,54 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
               </div>
             </div>
             
-            {/* List View - Organized & Accessible */}
-            <div className="flex flex-col gap-3">
-              {highlights.map(highlight => (
+            {/* Instagram-style Grid View */}
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-0.5">
+              {highlights.map((highlight, index) => (
                 <div 
-                  key={highlight.id} 
-                  className="group relative flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-                  onClick={() => setSelectedHighlight(highlight)}
-                >
-                  {/* Image Thumbnail */}
-                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 relative bg-gray-100">
-                    <ImageWithFallback
-                      src={highlight.image}
-                      alt={highlight.title}
-                      className="w-full h-full object-cover"
-                    />
-                    
-                    {/* Video Play Icon */}
-                    {highlight.mediaType === 'video' && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                        <div className="w-6 h-6 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm">
-                          <Play className="w-3 h-3 text-[#8A2BE2] ml-0.5" fill="currentColor" />
-                        </div>
-                      </div>
-                    )}
+                key={highlight.id} 
+                className="group relative aspect-square bg-gray-100 overflow-hidden cursor-pointer"
+                onClick={() => setSelectedHighlight(highlight)}
+              >
+                {highlight.mediaType === 'video' ? (
+                  <VideoPreview 
+                    src={highlight.video} 
+                    poster={highlight.image || highlight.fallbackSrc}
+                    alt={highlight.title}
+                    className="w-full h-full"
+                  />
+                ) : (
+                  <ImageWithFallback
+                    src={highlight.image}
+                    fallbackSrc={highlight.fallbackSrc}
+                    alt={highlight.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                )}
+                
+                {/* Type Indicator - Video */}
+                {highlight.mediaType === 'video' && (
+                  <div className="absolute top-2 right-2 pointer-events-none z-10">
+                    <div className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-sm">
+                      <Play className="w-3 h-3 text-white fill-white ml-0.5" />
+                    </div>
                   </div>
-                  
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-gray-900 font-medium mb-1 line-clamp-1">{highlight.title || 'Untitled Post'}</h3>
-                    
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 text-gray-500 text-xs">
-                      <div className="flex items-center gap-1">
-                        <Heart className="w-3.5 h-3.5" />
-                        <span>{highlight.likes}</span>
+                )}
+                
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
+
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-2 pointer-events-none">
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-1.5">
+                        <Heart className="w-5 h-5 fill-white" />
+                        <span className="font-bold text-sm">{highlight.likes}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        <span>{highlight.comments}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span>{highlight.shares}</span>
+                      <div className="flex items-center gap-1.5">
+                        <MessageCircle className="w-5 h-5 fill-white" />
+                        <span className="font-bold text-sm">{highlight.comments}</span>
                       </div>
                     </div>
                   </div>
-
-                  {/* Actions */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button 
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-500"
-                      >
-                        <MoreHorizontal className="w-5 h-5" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem 
-                        className="text-red-600 focus:text-red-600 cursor-pointer"
-                        onClick={(e: React.MouseEvent) => handleDeletePost(highlight.id, e)}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="cursor-pointer"
-                        onClick={(e) => { e.stopPropagation(); handleShare(highlight); }}
-                      >
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
               ))}
             </div>

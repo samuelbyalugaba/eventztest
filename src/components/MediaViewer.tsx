@@ -355,6 +355,7 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
           {type === 'photo' ? (
             <ImageWithFallback
               src={(currentMedia as Photo).url}
+              fallbackSrc={(currentMedia as Photo).fallbackSrc}
               alt="Full size"
               className="w-full h-full object-contain"
             />

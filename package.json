@@ -38,12 +38,14 @@
             "class-variance-authority": "^0.7.1",
             "clsx": "*",
             "cmdk": "^1.1.1",
+            "dotenv": "^17.3.1",
             "embla-carousel-react": "^8.6.0",
             "hls.js": "^1.6.15",
             "hono": "*",
             "input-otp": "^1.4.2",
             "lucide-react": "^0.487.0",
             "next-themes": "^0.4.6",
+            "pg": "^8.18.0",
             "react": "^18.3.1",
             "react-day-picker": "^8.10.1",
             "react-dom": "^18.3.1",
@@ -62,6 +64,7 @@
             "@types/react-dom": "^18.3.7",
             "@vitejs/plugin-react-swc": "^3.10.2",
             "sharp": "^0.34.5",
+            "supabase": "^2.76.8",
             "vite": "6.3.5"
       },
       "scripts": {

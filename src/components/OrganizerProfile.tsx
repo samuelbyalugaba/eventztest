@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, Users, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight } from 'lucide-react';
+import { X, MapPin, Calendar, Users, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical, Heart } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { VideoPreview } from './VideoPreview';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
@@ -33,6 +34,8 @@ interface OrganizerData {
   photos: {
     id: number;
     image: string;
+    video?: string;
+    mediaType: 'image' | 'video';
     size: 'small' | 'large';
     eventName?: string;
   }[];
@@ -55,6 +58,17 @@ interface OrganizerProfileProps {
   onTicketPurchase?: (ticket: PurchasedTicket) => void;
   onMessage?: (organizer: { name: string; avatar: string; verified: boolean; isOrganizer: boolean; id?: string }) => void;
 }
+
+const PLACEHOLDERS = [
+  "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=800&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1459749411177-8c275d849fae?w=800&auto=format&fit=crop&q=60"
+];
+
+const getFallbackImage = (index: number) => PLACEHOLDERS[index % PLACEHOLDERS.length];
 
 export function OrganizerProfile({ organizerName, organizerId, onClose, onTicketPurchase, onMessage }: OrganizerProfileProps) {
   const [isFollowing, setIsFollowing] = useState(false);
@@ -188,8 +202,10 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           photos: posts.map((p, index) => ({
             id: p.id,
             image: p.image_urls?.[0] || '',
+            video: p.video_url,
+            mediaType: p.video_url ? 'video' : 'image',
             size: index % 3 === 0 ? 'large' : 'small',
-            eventName: p.content.substring(0, 15) + '...'
+            eventName: p.content ? p.content.substring(0, 15) + '...' : 'Event'
           })),
           upcomingEvents: events.filter((e: any) => new Date(e.date) >= new Date()).map((e: any) => ({
             id: e.id,
@@ -385,38 +401,23 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   if (!organizerData) return null;
 
   // Combine highlights and photos into a unified gallery for the combined layout
-  const combinedGallery = [
-    ...organizerData.highlights.map((h) => ({
-      id: h.id, // Use number ID for MediaViewer compatibility
-      uniqueId: `highlight-${h.id}`, // Unique ID for key
-      image: h.image,
-      video: h.video,
-      title: h.title,
-      mediaType: h.video ? 'video' as const : 'photo' as const,
-      likes: 0, // No likes count available in highlights structure yet
-      comments: 0,
-      shares: 0,
-      // MediaViewer compatibility
-      url: h.image,
-      thumbnail: h.image,
-      videoUrl: h.video || '',
-    })),
-    ...organizerData.photos.map((p) => ({
+  // Use photos array as it contains all posts with correct media types
+  const combinedGallery = organizerData.photos.map((p, index) => ({
       id: p.id, // Use number ID for MediaViewer compatibility
-      uniqueId: `photo-${p.id}`, // Unique ID for key
+      uniqueId: `post-${p.id}`, // Unique ID for key
       image: p.image,
-      video: undefined,
+      video: p.video,
       title: p.eventName || `${organizerData.name} Gallery`,
-      mediaType: 'photo' as const,
+      mediaType: p.mediaType === 'image' ? 'photo' as const : 'video' as const,
       likes: 0,
       comments: 0,
       shares: 0,
       // MediaViewer compatibility
       url: p.image,
       thumbnail: p.image,
-      videoUrl: '',
-    })),
-  ];
+      videoUrl: p.video || '',
+      fallbackSrc: getFallbackImage(index),
+    }));
 
   return (
     <>
@@ -593,28 +594,33 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                   }}
                 >
                   {/* Image */}
-                  <ImageWithFallback
-                    src={item.image}
-                    alt={item.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  
-                  {/* Video Play Icon - Always Visible for Videos */}
+                  {item.mediaType === 'video' ? (
+                    <VideoPreview 
+                      src={item.video || ''} 
+                      poster={item.image || item.fallbackSrc}
+                      alt={item.title}
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <ImageWithFallback
+                      src={item.image}
+                      alt={item.title}
+                      fallbackSrc={item.fallbackSrc}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  )}
+
+                  {/* Video Indicator */}
                   {item.mediaType === 'video' && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                        <Play className="w-4 h-4 text-[#8A2BE2] ml-0.5" fill="currentColor" />
+                    <div className="absolute top-2 right-2 pointer-events-none z-10">
+                      <div className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-sm">
+                        <Play className="w-3 h-3 text-white fill-white ml-0.5" />
                       </div>
                     </div>
                   )}
                   
-                  {/* Gradient Overlay - Appears on Hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  
-                  {/* Content Overlay - Appears on Hover */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                    <h4 className="text-white text-xs line-clamp-2 leading-snug">{item.title}</h4>
-                  </div>
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
                 </div>
               ))}
             </div>
@@ -623,62 +629,64 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           {/* Upcoming Events */}
           <div>
             <h3 className="text-gray-900 mb-4">Upcoming Events</h3>
-            <div className="space-y-4">
+            <div className="space-y-2">
               {organizerData.upcomingEvents.map((event) => (
-                <div key={event.id} className="flex gap-3">
-                  {/* Event Image */}
+                <div 
+                  key={event.id} 
+                  className="grid grid-cols-[64px_1fr_44px] gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer items-center group"
+                  onClick={() => {
+                    setSelectedEvent(event);
+                    setShowTicketModal(true);
+                  }}
+                >
+                  {/* Left: Thumbnail (Fixed 64x64) */}
                   <ImageWithFallback
                     src={event.image}
                     alt={event.title}
-                    className="w-24 h-24 rounded-2xl object-cover flex-shrink-0"
+                    className="w-16 h-16 rounded-xl object-cover bg-gray-200 shadow-sm"
                   />
                   
-                  {/* Event Details */}
-                  <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                      <h4 className="text-gray-900 mb-2 line-clamp-2 font-medium">{event.title}</h4>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span>{event.date} • {event.time}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span className="line-clamp-1">{event.location}</span>
-                        </div>
-                        {event.attendees && event.attendees > 0 && (
-                          <div className="flex items-center gap-1.5 text-sm text-[#8A2BE2] font-medium">
-                            <Users className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>{event.attendees} Attending</span>
-                          </div>
-                        )}
+                  {/* Middle: Flexible Text Block */}
+                  <div className="flex flex-col justify-center min-w-0">
+                    <h4 className="text-gray-900 font-medium text-sm leading-snug line-clamp-2 mb-1 group-hover:text-[#8A2BE2] transition-colors">
+                      {event.title}
+                    </h4>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <Calendar className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{event.date} • {event.time}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{event.location}</span>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-gray-900 font-semibold text-sm">{event.price}</span>
-                      <div className="flex items-center gap-2">
-                        {currentUser && currentUser.id === organizerId && (
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteEvent(event.id);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                            title="Delete Event"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button className="bg-[#8A2BE2] text-white px-4 py-1.5 rounded-full text-xs font-medium hover:bg-[#7526c7] transition-colors"
-                          onClick={() => {
-                            setSelectedEvent(event);
-                            setShowTicketModal(true);
-                          }}
-                        >
-                          Get Ticket
-                        </button>
-                      </div>
-                    </div>
+                  </div>
+
+                  {/* Right: Fixed Actions (44px) */}
+                  <div className="flex items-center justify-center w-[44px]">
+                    {currentUser && currentUser.id === organizerId ? (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteEvent(event.id);
+                        }}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                        title="Delete Event"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <button 
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                        onClick={(e) => {
+                           e.stopPropagation();
+                           // Future: Open menu
+                        }}
+                      >
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

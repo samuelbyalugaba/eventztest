@@ -12,7 +12,7 @@ import { ShareModal } from './ShareModal';
 import { EventDetailModal } from './EventDetailModal';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView } from '../utils/supabase/api';
+import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView, createTransaction, initiatePayment } from '../utils/supabase/api';
 
 
 
@@ -391,9 +391,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       setTicketFormData({ name: '', email: '' });
       setNormalTicketQuantity(1);
       setNormalTicketStep('quantity');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error purchasing ticket:', error);
-      toast.error('Failed to purchase tickets');
+      toast.error(`Failed to purchase tickets: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -1005,12 +1005,18 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   <div className="flex items-center justify-between">
                     <span className="text-lg">Total</span>
                     <span className="text-2xl">
-                      {eventToPurchase.price_range.includes('TSh') 
-                        ? `TSh ${(parseInt(eventToPurchase.price_range.replace(/[^\d]/g, '')) * normalTicketQuantity).toLocaleString()}`
-                        : eventToPurchase.price_range.includes('$')
-                        ? `$${(parseInt(eventToPurchase.price_range.replace(/[^\d]/g, '')) * normalTicketQuantity).toLocaleString()}`
-                        : eventToPurchase.price_range
-                      }
+                      {(() => {
+                        const priceStr = eventToPurchase.price_range;
+                        const numericPrice = parseInt(priceStr.replace(/[^\d]/g, '')) || 0;
+                        const total = numericPrice * normalTicketQuantity;
+                        
+                        if (priceStr.toLowerCase().includes('free')) return 'Free';
+                        if (priceStr.includes('TSh')) return `TSh ${total.toLocaleString()}`;
+                        if (priceStr.includes('$')) return `$${total.toLocaleString()}`;
+                        // Fallback: if it has digits, assume it's a number and format it
+                        if (/\d/.test(priceStr)) return total.toLocaleString();
+                        return priceStr;
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -1136,12 +1142,17 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                         <p className="text-gray-900">{normalTicketQuantity} × {eventToPurchase.price_range}</p>
                       </div>
                       <p className="text-2xl text-purple-600">
-                        {eventToPurchase.price_range.includes('TSh') 
-                          ? `TSh ${(parseInt(eventToPurchase.price_range.replace(/[^\d]/g, '')) * normalTicketQuantity).toLocaleString()}`
-                          : eventToPurchase.price_range.includes('$')
-                          ? `$${(parseInt(eventToPurchase.price_range.replace(/[^\d]/g, '')) * normalTicketQuantity).toLocaleString()}`
-                          : eventToPurchase.price_range
-                        }
+                        {(() => {
+                          const priceStr = eventToPurchase.price_range;
+                          const numericPrice = parseInt(priceStr.replace(/[^\d]/g, '')) || 0;
+                          const total = numericPrice * normalTicketQuantity;
+                          
+                          if (priceStr.toLowerCase().includes('free')) return 'Free';
+                          if (priceStr.includes('TSh')) return `TSh ${total.toLocaleString()}`;
+                          if (priceStr.includes('$')) return `$${total.toLocaleString()}`;
+                          if (/\d/.test(priceStr)) return total.toLocaleString();
+                          return priceStr;
+                        })()}
                       </p>
                     </div>
                   </div>

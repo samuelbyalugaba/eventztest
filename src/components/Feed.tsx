@@ -645,11 +645,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
     return true;
   });
   const totalToRender = Math.min(filteredPosts.length, renderCount);
-  const visibleStart = Math.max(0, Math.floor(scrollTop / estimatedItemHeight));
-  const visibleCount = Math.ceil(viewportHeight / estimatedItemHeight) + overscan;
-  const visibleEnd = Math.min(totalToRender, visibleStart + visibleCount);
-  const topSpacer = visibleStart * estimatedItemHeight;
-  const bottomSpacer = (totalToRender - visibleEnd) * estimatedItemHeight;
+
 
   return (
     <>

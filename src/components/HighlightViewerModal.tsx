@@ -150,6 +150,7 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
           ) : (
             <ImageWithFallback
               src={highlight.image}
+              fallbackSrc={highlight.fallbackSrc}
               alt={highlight.title}
               className="w-full h-full object-contain"
             />
