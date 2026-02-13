@@ -2,7 +2,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 // Configuration
-const AZAMPAY_BASE_URL = Deno.env.get('AZAMPAY_ENV') === 'production' 
+const AZAMPAY_ENV = Deno.env.get('AZAMPAY_ENV') || 'sandbox';
+
+const AZAMPAY_AUTH_URL = AZAMPAY_ENV === 'production'
+  ? "https://authenticator.azampay.co.tz/AppRegistration/GenerateToken"
+  : "https://authenticator-sandbox.azampay.co.tz/AppRegistration/GenerateToken";
+
+const AZAMPAY_BASE_URL = AZAMPAY_ENV === 'production' 
   ? "https://checkout.azampay.co.tz" 
   : "https://sandbox.azampay.co.tz";
 
@@ -28,18 +34,20 @@ serve(async (req: Request) => {
     // 1. Get Access Token
     const clientId = Deno.env.get('AZAMPAY_CLIENT_ID');
     const clientSecret = Deno.env.get('AZAMPAY_CLIENT_SECRET');
+    const apiKey = Deno.env.get('AZAMPAY_API_KEY'); // Optional?
     const appName = Deno.env.get('AZAMPAY_APP_NAME') || 'Eventz';
 
     if (!clientId || !clientSecret) {
       throw new Error('AzamPay credentials (AZAMPAY_CLIENT_ID, AZAMPAY_CLIENT_SECRET) not configured in Edge Function secrets.');
     }
 
-    console.log(`Authenticating with AzamPay for app: ${appName}`);
+    console.log(`Authenticating with AzamPay for app: ${appName} at ${AZAMPAY_AUTH_URL}`);
 
-    const authResponse = await fetch(`${AZAMPAY_BASE_URL}/azampay/auth/login`, {
+    const authResponse = await fetch(AZAMPAY_AUTH_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; Eventz/1.0)',
       },
       body: JSON.stringify({
         appName: appName,
@@ -60,35 +68,48 @@ serve(async (req: Request) => {
     if (!accessToken) {
       throw new Error('Failed to retrieve access token from AzamPay response');
     }
+    
+    console.log(`Auth Success! Token length: ${accessToken.length}`);
 
     // 2. Initiate Checkout (MNO Push Payment)
-    // Providers: "Airtel", "Tigo", "Halantel", "Azampesa"
-    console.log(`Initiating checkout for Transaction ${externalId} via ${provider}`);
+    console.log(`Initiating checkout for Transaction ${externalId} via ${provider} at ${AZAMPAY_BASE_URL}`);
     
+    const checkoutHeaders: Record<string, string> = {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (compatible; Eventz/1.0)',
+    };
+
+    if (apiKey) {
+      checkoutHeaders['X-API-KEY'] = apiKey;
+    }
+
     const checkoutResponse = await fetch(`${AZAMPAY_BASE_URL}/azampay/mno/checkout`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers: checkoutHeaders,
       body: JSON.stringify({
-        accountNumber: accountNumber, // Format: 255XXXXXXXXX
+        accountNumber: accountNumber,
         amount: String(amount),
         currency: "TZS",
-        externalId: externalId, // Maps to our transactions.id (or provider_transaction_id)
+        externalId: externalId,
         provider: provider, 
       }),
     });
 
-    // AzamPay might return 200 even if transaction fails later (async), or 400/500 if immediate fail.
-    const checkoutData = await checkoutResponse.json();
+    const checkoutText = await checkoutResponse.text();
+    console.log(`AzamPay Checkout Response (${checkoutResponse.status}):`, checkoutText);
+
+    let checkoutData;
+    try {
+        checkoutData = checkoutText ? JSON.parse(checkoutText) : {};
+    } catch (e) {
+        checkoutData = { raw: checkoutText };
+    }
     
     if (!checkoutResponse.ok) {
       console.error('AzamPay Checkout Error:', checkoutData);
-      throw new Error(`AzamPay Checkout Failed: ${JSON.stringify(checkoutData)}`);
+      throw new Error(`AzamPay Checkout Failed: ${checkoutResponse.status} - ${checkoutText}`);
     }
-
-    // Log success (in a real app, maybe update transaction status to 'processing' via Supabase client here)
 
     return new Response(
       JSON.stringify({ 
@@ -102,13 +123,13 @@ serve(async (req: Request) => {
       },
     )
 
-  } catch (error: any) {
-    console.error('Edge Function Error:', error);
+  } catch (error) {
+    console.error('Payment Function Error:', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400, // Return 400 for bad requests/logic errors
+        status: 400,
       },
     )
   }
