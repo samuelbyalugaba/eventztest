@@ -80,6 +80,11 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     const initAgora = async () => {
       try {
         const token = await getAgoraToken(channelName, 0, 'subscriber'); // 0 for random UID
+        if (!token) {
+          setVideoError("Failed to join stream: missing Agora token");
+          console.error("Agora subscriber token retrieval returned null for channel:", channelName);
+          return;
+        }
         
         // Add event listeners
         client.current.on("user-published", async (user, mediaType) => {

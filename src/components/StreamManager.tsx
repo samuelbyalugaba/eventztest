@@ -186,6 +186,11 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         setTimeout(async () => {
           try {
             const token = await getAgoraToken(channelName, uid, 'publisher');
+            if (!token) {
+              toast.error("Failed to start stream: missing Agora token");
+              console.error("Agora token retrieval returned null for channel:", channelName, "uid:", uid);
+              return;
+            }
             await client.current.setClientRole('host');
             await client.current.join(AGORA_APP_ID, channelName, token, uid);
             if (localAudioTrack && localVideoTrack) {
