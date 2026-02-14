@@ -251,7 +251,7 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <h3 className="text-gray-900 text-lg mb-5">Age Distribution</h3>
               <div className="space-y-4">
-                {analytics.demographics.age.map((group: any, index: number) => (
+                {(analytics?.demographics?.ageGroups || []).map((group: any, index: number) => (
                   <div key={index}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-gray-700 text-sm">{group.range} years</span>

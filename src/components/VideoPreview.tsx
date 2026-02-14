@@ -39,11 +39,6 @@ export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps)
           alt={alt || "Video thumbnail"}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors">
-          <div className="bg-white/30 backdrop-blur-sm p-3 rounded-full group-hover:scale-110 transition-transform">
-            <Play className="w-6 h-6 text-white fill-white" />
-          </div>
-        </div>
       </div>
     );
   }
@@ -73,12 +68,7 @@ export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps)
         onError={() => setImageError(true)}
       />
       
-      {/* Play Icon Overlay */}
-      <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${isHovering ? 'bg-black/10' : 'bg-black/20'}`}>
-         <div className={`bg-white/30 backdrop-blur-sm p-3 rounded-full transition-all duration-300 ${isHovering ? 'scale-110 opacity-100' : 'scale-100 opacity-90'}`}>
-            <Play className="w-6 h-6 text-white fill-white" />
-          </div>
-      </div>
+      
     </div>
   );
 }
