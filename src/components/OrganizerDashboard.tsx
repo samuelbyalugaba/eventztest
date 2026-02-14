@@ -384,32 +384,33 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <button 
-                  onClick={() => setShowSettings(true)}
-                  className="flex items-center gap-2 bg-white/10 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition-all border border-white/20 backdrop-blur-sm"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span className="text-sm font-semibold whitespace-nowrap">Manage</span>
-                </button>
-                <button
-                  onClick={onCreateEvent}
-                  className="flex items-center gap-2 bg-white/10 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition-all border border-white/20 backdrop-blur-sm"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span className="text-sm font-semibold whitespace-nowrap">Create Event</span>
-                </button>
-                
-                {/* Premium Go Live Button - Optimized for iPhone 16 (392x852) */}
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
+                <div className="flex items-center gap-2 bg-white/10 text-white rounded-xl border border-white/20 backdrop-blur-sm p-1 w-full md:w-auto">
+                  <button 
+                    onClick={() => setShowSettings(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/20 transition-colors w-full md:w-auto"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span className="text-sm font-semibold whitespace-nowrap">Manage</span>
+                  </button>
+                  <span className="w-px h-5 bg-white/20 hidden md:block" />
+                  <button
+                    onClick={onCreateEvent}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/20 transition-colors w-full md:w-auto"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    <span className="text-sm font-semibold whitespace-nowrap">Create Event</span>
+                  </button>
+                </div>
                 <button 
                   onClick={handleGoLive}
-                  className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-xl hover:shadow-xl hover:shadow-red-500/30 transition-all group relative overflow-hidden min-w-[110px] flex-shrink-0"
+                  className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-600 text-white px-5 py-2.5 rounded-xl hover:shadow-xl hover:shadow-red-500/30 transition-all group relative overflow-hidden min-w-[130px]"
                 >
-                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform" />
                   <div className="relative flex items-center gap-1.5 justify-center w-full">
-                    <div className="relative flex-shrink-0">
+                    <div className="relative">
                       <Radio className="w-4 h-4" />
-                      <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                      <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                     </div>
                     <span className="text-sm font-semibold whitespace-nowrap">Go Live</span>
                   </div>
