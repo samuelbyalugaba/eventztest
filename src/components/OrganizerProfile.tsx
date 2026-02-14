@@ -617,7 +617,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
 
                   {/* Video Indicator */}
                   {item.mediaType === 'video' && (
-                    <div className="absolute top-2 right-2 pointer-events-none z-10">
+                    <div className="absolute top-2 right-2 pointer-events-none z-0">
                       <div className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-sm">
                         <Play className="w-3 h-3 text-white fill-white ml-0.5" />
                       </div>
