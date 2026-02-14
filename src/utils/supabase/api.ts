@@ -1288,14 +1288,28 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
 };
 
 export const deletePost = async (postId: number) => {
-  // 1. Fetch post to get image URLs
+  // Prefer server-side deletion via Edge Function (handles ownership check & cascade)
+  try {
+    const { data, error } = await supabase.functions.invoke('delete-post-complete', {
+      body: { postId }
+    });
+    if (error) {
+      // Fallback to direct delete for environments without the function or missing service role
+      console.warn('Edge Function delete-post-complete failed:', error.message || error);
+    } else {
+      return data;
+    }
+  } catch (e: any) {
+    console.warn('Edge Function invoke error:', e?.message || e);
+  }
+
+  // Fallback: client-side delete (requires RLS delete policy)
   const { data: post } = await supabase
     .from('posts')
     .select('image_urls')
     .eq('id', postId)
     .single();
 
-  // 2. Delete post row (CASCADE handles comments/likes)
   const { error } = await supabase
     .from('posts')
     .delete()
@@ -1303,7 +1317,6 @@ export const deletePost = async (postId: number) => {
 
   if (error) throw error;
 
-  // 3. Delete images from storage (Best effort)
   if (post?.image_urls && Array.isArray(post.image_urls)) {
     await Promise.all(post.image_urls.map(url => deleteFile('posts', url)));
   }

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { toast } from 'sonner';
-import { supabase, toggleLikePost, incrementPostView, incrementUserMediaView } from '../utils/supabase/api';
+import { supabase, toggleLikePost, incrementPostView, incrementUserMediaView, deletePost } from '../utils/supabase/api';
 
 interface Photo {
   id: number;
