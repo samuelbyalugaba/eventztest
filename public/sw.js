@@ -43,6 +43,12 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event
 self.addEventListener('fetch', (event) => {
+  // Bypass non-GET requests (e.g., POST to APIs/functions)
+  if (event.request.method !== 'GET') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
     return;
@@ -53,6 +59,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Bypass API and Edge Functions calls to avoid caching/interference
+  if (event.request.url.includes('/api/') || event.request.url.includes('/functions/v1/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   // 1. Navigation Requests (HTML pages) - Network First, Fallback to Cache
   // This ensures users always get the latest version of the app shell
   if (event.request.mode === 'navigate') {

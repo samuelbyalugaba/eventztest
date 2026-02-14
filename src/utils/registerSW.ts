@@ -1,7 +1,20 @@
 import { toast } from 'sonner';
 
 export const registerServiceWorker = async () => {
+  // Only register in production; in dev, unregister any existing SW to avoid intercepting API calls
   if ('serviceWorker' in navigator) {
+    if (!import.meta.env.PROD) {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+          await reg.unregister();
+        }
+        console.log('Service Worker unregistered in development.');
+      } catch (e) {
+        console.warn('Failed to unregister Service Worker in dev:', e);
+      }
+      return;
+    }
     try {
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
@@ -46,5 +59,4 @@ export const isAppInstalled = () => {
   return window.matchMedia('(display-mode: standalone)').matches ||
          (window.navigator as any).standalone === true;
 };
-
 

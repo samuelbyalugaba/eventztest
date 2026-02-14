@@ -43,6 +43,12 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - network first, fallback to cache
 self.addEventListener('fetch', (event) => {
+  // Bypass non-GET requests (e.g., POST to APIs/functions)
+  if (event.request.method !== 'GET') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
     return;
@@ -50,6 +56,12 @@ self.addEventListener('fetch', (event) => {
 
   // Skip Chrome extensions
   if (event.request.url.startsWith('chrome-extension://')) {
+    return;
+  }
+
+  // Bypass API and Edge Functions calls to avoid caching/interference
+  if (event.request.url.includes('/api/') || event.request.url.includes('/functions/v1/')) {
+    event.respondWith(fetch(event.request));
     return;
   }
 
