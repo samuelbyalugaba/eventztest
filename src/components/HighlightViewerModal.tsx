@@ -1,10 +1,10 @@
-import { X, Heart, Share2, Volume2, VolumeX, Play } from 'lucide-react';
+import { X, Heart, Share2, Volume2, VolumeX, Play, Trash } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useState, useRef, useEffect } from 'react';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { toast } from 'sonner';
-import { incrementPostView } from '../utils/supabase/api';
+import { incrementPostView, deletePost, supabase } from '../utils/supabase/api';
 
 interface HighlightViewerModalProps {
   highlight: {
@@ -105,6 +105,26 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
     }
   };
 
+  const handleDelete = async () => {
+    if (highlight.type !== 'post') return;
+    const confirmed = window.confirm('Delete this post?');
+    if (!confirmed) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Not authorized to delete this post');
+        return;
+      }
+      await deletePost(highlight.id);
+      toast.success('Post deleted');
+      window.dispatchEvent(new Event('postsUpdated'));
+      onClose();
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+    }
+  };
+
   const handleShareClick = async () => {
     const shared = await handleShare({
       title: highlight.title,
@@ -193,19 +213,30 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
           <X className="w-5 h-5 text-white" />
         </button>
 
-        {/* Mute Button - Top Right (videos only) */}
-        {highlight.mediaType === 'video' && (
-          <button
-            onClick={toggleMute}
-            className="absolute top-4 right-4 z-30 w-9 h-9 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 flex items-center justify-center transition-colors"
-          >
-            {isMuted ? (
-              <VolumeX className="w-5 h-5 text-white" />
-            ) : (
-              <Volume2 className="w-5 h-5 text-white" />
-            )}
-          </button>
-        )}
+        {/* Top Right Controls */}
+        <div className="absolute top-4 right-4 z-30 flex items-center gap-2">
+          {highlight.mediaType === 'video' && (
+            <button
+              onClick={toggleMute}
+              className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 flex items-center justify-center transition-colors"
+            >
+              {isMuted ? (
+                <VolumeX className="w-5 h-5 text-white" />
+              ) : (
+                <Volume2 className="w-5 h-5 text-white" />
+              )}
+            </button>
+          )}
+          {highlight.type === 'post' && (
+            <button
+              onClick={handleDelete}
+              className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md hover:bg-red-600/70 flex items-center justify-center transition-colors"
+              title="Delete"
+            >
+              <Trash className="w-5 h-5 text-white" />
+            </button>
+          )}
+        </div>
 
         {/* Right Side Actions - TikTok Style */}
         <div className="absolute right-3 bottom-24 flex flex-col items-center gap-6 z-30">

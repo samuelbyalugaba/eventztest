@@ -1569,12 +1569,41 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
           onClick={() => setFullScreenImage(null)}
         >
-          <button
-            className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-20"
-            onClick={() => setFullScreenImage(null)}
-          >
-            <X className="w-6 h-6 text-white" />
-          </button>
+          <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
+            <button
+              className="p-2 bg-white/10 hover:bg-red-500/50 rounded-full transition-colors"
+              title="Delete"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const confirmed = window.confirm('Delete this post?');
+                if (!confirmed) return;
+                try {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  const post = posts.find(p => p.id === fullScreenImage.postId);
+                  if (!user || !post || user.id !== post.user.id) {
+                    toast.error('Not authorized to delete this post');
+                    return;
+                  }
+                  await deletePost(fullScreenImage.postId);
+                  toast.success('Post deleted');
+                  setFullScreenImage(null);
+                  setPosts(prev => prev.filter(p => p.id !== post.id));
+                  window.dispatchEvent(new Event('postsUpdated'));
+                } catch (error) {
+                  console.error('Error deleting post:', error);
+                  toast.error('Failed to delete post');
+                }
+              }}
+            >
+              <Trash2 className="w-6 h-6 text-white" />
+            </button>
+            <button
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+              onClick={(e) => { e.stopPropagation(); setFullScreenImage(null); }}
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+          </div>
           
           {/* Image Counter for Multiple Images */}
           {fullScreenImage.images.length > 1 && (

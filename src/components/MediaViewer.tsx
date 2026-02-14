@@ -1,4 +1,4 @@
-import { X, Heart, Share2, Volume2, VolumeX, RotateCcw, RotateCw, Play, Pause } from 'lucide-react';
+import { X, Heart, Share2, Volume2, VolumeX, RotateCcw, RotateCw, Play, Pause, Trash } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useState, useEffect, useRef } from 'react';
 import { ShareModal } from './ShareModal';
@@ -180,6 +180,21 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
           toast.error('Failed to update like');
         }
       }
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!(currentMedia as any).isPost || !(currentMedia as any).postId) return;
+    const confirmed = window.confirm('Delete this post?');
+    if (!confirmed) return;
+    try {
+      await deletePost((currentMedia as any).postId);
+      toast.success('Post deleted');
+      window.dispatchEvent(new Event('postsUpdated'));
+      onClose();
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
     }
   };
 
@@ -428,22 +443,36 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
           <X className="w-5 h-5 text-white" />
         </button>
 
-        {/* Mute Button - Top Right (videos only) */}
-        {type === 'video' && !((currentMedia as VideoClip).videoUrl.includes('youtube.com') || (currentMedia as VideoClip).videoUrl.includes('youtu.be')) && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleMute();
-            }}
-            className="absolute top-4 right-4 z-30 w-9 h-9 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 flex items-center justify-center transition-colors"
-          >
-            {isMuted ? (
-              <VolumeX className="w-5 h-5 text-white" />
-            ) : (
-              <Volume2 className="w-5 h-5 text-white" />
-            )}
-          </button>
-        )}
+        {/* Top Right Controls */}
+        <div className="absolute top-4 right-4 z-30 flex items-center gap-2">
+          {type === 'video' && !((currentMedia as VideoClip).videoUrl.includes('youtube.com') || (currentMedia as VideoClip).videoUrl.includes('youtu.be')) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleMute();
+              }}
+              className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 flex items-center justify-center transition-colors"
+            >
+              {isMuted ? (
+                <VolumeX className="w-5 h-5 text-white" />
+              ) : (
+                <Volume2 className="w-5 h-5 text-white" />
+              )}
+            </button>
+          )}
+          {(currentMedia as any).isPost && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete();
+              }}
+              className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md hover:bg-red-600/70 flex items-center justify-center transition-colors"
+              title="Delete"
+            >
+              <Trash className="w-5 h-5 text-white" />
+            </button>
+          )}
+        </div>
 
         {/* Right Side Actions - TikTok Style */}
         <div className="absolute right-3 bottom-32 flex flex-col items-center gap-6 z-30">
