@@ -267,7 +267,7 @@ export const getOrganizerProfile = async (userId: string) => {
     throw error;
   }
   
-  return { ...data, organizer_avatar_url: data.organizer_avatar_url || data.avatar_url } as OrganizerProfile;
+  return { ...data } as OrganizerProfile;
 };
 
 export const upsertOrganizerProfile = async (profile: Partial<OrganizerProfile> & { id: string }) => {
