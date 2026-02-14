@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, Wifi } from 'lucide-react';
+import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, Wifi, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
-import { Event, generateStreamKeys, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, Profile, updateEventStreamingStatus } from '../utils/supabase/api';
+import { Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, updateEventStreamingStatus } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
+import { AGORA_APP_ID, getAgoraToken } from '../utils/agora';
 
 interface StreamManagerProps {
   event: Event;
@@ -12,8 +14,6 @@ interface StreamManagerProps {
 
 export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerProps) {
   const [isLive, setIsLive] = useState(event.streaming?.isLive || false);
-  const [showKey, setShowKey] = useState(false);
-  const [streamMethod, setStreamMethod] = useState<'obs' | 'webcam'>('webcam');
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
   const [streamHealth, setStreamHealth] = useState<'good' | 'poor' | 'offline'>(isLive ? 'good' : 'offline');
@@ -23,14 +23,23 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [newMessage, setNewMessage] = useState('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
   
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  // Stream Credentials State
-  const [streamKey, setStreamKey] = useState(event.streaming?.stream_key || '');
-  const [rtmpUrl, setRtmpUrl] = useState(event.streaming?.ingest_url || "rtmp://global-live.mux.com:5222/app");
-
+  // Agora State
+  const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
+  const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null);
+  const client = useRef(AgoraRTC.createClient({ mode: 'live', codec: 'vp8' }));
   const [elapsedTime, setElapsedTime] = useState(0);
+  
+  // Streaming method and legacy RTMP settings (for OBS mode UI)
+  const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>('webcam');
+  const [rtmpUrl, setRtmpUrl] = useState<string>(event.streaming?.ingest_url || '');
+  const [streamKey, setStreamKey] = useState<string>(event.streaming?.stream_key || '');
+  const [showKey, setShowKey] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'settings' | 'chat' | 'monetization' | 'analytics'>('settings');
+  const [streamTitle, setStreamTitle] = useState<string>(event.title || '');
+  const [streamCategory, setStreamCategory] = useState<string>('General');
+  const [visibility, setVisibility] = useState<'public' | 'ticket' | 'followers'>('public');
+  const [monetizationEnabled, setMonetizationEnabled] = useState<boolean>(false);
+  const [countdown, setCountdown] = useState<number>(0);
 
   // Timer for elapsed time
   useEffect(() => {
@@ -50,23 +59,71 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Fetch/Generate keys on mount if missing
+  // Initialize Agora Local Tracks (Webcam/Mic)
   useEffect(() => {
-    const fetchKeys = async () => {
-      if (!event.streaming?.stream_key) {
-        try {
-          const keys = await generateStreamKeys(event.id);
-          setStreamKey(keys.streamKey);
-          setRtmpUrl(keys.ingestUrl);
-        } catch (error) {
-          console.error('Failed to generate stream keys', error);
-          // Fallback mock
-          setStreamKey(`live_${event.id}_${Math.random().toString(36).substr(2, 9)}`);
+    let mounted = true;
+
+    const initLocalTracks = async () => {
+      try {
+        const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+        
+        if (!mounted) {
+          audioTrack.close();
+          videoTrack.close();
+          return;
         }
+
+        setLocalAudioTrack(audioTrack);
+        setLocalVideoTrack(videoTrack);
+        
+        // Play video in the local container
+        videoTrack.play('local-player');
+        
+        setCameraEnabled(true);
+        setMicEnabled(true);
+      } catch (error) {
+        console.error("Error accessing webcam/mic:", error);
+        toast.error("Could not access camera/microphone");
       }
     };
-    fetchKeys();
-  }, [event.id, event.streaming?.stream_key]);
+
+    initLocalTracks();
+
+    return () => {
+      mounted = false;
+      localAudioTrack?.close();
+      localVideoTrack?.close();
+    };
+  }, []); // Only run once on mount
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      localAudioTrack?.close();
+      localVideoTrack?.close();
+      if (client.current) {
+        client.current.leave();
+      }
+    };
+  }, []);
+
+  // Handle Camera Toggle
+  const toggleCamera = async () => {
+    if (localVideoTrack) {
+      const newState = !cameraEnabled;
+      await localVideoTrack.setEnabled(newState);
+      setCameraEnabled(newState);
+    }
+  };
+
+  // Handle Mic Toggle
+  const toggleMic = async () => {
+    if (localAudioTrack) {
+      const newState = !micEnabled;
+      await localAudioTrack.setEnabled(newState);
+      setMicEnabled(newState);
+    }
+  };
 
   // Load and Subscribe to Chat
   useEffect(() => {
@@ -109,62 +166,59 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     }
   };
 
-  useEffect(() => {
-    if (streamMethod === 'webcam') {
-      startWebcam();
+  const toggleLive = async () => {
+    const newState = !isLive;
+    const channelName = `event-${event.id}`;
+    const uid = event.organizer_id; // Use organizer ID as UID (needs to be string or number)
+
+    if (newState) {
+      if (countdown === 0) {
+        setCountdown(3);
+        const interval = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) {
+              clearInterval(interval);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        setTimeout(async () => {
+          try {
+            const token = await getAgoraToken(channelName, uid, 'publisher');
+            await client.current.setClientRole('host');
+            await client.current.join(AGORA_APP_ID, channelName, token, uid);
+            if (localAudioTrack && localVideoTrack) {
+              await client.current.publish([localAudioTrack, localVideoTrack]);
+            } else {
+              toast.error("Camera/Mic not ready. Check permissions.");
+              return;
+            }
+            await updateEventStreamingStatus(event.id, true);
+            setIsLive(true);
+            setStreamHealth('good');
+            onUpdateStatus(true);
+            toast.success("You are now LIVE! 🔴");
+          } catch (error: any) {
+            console.error("Error starting stream:", error);
+            toast.error(`Failed to start stream: ${error.message}`);
+          }
+        }, 3000);
+      }
     } else {
-      stopWebcam();
-    }
-
-    return () => stopWebcam();
-  }, [streamMethod]);
-
-  const startWebcam = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
-      });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      streamRef.current = stream;
-      setCameraEnabled(true);
-      setMicEnabled(true);
-    } catch (error) {
-      console.error("Error accessing webcam:", error);
-      toast.error("Could not access camera/microphone");
-      setStreamMethod('obs'); // Fallback to OBS instructions
-    }
-  };
-
-  const stopWebcam = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  };
-
-  const toggleCamera = () => {
-    if (streamRef.current) {
-      const videoTrack = streamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setCameraEnabled(videoTrack.enabled);
-      }
-    }
-  };
-
-  const toggleMic = () => {
-    if (streamRef.current) {
-      const audioTrack = streamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setMicEnabled(audioTrack.enabled);
+      // Stop Streaming (Leave)
+      try {
+        await client.current.leave();
+        
+        // Update DB status
+        await updateEventStreamingStatus(event.id, false);
+        
+        setIsLive(false);
+        setStreamHealth('offline');
+        onUpdateStatus(false);
+        toast.info("Stream ended");
+      } catch (error) {
+         console.error("Error stopping stream:", error);
       }
     }
   };
@@ -174,45 +228,10 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     toast.success(`${label} copied to clipboard`);
   };
 
-  const toggleLive = async () => {
-    const newState = !isLive;
-    
-    // Optimistic update
-    setIsLive(newState);
-    setStreamHealth(newState ? 'good' : 'offline');
-    onUpdateStatus(newState);
-    
-    // Persist to database
-    try {
-      await updateEventStreamingStatus(event.id, newState);
-      
-      if (newState) {
-        toast.success("You are now LIVE! 🔴", {
-          description: "Your followers have been notified."
-        });
-      } else {
-        toast.info("Stream ended", {
-          description: "The broadcast has stopped."
-        });
-      }
-    } catch (error) {
-      console.error('Failed to update streaming status:', error);
-      // Revert on error
-      setIsLive(!newState);
-      setStreamHealth(!newState ? 'good' : 'offline');
-      onUpdateStatus(!newState);
-      toast.error("Failed to update stream status", {
-        description: "Please try again."
-      });
-    }
-  };
-
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col md:flex-row overflow-hidden">
-      {/* LEFT COLUMN: Preview & Controls */}
+    <div className="fixed inset-0 bg-gradient-to-b from-[#0b0f1a] to-black z-50 flex flex-col overflow-hidden">
       <div className="flex-1 flex flex-col relative">
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10 bg-gradient-to-b from-black/70 to-transparent">
           <div className="flex items-center gap-3">
             <button onClick={onClose} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors">
               <X className="w-5 h-5" />
@@ -242,188 +261,141 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           </div>
         </div>
 
-        {/* Main Preview Area */}
-        <div className="flex-1 bg-gray-900 relative flex items-center justify-center">
-          {streamMethod === 'webcam' ? (
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              muted 
-              playsInline 
-              className={`w-full h-full object-cover ${!cameraEnabled ? 'hidden' : ''}`}
-            />
-          ) : (
-            <div className="text-center p-8 max-w-md">
-              <div className="w-20 h-20 rounded-full bg-purple-900/30 flex items-center justify-center mx-auto mb-6 border border-purple-500/30 animate-pulse">
-                <Wifi className="w-10 h-10 text-purple-400" />
-              </div>
-              <h3 className="text-white text-xl font-bold mb-2">Connect via OBS</h3>
-              <p className="text-gray-400 mb-6">Use the stream key settings to connect your broadcasting software.</p>
-              <div className="flex flex-col gap-2 text-sm text-gray-500">
-                <p>Status: <span className="text-yellow-500">Waiting for signal...</span></p>
-                <p>Bitrate: 0 kbps</p>
-              </div>
-            </div>
-          )}
-          
-          {!cameraEnabled && streamMethod === 'webcam' && (
-             <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-               <div className="flex flex-col items-center text-gray-500">
+        <div className="h-[70vh] relative flex items-center justify-center overflow-hidden rounded-b-3xl">
+          <div id="local-player" className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`} style={{ transform: 'rotateY(180deg)' }} />
+          {!cameraEnabled && (
+             <div className="absolute inset-0 flex items-center justify-center">
+               <div className="flex flex-col items-center text-white/70">
                  <VideoOff className="w-12 h-12 mb-3" />
-                 <p>Camera is off</p>
+                 <span>Camera is off</span>
                </div>
              </div>
           )}
-
-          {/* Bottom Control Bar */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
-            <div className="flex items-center justify-center gap-4 max-w-2xl mx-auto">
-              
-              {streamMethod === 'webcam' && (
-                <>
-                  <button 
-                    onClick={toggleMic}
-                    className={`p-4 rounded-full transition-all ${micEnabled ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-red-500/20 text-red-500 hover:bg-red-500/30'}`}
-                  >
-                    {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-                  </button>
-                  
-                  <button 
-                    onClick={toggleCamera}
-                    className={`p-4 rounded-full transition-all ${cameraEnabled ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-red-500/20 text-red-500 hover:bg-red-500/30'}`}
-                  >
-                    {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
-                  </button>
-                </>
-              )}
-
-              <button 
-                onClick={toggleLive}
-                className={`px-8 py-4 rounded-full font-bold text-lg shadow-xl transition-all transform hover:scale-105 flex items-center gap-2 min-w-[180px] justify-center ${
-                  isLive 
-                    ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' 
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
-              >
-                <Radio className="w-5 h-5" />
-                {isLive ? 'END STREAM' : 'GO LIVE'}
+          {countdown > 0 && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-white text-6xl font-bold">{countdown}</div>
+            </div>
+          )}
+          <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center">
+            <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-3 flex items-center gap-3">
+              <button onClick={toggleMic} className={`p-2 rounded-full ${micEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'}`}>
+                {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
               </button>
-              
-              <button 
-                onClick={() => setStreamMethod(prev => prev === 'obs' ? 'webcam' : 'obs')}
-                className="p-4 rounded-full bg-gray-800 hover:bg-gray-700 text-white transition-all"
-                title={streamMethod === 'obs' ? "Switch to Webcam" : "Switch to OBS"}
-              >
+              <button onClick={toggleCamera} className={`p-2 rounded-full ${cameraEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'}`}>
+                {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+              </button>
+              <button className="p-2 rounded-full bg-black/30 text-white">
                 <Settings className="w-6 h-6" />
+              </button>
+              <button onClick={toggleLive} className={`px-8 py-3 rounded-full font-bold text-lg ${isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-green-600 text-white'}`}>
+                {countdown > 0 ? `${countdown}` : (isLive ? 'END STREAM' : 'GO LIVE')}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Settings & Chat */}
-      <div className="w-full md:w-96 bg-gray-900 border-l border-gray-800 flex flex-col">
-        
-        {/* Stream Settings Panel */}
-        <div className="p-6 border-b border-gray-800">
-          <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-            <Settings className="w-4 h-4 text-purple-400" />
-            Stream Settings
-          </h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs text-gray-500 uppercase font-semibold mb-1.5 block">Stream URL</label>
-              <div className="flex items-center gap-2 bg-black/30 rounded-lg p-2 border border-gray-800">
-                <input 
-                  type="text" 
-                  value={rtmpUrl} 
-                  readOnly 
-                  className="bg-transparent text-gray-300 text-sm flex-1 outline-none font-mono"
-                />
-                <button onClick={() => handleCopy(rtmpUrl, "Stream URL")} className="text-gray-500 hover:text-white transition-colors">
-                  <Copy className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-gray-500 uppercase font-semibold mb-1.5 block">Stream Key</label>
-              <div className="flex items-center gap-2 bg-black/30 rounded-lg p-2 border border-gray-800">
-                <input 
-                  type={showKey ? "text" : "password"} 
-                  value={streamKey} 
-                  readOnly 
-                  className="bg-transparent text-gray-300 text-sm flex-1 outline-none font-mono"
-                />
-                <button onClick={() => setShowKey(!showKey)} className="text-gray-500 hover:text-white transition-colors">
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-                <button onClick={() => handleCopy(streamKey, "Stream Key")} className="text-gray-500 hover:text-white transition-colors">
-                  <Copy className="w-4 h-4" />
-                </button>
-              </div>
-              <p className="text-xs text-yellow-600/80 mt-1.5">
-                ⚠️ Never share your stream key with anyone.
-              </p>
-            </div>
+      <div className="flex-1 px-6 pt-4 overflow-y-auto">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
+          <div className="flex items-center gap-2 px-4 pt-4">
+            <button title="Stream Settings" onClick={() => setActiveTab('settings')} className={`p-2 rounded-full ${activeTab === 'settings' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'}`}>
+              <Settings className="w-5 h-5" />
+            </button>
+            <button title="Chat" onClick={() => setActiveTab('chat')} className={`p-2 rounded-full ${activeTab === 'chat' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'}`}>
+              <MessageCircle className="w-5 h-5" />
+            </button>
+            <button title="Monetization" onClick={() => setActiveTab('monetization')} className={`p-2 rounded-full ${activeTab === 'monetization' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'}`}>
+              <CreditCard className="w-5 h-5" />
+            </button>
+            <button title="Analytics" disabled={!isLive} onClick={() => setActiveTab('analytics')} className={`p-2 rounded-full ${activeTab === 'analytics' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'} ${!isLive ? 'opacity-50' : ''}`}>
+              <Activity className="w-5 h-5" />
+            </button>
           </div>
-        </div>
-
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="p-4 border-b border-gray-800 bg-gray-900/50">
-            <h3 className="text-white font-bold flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 text-purple-400" />
-              Live Chat
-            </h3>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={chatContainerRef}>
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-gray-500 text-center p-4">
-                <MessageCircle className="w-8 h-8 mb-2 opacity-50" />
-                <p className="text-sm">No messages yet.</p>
-                <p className="text-xs">Start the conversation!</p>
-              </div>
-            ) : (
-              messages.map((msg) => (
-                <div key={msg.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {msg.user?.avatar_url ? (
-                      <img src={msg.user.avatar_url} alt={msg.user.username} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xs text-white font-bold">{(msg.user?.username || 'U').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-gray-400 text-xs mb-0.5">
-                      {msg.user?.username || 'User'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    <p className="text-gray-200 text-sm break-words">{msg.message}</p>
+          <div className="p-6">
+            {activeTab === 'settings' && (
+              <div className="space-y-6">
+                <div className="relative w-64 bg-white/10 rounded-full p-1">
+                  <div className={`absolute top-1 bottom-1 w-1/2 bg-purple-600 rounded-full transition-transform ${streamMethod === 'webcam' ? 'translate-x-0' : 'translate-x-full'}`}></div>
+                  <div className="relative z-10 flex">
+                    <button onClick={() => setStreamMethod('webcam')} className={`w-1/2 py-2 rounded-full ${streamMethod === 'webcam' ? 'text-white' : 'text-white/70'}`}>Webcam</button>
+                    <button onClick={() => setStreamMethod('obs')} className={`w-1/2 py-2 rounded-full ${streamMethod === 'obs' ? 'text-white' : 'text-white/70'}`}>OBS / RTMP</button>
                   </div>
                 </div>
-              ))
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="text-white/70 text-xs">Stream Title</div>
+                    <input value={streamTitle} onChange={e => setStreamTitle(e.target.value)} className="w-full bg-white/10 text-white rounded-lg px-3 py-2 outline-none" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-white/70 text-xs">Category</div>
+                    <select value={streamCategory} onChange={e => setStreamCategory(e.target.value)} className="w-full bg-white/10 text-white rounded-lg px-3 py-2 outline-none">
+                      <option>General</option>
+                      <option>Music</option>
+                      <option>Sports</option>
+                      <option>Gaming</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-white/70 text-xs">Visibility</div>
+                    <select value={visibility} onChange={e => setVisibility(e.target.value as any)} className="w-full bg-white/10 text-white rounded-lg px-3 py-2 outline-none">
+                      <option value="public">Public</option>
+                      <option value="ticket">Ticket holders only</option>
+                      <option value="followers">Followers only</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-white/70 text-xs">Monetization</div>
+                    <button onClick={() => setMonetizationEnabled(m => !m)} className={`px-3 py-2 rounded-lg ${monetizationEnabled ? 'bg-green-600 text-white' : 'bg-white/10 text-white'}`}>
+                      {monetizationEnabled ? 'Enabled' : 'Disabled'}
+                    </button>
+                  </div>
+                </div>
+                {streamMethod === 'obs' && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="text-white/70 text-xs">Stream URL</div>
+                      <div className="flex items-center gap-2 bg-white/10 rounded-lg p-2 border border-white/10">
+                        <input type="text" value={rtmpUrl} readOnly className="bg-transparent text-gray-300 text-sm flex-1 outline-none font-mono" />
+                        <button onClick={() => handleCopy(rtmpUrl, "Stream URL")} className="text-gray-300 hover:text-white">
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-white/70 text-xs">Stream Key</div>
+                      <div className="flex items-center gap-2 bg-white/10 rounded-lg p-2 border border-white/10">
+                        <input type={showKey ? "text" : "password"} value={streamKey} readOnly className="bg-transparent text-gray-300 text-sm flex-1 outline-none font-mono" />
+                        <button onClick={() => setShowKey(!showKey)} className="text-gray-300 hover:text-white">
+                          {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        <button onClick={() => handleCopy(streamKey, "Stream Key")} className="text-gray-300 hover:text-white">
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </div>
-
-          <div className="p-4 bg-gray-900 border-t border-gray-800">
-             <form onSubmit={handleSendMessage} className="relative">
-               <input 
-                 type="text" 
-                 value={newMessage}
-                 onChange={(e) => setNewMessage(e.target.value)}
-                 placeholder="Send a message as host..." 
-                 className="w-full bg-black/30 border border-gray-800 rounded-lg px-4 py-2.5 pr-10 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
-               />
-               <button 
-                 type="submit"
-                 disabled={!newMessage.trim()}
-                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-purple-500 hover:text-purple-400 disabled:opacity-50 transition-colors"
-               >
-                 <MessageCircle className="w-4 h-4" />
-               </button>
-             </form>
+            {activeTab === 'chat' && (
+              <div className="space-y-4">
+                <div className="h-32 rounded-xl bg-white/5 flex items-center justify-center text-white/60">
+                  Say hello to your audience
+                </div>
+                <form onSubmit={handleSendMessage} className="relative">
+                  <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Send a message as host..." className="w-full bg-white/10 text-white rounded-full py-3 pl-4 pr-12 outline-none" />
+                  <button type="submit" disabled={!newMessage.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-600 rounded-full text-white disabled:opacity-50">
+                    <MessageCircle className="w-4 h-4" />
+                  </button>
+                </form>
+              </div>
+            )}
+            {activeTab === 'monetization' && (
+              <div className="text-white/70">Monetization settings coming soon</div>
+            )}
+            {activeTab === 'analytics' && (
+              <div className="text-white/70">Live analytics</div>
+            )}
           </div>
         </div>
       </div>

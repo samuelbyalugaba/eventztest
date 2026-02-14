@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, Share2, Send, Users, MoreVertical, Maximize2, Minimize2, Volume2, VolumeX, Play, Pause } from 'lucide-react';
+import { X, Heart, Share2, Send, Users, MoreVertical, Maximize2, Minimize2, Volume2, VolumeX, Play, Pause, Gift, BadgeCheck } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages } from '../utils/supabase/api';
 import { toast } from 'sonner';
-import Hls from 'hls.js';
+import AgoraRTC, { IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng';
+import { AGORA_APP_ID, getAgoraToken } from '../utils/agora';
 
 interface LiveStreamViewerProps {
   stream: {
@@ -28,10 +29,17 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   const [messages, setMessages] = useState<{ user: string; text: string; avatar?: string }[]>([]);
   const [likes, setLikes] = useState(0);
   const [videoError, setVideoError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [showEventInfo, setShowEventInfo] = useState(false);
+  const [reactions, setReactions] = useState<number[]>([]);
+  const [showChatDrawer, setShowChatDrawer] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
+  
+  // Agora State
+  const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
+  const client = useRef(AgoraRTC.createClient({ mode: 'live', codec: 'vp8' }));
 
   // Load chat messages
   useEffect(() => {
@@ -64,120 +72,87 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     };
   }, [stream.id]);
 
-  // Initialize HLS video player
+  // Initialize Agora Client (Audience)
   useEffect(() => {
-    if (!stream.playback_url || !videoRef.current) return;
+    let mounted = true;
+    const channelName = `event-${stream.id}`;
 
-    const video = videoRef.current;
-    const url = stream.playback_url;
-
-    // Check if URL is HLS (.m3u8)
-    const isHLS = url.includes('.m3u8') || url.endsWith('/master.m3u8');
-
-    if (isHLS) {
-      // Check if browser natively supports HLS (Safari)
-      if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native HLS support (Safari)
-        video.src = url;
-        if (isPlaying) {
-          video.play().catch((err) => {
-            console.error('Error playing video:', err);
-            setVideoError('Failed to play video');
-            setIsPlaying(false);
-          });
-        }
-      } else if (Hls.isSupported()) {
-        // Use hls.js for browsers that don't support HLS natively
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90,
-        });
+    const initAgora = async () => {
+      try {
+        const token = await getAgoraToken(channelName, 0, 'subscriber'); // 0 for random UID
         
-        hlsRef.current = hls;
-        
-        hls.loadSource(url);
-        hls.attachMedia(video);
-
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          if (isPlaying) {
-            video.play().catch((err) => {
-              console.error('Error playing video:', err);
-              setVideoError('Failed to play video');
-              setIsPlaying(false);
-            });
+        // Add event listeners
+        client.current.on("user-published", async (user, mediaType) => {
+          await client.current.subscribe(user, mediaType);
+          
+          if (mediaType === "video") {
+            setRemoteUsers(prev => [...prev, user]);
+            // Play video (needs to happen after state update renders the div)
+            // But state update is async.
+            // Better to handle play in a separate effect or immediately if div exists.
+            // We'll rely on a separate effect to play/attach tracks when remoteUsers changes.
+          }
+          if (mediaType === "audio") {
+            user.audioTrack?.play();
           }
         });
 
-        hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                console.error('Fatal network error, trying to recover...');
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                console.error('Fatal media error, trying to recover...');
-                hls.recoverMediaError();
-                break;
-              default:
-                console.error('Fatal error, destroying HLS instance');
-                hls.destroy();
-                setVideoError('Failed to load video stream');
-                break;
-            }
-          }
+        client.current.on("user-unpublished", (user) => {
+          setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
         });
 
-        return () => {
-          hls.destroy();
-        };
-      } else {
-        // HLS not supported
-        setVideoError('HLS video playback is not supported in this browser');
-      }
-    } else {
-      // Regular video (MP4, WebM, etc.)
-      video.src = url;
-      if (isPlaying) {
-        video.play().catch((err) => {
-          console.error('Error playing video:', err);
-          setVideoError('Failed to play video');
-          setIsPlaying(false);
-        });
-      }
-    }
+        await client.current.setClientRole('audience');
+        await client.current.join(AGORA_APP_ID, channelName, token, null);
 
-    // Error handler for video element
-    const handleError = () => {
-      setVideoError('Failed to load video');
-      setIsPlaying(false);
+      } catch (error: any) {
+        console.error("Agora join error:", error);
+        setVideoError(`Failed to join stream: ${error.message}`);
+      }
     };
 
-    video.addEventListener('error', handleError);
+    initAgora();
 
     return () => {
-      video.removeEventListener('error', handleError);
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
+      mounted = false;
+      client.current.leave();
+      client.current.removeAllListeners();
     };
-  }, [stream.playback_url, isPlaying]);
+  }, [stream.id]);
 
-  // Handle Play/Pause
+  // Play Remote Video Tracks
   useEffect(() => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.play().catch(() => {
-          setIsPlaying(false);
-          setVideoError('Failed to play video');
-        });
-      } else {
-        videoRef.current.pause();
+    remoteUsers.forEach(user => {
+      const playerContainer = document.getElementById(`remote-player-${user.uid}`);
+      if (playerContainer && user.videoTrack) {
+        user.videoTrack.play(playerContainer);
       }
-    }
-  }, [isPlaying]);
+    });
+  }, [remoteUsers]);
+
+  // Handle Play/Pause (Local Mute/Stop)
+  // For Audience, "Pause" usually means stopping the video/audio track playback locally
+  useEffect(() => {
+     remoteUsers.forEach(user => {
+       if (user.videoTrack) {
+         if (isPlaying) {
+            // If track is playing, do nothing? Or re-play?
+            // user.videoTrack.play(...) handles it.
+         } else {
+            // user.videoTrack.stop(); // This would remove the video element content
+         }
+       }
+     });
+  }, [isPlaying, remoteUsers]);
+
+  // Handle Mute
+  useEffect(() => {
+    remoteUsers.forEach(user => {
+      if (user.audioTrack) {
+        user.audioTrack.setVolume(isMuted ? 0 : 100);
+      }
+    });
+  }, [isMuted, remoteUsers]);
+
 
   // Auto-scroll chat
   useEffect(() => {
@@ -220,7 +195,7 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
 
   const handleLike = () => {
     setLikes(prev => prev + 1);
-    // Show floating heart animation logic could go here
+    setReactions(prev => [...prev, Date.now()]);
   };
 
   const toggleFullscreen = () => {
@@ -232,21 +207,25 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
       setIsFullscreen(false);
     }
   };
+  const toggleFollow = () => {
+    setIsFollowing(f => !f);
+  };
 
   return (
     <div ref={containerRef} className="fixed inset-0 z-[100] bg-black flex flex-col md:flex-row">
       {/* Video Player Area */}
-      <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
+      <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden" onDoubleClick={handleLike}>
         {/* Main Video */}
-        {stream.playback_url && !videoError ? (
-          <video
-            ref={videoRef}
-            className="w-full h-full object-contain"
-            autoPlay={isPlaying}
-            muted={isMuted}
-            playsInline
-            controls={false}
-          />
+        {remoteUsers.length > 0 ? (
+          <div className="w-full h-full flex items-center justify-center">
+            {remoteUsers.map(user => (
+              <div 
+                key={user.uid}
+                id={`remote-player-${user.uid}`}
+                className="w-full h-full" // Adjust for multiple users if needed, currently assumes 1 host
+              />
+            ))}
+          </div>
         ) : (
           <div className="absolute inset-0">
             <ImageWithFallback
@@ -261,7 +240,8 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
                     <button
                       onClick={() => {
                         setVideoError(null);
-                        setIsPlaying(true);
+                        // Retry logic would involve re-joining
+                        window.location.reload(); // Simple retry for now
                       }}
                       className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                     >
@@ -269,45 +249,41 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
                     </button>
                   </>
                 ) : (
-                  <p className="text-white/70">Stream Preview</p>
+                  <div className="text-center">
+                     <p className="text-white text-xl font-bold mb-2">Waiting for host to join...</p>
+                     <p className="text-white/70 animate-pulse">Connecting to live stream...</p>
+                  </div>
                 )}
              </div>
           </div>
         )}
 
-        {/* Overlays & Controls */}
         <div className={`absolute inset-0 transition-opacity duration-300 flex flex-col justify-between p-4 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          
-          {/* Top Bar */}
           <div className="flex items-start justify-between bg-gradient-to-b from-black/60 to-transparent pt-2 pb-12 px-2 -mx-2 -mt-2">
             <div className="flex items-center gap-3">
-              <button 
-                onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-full text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              <div>
-                <h2 className="text-white font-semibold text-lg line-clamp-1">{stream.title}</h2>
-                <div className="flex items-center gap-2 text-white/80 text-sm">
-                  <span className="flex items-center gap-1 bg-red-600 px-2 py-0.5 rounded text-xs font-bold">
-                    LIVE
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    {stream.viewers?.toLocaleString()} watching
-                  </span>
-                </div>
+              <div className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center">
+                <span className="font-bold">{(stream.host || 'U').charAt(0).toUpperCase()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="text-white font-semibold text-sm">{stream.host}</button>
+                <BadgeCheck className="w-4 h-4 text-blue-400" />
+                <span className="flex items-center gap-1 bg-red-600 px-2 py-0.5 rounded text-[10px] font-bold">LIVE</span>
+                <span className="flex items-center gap-1 text-white/80 text-xs">
+                  <Users className="w-4 h-4" />
+                  {stream.viewers?.toLocaleString()}
+                </span>
               </div>
             </div>
-            
             <div className="flex items-center gap-2">
-               <div className="bg-black/30 backdrop-blur-md px-3 py-1 rounded-full text-white/90 text-sm border border-white/10">
-                 {stream.quality}
-               </div>
-               <button className="p-2 hover:bg-white/10 rounded-full text-white transition-colors">
-                 <MoreVertical className="w-6 h-6" />
-               </button>
+              <button className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs">
+                <Share2 className="w-4 h-4" />
+              </button>
+              <button onClick={toggleFollow} className={`px-3 py-1.5 rounded-full text-xs ${isFollowing ? 'bg-green-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+              <button onClick={onClose} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs">
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
@@ -338,85 +314,100 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Sidebar (Chat & Interactions) - Hidden on landscape mobile if needed, but we'll keep it simple */}
-      <div className="w-full md:w-96 bg-gray-900 border-l border-gray-800 flex flex-col h-[40vh] md:h-full z-10">
-        
-        {/* Host Info */}
-        <div className="p-4 border-b border-gray-800 bg-gray-900 flex items-center justify-between">
-           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                {stream.host.charAt(0)}
-             </div>
-             <div>
-               <p className="text-white font-medium">{stream.host}</p>
-               <p className="text-gray-400 text-xs">Host</p>
-             </div>
-           </div>
-           <button className="px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full hover:bg-purple-700">
-             Follow
-           </button>
-        </div>
-
-        {/* Chat Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="text-center text-gray-500 text-sm my-4">
-            Welcome to the live chat! 👋
-          </div>
-          {messages.map((msg, i) => (
-            <div key={i} className="flex items-start gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
-              <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                <UserAvatar src={msg.avatar} name={msg.user} className="w-full h-full" />
+          <div className="pointer-events-none flex-1" />
+          <div className="bg-gradient-to-t from-black via-black/60 to-transparent px-4 py-6">
+            <div className="max-w-5xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setIsPlaying(p => !p)} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                </button>
+                <button onClick={() => setIsMuted(m => !m)} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                </button>
               </div>
-              <div className="flex-1">
-                <p className="text-gray-400 text-xs mb-0.5">{msg.user}</p>
-                <p className="text-white text-sm">{msg.text}</p>
+              <div className="flex items-center gap-3">
+                <button onClick={toggleFullscreen} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  {isFullscreen ? <Minimize2 className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
+                </button>
+                <button onClick={handleLike} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  <Heart className="w-6 h-6" />
+                </button>
+                <button className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  <Share2 className="w-6 h-6" />
+                </button>
               </div>
             </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Interaction Bar */}
-        <div className="p-4 bg-gray-900 border-t border-gray-800">
-          
-          {/* Floating Actions */}
-          <div className="flex items-center justify-end gap-3 mb-4">
-             <button 
-               onClick={handleLike}
-               className="p-3 bg-gray-800 rounded-full text-pink-500 hover:bg-gray-700 transition-colors relative group"
-             >
-               <Heart className={`w-6 h-6 ${likes > 0 ? 'fill-pink-500' : ''}`} />
-               <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                 {likes}
-               </span>
-             </button>
-             <button className="p-3 bg-gray-800 rounded-full text-white hover:bg-gray-700 transition-colors">
-               <Share2 className="w-6 h-6" />
-             </button>
           </div>
-
-          {/* Chat Input */}
-          <form onSubmit={handleSendMessage} className="relative">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Say something..."
-              className="w-full bg-gray-800 text-white border-none rounded-full py-3 pl-4 pr-12 focus:ring-2 focus:ring-purple-600 focus:outline-none placeholder-gray-500"
-            />
-            <button 
-              type="submit"
-              disabled={!message.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-600 rounded-full text-white disabled:opacity-50 disabled:bg-gray-700 transition-all"
-            >
-              <Send className="w-4 h-4" />
+          <div className="absolute right-4 top-24 flex flex-col gap-3">
+            <button onClick={handleLike} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+              <Heart className="w-6 h-6" />
             </button>
-          </form>
+            <button className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+              <Gift className="w-6 h-6" />
+            </button>
+            <button onClick={() => setShowEventInfo(s => !s)} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+              <MoreVertical className="w-6 h-6" />
+            </button>
+            <button onClick={() => setShowChatDrawer(true)} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+              <Send className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="pointer-events-none absolute inset-0">
+            {reactions.map(r => (
+              <div key={r} className="absolute bottom-24 right-8 animate-bounce">
+                <Heart className="w-6 h-6 text-pink-500" />
+              </div>
+            ))}
+          </div>
         </div>
+        {showEventInfo && (
+          <div className="absolute left-0 top-0 bottom-0 w-[80%] md:w-[360px] bg-black/70 backdrop-blur-md border-r border-white/10">
+            <div className="p-4 space-y-3">
+              <div className="text-white font-bold text-lg">{stream.title}</div>
+              <div className="text-white/80 text-sm">Host: {stream.host}</div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowEventInfo(false)} className="px-3 py-2 rounded-full bg-white/10 text-white text-sm">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+      {showChatDrawer && (
+        <div className="absolute inset-x-0 bottom-0 h-[70%] bg-black/70 backdrop-blur-md border-t border-white/10">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between p-3">
+              <div className="text-white font-semibold text-sm">Live Chat</div>
+              <button onClick={() => setShowChatDrawer(false)} className="px-3 py-1.5 rounded-full bg-white/10 text-white text-xs">Close</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messages.map((m, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center text-xs">
+                    <span>{(m.user || 'U').charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-white/80 text-xs">{m.user || 'User'}</div>
+                    <div className="text-white text-sm">{m.text}</div>
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-white/10">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="flex-1 bg-white/10 text-white rounded-full px-4 py-2 outline-none"
+                  placeholder="Message"
+                />
+                <button type="submit" className="px-4 py-2 rounded-full bg-purple-600 text-white">Send</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
