@@ -178,6 +178,8 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
              shares: 0,
              timestamp: new Date(p.created_at).toLocaleDateString(),
              isLiked: p.is_liked,
+             posted_as_organizer: p.posted_as_organizer,
+             event: p.event,
              fallbackSrc: p.video_url 
                ? "https://images.unsplash.com/photo-1536240478700-b869070f9279?w=800&auto=format&fit=crop&q=60" 
                : getFallbackImage(index)
@@ -217,7 +219,13 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
     return num.toString();
   };
 
-  const highlights = organizerPosts.length > 0 ? organizerPosts : [];
+  const highlights = organizerPosts.length > 0 
+    ? organizerPosts.filter((p: any) => {
+        const asOrganizer = !!p.posted_as_organizer;
+        const belongsToOrganizerEvent = !!p.event && p.event.organizer_id === organizerProfile?.id;
+        return asOrganizer || belongsToOrganizerEvent;
+      })
+    : [];
 
   const handleGoLive = () => {
     // 1. Check if there are any published events

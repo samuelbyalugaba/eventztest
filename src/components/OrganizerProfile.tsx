@@ -174,6 +174,11 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
 
         // 4. Fetch Posts (as highlights/photos)
         const posts = await getPosts({ authorId: organizerId });
+        const filteredPosts = (posts || []).filter((p: any) => {
+          const asOrganizer = !!p.posted_as_organizer;
+          const belongsToOrganizerEvent = !!p.event && p.event.organizer_id === organizerId;
+          return asOrganizer || belongsToOrganizerEvent;
+        });
 
         // Map to component state
         // Prefer organizer-specific data from separate table
@@ -191,7 +196,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           rating: stats.avgRating || 0,
           phone: organizerProfile?.phone,
           whatsapp: organizerProfile?.phone, // Assuming phone is whatsapp for now
-          highlights: posts.slice(0, 5).map(p => ({
+          highlights: filteredPosts.slice(0, 5).map(p => ({
             id: p.id,
             image: p.image_urls?.[0] || '',
             video: p.video_url,
@@ -199,7 +204,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             date: (() => { try { const d = new Date(p.created_at); return isNaN(d.getTime()) ? '' : d.toLocaleDateString(); } catch { return ''; } })(),
             attendees: p.likes_count || 0
           })),
-          photos: posts.map((p, index) => ({
+          photos: filteredPosts.map((p, index) => ({
             id: p.id,
             image: p.image_urls?.[0] || '',
             video: p.video_url,

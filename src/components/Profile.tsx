@@ -324,7 +324,8 @@ export function Profile({ onLogout }: ProfileProps) {
   };
 
   // Derive media from posts
-  const photos = userPosts.flatMap(p => 
+  const filteredUserPosts = userPosts.filter(p => !p.posted_as_organizer);
+  const photos = filteredUserPosts.flatMap(p => 
     (p.image_urls || []).map((url, idx) => ({
       id: p.id * 1000 + idx,
       url,
@@ -336,7 +337,7 @@ export function Profile({ onLogout }: ProfileProps) {
     }))
   );
 
-  const videoClips = userPosts
+  const videoClips = filteredUserPosts
     .filter(p => p.video_url)
     .map(p => ({
       id: p.id,
