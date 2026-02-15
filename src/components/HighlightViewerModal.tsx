@@ -20,6 +20,7 @@ interface HighlightViewerModalProps {
     shares: number;
     timestamp: string;
     isLiked: boolean;
+    fallbackSrc?: string;
   };
   onClose: () => void;
   onLike: (id: number) => void;

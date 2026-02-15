@@ -14,6 +14,7 @@ interface Photo {
   isPost?: boolean;
   postId?: number;
   isLiked?: boolean;
+  fallbackSrc?: string;
 }
 
 interface VideoClip {

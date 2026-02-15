@@ -1,4 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-nocheck
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import jwtDecode from "npm:jwt-decode";
 import { createClient } from "npm:@supabase/supabase-js";
 

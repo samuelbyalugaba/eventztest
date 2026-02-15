@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, Users, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical, Heart } from 'lucide-react';
+import { X, MapPin, Calendar, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { VideoPreview } from './VideoPreview';
 import { MediaViewer } from './MediaViewer';
