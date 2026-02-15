@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Play } from 'lucide-react';
 
 interface VideoPreviewProps {
@@ -10,6 +10,7 @@ interface VideoPreviewProps {
 
 export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isHovering, setIsHovering] = useState(false);
   const [imageError, setImageError] = useState(false);
 
   // Helper to check for YouTube
@@ -46,9 +47,11 @@ export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps)
     <div 
       className={`relative ${className} bg-gray-900 group overflow-hidden`}
       onMouseEnter={() => {
+        setIsHovering(true);
         videoRef.current?.play().catch(() => {});
       }}
       onMouseLeave={() => {
+        setIsHovering(false);
         videoRef.current?.pause();
         if (videoRef.current) videoRef.current.currentTime = 0;
       }}

@@ -1,5 +1,5 @@
 import AgoraRTC, { IAgoraRTCClient } from 'agora-rtc-sdk-ng';
-import { isSupabaseConfigured } from './supabase/client';
+import { supabase } from './supabase/client';
 
 export const AGORA_APP_ID = 'f5ff5998cbc248459a3c536a9997b970';
 
@@ -12,25 +12,16 @@ export const AGORA_config = {
 
 export const getAgoraToken = async (channelName: string, uid: string | number, role: 'publisher' | 'subscriber') => {
   try {
-    if (!isSupabaseConfigured()) {
-      console.error('Supabase not configured: check VITE_SUPABASE_URL and VITE_SUPABASE_KEY in .env');
-      return null;
-    }
-    const resp = await fetch(`/api/agora-token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ channelName, uid, role, expireSeconds: 3600 }),
+    const { data, error } = await supabase.functions.invoke('agora-rtc-token', {
+      body: { channelName, uid, role, expireSeconds: 3600 }
     });
-    if (!resp.ok) {
-      console.warn('Direct fetch to Edge Function failed:', resp.status, await resp.text());
+    if (error) {
+      console.warn('Failed to get Agora token from Edge Function:', error.message || error);
       return null;
     }
-    const json = await resp.json();
-    return json?.token ?? null;
+    return (data as any)?.token ?? null;
   } catch (e: any) {
-    console.warn('Direct fetch exception:', (e as any)?.message || e);
+    console.warn('Agora token fetch error:', e?.message || e);
     return null;
   }
 };
