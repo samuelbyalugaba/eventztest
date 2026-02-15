@@ -10,18 +10,50 @@ export const AGORA_config = {
   codec: 'vp8',
 };
 
-export const getAgoraToken = async (channelName: string, uid: string | number, role: 'publisher' | 'subscriber') => {
+export const getAgoraToken = async (
+  channelName: string,
+  uid: string | number,
+  role: 'publisher' | 'subscriber'
+) => {
   try {
-    const { data, error } = await supabase.functions.invoke('agora-rtc-token', {
-      body: { channelName, uid, role, expireSeconds: 3600 }
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      apikey: import.meta.env.VITE_SUPABASE_KEY as string
+    };
+
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agora-rtc-token`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ channelName, uid, role, expireSeconds: 3600 })
     });
-    if (error) {
-      console.warn('Failed to get Agora token from Edge Function:', error.message || error);
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('[AgoraToken] HTTP error status:', res.status);
+      console.error('[AgoraToken] HTTP error body:', text);
       return null;
     }
-    return (data as any)?.token ?? null;
+
+    const data = await res.json();
+
+    if (!data || !(data as any).token) {
+      console.error('[AgoraToken] Response missing token. Full data:', data);
+      return null;
+    }
+
+    return (data as any).token;
   } catch (e: any) {
-    console.warn('Agora token fetch error:', e?.message || e);
+    console.error('[AgoraToken] Unexpected error calling Edge Function:', e);
+    console.error('[AgoraToken] error message:', e?.message || e);
     return null;
   }
 };

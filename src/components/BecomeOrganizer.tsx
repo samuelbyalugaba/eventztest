@@ -4,6 +4,18 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase/client';
 import { updateProfile, getPlatformStats, getProfile } from '../utils/supabase/api';
 
+const isAbortError = (error: any) => {
+  if (!error) return false;
+  const name = (error as any).name;
+  const message = (error as any).message;
+  const details = (error as any).details;
+  if (name === 'AbortError') return true;
+  if (typeof message === 'string' && message.includes('AbortError')) return true;
+  if (details && typeof details === 'object' && (details as any).name === 'AbortError') return true;
+  if (typeof details === 'string' && details.includes('AbortError')) return true;
+  return false;
+};
+
 interface BecomeOrganizerProps {
   onComplete: () => void;
 }
@@ -17,6 +29,9 @@ export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
         const data = await getPlatformStats();
         setStats(data);
       } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
         console.error('Error fetching platform stats:', error);
       }
     };
