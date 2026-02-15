@@ -40,6 +40,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [visibility, setVisibility] = useState<'public' | 'ticket' | 'followers'>('public');
   const [monetizationEnabled, setMonetizationEnabled] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(0);
+  const settingsOverlayRef = useRef<HTMLDivElement | null>(null);
+  const [isSettingsDocked, setIsSettingsDocked] = useState(false);
 
   // Timer for elapsed time
   useEffect(() => {
@@ -75,10 +77,15 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
-        
-        // Play video in the local container without mirroring
         videoTrack.play('local-player', { mirror: false });
-        
+        const container = document.getElementById('local-player');
+        if (container) {
+          const videoElement = container.querySelector('video') as HTMLVideoElement | null;
+          if (videoElement) {
+            videoElement.style.transform = 'none';
+          }
+        }
+
         setCameraEnabled(true);
         setMicEnabled(true);
       } catch (error) {
@@ -233,6 +240,26 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     toast.success(`${label} copied to clipboard`);
   };
 
+  const handleOverlayScroll = () => {
+    if (!settingsOverlayRef.current) return;
+    const { scrollTop, clientHeight } = settingsOverlayRef.current;
+    const threshold = clientHeight * 0.2;
+    const shouldDock = scrollTop > threshold;
+    setIsSettingsDocked(prev => (prev !== shouldDock ? shouldDock : prev));
+  };
+
+  const openSettingsPanel = () => {
+    setActiveTab('settings');
+    if (!settingsOverlayRef.current) return;
+    const { scrollTop, clientHeight } = settingsOverlayRef.current;
+    const threshold = clientHeight * 0.2;
+    const targetTop = scrollTop <= threshold ? clientHeight : 0;
+    settingsOverlayRef.current.scrollTo({
+      top: targetTop,
+      behavior: 'smooth',
+    });
+  };
+
   return (
     <div className="fixed inset-0 bg-black z-50 overflow-hidden">
       {/* Fullscreen video layer */}
@@ -254,7 +281,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       </div>
 
       {/* On-top HUD: header + controls */}
-      <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none z-10">
         <div className="p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
           <div className="flex items-center gap-3">
             <button onClick={onClose} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors">
@@ -290,26 +317,59 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           </div>
         </div>
 
-        <div className="pb-8 flex items-center justify-center pointer-events-auto">
-          <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-3 flex items-center gap-3">
-            <button onClick={toggleMic} className={`p-2 rounded-full ${micEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'}`}>
-              {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-            </button>
-            <button onClick={toggleCamera} className={`p-2 rounded-full ${cameraEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'}`}>
-              {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
-            </button>
-            <button className="p-2 rounded-full bg-black/30 text-white">
+        <div
+          className={`absolute bottom-8 left-0 right-0 flex items-center pointer-events-auto transition-all duration-300 ${
+            isSettingsDocked ? 'justify-end pr-6' : 'justify-center'
+          }`}
+        >
+          <div
+            className={`bg-white/10 backdrop-blur-md border border-white/10 rounded-full flex items-center gap-3 transition-all duration-300 ${
+              isSettingsDocked ? 'px-3 py-2' : 'px-4 py-3'
+            }`}
+          >
+            {!isSettingsDocked && (
+              <button
+                onClick={toggleMic}
+                className={`p-2 rounded-full ${
+                  micEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'
+                }`}
+              >
+                {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+              </button>
+            )}
+            {!isSettingsDocked && (
+              <button
+                onClick={toggleCamera}
+                className={`p-2 rounded-full ${
+                  cameraEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'
+                }`}
+              >
+                {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+              </button>
+            )}
+            <button onClick={openSettingsPanel} className="p-2 rounded-full bg-black/30 text-white">
               <Settings className="w-6 h-6" />
             </button>
-            <button onClick={toggleLive} className={`px-8 py-3 rounded-full font-bold text-lg ${isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-green-600 text-white'}`}>
-              {countdown > 0 ? `${countdown}` : (isLive ? 'END STREAM' : 'GO LIVE')}
-            </button>
+            {!isSettingsDocked && (
+              <button
+                onClick={toggleLive}
+                className={`px-8 py-3 rounded-full font-bold text-lg ${
+                  isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-green-600 text-white'
+                }`}
+              >
+                {countdown > 0 ? `${countdown}` : isLive ? 'END STREAM' : 'GO LIVE'}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Scroll overlay for settings/chat/monetization panel */}
-      <div className="absolute inset-0 overflow-y-auto pt-[100vh] px-6 pb-6">
+      <div
+        ref={settingsOverlayRef}
+        onScroll={handleOverlayScroll}
+        className="absolute inset-0 overflow-y-auto pt-[100vh] px-6 pb-6 z-0"
+      >
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
           <div className="flex items-center gap-2 px-4 pt-4">
             <button title="Stream Settings" onClick={() => setActiveTab('settings')} className={`p-2 rounded-full ${activeTab === 'settings' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'}`}>
