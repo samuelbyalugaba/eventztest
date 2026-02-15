@@ -42,6 +42,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [countdown, setCountdown] = useState<number>(0);
   const settingsOverlayRef = useRef<HTMLDivElement | null>(null);
   const [isSettingsDocked, setIsSettingsDocked] = useState(false);
+  const noMirrorObserverRef = useRef<MutationObserver | null>(null);
 
   // Timer for elapsed time
   useEffect(() => {
@@ -78,12 +79,22 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
         videoTrack.play('local-player', { mirror: false });
+
+        const enforceNoMirror = () => {
+          const container = document.getElementById('local-player');
+          if (!container) return;
+          (container as HTMLElement).style.setProperty('transform', 'none', 'important');
+          const nodes = container.querySelectorAll<HTMLElement>('video, div, canvas, *');
+          nodes.forEach(el => {
+            el.style.setProperty('transform', 'none', 'important');
+          });
+        };
+        enforceNoMirror();
         const container = document.getElementById('local-player');
         if (container) {
-          const videoElement = container.querySelector('video') as HTMLVideoElement | null;
-          if (videoElement) {
-            videoElement.style.transform = 'none';
-          }
+          const obs = new MutationObserver(() => enforceNoMirror());
+          obs.observe(container, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class'] });
+          noMirrorObserverRef.current = obs;
         }
 
         setCameraEnabled(true);
@@ -110,6 +121,10 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       localVideoTrack?.close();
       if (client.current) {
         client.current.leave();
+      }
+      if (noMirrorObserverRef.current) {
+        noMirrorObserverRef.current.disconnect();
+        noMirrorObserverRef.current = null;
       }
     };
   }, []);

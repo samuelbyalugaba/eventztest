@@ -15,7 +15,8 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  #local-player video {
+  #local-player,
+  #local-player * {
     transform: none !important;
   }
 }
