@@ -1470,6 +1470,30 @@ export const updateEventStreamingStatus = async (eventId: number, isLive: boolea
   return data;
 };
 
+export const updateLiveViewerCount = async (eventId: number, delta: number) => {
+  const { data: currentEvent, error: fetchError } = await supabase
+    .from('events')
+    .select('streaming')
+    .eq('id', eventId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  const currentStreaming = currentEvent?.streaming || {};
+  const currentCount = currentStreaming.liveViewers || 0;
+  const newCount = Math.max(0, currentCount + delta);
+
+  const { data, error } = await supabase
+    .from('events')
+    .update({ streaming: { ...currentStreaming, liveViewers: newCount } })
+    .eq('id', eventId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
 export const generateStreamKeys = async (eventId: number) => {
   // In a real app, this would call a backend function (Edge Function) to talk to Mux/AWS
   const streamKey = `sk_${Math.random().toString(36).substr(2, 12)}`;

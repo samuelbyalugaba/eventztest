@@ -246,7 +246,11 @@ export function LiveFeed() {
         const mappedLive = live.map((e: any) => ({
           ...e,
           thumbnail: e.image_url,
-          host: e.organizer?.organizer_name || 'Unknown Host',
+          host:
+            e.organizer?.organizer_details?.organizer_name ||
+            e.organizer?.full_name ||
+            e.organizer?.username ||
+            'Event Organizer',
           viewers: e.streaming?.liveViewers || 0,
           isLive: true,
           playback_url: e.streaming?.playback_url,
@@ -261,7 +265,11 @@ export function LiveFeed() {
           ...e,
           thumbnail: e.image_url,
           scheduledTime: `${e.date} at ${e.time}`,
-          host: e.organizer?.organizer_name || 'Unknown Host',
+          host:
+            e.organizer?.organizer_details?.organizer_name ||
+            e.organizer?.full_name ||
+            e.organizer?.username ||
+            'Event Organizer',
           country: e.location?.split(',').pop()?.trim() || 'Tanzania', // Try to guess country
           countdown: Math.max(0, Math.floor((new Date(`${e.date}T${e.time}`).getTime() - new Date().getTime()) / (1000 * 60)))
         }));
