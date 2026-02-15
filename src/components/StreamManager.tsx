@@ -42,9 +42,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [countdown, setCountdown] = useState<number>(0);
   const settingsOverlayRef = useRef<HTMLDivElement | null>(null);
   const [isSettingsDocked, setIsSettingsDocked] = useState(false);
-  const noMirrorObserverRef = useRef<MutationObserver | null>(null);
-  const [isMirrored, setIsMirrored] = useState(false);
-  const isMirroredRef = useRef(false);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
 
   // Timer for elapsed time
   useEffect(() => {
@@ -70,7 +69,19 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
     const initLocalTracks = async () => {
       try {
-        const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+        const cameras = await AgoraRTC.getCameras();
+        if (!mounted) return;
+
+        setAvailableCameras(cameras);
+        const initialIndex = 0;
+        setCurrentCameraIndex(initialIndex);
+
+        const cameraId = cameras[initialIndex]?.deviceId;
+
+        const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+          {},
+          cameraId ? { cameraId } : {}
+        );
         
         if (!mounted) {
           audioTrack.close();
@@ -81,21 +92,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
         videoTrack.play('local-player');
-
-        const applyMirror = () => {
-          const container = document.getElementById('local-player');
-          if (!container) return;
-          const value = isMirroredRef.current ? 'scaleX(-1)' : 'none';
-          (container as HTMLElement).style.setProperty('transform', value, 'important');
-        };
-
-        applyMirror();
-        const container = document.getElementById('local-player');
-        if (container) {
-          const obs = new MutationObserver(() => applyMirror());
-          obs.observe(container, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class'] });
-          noMirrorObserverRef.current = obs;
-        }
 
         setCameraEnabled(true);
         setMicEnabled(true);
@@ -114,15 +110,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     };
   }, []); // Only run once on mount
 
-  useEffect(() => {
-    isMirroredRef.current = isMirrored;
-    const container = document.getElementById('local-player');
-    if (container) {
-      const value = isMirrored ? 'scaleX(-1)' : 'none';
-      (container as HTMLElement).style.setProperty('transform', value, 'important');
-    }
-  }, [isMirrored]);
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -130,10 +117,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       localVideoTrack?.close();
       if (client.current) {
         client.current.leave();
-      }
-      if (noMirrorObserverRef.current) {
-        noMirrorObserverRef.current.disconnect();
-        noMirrorObserverRef.current = null;
       }
     };
   }, []);
@@ -147,8 +130,31 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     }
   };
 
-  const toggleMirror = () => {
-    setIsMirrored(prev => !prev);
+  const toggleCameraDevice = async () => {
+    if (!localVideoTrack) return;
+    try {
+      const cameras = availableCameras.length
+        ? availableCameras
+        : await AgoraRTC.getCameras();
+
+      if (cameras.length < 2) {
+        toast.error('No secondary camera available');
+        return;
+      }
+
+      if (!availableCameras.length) {
+        setAvailableCameras(cameras);
+      }
+
+      const nextIndex = (currentCameraIndex + 1) % cameras.length;
+      const nextCamera = cameras[nextIndex];
+
+      await localVideoTrack.setDevice(nextCamera.deviceId);
+      setCurrentCameraIndex(nextIndex);
+    } catch (error) {
+      console.error('Failed to switch camera device:', error);
+      toast.error('Failed to switch camera');
+    }
   };
 
   // Handle Mic Toggle
@@ -380,9 +386,11 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             )}
             {!isSettingsDocked && (
               <button
-                onClick={toggleMirror}
-                className={`p-2 rounded-full ${isMirrored ? 'bg-purple-600 text-white' : 'bg-black/30 text-white'}`}
-                title="Flip preview"
+                onClick={toggleCameraDevice}
+                className={`p-2 rounded-full ${
+                  currentCameraIndex > 0 ? 'bg-purple-600 text-white' : 'bg-black/30 text-white'
+                }`}
+                title="Switch camera"
               >
                 <RotateCcw className="w-5 h-5" />
               </button>
