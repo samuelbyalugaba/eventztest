@@ -14,9 +14,4 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-
-  #local-player,
-  #local-player * {
-    transform: none !important;
-  }
 }

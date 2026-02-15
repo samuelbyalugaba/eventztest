@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, Wifi, CreditCard } from 'lucide-react';
+import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, CreditCard, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, updateEventStreamingStatus } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -43,6 +43,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const settingsOverlayRef = useRef<HTMLDivElement | null>(null);
   const [isSettingsDocked, setIsSettingsDocked] = useState(false);
   const noMirrorObserverRef = useRef<MutationObserver | null>(null);
+  const [isMirrored, setIsMirrored] = useState(false);
+  const isMirroredRef = useRef(false);
 
   // Timer for elapsed time
   useEffect(() => {
@@ -78,21 +80,19 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
-        videoTrack.play('local-player', { mirror: false });
+        videoTrack.play('local-player');
 
-        const enforceNoMirror = () => {
+        const applyMirror = () => {
           const container = document.getElementById('local-player');
           if (!container) return;
-          (container as HTMLElement).style.setProperty('transform', 'none', 'important');
-          const nodes = container.querySelectorAll<HTMLElement>('video, div, canvas, *');
-          nodes.forEach(el => {
-            el.style.setProperty('transform', 'none', 'important');
-          });
+          const value = isMirroredRef.current ? 'scaleX(-1)' : 'none';
+          (container as HTMLElement).style.setProperty('transform', value, 'important');
         };
-        enforceNoMirror();
+
+        applyMirror();
         const container = document.getElementById('local-player');
         if (container) {
-          const obs = new MutationObserver(() => enforceNoMirror());
+          const obs = new MutationObserver(() => applyMirror());
           obs.observe(container, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class'] });
           noMirrorObserverRef.current = obs;
         }
@@ -113,6 +113,15 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       localVideoTrack?.close();
     };
   }, []); // Only run once on mount
+
+  useEffect(() => {
+    isMirroredRef.current = isMirrored;
+    const container = document.getElementById('local-player');
+    if (container) {
+      const value = isMirrored ? 'scaleX(-1)' : 'none';
+      (container as HTMLElement).style.setProperty('transform', value, 'important');
+    }
+  }, [isMirrored]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -136,6 +145,10 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       await localVideoTrack.setEnabled(newState);
       setCameraEnabled(newState);
     }
+  };
+
+  const toggleMirror = () => {
+    setIsMirrored(prev => !prev);
   };
 
   // Handle Mic Toggle
@@ -279,7 +292,10 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     <div className="fixed inset-0 bg-black z-50 overflow-hidden">
       {/* Fullscreen video layer */}
       <div className="absolute inset-0">
-        <div id="local-player" className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`} />
+        <div
+          id="local-player"
+          className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`}
+        />
         {!cameraEnabled && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center text-white/70">
@@ -362,17 +378,27 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
                 {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
               </button>
             )}
+            {!isSettingsDocked && (
+              <button
+                onClick={toggleMirror}
+                className={`p-2 rounded-full ${isMirrored ? 'bg-purple-600 text-white' : 'bg-black/30 text-white'}`}
+                title="Flip preview"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </button>
+            )}
             <button onClick={openSettingsPanel} className="p-2 rounded-full bg-black/30 text-white">
               <Settings className="w-6 h-6" />
             </button>
             {!isSettingsDocked && (
               <button
                 onClick={toggleLive}
-                className={`px-8 py-3 rounded-full font-bold text-lg ${
+                className={`w-12 h-12 rounded-full flex items-center justify-center ${
                   isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-green-600 text-white'
                 }`}
+                title={countdown > 0 ? `Going live in ${countdown}` : isLive ? 'End stream' : 'Go live'}
               >
-                {countdown > 0 ? `${countdown}` : isLive ? 'END STREAM' : 'GO LIVE'}
+                <Radio className="w-6 h-6" />
               </button>
             )}
           </div>
