@@ -141,7 +141,11 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     remoteUsers.forEach(user => {
       const playerContainer = document.getElementById(`remote-player-${user.uid}`);
       if (playerContainer && user.videoTrack) {
-        user.videoTrack.play(playerContainer);
+        user.videoTrack.play(playerContainer, { mirror: false });
+        const videoEl = playerContainer.querySelector('video') as HTMLVideoElement | null;
+        if (videoEl) {
+          videoEl.style.transform = 'none';
+        }
       }
     });
   }, [remoteUsers]);
