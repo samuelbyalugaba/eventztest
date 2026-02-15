@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, CreditCard, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, updateEventStreamingStatus } from '../utils/supabase/api';
+import { Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, updateEventStreamingStatus, getEventAnalytics, generateStreamKeys } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../utils/agora';
@@ -36,14 +36,28 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [showKey, setShowKey] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'settings' | 'chat' | 'monetization' | 'analytics'>('settings');
   const [streamTitle, setStreamTitle] = useState<string>(event.title || '');
-  const [streamCategory, setStreamCategory] = useState<string>('General');
-  const [visibility, setVisibility] = useState<'public' | 'ticket' | 'followers'>('public');
+  const [streamCategory, setStreamCategory] = useState<string>(event.category || 'General');
+  const [visibility, setVisibility] = useState<'public' | 'ticket' | 'followers'>(
+    (event.streaming as any)?.visibility || 'public'
+  );
   const [monetizationEnabled, setMonetizationEnabled] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(0);
   const settingsOverlayRef = useRef<HTMLDivElement | null>(null);
   const [isSettingsDocked, setIsSettingsDocked] = useState(false);
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
+  const [analytics, setAnalytics] = useState<any | null>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+
+  const virtualTicket = event.ticket_tiers?.find((tier) =>
+    tier.name.toLowerCase().includes('virtual')
+  );
+  const virtualPrice =
+    (event.streaming as any)?.virtualPrice || virtualTicket?.price || null;
+  const virtualAvailable =
+    virtualTicket && typeof virtualTicket.available === 'number'
+      ? virtualTicket.available
+      : null;
 
   // Timer for elapsed time
   useEffect(() => {
@@ -194,6 +208,55 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (activeTab !== 'analytics' || !isLive) return;
+
+    let cancelled = false;
+
+    const loadAnalytics = async () => {
+      try {
+        setIsLoadingAnalytics(true);
+        const data = await getEventAnalytics(event.id);
+        if (!cancelled) {
+          setAnalytics(data);
+        }
+      } catch (error) {
+        console.error('Failed to load event analytics:', error);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAnalytics(false);
+        }
+      }
+    };
+
+    loadAnalytics();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, isLive, event.id]);
+
+  useEffect(() => {
+    if (streamMethod !== 'obs') return;
+    let cancelled = false;
+    const loadKeys = async () => {
+      try {
+        const { ingestUrl, streamKey } = await generateStreamKeys(event.id);
+        if (!cancelled) {
+          setRtmpUrl(ingestUrl || '');
+          setStreamKey(streamKey || '');
+        }
+      } catch (error) {
+        console.error('Failed to generate RTMP keys:', error);
+        toast.error('Failed to generate RTMP keys');
+      }
+    };
+    loadKeys();
+    return () => {
+      cancelled = true;
+    };
+  }, [streamMethod, event.id]);
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!newMessage.trim()) return;
@@ -319,48 +382,77 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
       {/* On-top HUD: header + controls */}
       <div className="absolute inset-0 pointer-events-none z-10">
-        <div className="p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors">
-              <X className="w-5 h-5" />
+        <div className="px-3 pt-3 pb-1 flex items-center justify-between pointer-events-auto">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/10"
+            >
+              <X className="w-4 h-4" />
             </button>
-            <div>
-              <h2 className="text-white font-bold text-lg">{event.title}</h2>
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`}></span>
-                <span className="text-white/80 text-xs uppercase tracking-wider">{isLive ? 'LIVE' : 'OFFLINE'}</span>
-                {isLive && (
-                  <span className="bg-red-500/20 text-red-400 text-[10px] px-1.5 py-0.5 rounded ml-2 border border-red-500/30">
-                    {formatTime(elapsedTime)}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <h2 className="text-white font-semibold text-sm truncate max-w-[180px]">
+                  {streamTitle}
+                </h2>
+                {monetizationEnabled && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-500/15 px-2 py-0.5 border border-green-500/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                    <span className="text-[10px] text-green-200">Monetized</span>
                   </span>
                 )}
+              </div>
+              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-white/70">
+                <span className="inline-flex items-center gap-1">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'
+                    }`}
+                  />
+                  <span className="tracking-wide">
+                    {isLive ? 'LIVE' : 'OFFLINE'}
+                  </span>
+                  {isLive && (
+                    <span className="ml-1 rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] text-red-200 border border-red-500/40">
+                      {formatTime(elapsedTime)}
+                    </span>
+                  )}
+                </span>
+                <span className="text-white/50">
+                  {streamCategory} •{' '}
+                  {visibility === 'public'
+                    ? 'Public'
+                    : visibility === 'ticket'
+                    ? 'Tickets only'
+                    : 'Followers only'}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="bg-black/40 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 border border-white/10">
-              <Eye className="w-4 h-4 text-white/70" />
-              <span className="text-white text-sm font-medium">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 border border-white/10">
+              <Eye className="w-3.5 h-3.5 text-white/70" />
+              <span className="text-white text-xs font-medium">
                 {isLive ? (event.streaming?.liveViewers || 0).toLocaleString() : 0}
               </span>
             </div>
             <button
-              className="w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-700 flex items-center justify-center text-white shadow-lg shadow-purple-900/20 transition-colors"
+              className="w-8 h-8 rounded-full bg-purple-600/90 hover:bg-purple-700 flex items-center justify-center text-white border border-white/15"
               title="Share stream"
             >
-              <Share2 className="w-5 h-5" />
+              <Share2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         <div
-          className={`absolute bottom-8 left-0 right-0 flex items-center pointer-events-auto transition-all duration-300 ${
+          className={`absolute bottom-8 left-0 right-0 flex items-center pointer-events-none transition-all duration-300 ${
             isSettingsDocked ? 'justify-end pr-6' : 'justify-center'
           }`}
         >
           <div
-            className={`bg-white/10 backdrop-blur-md border border-white/10 rounded-full flex items-center gap-3 transition-all duration-300 ${
+            className={`bg-white/10 backdrop-blur-md border border-white/10 rounded-full flex items-center gap-3 transition-all duration-300 pointer-events-auto ${
               isSettingsDocked ? 'px-3 py-2' : 'px-4 py-3'
             }`}
           >
@@ -419,25 +511,58 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         onScroll={handleOverlayScroll}
         className="absolute inset-0 overflow-y-auto pt-[100vh] px-6 pb-6 z-0"
       >
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
-          <div className="flex items-center gap-2 px-4 pt-4">
-            <button title="Stream Settings" onClick={() => setActiveTab('settings')} className={`p-2 rounded-full ${activeTab === 'settings' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'}`}>
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl max-w-xl mx-auto">
+          <div className="flex items-center gap-1 px-4 pt-3">
+            <button
+              title="Stream Settings"
+              onClick={() => setActiveTab('settings')}
+              className={`p-2 rounded-full transition-colors ${
+                activeTab === 'settings'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/5 text-white/80'
+              }`}
+            >
               <Settings className="w-5 h-5" />
             </button>
-            <button title="Chat" onClick={() => setActiveTab('chat')} className={`p-2 rounded-full ${activeTab === 'chat' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'}`}>
+            <button
+              title="Chat"
+              onClick={() => setActiveTab('chat')}
+              className={`p-2 rounded-full transition-colors ${
+                activeTab === 'chat'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/5 text-white/80'
+              }`}
+            >
               <MessageCircle className="w-5 h-5" />
             </button>
-            <button title="Monetization" onClick={() => setActiveTab('monetization')} className={`p-2 rounded-full ${activeTab === 'monetization' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'}`}>
+            <button
+              title="Monetization"
+              onClick={() => setActiveTab('monetization')}
+              className={`p-2 rounded-full transition-colors ${
+                activeTab === 'monetization'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/5 text-white/80'
+              }`}
+            >
               <CreditCard className="w-5 h-5" />
             </button>
-            <button title="Analytics" disabled={!isLive} onClick={() => setActiveTab('analytics')} className={`p-2 rounded-full ${activeTab === 'analytics' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'} ${!isLive ? 'opacity-50' : ''}`}>
+            <button
+              title="Analytics"
+              disabled={!isLive}
+              onClick={() => setActiveTab('analytics')}
+              className={`p-2 rounded-full transition-colors ${
+                activeTab === 'analytics'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/5 text-white/80'
+              } ${!isLive ? 'opacity-40 cursor-not-allowed' : ''}`}
+            >
               <Activity className="w-5 h-5" />
             </button>
           </div>
           <div className="p-6">
             {activeTab === 'settings' && (
               <div className="space-y-6">
-                <div className="relative w-64 bg-white/10 rounded-full p-1">
+                <div className="relative w-full max-w-xs bg-white/10 rounded-full p-1 mx-auto">
                   <div className={`absolute top-1 bottom-1 w-1/2 bg-purple-600 rounded-full transition-transform ${streamMethod === 'webcam' ? 'translate-x-0' : 'translate-x-full'}`}></div>
                   <div className="relative z-10 flex">
                     <button onClick={() => setStreamMethod('webcam')} className={`w-1/2 py-2 rounded-full ${streamMethod === 'webcam' ? 'text-white' : 'text-white/70'}`}>Webcam</button>
@@ -447,11 +572,19 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="text-white/70 text-xs">Stream Title</div>
-                    <input value={streamTitle} onChange={e => setStreamTitle(e.target.value)} className="w-full bg-white/10 text-white rounded-lg px-3 py-2 outline-none" />
+                    <input
+                      value={streamTitle}
+                      onChange={e => setStreamTitle(e.target.value)}
+                      className="w-full bg-black/60 text-white rounded-lg px-3 py-2 outline-none border border-white/15 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/60"
+                    />
                   </div>
                   <div className="space-y-2">
                     <div className="text-white/70 text-xs">Category</div>
-                    <select value={streamCategory} onChange={e => setStreamCategory(e.target.value)} className="w-full bg-white/10 text-white rounded-lg px-3 py-2 outline-none">
+                    <select
+                      value={streamCategory}
+                      onChange={e => setStreamCategory(e.target.value)}
+                      className="w-full bg-black/60 text-white rounded-lg px-3 py-2 outline-none border border-white/15 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/60"
+                    >
                       <option>General</option>
                       <option>Music</option>
                       <option>Sports</option>
@@ -460,7 +593,11 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
                   </div>
                   <div className="space-y-2">
                     <div className="text-white/70 text-xs">Visibility</div>
-                    <select value={visibility} onChange={e => setVisibility(e.target.value as any)} className="w-full bg-white/10 text-white rounded-lg px-3 py-2 outline-none">
+                    <select
+                      value={visibility}
+                      onChange={e => setVisibility(e.target.value as any)}
+                      className="w-full bg-black/60 text-white rounded-lg px-3 py-2 outline-none border border-white/15 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/60"
+                    >
                       <option value="public">Public</option>
                       <option value="ticket">Ticket holders only</option>
                       <option value="followers">Followers only</option>
@@ -468,8 +605,17 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
                   </div>
                   <div className="space-y-2">
                     <div className="text-white/70 text-xs">Monetization</div>
-                    <button onClick={() => setMonetizationEnabled(m => !m)} className={`px-3 py-2 rounded-lg ${monetizationEnabled ? 'bg-green-600 text-white' : 'bg-white/10 text-white'}`}>
-                      {monetizationEnabled ? 'Enabled' : 'Disabled'}
+                    <button
+                      onClick={() => setMonetizationEnabled(m => !m)}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        monetizationEnabled ? 'bg-green-500' : 'bg-white/20'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
+                          monetizationEnabled ? 'right-0.5' : 'left-0.5'
+                        }`}
+                      />
                     </button>
                   </div>
                 </div>
@@ -502,8 +648,29 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             )}
             {activeTab === 'chat' && (
               <div className="space-y-4">
-                <div className="h-32 rounded-xl bg-white/5 flex items-center justify-center text-white/60">
-                  Say hello to your audience
+                <div
+                  ref={chatContainerRef}
+                  className="h-64 rounded-xl bg-white/5 overflow-y-auto p-3 space-y-3"
+                >
+                  {messages.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-white/60">
+                      Say hello to your audience
+                    </div>
+                  ) : (
+                    messages.map((message) => (
+                      <div key={message.id} className="flex gap-2 text-sm">
+                        <div className="font-semibold truncate max-w-[40%] text-purple-400">
+                          {message.user?.full_name ||
+                            (message.user as any)?.username ||
+                            'Guest'}
+                        </div>
+                        <div className="text-white/60">•</div>
+                        <div className="flex-1 break-words text-white">
+                          {message.message}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <form onSubmit={handleSendMessage} className="relative">
                   <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Send a message as host..." className="w-full bg-white/10 text-white rounded-full py-3 pl-4 pr-12 outline-none" />
@@ -514,10 +681,83 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               </div>
             )}
             {activeTab === 'monetization' && (
-              <div className="text-white/70">Monetization settings coming soon</div>
+              <div className="space-y-4 text-white/80">
+                <div className="text-sm">
+                  Monetization is{' '}
+                  <span className={monetizationEnabled ? 'text-green-400' : 'text-red-400'}>
+                    {monetizationEnabled ? 'enabled' : 'disabled'}
+                  </span>{' '}
+                  for this stream.
+                </div>
+                {virtualPrice ? (
+                  <div className="space-y-2">
+                    <div className="text-xs text-white/60">Virtual ticket</div>
+                    <div className="bg-white/10 rounded-lg p-3 inline-block">
+                      <div className="font-semibold">Virtual</div>
+                      <div className="text-sm text-white/70">{virtualPrice}</div>
+                      {virtualAvailable !== null && (
+                        <div className="text-xs text-white/60">
+                          {virtualAvailable} available
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-white/60 text-sm">
+                    No virtual ticket configured for this event.
+                  </div>
+                )}
+              </div>
             )}
             {activeTab === 'analytics' && (
-              <div className="text-white/70">Live analytics</div>
+              <div className="space-y-4 text-white/80">
+                {isLoadingAnalytics && (
+                  <div className="text-white/70 text-sm">Loading analytics...</div>
+                )}
+                {!isLoadingAnalytics && analytics && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <div className="text-xs text-white/60">Live viewers</div>
+                      <div className="text-xl font-semibold">
+                        {(event.streaming?.liveViewers || 0).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <div className="text-xs text-white/60">Total views</div>
+                      <div className="text-xl font-semibold">
+                        {analytics.views?.total ?? 0}
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <div className="text-xs text-white/60">Tickets sold</div>
+                      <div className="text-xl font-semibold">
+                        {analytics.ticketsSold?.total ?? 0}
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <div className="text-xs text-white/60">Interested</div>
+                      <div className="text-xl font-semibold">
+                        {analytics.interested?.total ?? 0}
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <div className="text-xs text-white/60">Shares</div>
+                      <div className="text-xl font-semibold">
+                        {analytics.shares?.total ?? 0}
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <div className="text-xs text-white/60">Revenue</div>
+                      <div className="text-xl font-semibold">
+                        {analytics.revenue?.total ?? 'TSh 0'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {!isLoadingAnalytics && !analytics && (
+                  <div className="text-white/60 text-sm">No analytics data yet.</div>
+                )}
+              </div>
             )}
           </div>
         </div>

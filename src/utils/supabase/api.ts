@@ -1495,15 +1495,17 @@ export const updateLiveViewerCount = async (eventId: number, delta: number) => {
 };
 
 export const generateStreamKeys = async (eventId: number) => {
-  // In a real app, this would call a backend function (Edge Function) to talk to Mux/AWS
-  const streamKey = `sk_${Math.random().toString(36).substr(2, 12)}`;
-  const ingestUrl = "rtmp://global-live.mux.com:5222/app";
-  const playbackUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"; // Demo stream for testing
+  const channelName = `event-${eventId}`;
+  const streamKey = channelName;
+  const ingestUrl = "rtmp://rtmp.eventz-bridge.local/live";
+  const playbackUrl = null;
 
   const updates = {
     stream_key: streamKey,
     ingest_url: ingestUrl,
-    playback_url: playbackUrl
+    playback_url: playbackUrl,
+    provider: 'agora-rtmp',
+    channel: channelName
   };
 
   const { data: currentEvent } = await supabase.from('events').select('streaming').eq('id', eventId).single();
