@@ -76,8 +76,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
         
-        // Play video in the local container
-        videoTrack.play('local-player');
+        // Play video in the local container without mirroring
+        videoTrack.play('local-player', { mirror: false });
         
         setCameraEnabled(true);
         setMicEnabled(true);
@@ -234,9 +234,28 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-[#0b0f1a] to-black z-50 flex flex-col overflow-hidden">
-      <div className="flex-1 flex flex-col relative">
-        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10 bg-gradient-to-b from-black/70 to-transparent">
+    <div className="fixed inset-0 bg-black z-50 overflow-hidden">
+      {/* Fullscreen video layer */}
+      <div className="absolute inset-0">
+        <div id="local-player" className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`} />
+        {!cameraEnabled && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex flex-col items-center text-white/70">
+              <VideoOff className="w-12 h-12 mb-3" />
+              <span>Camera is off</span>
+            </div>
+          </div>
+        )}
+        {countdown > 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-white text-6xl font-bold">{countdown}</div>
+          </div>
+        )}
+      </div>
+
+      {/* On-top HUD: header + controls */}
+      <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+        <div className="p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
           <div className="flex items-center gap-3">
             <button onClick={onClose} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors">
               <X className="w-5 h-5" />
@@ -254,53 +273,43 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className="bg-black/40 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 border border-white/10">
               <Eye className="w-4 h-4 text-white/70" />
-              <span className="text-white text-sm font-medium">{isLive ? (event.streaming?.liveViewers || 0).toLocaleString() : 0}</span>
+              <span className="text-white text-sm font-medium">
+                {isLive ? (event.streaming?.liveViewers || 0).toLocaleString() : 0}
+              </span>
             </div>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors shadow-lg shadow-purple-900/20">
-              Share Stream
+            <button
+              className="w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-700 flex items-center justify-center text-white shadow-lg shadow-purple-900/20 transition-colors"
+              title="Share stream"
+            >
+              <Share2 className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        <div className="h-[70vh] relative flex items-center justify-center overflow-hidden rounded-b-3xl">
-          <div id="local-player" className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`} style={{ transform: 'rotateY(180deg)' }} />
-          {!cameraEnabled && (
-             <div className="absolute inset-0 flex items-center justify-center">
-               <div className="flex flex-col items-center text-white/70">
-                 <VideoOff className="w-12 h-12 mb-3" />
-                 <span>Camera is off</span>
-               </div>
-             </div>
-          )}
-          {countdown > 0 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-white text-6xl font-bold">{countdown}</div>
-            </div>
-          )}
-          <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center">
-            <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-3 flex items-center gap-3">
-              <button onClick={toggleMic} className={`p-2 rounded-full ${micEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'}`}>
-                {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-              </button>
-              <button onClick={toggleCamera} className={`p-2 rounded-full ${cameraEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'}`}>
-                {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
-              </button>
-              <button className="p-2 rounded-full bg-black/30 text-white">
-                <Settings className="w-6 h-6" />
-              </button>
-              <button onClick={toggleLive} className={`px-8 py-3 rounded-full font-bold text-lg ${isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-green-600 text-white'}`}>
-                {countdown > 0 ? `${countdown}` : (isLive ? 'END STREAM' : 'GO LIVE')}
-              </button>
-            </div>
+        <div className="pb-8 flex items-center justify-center pointer-events-auto">
+          <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-3 flex items-center gap-3">
+            <button onClick={toggleMic} className={`p-2 rounded-full ${micEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'}`}>
+              {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+            </button>
+            <button onClick={toggleCamera} className={`p-2 rounded-full ${cameraEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'}`}>
+              {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+            </button>
+            <button className="p-2 rounded-full bg-black/30 text-white">
+              <Settings className="w-6 h-6" />
+            </button>
+            <button onClick={toggleLive} className={`px-8 py-3 rounded-full font-bold text-lg ${isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-green-600 text-white'}`}>
+              {countdown > 0 ? `${countdown}` : (isLive ? 'END STREAM' : 'GO LIVE')}
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 px-6 pt-4 overflow-y-auto">
+      {/* Scroll overlay for settings/chat/monetization panel */}
+      <div className="absolute inset-0 overflow-y-auto pt-[100vh] px-6 pb-6">
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
           <div className="flex items-center gap-2 px-4 pt-4">
             <button title="Stream Settings" onClick={() => setActiveTab('settings')} className={`p-2 rounded-full ${activeTab === 'settings' ? 'bg-purple-600 text-white' : 'bg-white/10 text-white'}`}>

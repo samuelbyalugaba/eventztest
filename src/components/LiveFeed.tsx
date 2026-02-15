@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, Play, Clock, Check, MapPin, Search, Lock, Unlock, X, CheckCircle2 } from 'lucide-react';
+import { Filter, Play, MapPin, Search, Lock, Unlock, X, CheckCircle2 } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
 import { toast } from 'sonner';
-import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, Event as ApiEvent } from '../utils/supabase/api';
+import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile, Event as ApiEvent } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 
 interface LiveStream {
@@ -219,7 +219,6 @@ export function LiveFeed() {
   const [showFilters, setShowFilters] = useState(false);
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
-  const [reminders, setReminders] = useState<Set<number>>(new Set());
   const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -382,7 +381,7 @@ export function LiveFeed() {
         // But for the jsonb value itself, it replaces it unless we handle it carefully.
         // Assuming we just have recentCountries for now, replacing `preferences` object is fine.
         // If we add more keys to preferences later, we should fetch first.
-        const profile = await getProfile(user.id);
+        // Fetch current preferences if needed in future
         // const currentPreferences = profile?.preferences || {};
         
         // Commented out to avoid PGRST204 error (missing preferences column)
@@ -422,15 +421,7 @@ export function LiveFeed() {
     ? countries.filter(c => c.id === 'all' || recentCountries.includes(c.id))
     : filteredCountries;
 
-  const toggleReminder = (id: number) => {
-    const newReminders = new Set(reminders);
-    if (newReminders.has(id)) {
-      newReminders.delete(id);
-    } else {
-      newReminders.add(id);
-    }
-    setReminders(newReminders);
-  };
+  // Reminder toggling logic can be reintroduced when reminder UI is active
 
   const formatCountdown = (minutes: number) => {
     if (minutes < 60) return `${minutes}m`;

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, Share2, Send, Users, Volume2, VolumeX, Gift, BadgeCheck } from 'lucide-react';
-import { UserAvatar } from './UserAvatar';
+import { X, Heart, Share2, Send, Users, Volume2, VolumeX, Gift } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages, updateLiveViewerCount } from '../utils/supabase/api';
 import { toast } from 'sonner';
@@ -18,6 +17,7 @@ interface LiveStreamViewerProps {
     playback_url?: string;
   };
   onClose: () => void;
+  isUnlockedOverride?: boolean;
 }
 
 export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
@@ -273,7 +273,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1">
                     <span className="text-white text-sm font-semibold">{stream.host}</span>
-                    <BadgeCheck className="w-4 h-4 text-blue-400" />
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-white/70">
                     <span className="flex items-center gap-1">
