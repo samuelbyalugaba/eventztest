@@ -14,4 +14,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  #local-player video {
+    transform: none !important;
+  }
 }
