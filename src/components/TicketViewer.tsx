@@ -1,7 +1,9 @@
 import { X, Download, Share2, MapPin, Calendar, Clock, Ticket, Sparkles, QrCode } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import QRCode from 'react-qr-code';
+import { toPng } from 'html-to-image';
 
 interface TicketEvent {
   id: number;
@@ -22,6 +24,8 @@ interface TicketViewerProps {
 }
 
 export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
+  const ticketRef = useRef<HTMLDivElement>(null);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -34,25 +38,78 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleDownload = () => {
-    toast.success('Ticket downloaded! 📥', {
-      description: 'Your ticket has been saved to your device',
-      duration: 2000,
-    });
+  const handleDownload = async () => {
+    if (!ticketRef.current) return;
+    
+    const toastId = toast.loading('Generating ticket image...');
+    
+    try {
+      const dataUrl = await toPng(ticketRef.current, { cacheBust: true });
+      const link = document.createElement('a');
+      link.download = `Eventz-Ticket-${ticket.id}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      toast.dismiss(toastId);
+      toast.success('Ticket downloaded! 📥', {
+        description: 'Your ticket has been saved to your device',
+        duration: 2000,
+      });
+    } catch (err) {
+      console.error(err);
+      toast.dismiss(toastId);
+      toast.error('Failed to download ticket');
+    }
   };
 
-  const handleShare = () => {
-    toast.success('Link copied to clipboard! 🔗', {
-      description: 'Share your ticket with friends',
-      duration: 2000,
-    });
+  const handleShare = async () => {
+    if (!ticketRef.current) return;
+
+    try {
+      if (navigator.share) {
+        const toastId = toast.loading('Preparing to share...');
+        const dataUrl = await toPng(ticketRef.current, { cacheBust: true });
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], `ticket-${ticket.id}.png`, { type: 'image/png' });
+        
+        toast.dismiss(toastId);
+        
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `Ticket: ${ticket.name}`,
+            text: `Here is my ticket for ${ticket.name}!`,
+          });
+          toast.success('Shared successfully! 🎉');
+        } else {
+           await navigator.share({
+            title: `Ticket: ${ticket.name}`,
+            text: `I'm going to ${ticket.name}! Join me!`,
+            url: window.location.origin
+          });
+          toast.success('Shared successfully! 🎉');
+        }
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(`${window.location.origin}`);
+        toast.success('Link copied to clipboard! 🔗', {
+          description: 'Share your ticket link with friends',
+          duration: 2000,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error sharing:', err);
+      if (err.name !== 'AbortError') {
+         toast.error('Failed to share ticket');
+      }
+    }
   };
 
   // Generate ticket number
   const ticketNumber = `EVTZ-${ticket.id.toString().padStart(6, '0')}-${Date.now().toString().slice(-4)}`;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
       {/* Close Button - Top Right */}
       <button
         onClick={onClose}
@@ -64,7 +121,7 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
       {/* Ticket Container */}
       <div className="relative w-full max-w-lg my-8" style={{ animation: 'slideUp 0.4s ease-out' }}>
         {/* Premium Ticket Card */}
-        <div className="relative bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 rounded-3xl shadow-2xl overflow-hidden">
+        <div ref={ticketRef} className="relative bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 rounded-3xl shadow-2xl overflow-hidden">
           {/* Animated Shimmer Effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{ animation: 'shimmer 3s infinite' }} />
           
@@ -156,12 +213,12 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
               {/* QR Code */}
               <div className="flex-shrink-0">
                 <div className="w-32 h-32 bg-white rounded-2xl p-2 shadow-lg">
-                  <div className="w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
-                    {/* QR Code Placeholder - In production, use a real QR code library */}
-                    <div className="flex flex-col items-center justify-center p-4 bg-white/50 rounded-lg">
-                      <QrCode className="w-16 h-16 text-purple-900/80 mb-2" />
-                      <p className="text-[10px] text-purple-900/60 font-mono font-bold tracking-wider">SCAN ENTRY</p>
-                    </div>
+                  <div className="w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center p-2">
+                    <QRCode
+                      value={ticket.qrCode || `TICKET-${ticket.id}`}
+                      style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                      viewBox={`0 0 256 256`}
+                    />
                   </div>
                 </div>
               </div>

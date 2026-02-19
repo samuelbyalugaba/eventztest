@@ -12,6 +12,7 @@ import { supabase } from '../utils/supabase/client';
 import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Event, Ticket, Post, getFollowers, getFollowing, deletePost } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
+import { TicketListModal } from './TicketListModal';
 
 const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"; // Generic event background
 
@@ -37,6 +38,10 @@ export function Profile({ onLogout }: ProfileProps) {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  
+  // Ticket List Modal State
+  const [showTicketListModal, setShowTicketListModal] = useState(false);
+  const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);
   
   // Data states
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -351,6 +356,18 @@ export function Profile({ onLogout }: ProfileProps) {
       isLiked: p.is_liked,
       duration: '0:30'
     }));
+
+  // Group tickets by event
+  const groupedTickets = ticketEvents.reduce((acc, ticket) => {
+    const eventId = ticket.event_id;
+    if (!acc[eventId]) {
+      acc[eventId] = [];
+    }
+    acc[eventId].push(ticket);
+    return acc;
+  }, {} as Record<number, Ticket[]>);
+
+  const uniqueTicketGroups = Object.values(groupedTickets);
 
   return (
     <div className="bg-white min-h-screen pb-20">
@@ -760,41 +777,44 @@ export function Profile({ onLogout }: ProfileProps) {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-gray-900">Tickets</h3>
-              <span className="text-gray-500 text-sm">{ticketEvents.length} tickets</span>
+              <span className="text-gray-500 text-sm">{uniqueTicketGroups.length} events</span>
             </div>
             <div className="grid grid-cols-3 gap-1">
-              {ticketEvents.map((ticket) => (
-                <div
-                  key={ticket.id}
-                  onClick={() => {
-                    setSelectedTicket(ticket);
-                    setShowTicketViewer(true);
-                  }}
-                  className="relative aspect-square cursor-pointer group"
-                >
-                  <ImageWithFallback
-                    src={ticket.event?.image_url || FALLBACK_COVER_IMAGE}
-                    alt={`Ticket ${ticket.id}`}
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Ticket Type Badge */}
-                  <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
-                    {ticket.ticket_type}
-                  </div>
-                  {/* Price Badge */}
-                  <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
-                    {ticket.price}
-                  </div>
-                  {/* QR Code Icon */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
+              {uniqueTicketGroups.map((tickets) => {
+                const ticket = tickets[0];
+                return (
+                  <div
+                    key={ticket.event_id}
+                    onClick={() => {
+                      setSelectedEventTickets(tickets);
+                      setShowTicketListModal(true);
+                    }}
+                    className="relative aspect-square cursor-pointer group"
+                  >
+                    <ImageWithFallback
+                      src={ticket.event?.image_url || FALLBACK_COVER_IMAGE}
+                      alt={`Event ${ticket.event?.title}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Count Badge */}
+                    <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
+                      {tickets.length} Ticket{tickets.length > 1 ? 's' : ''}
+                    </div>
+                    
+                    {/* Event Name (Bottom) */}
+                    <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
+                      <p className="text-white text-[10px] line-clamp-1 font-medium">{ticket.event?.title}</p>
+                    </div>
+
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
+                        <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
+                      </div>
                     </div>
                   </div>
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -1232,6 +1252,19 @@ export function Profile({ onLogout }: ProfileProps) {
           onClose={() => {
             setShowTicketViewer(false);
             setSelectedTicket(null);
+          }}
+        />
+      )}
+
+      {/* Ticket List Modal */}
+      {showTicketListModal && selectedEventTickets.length > 0 && (
+        <TicketListModal
+          eventName={selectedEventTickets[0].event?.title || 'Event'}
+          tickets={selectedEventTickets}
+          onClose={() => setShowTicketListModal(false)}
+          onSelectTicket={(ticket) => {
+            setSelectedTicket(ticket);
+            setShowTicketViewer(true);
           }}
         />
       )}

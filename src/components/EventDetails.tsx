@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2 } from 'lucide-react';
+import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
@@ -108,7 +108,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [eventToPurchase, setEventToPurchase] = useState<ApiEvent | null>(null);
   const [showNormalTicketModal, setShowNormalTicketModal] = useState(false);
   const [normalTicketQuantity, setNormalTicketQuantity] = useState(1);
-  const [normalTicketStep, setNormalTicketStep] = useState<'quantity' | 'details' | 'confirm'>('quantity');
+  const [normalTicketStep, setNormalTicketStep] = useState<'quantity' | 'details' | 'payment' | 'confirm'>('quantity');
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   
@@ -327,17 +327,53 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   };
 
   const handleNormalTicketSubmit = async () => {
-    if (!eventToPurchase || !ticketFormData.name || !ticketFormData.email) {
-      toast.error('Please fill in all fields');
+    if (!eventToPurchase || !ticketFormData.name || !ticketFormData.email || !paymentPhone) {
+      toast.error('Please fill in all fields including payment details');
       return;
     }
 
     try {
+      setIsProcessingPayment(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Please sign in to purchase tickets');
+        setIsProcessingPayment(false);
         return;
       }
+
+      const priceStr = eventToPurchase.price_range;
+      const numericPrice = parseInt(priceStr.replace(/[^\d]/g, '')) || 0;
+      const totalPrice = numericPrice * normalTicketQuantity;
+
+      // 1. Create Transaction
+      const transactionData = {
+        user_id: user.id,
+        event_id: eventToPurchase.id,
+        amount: totalPrice,
+        currency: 'TZS',
+        provider: selectedProvider,
+        status: 'pending',
+        metadata: {
+          customer_name: ticketFormData.name,
+          customer_email: ticketFormData.email,
+          customer_phone: paymentPhone,
+          ticket_tier: 'Normal',
+          quantity: normalTicketQuantity
+        }
+      };
+
+      const transaction = await createTransaction(transactionData);
+
+      // 2. Initiate Payment
+      toast.info('Initiating payment request...');
+      await initiatePayment({
+        amount: totalPrice,
+        accountNumber: paymentPhone,
+        provider: selectedProvider,
+        externalId: transaction.id.toString()
+      });
+
+      toast.success(`Payment request sent to ${paymentPhone}! Please approve on your phone.`);
 
       // Generate tickets for each quantity
       const tickets: PurchasedTicket[] = [];
@@ -376,9 +412,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         tickets.push(ticket);
       }
 
-      // Save all tickets
-      // tickets.forEach(ticket => onTicketPurchase(ticket));
-
       // Show success toast
       toast.success(`${normalTicketQuantity} Ticket${normalTicketQuantity > 1 ? 's' : ''} Purchased! 🎉`, {
         description: `Sent to ${ticketFormData.email}. Check Alerts for details.`,
@@ -391,9 +424,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       setTicketFormData({ name: '', email: '' });
       setNormalTicketQuantity(1);
       setNormalTicketStep('quantity');
+      setPaymentPhone('');
+      setSelectedProvider('Azampesa');
     } catch (error: any) {
       console.error('Error purchasing ticket:', error);
       toast.error(`Failed to purchase tickets: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -1089,12 +1126,85 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 <button
                   onClick={() => {
                     if (ticketFormData.name && ticketFormData.email) {
-                      setNormalTicketStep('confirm');
+                      setNormalTicketStep('payment');
                     } else {
                       toast.error('Please fill in all fields');
                     }
                   }}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg text-lg"
+                >
+                  Continue to Payment
+                </button>
+              </div>
+            )}
+
+            {/* Step 3: Payment */}
+            {normalTicketStep === 'payment' && (
+              <div className="p-6">
+                {/* Header */}
+                <div className="mb-6">
+                  <button 
+                    onClick={() => setNormalTicketStep('details')}
+                    className="text-purple-600 hover:text-purple-700 mb-3 flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back
+                  </button>
+                  <h2 className="text-gray-900 text-2xl mb-1">Payment Method</h2>
+                  <p className="text-gray-600">Select your preferred payment provider</p>
+                </div>
+
+                {/* Provider Selection */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {['Azampesa', 'Airtel', 'Tigo', 'Halopesa'].map((provider) => (
+                    <button
+                      key={provider}
+                      onClick={() => setSelectedProvider(provider)}
+                      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                        selectedProvider === provider
+                          ? 'border-purple-500 bg-purple-50 text-purple-700'
+                          : 'border-gray-200 hover:border-purple-200 text-gray-600'
+                      }`}
+                    >
+                      <CreditCard className={`w-6 h-6 ${selectedProvider === provider ? 'text-purple-600' : 'text-gray-400'}`} />
+                      <span className="font-medium">{provider}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Phone Input */}
+                <div className="mb-6">
+                  <label className="block text-gray-700 mb-2 font-medium">Mobile Number</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Smartphone className="w-5 h-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="tel"
+                      value={paymentPhone}
+                      onChange={(e) => setPaymentPhone(e.target.value)}
+                      placeholder="2557..."
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-lg"
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">Enter the number registered with {selectedProvider}</p>
+                </div>
+
+                {/* Continue Button */}
+                <button
+                  onClick={() => {
+                    if (paymentPhone && paymentPhone.length >= 10) {
+                      setNormalTicketStep('confirm');
+                    } else {
+                      toast.error('Please enter a valid phone number');
+                    }
+                  }}
+                  disabled={!paymentPhone || paymentPhone.length < 10}
+                  className={`w-full py-4 rounded-xl text-white flex items-center justify-center gap-2 transition-all shadow-lg text-lg ${
+                    paymentPhone && paymentPhone.length >= 10
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
+                      : 'bg-gray-300 cursor-not-allowed'
+                  }`}
                 >
                   Review Order
                 </button>
@@ -1107,7 +1217,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 {/* Header */}
                 <div className="mb-6">
                   <button 
-                    onClick={() => setNormalTicketStep('details')}
+                    onClick={() => setNormalTicketStep('payment')}
                     className="text-purple-600 hover:text-purple-700 mb-3 flex items-center gap-1"
                   >
                     <ChevronLeft className="w-4 h-4" />
