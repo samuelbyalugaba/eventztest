@@ -143,52 +143,66 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         }
 
         // Load stats
-        const statsData = await getOrganizerStats(user.id);
-        setStats(statsData);
+        try {
+          const statsData = await getOrganizerStats(user.id);
+          setStats(statsData);
+        } catch (err) {
+          console.error("Error loading organizer stats:", err);
+          // Don't fail completely, just use defaults
+        }
 
         // Load events
-        const userEvents = await getOrganizerEvents(user.id);
-        if (userEvents) {
-          const published = userEvents.filter((e: any) => e.status === 'published' || !e.status);
-          const drafts = userEvents.filter((e: any) => e.status === 'draft');
+        try {
+          const userEvents = await getOrganizerEvents(user.id);
+          if (userEvents) {
+            const published = userEvents.filter((e: any) => e.status === 'published' || !e.status);
+            const drafts = userEvents.filter((e: any) => e.status === 'draft');
 
-          const mapEvent = (e: any) => ({
-             ...e,
-             coverImage: e.image_url || e.coverImage, // Map image_url to coverImage
-             price: e.price_range || e.price // Map price_range to price
-          });
+            const mapEvent = (e: any) => ({
+               ...e,
+               coverImage: e.image_url || e.coverImage, // Map image_url to coverImage
+               price: e.price_range || e.price // Map price_range to price
+            });
 
-          setPublishedEvents(published.map(mapEvent));
-          setDraftEvents(drafts.map(mapEvent));
+            setPublishedEvents(published.map(mapEvent));
+            setDraftEvents(drafts.map(mapEvent));
+          }
+        } catch (err) {
+          console.error("Error loading organizer events:", err);
         }
 
         // Load posts (highlights)
-        const userPosts = await getPosts({ currentUserId: user.id, authorId: user.id });
-        if (userPosts) {
-          setOrganizerPosts(userPosts.map((p: any, index: number) => ({
-             id: p.id,
-             type: 'post',
-             mediaType: p.video_url ? 'video' : (p.image_urls && p.image_urls.length > 0 ? 'image' : 'text'),
-             title: p.content ? p.content.substring(0, 30) + '...' : 'New Post',
-             description: p.content,
-             image: p.image_urls?.[0] || '',
-             video: p.video_url,
-             likes: p.likes_count || 0,
-             comments: p.comments_count || 0,
-             shares: 0,
-             timestamp: new Date(p.created_at).toLocaleDateString(),
-             isLiked: p.is_liked,
-             posted_as_organizer: p.posted_as_organizer,
-             event: p.event,
-             fallbackSrc: p.video_url 
-               ? "https://images.unsplash.com/photo-1536240478700-b869070f9279?w=800&auto=format&fit=crop&q=60" 
-               : getFallbackImage(index)
-          })));
+        try {
+          const userPosts = await getPosts({ currentUserId: user.id, authorId: user.id });
+          if (userPosts) {
+            setOrganizerPosts(userPosts.map((p: any, index: number) => ({
+               id: p.id,
+               type: 'post',
+               mediaType: p.video_url ? 'video' : (p.image_urls && p.image_urls.length > 0 ? 'image' : 'text'),
+               title: p.content ? p.content.substring(0, 30) + '...' : 'New Post',
+               description: p.content,
+               image: p.image_urls?.[0] || '',
+               video: p.video_url,
+               likes: p.likes_count || 0,
+               comments: p.comments_count || 0,
+               shares: 0,
+               timestamp: new Date(p.created_at).toLocaleDateString(),
+               isLiked: p.is_liked,
+               posted_as_organizer: p.posted_as_organizer,
+               event: p.event,
+               fallbackSrc: p.video_url 
+                 ? "https://images.unsplash.com/photo-1536240478700-b869070f9279?w=800&auto=format&fit=crop&q=60" 
+                 : getFallbackImage(index)
+            })));
+          }
+        } catch (err) {
+          console.error("Error loading organizer posts:", err);
         }
 
       } catch (error) {
         console.error('Error loading organizer data:', error);
-        toast.error('Failed to load dashboard data');
+        // Only show toast if it's a critical auth error
+        // toast.error('Failed to load dashboard data'); 
       }
     };
 
