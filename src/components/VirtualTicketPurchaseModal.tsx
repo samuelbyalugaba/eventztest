@@ -33,6 +33,12 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
 
     try {
       setIsSubmitting(true);
+      const supabaseEnvDebug = {
+        url: import.meta.env.VITE_SUPABASE_URL,
+        hasKey: !!import.meta.env.VITE_SUPABASE_KEY,
+      };
+      console.log('Supabase config debug (virtual ticket purchase)', supabaseEnvDebug);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Please sign in to purchase tickets');
@@ -92,8 +98,21 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
       await finalizeTicket(user.id, priceString);
 
     } catch (error: any) {
-      console.error('Error purchasing ticket:', error);
-      toast.error(`Payment failed: ${error.message || 'Unknown error'}`);
+      const debugError = {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+        context: (error as any)?.context,
+      };
+      console.error('Error purchasing ticket (debug)', {
+        error: debugError,
+        raw: error,
+      });
+      const message =
+        error?.message ||
+        (error as any)?.error?.message ||
+        'Unknown error';
+      toast.error(`Payment failed: ${message}`);
       setPaymentStep('details');
     } finally {
       setIsSubmitting(false);

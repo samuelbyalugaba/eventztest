@@ -992,7 +992,9 @@ export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'e
     p_customer_name: ticket.customer_name,
     p_customer_email: ticket.customer_email,
     p_ticket_number: ticket.ticket_number,
-    p_qr_code: ticket.qr_code || null
+    p_qr_code: ticket.qr_code || null,
+    p_user_id: (ticket as any).user_id || null,
+    p_price: ticket.price || null
   });
 
   if (error) {
@@ -1042,13 +1044,25 @@ export const initiatePayment = async (params: {
   provider: string; // "Airtel", "Tigo", "Halantel", "Azampesa"
   externalId: string; // Transaction ID
 }) => {
+  console.log('initiatePayment called', params);
+
   const { data, error } = await supabase.functions.invoke('azampay-payment', {
     body: params,
   });
 
-  if (error) throw error;
+  console.log('initiatePayment response', {
+    hasData: !!data,
+    data,
+    error,
+  });
+
+  if (error) {
+    console.error('Supabase functions.invoke error (azampay-payment)', error);
+    throw error;
+  }
 
   if (data && !data.success) {
+    console.error('azampay-payment function returned failure', data);
     throw new Error(data.error || 'Payment initiation failed');
   }
 
