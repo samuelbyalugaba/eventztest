@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Post, Comment } from '../types';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { CommentIcon } from './icons/CommentIcon';
 import { 
   MessageSquare, Share2, Bookmark, 
   Play, Volume2, VolumeX, 
@@ -465,7 +466,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
               <button 
                 className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
               >
-                <MessageSquare className="w-5 h-5 text-gray-600" />
+                <CommentIcon className="w-5 h-5" color="#4b5563" />
                 <span className="text-sm font-bold text-gray-700">{commentsCount}</span>
               </button>
             </DrawerTrigger>
@@ -547,7 +548,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
            onClick={() => onMessage?.(post.user)}
            className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
          >
-          <MessageCircle className="w-5 h-5 text-gray-600" /> 
+          <MessageSquare className="w-5 h-5 text-gray-600" /> 
         </button>
 
       </div>

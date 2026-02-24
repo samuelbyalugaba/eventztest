@@ -685,21 +685,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
         ) : null}
 
-        {/* Past Events Grid */}
-        {!loading && pastEvents.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-gray-900 font-semibold mb-4 ml-1">Past Events</h3>
-            <div className="grid grid-cols-2 gap-3 opacity-80">
-              {pastEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onClick={setSelectedEvent}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {/* Fallback if logic fails or both empty but filteredEvents has items (shouldn't happen) */}
         {!loading && upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
