@@ -371,87 +371,77 @@ export function Profile({ onLogout }: ProfileProps) {
 
   return (
     <div className="bg-white min-h-screen pb-20">
-      {/* Compact Header */}
+      {/* Immersive Header Design */}
       <div className="relative">
-        {/* Cover Photo */}
-        <div className="relative w-full h-32 overflow-hidden">
+        {/* Large Cover Photo - Half Screen */}
+        <div className="relative w-full h-[45vh] overflow-hidden">
           <ImageWithFallback
-            src={userProfile?.cover_url || FALLBACK_COVER_IMAGE}
-            alt="Cover"
+            src={userProfile?.avatar_url || FALLBACK_COVER_IMAGE}
+            alt="Profile"
             className="w-full h-full object-cover"
           />
-          <button className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-colors z-10" onClick={() => setShowSettingsModal(true)}>
-            <Settings className="w-4 h-4 text-gray-700" />
+          {/* Settings Button - Top Right */}
+          <button 
+            className="absolute top-6 right-6 p-2.5 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40 transition-all z-10" 
+            onClick={() => setShowSettingsModal(true)}
+          >
+            <Settings className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Profile Info - Centered and Compact */}
-        <div className="px-6 -mt-12">
-          {/* Profile Picture */}
-          <div className="flex justify-center mb-4">
-            <div className="relative">
-              <UserAvatar
-                src={userProfile?.avatar_url}
-                name={userProfile?.full_name || 'User'}
-                className="w-24 h-24 rounded-full border-4 border-white shadow-lg"
-              />
+        {/* Profile Content Sheet - Slides up */}
+        <div className="relative -mt-16 bg-white rounded-t-[2.5rem] px-6 pt-16 pb-6 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+          
+          {/* Header Info */}
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h1 className="text-gray-900 text-2xl font-bold mb-1">{userProfile?.full_name || 'Loading...'}</h1>
+              <p className="text-gray-500 text-sm font-medium">@{userProfile?.username || 'user'}</p>
             </div>
+            
+            {/* Edit Button */}
+            <button 
+              onClick={() => {
+                setSettingsInitialView('profile');
+                setShowSettingsModal(true);
+              }}
+              className="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors flex items-center gap-2"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              Edit
+            </button>
           </div>
 
-          {/* Name and Edit Button */}
-          <div className="text-center mb-3">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <h1 className="text-gray-900">{userProfile?.full_name || 'Loading...'}</h1>
-              <button 
-                onClick={() => {
-                  setSettingsInitialView('profile');
-                  setShowSettingsModal(true);
-                }}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors group" 
-                title="Edit Profile"
-              >
-                <Edit2 className="w-4 h-4 text-gray-500 group-hover:text-purple-600 transition-colors" />
-              </button>
-            </div>
-            <p className="text-gray-600 text-sm mb-2">@{userProfile?.username || 'user'}</p>
-            
-            {/* Bio - Compact */}
-            <p className="text-gray-700 text-sm max-w-md mx-auto leading-relaxed">
+          {/* Bio */}
+          <div className="mb-6">
+            <p className="text-gray-700 leading-relaxed text-[15px]">
               {userProfile?.bio ? (
                 userProfile.bio
               ) : (
-                <button 
-                  onClick={() => {
-                    setSettingsInitialView('profile');
-                    setShowSettingsModal(true);
-                  }}
-                  className="text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  Edit bio
-                </button>
+                <span className="text-gray-400 italic">No bio yet</span>
               )}
             </p>
           </div>
 
-          {/* Stats - Compact and Modern */}
-          <div className="flex justify-center gap-8 mb-5 py-3 border-y border-gray-100">
-            <div className="text-center">
-              <p className="text-gray-900">{attendedEvents.length}</p>
-              <p className="text-gray-500 text-xs">Events</p>
+          {/* Stats Cards - Modern Grid */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
+              <span className="block text-gray-900 font-bold text-lg mb-0.5">{attendedEvents.length}</span>
+              <span className="text-gray-500 text-xs font-medium">Events</span>
             </div>
             <div 
-              className="text-center cursor-pointer hover:opacity-70 transition-opacity"
+              className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100 cursor-pointer hover:border-purple-200 hover:bg-purple-50 transition-all"
               onClick={handleShowFollowers}
             >
-              <p className="text-gray-900">{followStats.followers}</p>
-              <p className="text-gray-500 text-xs">Followers</p>
+              <span className="block text-gray-900 font-bold text-lg mb-0.5">{followStats.followers}</span>
+              <span className="text-gray-500 text-xs font-medium">Followers</span>
             </div>
             <div 
-              className="text-center cursor-pointer hover:opacity-70 transition-opacity"
+              className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100 cursor-pointer hover:border-purple-200 hover:bg-purple-50 transition-all"
               onClick={handleShowFollowing}
             >
-              <p className="text-gray-900">{followStats.following}</p>
-              <p className="text-gray-500 text-xs">Following</p>
+              <span className="block text-gray-900 font-bold text-lg mb-0.5">{followStats.following}</span>
+              <span className="text-gray-500 text-xs font-medium">Following</span>
             </div>
           </div>
 
