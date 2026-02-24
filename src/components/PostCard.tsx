@@ -54,6 +54,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [isVideoLoading, setIsVideoLoading] = useState(true);
 
   // Haptic feedback helper
   const triggerHaptic = () => {
@@ -78,7 +79,8 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       (entries) => {
         entries.forEach((entry) => {
           if (videoRef.current) {
-            if (entry.isIntersecting) {
+            // Stricter threshold for autoplay - Must be FULLY visible (ratio >= 0.95 to account for subpixels)
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.95) {
               // Try to play with sound first
               if (videoRef.current.paused) {
                 // Ensure we try unmuted first
@@ -112,13 +114,16 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                 setIsMuted(false);
               }
             } else {
-              videoRef.current.pause();
-              setIsPlaying(false);
+              // Pause if less than 80% visible
+              if (!videoRef.current.paused) {
+                videoRef.current.pause();
+                setIsPlaying(false);
+              }
             }
           }
         });
       },
-      { threshold: 0.7 }
+      { threshold: 0.95 }
     );
 
     if (videoRef.current) {
@@ -354,7 +359,8 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
           onDoubleClick={handleDoubleTap}
         >
           {isCurrentMediaVideo ? (
-            <div className={`relative w-full bg-black ${isCarousel ? 'h-full' : ''}`}>
+            <div className={`relative w-full bg-black ${isCarousel ? 'h-full' : 'min-h-[250px]'}`}>
+              {isVideoLoading && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
               <video
                 ref={videoRef}
                 src={currentMedia}
@@ -364,6 +370,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                 playsInline
                 preload="metadata"
                 onClick={handleManualPlay}
+                onLoadedData={() => setIsVideoLoading(false)}
               />
               {/* Video Controls Overlay */}
               <div className="absolute bottom-4 right-4 z-10">
@@ -393,7 +400,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             <ImageWithFallback
               src={currentMedia}
               alt="Post content"
-              className={`w-full ${isCarousel ? 'h-full object-cover' : 'h-auto'}`}
+              className={`w-full ${isCarousel ? 'h-full object-cover' : 'h-auto min-h-[250px]'}`}
               fallbackType="image"
               loading="lazy"
             />

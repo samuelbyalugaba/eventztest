@@ -185,10 +185,25 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
     }
   };
 
+  const formatDateHeader = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-white z-[60] flex flex-col h-full animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 h-[100dvh] bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white z-10 flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6 text-gray-900" />
@@ -249,19 +264,25 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
-        {/* Date Separator Example */}
-        <div className="flex justify-center mb-6">
-          <span className="bg-white px-3 py-1 rounded-lg text-xs font-medium text-gray-500 shadow-sm">
-            Today
-          </span>
-        </div>
-
         <div className="space-y-4">
-          {messages.map((msg) => {
+          {messages.map((msg, index) => {
             const isMe = msg.sender_id === currentUser.id;
+            const msgDate = new Date(msg.created_at);
+            const prevMsgDate = index > 0 ? new Date(messages[index - 1].created_at) : null;
+            
+            const showDateHeader = !prevMsgDate || msgDate.toDateString() !== prevMsgDate.toDateString();
+            const dateHeader = showDateHeader ? formatDateHeader(msg.created_at) : null;
             
             return (
-              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
+              <React.Fragment key={msg.id}>
+                {showDateHeader && (
+                  <div className="flex justify-center mb-6 mt-2">
+                    <span className="bg-white px-3 py-1 rounded-lg text-xs font-medium text-gray-500 shadow-sm">
+                      {dateHeader}
+                    </span>
+                  </div>
+                )}
+                <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
                 <div className={`flex flex-col max-w-[75%] ${isMe ? 'items-end' : 'items-start'}`}>
                   <div 
                     className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
@@ -300,7 +321,8 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                      )}
                   </div>
                 </div>
-              </div>
+                </div>
+              </React.Fragment>
             );
           })}
           <div ref={messagesEndRef} />

@@ -60,6 +60,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       } catch (error) {
         console.error('Error fetching events:', error);
         toast.error('Failed to load events');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -536,7 +538,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Professional Header with Search & Filter */}
-        <div className="mb-8 sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-2 pb-4 -mx-4 px-4 transition-all">
+        <div className="mb-1 sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-2 pb-2 -mx-4 px-4 transition-all">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-gray-900 text-2xl"><strong>EVENTZ</strong></h1>
@@ -652,9 +654,25 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         )}
 
         {/* Upcoming Events Grid */}
-        {upcomingEvents.length > 0 && (
+        {loading ? (
           <div className="mb-8">
-            <h3 className="text-gray-900 font-semibold mb-4 ml-1">Upcoming Events</h3>
+            <h3 className="text-gray-900 font-semibold mb-2 ml-1">Upcoming Events</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm h-[260px] animate-pulse">
+                  <div className="w-full h-40 bg-gray-200"></div>
+                  <div className="p-3 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : upcomingEvents.length > 0 ? (
+          <div className="mb-8">
+            <h3 className="text-gray-900 font-semibold mb-2 ml-1">Upcoming Events</h3>
             <div className="grid grid-cols-2 gap-3">
               {upcomingEvents.map((event) => (
                 <EventCard
@@ -665,10 +683,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Past Events Grid */}
-        {pastEvents.length > 0 && (
+        {!loading && pastEvents.length > 0 && (
           <div className="mb-8">
             <h3 className="text-gray-900 font-semibold mb-4 ml-1">Past Events</h3>
             <div className="grid grid-cols-2 gap-3 opacity-80">
@@ -684,7 +702,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         )}
 
         {/* Fallback if logic fails or both empty but filteredEvents has items (shouldn't happen) */}
-        {upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
+        {!loading && upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
            <div className="grid grid-cols-2 gap-3 mb-8">
              {filteredEvents.map((event) => (
                <EventCard
@@ -697,7 +715,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         )}
 
         {/* Empty State */}
-        {filteredEvents.length === 0 && (
+        {!loading && filteredEvents.length === 0 && (
           <div className="text-center py-16">
             <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 text-gray-400" />

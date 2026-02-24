@@ -10,33 +10,54 @@ interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElemen
 
 export function ImageWithFallback(props: ImageWithFallbackProps) {
   const [didError, setDidError] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const handleError = () => {
     setDidError(true)
+    setIsLoading(false)
+  }
+
+  const handleLoad = () => {
+    setIsLoading(false)
   }
 
   const { src, alt, style, className, fallbackType = 'image', fallbackSrc, ...rest } = props
 
-  return didError ? (
-    <div
-      className={`inline-block bg-gray-100 text-center align-middle ${className ?? ''}`}
-      style={style}
-    >
-      <div className="flex items-center justify-center w-full h-full text-gray-400">
-        {fallbackType === 'video' ? (
-          <Film className="w-8 h-8 opacity-50" />
-        ) : (
-          <img 
-            src={fallbackSrc || ERROR_IMG_SRC} 
-            alt="Error loading image" 
-            {...rest} 
-            className={fallbackSrc ? className : undefined} // Keep className if using custom fallback (like profile.jpg)
-            data-original-url={src} 
-          />
-        )}
-      </div>
-    </div>
-  ) : (
-    <img src={src} alt={alt} className={className} style={style} {...rest} onError={handleError} />
+  return (
+    <>
+      {isLoading && !didError && (
+        <div className={`absolute inset-0 z-10 animate-pulse bg-gray-200 ${className ?? ''}`} style={style} />
+      )}
+      {didError ? (
+        <div
+          className={`inline-block bg-gray-100 text-center align-middle ${className ?? ''}`}
+          style={style}
+        >
+          <div className="flex items-center justify-center w-full h-full text-gray-400">
+            {fallbackType === 'video' ? (
+              <Film className="w-8 h-8 opacity-50" />
+            ) : (
+              <img 
+                src={fallbackSrc || ERROR_IMG_SRC} 
+                alt="Error loading image" 
+                {...rest} 
+                className={fallbackSrc ? className : undefined} 
+                data-original-url={src} 
+              />
+            )}
+          </div>
+        </div>
+      ) : (
+        <img 
+          src={src} 
+          alt={alt} 
+          className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} 
+          style={style} 
+          {...rest} 
+          onError={handleError} 
+          onLoad={handleLoad}
+        />
+      )}
+    </>
   )
 }
