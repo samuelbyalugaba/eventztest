@@ -460,6 +460,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               </span>
             </div>
             <button
+              onClick={handleShare}
               className="w-8 h-8 rounded-full bg-purple-600/90 hover:bg-purple-700 flex items-center justify-center text-white border border-white/15"
               title="Share stream"
             >

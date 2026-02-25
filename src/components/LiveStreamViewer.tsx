@@ -238,9 +238,26 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     }
   };
 
-  const handleLike = () => {
-    setLikes(prev => prev + 1);
+  const handleLike = async () => {
+    // Optimistic update for animation
     setReactions(prev => [...prev, Date.now()]);
+    
+    // Toggle logic
+    const newIsLiked = !isLiked;
+    setIsLiked(newIsLiked);
+    setLikes(prev => newIsLiked ? prev + 1 : Math.max(0, prev - 1));
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await toggleLikeEvent(stream.id, user.id);
+      }
+    } catch (error) {
+      console.error('Like error:', error);
+      // Revert on error
+      setIsLiked(!newIsLiked);
+      setLikes(prev => !newIsLiked ? prev + 1 : Math.max(0, prev - 1));
+    }
   };
 
   // Cleanup reactions (remove old hearts from DOM)
@@ -251,6 +268,47 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     }, 1200);
     return () => clearTimeout(timer);
   }, [reactions]);
+
+  const handleFollow = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please login to follow");
+        return;
+      }
+      
+      if (isFollowingHost) {
+        await unfollowUser(user.id, stream.organizer_id);
+        setIsFollowingHost(false);
+        toast.success(`Unfollowed ${stream.host}`);
+      } else {
+        await followUser(user.id, stream.organizer_id);
+        setIsFollowingHost(true);
+        toast.success(`Following ${stream.host}`);
+      }
+    } catch (error) {
+      console.error('Follow error:', error);
+      toast.error("Failed to update follow status");
+    }
+  };
+
+  const handleGift = async () => {
+    try {
+      // For now, send a fixed amount or random amount to simulate
+      // In production, this would open a modal to select gift/amount
+      const amounts = [1000, 2000, 5000, 10000];
+      const amount = amounts[Math.floor(Math.random() * amounts.length)];
+      
+      await sendGift(stream.id, amount, 'TZS');
+      toast.success(`Sent a gift of TZS ${amount}! 🎁`);
+      
+      // Trigger a special animation or reaction?
+      setReactions(prev => [...prev, Date.now(), Date.now()+100, Date.now()+200]); // Burst of hearts
+    } catch (error) {
+      console.error('Gift error:', error);
+      toast.error("Failed to send gift");
+    }
+  };
 
   const visibleMessages = messages;
 
@@ -379,9 +437,11 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
               <div className="absolute bottom-16 right-2 flex flex-col items-center gap-3">
                 <button
                   type="button"
-                  className="p-2 rounded-full bg-black/60 text-white border border-white/10"
+                  onClick={handleGift}
+                  className="p-2 rounded-full bg-black/60 text-white border border-white/10 hover:bg-black/80 active:scale-95 transition-all"
+                  title="Send Gift"
                 >
-                  <Gift className="w-5 h-5" />
+                  <Gift className="w-5 h-5 text-yellow-400" />
                 </button>
                 <button
                   type="button"

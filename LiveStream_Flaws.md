@@ -58,7 +58,7 @@ While the basic WebRTC (Agora) video flow works, the backend architecture handle
 *   **Like Button:** Updates local state only (`setLikes`). Other viewers cannot see these likes, and they are not saved to the server.
 *   **Gift Button:** Completely non-functional (no `onClick` handler).
 *   **Follow Button:** Completely non-functional (no `onClick` handler).
-*   [ ] **Fix:** Implement backend logic for these actions or hide them until implemented.
+*   [x] **Fix:** Implement backend logic for these actions or hide them until implemented.
 
 ### ❌ 2. No Adaptive Quality Control
 *   **Issue:** The viewer is forced to whatever bandwidth is available. No UI to select "Low Data Mode" or specific resolutions (720p, 480p).
