@@ -638,21 +638,21 @@ export function Profile({ onLogout }: ProfileProps) {
               <span className="text-gray-500 text-sm">{photos.length} photos</span>
             </div>
             <div className="grid grid-cols-3 gap-1">
-              {photos.map((photo, index) => (
-                <div
-                  key={photo.id}
-                  onClick={() => {
-                    setMediaViewerIndex(index);
-                    setMediaViewerType('photo');
-                    setShowMediaViewer(true);
-                  }}
-                  className="relative aspect-square cursor-pointer group"
-                >
-                  <ImageWithFallback
-                    src={photo.url}
-                    alt={`Photo ${photo.id}`}
-                    className="w-full h-full object-cover"
-                  />
+            {photos.map((photo, index) => (
+              <div
+                key={photo.id}
+                onClick={() => {
+                  setMediaViewerIndex(index);
+                  setMediaViewerType('photo');
+                  setShowMediaViewer(true);
+                }}
+                className="relative aspect-square cursor-pointer group"
+              >
+                <ImageWithFallback
+                  src={photo.url}
+                  alt={`Photo ${photo.id}`}
+                  className="w-full h-full object-cover"
+                />
                   {/* Hover Overlay */}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <button 

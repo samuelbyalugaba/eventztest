@@ -130,7 +130,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
 
             const { error: profileError } = await supabase
               .from('profiles')
-              .insert([
+              .upsert([
                 {
                   id: data.user.id,
                   email: formData.email,
@@ -138,7 +138,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   username: finalUsername,
                   avatar_url: null,
                 }
-              ]);
+              ], { onConflict: 'id', ignoreDuplicates: true });
             
             if (profileError) {
               console.error('Profile creation failed:', profileError);

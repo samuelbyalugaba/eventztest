@@ -186,11 +186,9 @@ export const getProfile = async (userId: string) => {
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    // If error is PGRST116 (JSON object requested, multiple (or no) rows returned), it means profile doesn't exist
-    if (error.code === 'PGRST116') return null;
     throw error;
   }
   return data;
@@ -260,12 +258,13 @@ export const getOrganizerProfile = async (userId: string) => {
     .from('organizer_profiles')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code === 'PGRST116') return null;
     throw error;
   }
+  
+  if (!data) return null;
   
   return { ...data } as OrganizerProfile;
 };

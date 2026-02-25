@@ -640,7 +640,23 @@ export default function App() {
 
   // Show auth screen if not authenticated
   if (!isAuthenticated) {
-    return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
+    return (
+      <>
+        <Toaster 
+          position="top-center" 
+          richColors 
+          closeButton
+          toastOptions={{
+            style: {
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '12px',
+            },
+          }}
+        />
+        <AuthScreen onAuthSuccess={handleAuthSuccess} />
+      </>
+    );
   }
 
   return (
