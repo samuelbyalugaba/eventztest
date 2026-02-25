@@ -68,19 +68,35 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [streamKey, setStreamKey] = useState<string>(event.streaming?.stream_key || '');
   const [showKey, setShowKey] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'settings' | 'chat' | 'monetization' | 'analytics'>('settings');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSettingsDocked, setIsSettingsDocked] = useState(false);
   const settingsOverlayRef = useRef<HTMLDivElement>(null);
 
-  // Toggle Settings Panel
-  const toggleSettings = () => {
-    setIsSettingsOpen(prev => !prev);
-    if (!isSettingsOpen) {
-        setActiveTab('settings');
-    }
+  const handleOverlayScroll = () => {
+    if (!settingsOverlayRef.current) return;
+    const { scrollTop } = settingsOverlayRef.current;
+    // If scrolled up past 100px (meaning panel is coming into view significantly), dock it
+    const shouldDock = scrollTop > 100;
+    setIsSettingsDocked(prev => (prev !== shouldDock ? shouldDock : prev));
   };
 
-  const closeSettings = () => {
-    setIsSettingsOpen(false);
+  const openSettingsPanel = () => {
+    setActiveTab('settings');
+    if (!settingsOverlayRef.current) return;
+    // Scroll to reveal the panel
+    // The panel is pushed down by pt-[100vh] + h-[50vh] spacer.
+    // Total space before content = 150vh.
+    // To show content starting at 50vh from top (center), we need to scroll:
+    // (Total space before content) - (Target Offset from top)
+    // 150vh - 50vh = 100vh.
+    // So if we scroll to 100vh, the top of viewport is at 100vh offset in the container.
+    // The content starts at 150vh.
+    // So the content is at (150vh - 100vh) = 50vh from top of viewport.
+    // Perfect.
+    const targetScroll = window.innerHeight;
+    settingsOverlayRef.current.scrollTo({
+      top: targetScroll,
+      behavior: 'smooth',
+    });
   };
   const [streamTitle, setStreamTitle] = useState<string>(event.title || '');
   const [streamCategory, setStreamCategory] = useState<string>(event.category || 'General');
@@ -448,34 +464,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     }
   };
 
-  const handleOverlayScroll = () => {
-    if (!settingsOverlayRef.current) return;
-    const { scrollTop } = settingsOverlayRef.current;
-    // If scrolled up past 100px (meaning panel is coming into view significantly), dock it
-    const shouldDock = scrollTop > 100;
-    setIsSettingsDocked(prev => (prev !== shouldDock ? shouldDock : prev));
-  };
-
-  const openSettingsPanel = () => {
-    setActiveTab('settings');
-    if (!settingsOverlayRef.current) return;
-    // Scroll to reveal the panel
-    // The panel is pushed down by pt-[100vh] + h-[50vh] spacer.
-    // Total space before content = 150vh.
-    // To show content starting at 50vh from top (center), we need to scroll:
-    // (Total space before content) - (Target Offset from top)
-    // 150vh - 50vh = 100vh.
-    // So if we scroll to 100vh, the top of viewport is at 100vh offset in the container.
-    // The content starts at 150vh.
-    // So the content is at (150vh - 100vh) = 50vh from top of viewport.
-    // Perfect.
-    const targetScroll = window.innerHeight;
-    settingsOverlayRef.current.scrollTo({
-      top: targetScroll,
-      behavior: 'smooth',
-    });
-  };
-
   return (
     <div className="fixed inset-0 bg-black z-50 overflow-hidden">
       {/* Fullscreen video layer */}
@@ -568,7 +556,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
         <div
         className={`absolute bottom-8 right-4 flex flex-col items-center gap-4 pointer-events-auto transition-all duration-300 ${
-          isSettingsOpen ? 'translate-x-20 opacity-0' : 'translate-x-0 opacity-100'
+          isSettingsDocked ? 'translate-x-20 opacity-0' : 'translate-x-0 opacity-100'
         }`}
       >
         <button
@@ -600,7 +588,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         </button>
 
         <button 
-          onClick={toggleSettings} 
+          onClick={openSettingsPanel} 
           className="p-2.5 rounded-full bg-black/40 text-white backdrop-blur-md shadow-lg border border-white/10"
         >
           <Settings className="w-5 h-5" />
@@ -652,23 +640,13 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       </div>
 
       {/* Scroll overlay for settings/chat/monetization panel */}
-      {/* 
-        The overlay container is fixed and pointer-events-none so it doesn't block video clicks.
-        The content panel is pointer-events-auto and uses CSS transform to slide up/down.
-        This avoids all scroll-hijacking and overlap issues.
-      */}
-      <div className="absolute inset-0 z-50 pointer-events-none flex flex-col justify-end">
-        <div 
-          className={`w-full max-w-xl mx-auto pointer-events-auto transition-transform duration-300 ease-out bg-black/60 backdrop-blur-xl border-t border-white/10 rounded-t-3xl max-h-[60vh] overflow-y-auto ${
-            isSettingsOpen ? 'translate-y-0' : 'translate-y-full'
-          }`}
-        >
-          {/* Handle bar for visual cue */}
-          <div className="w-full flex justify-center pt-3 pb-1 cursor-pointer" onClick={toggleSettings}>
-             <div className="w-12 h-1.5 rounded-full bg-white/20" />
-          </div>
-
-          <div className="flex items-center gap-1 px-4 pt-2">
+      <div
+        ref={settingsOverlayRef}
+        onScroll={handleOverlayScroll}
+        className="absolute inset-0 overflow-y-auto px-6 pb-6 z-50 pointer-events-none scroll-smooth scrollbar-hide pt-[100vh]"
+      >
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl max-w-xl mx-auto pointer-events-auto min-h-[50vh] mb-[100vh]">
+          <div className="flex items-center gap-1 px-4 pt-3">
             <button
               title="Stream Settings"
               onClick={() => setActiveTab('settings')}
@@ -703,15 +681,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             >
               <Activity className="w-5 h-5" />
             </button>
-            <div className="flex-1" />
-            <button 
-              onClick={closeSettings}
-              className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
-          <div className="p-6 pb-20"> {/* Extra padding bottom for safe area */}
+          <div className="p-6">
             {activeTab === 'settings' && (
               <div className="space-y-6">
                 <div className="relative w-full max-w-xs bg-white/10 rounded-full p-1 mx-auto">
