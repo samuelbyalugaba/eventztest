@@ -353,6 +353,25 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     toast.success(`${label} copied to clipboard`);
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: streamTitle,
+      text: `Watch "${streamTitle}" live on Eventz`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        toast.success('Stream link copied to clipboard');
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  };
+
   const handleOverlayScroll = () => {
     if (!settingsOverlayRef.current) return;
     const { scrollTop, clientHeight } = settingsOverlayRef.current;

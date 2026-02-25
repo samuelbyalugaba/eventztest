@@ -403,8 +403,15 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="px-3 py-1.5 rounded-full bg-white/10 text-white text-xs backdrop-blur-md">
-                  Follow
+                <button 
+                  onClick={handleFollow}
+                  className={`px-3 py-1.5 rounded-full text-xs backdrop-blur-md transition-colors ${
+                    isFollowingHost 
+                      ? 'bg-white/20 text-white font-medium' 
+                      : 'bg-purple-600 text-white font-semibold hover:bg-purple-700'
+                  }`}
+                >
+                  {isFollowingHost ? 'Following' : 'Follow'}
                 </button>
                 <button
                   onClick={onClose}
