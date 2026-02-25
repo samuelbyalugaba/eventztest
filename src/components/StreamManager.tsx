@@ -68,6 +68,20 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [streamKey, setStreamKey] = useState<string>(event.streaming?.stream_key || '');
   const [showKey, setShowKey] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'settings' | 'chat' | 'monetization' | 'analytics'>('settings');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsOverlayRef = useRef<HTMLDivElement>(null);
+
+  // Toggle Settings Panel
+  const toggleSettings = () => {
+    setIsSettingsOpen(prev => !prev);
+    if (!isSettingsOpen) {
+        setActiveTab('settings');
+    }
+  };
+
+  const closeSettings = () => {
+    setIsSettingsOpen(false);
+  };
   const [streamTitle, setStreamTitle] = useState<string>(event.title || '');
   const [streamCategory, setStreamCategory] = useState<string>(event.category || 'General');
   const [visibility, setVisibility] = useState<'public' | 'ticket' | 'followers'>(
@@ -75,8 +89,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   );
   const [monetizationEnabled, setMonetizationEnabled] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(0);
-  const settingsOverlayRef = useRef<HTMLDivElement | null>(null);
-  const [isSettingsDocked, setIsSettingsDocked] = useState(false);
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
   const [analytics, setAnalytics] = useState<any | null>(null);
@@ -448,9 +460,16 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     setActiveTab('settings');
     if (!settingsOverlayRef.current) return;
     // Scroll to reveal the panel
-    // Since padding is 100vh, scrolling to 100vh brings the content to top
-    // We want it to slide up, so scroll to window.innerHeight
-    const targetScroll = window.innerHeight; 
+    // The panel is pushed down by pt-[100vh] + h-[50vh] spacer.
+    // Total space before content = 150vh.
+    // To show content starting at 50vh from top (center), we need to scroll:
+    // (Total space before content) - (Target Offset from top)
+    // 150vh - 50vh = 100vh.
+    // So if we scroll to 100vh, the top of viewport is at 100vh offset in the container.
+    // The content starts at 150vh.
+    // So the content is at (150vh - 100vh) = 50vh from top of viewport.
+    // Perfect.
+    const targetScroll = window.innerHeight;
     settingsOverlayRef.current.scrollTo({
       top: targetScroll,
       behavior: 'smooth',
@@ -548,62 +567,55 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         </div>
 
         <div
-          className={`absolute bottom-8 left-0 right-0 flex items-center pointer-events-none transition-all duration-300 ${
-            isSettingsDocked ? 'justify-end pr-6' : 'justify-center'
+        className={`absolute bottom-8 right-4 flex flex-col items-center gap-4 pointer-events-auto transition-all duration-300 ${
+          isSettingsOpen ? 'translate-x-20 opacity-0' : 'translate-x-0 opacity-100'
+        }`}
+      >
+        <button
+          onClick={toggleCameraDevice}
+          className={`p-2.5 rounded-full backdrop-blur-md shadow-lg border border-white/10 ${
+            currentCameraIndex > 0 ? 'bg-purple-600 text-white' : 'bg-black/40 text-white'
+          }`}
+          title="Switch camera"
+        >
+          <RotateCcw className="w-5 h-5" />
+        </button>
+
+        <button
+          onClick={toggleCamera}
+          className={`p-2.5 rounded-full backdrop-blur-md shadow-lg border border-white/10 ${
+            cameraEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'
           }`}
         >
-          <div
-            className={`bg-white/10 backdrop-blur-md border border-white/10 rounded-full flex items-center gap-3 transition-all duration-300 pointer-events-auto ${
-              isSettingsDocked ? 'px-3 py-2' : 'px-4 py-3'
-            }`}
-          >
-            {!isSettingsDocked && (
-              <button
-                onClick={toggleMic}
-                className={`p-2 rounded-full ${
-                  micEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'
-                }`}
-              >
-                {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-              </button>
-            )}
-            {!isSettingsDocked && (
-              <button
-                onClick={toggleCamera}
-                className={`p-2 rounded-full ${
-                  cameraEnabled ? 'bg-black/30 text-white' : 'bg-red-500/20 text-red-500'
-                }`}
-              >
-                {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
-              </button>
-            )}
-            {!isSettingsDocked && (
-              <button
-                onClick={toggleCameraDevice}
-                className={`p-2 rounded-full ${
-                  currentCameraIndex > 0 ? 'bg-purple-600 text-white' : 'bg-black/30 text-white'
-                }`}
-                title="Switch camera"
-              >
-                <RotateCcw className="w-5 h-5" />
-              </button>
-            )}
-            <button onClick={openSettingsPanel} className="p-2 rounded-full bg-black/30 text-white">
-              <Settings className="w-6 h-6" />
-            </button>
-            {!isSettingsDocked && (
-              <button
-                onClick={toggleLive}
-                className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-green-600 text-white'
-                }`}
-                title={countdown > 0 ? `Going live in ${countdown}` : isLive ? 'End stream' : 'Go live'}
-              >
-                <Radio className="w-6 h-6" />
-              </button>
-            )}
-          </div>
-        </div>
+          {cameraEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+        </button>
+
+        <button
+          onClick={toggleMic}
+          className={`p-2.5 rounded-full backdrop-blur-md shadow-lg border border-white/10 ${
+            micEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'
+          }`}
+        >
+          {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+        </button>
+
+        <button 
+          onClick={toggleSettings} 
+          className="p-2.5 rounded-full bg-black/40 text-white backdrop-blur-md shadow-lg border border-white/10"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+
+        <button
+          onClick={toggleLive}
+          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl border-4 border-white/10 transition-all active:scale-95 ${
+            isLive ? 'bg-white text-red-600' : 'bg-red-600 text-white'
+          }`}
+          title={countdown > 0 ? `Going live in ${countdown}` : isLive ? 'End stream' : 'Go live'}
+        >
+          <Radio className={`w-6 h-6 ${isLive ? 'animate-pulse' : ''}`} />
+        </button>
+      </div>
       </div>
 
       {/* Chat Overlay */}
@@ -640,13 +652,23 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       </div>
 
       {/* Scroll overlay for settings/chat/monetization panel */}
-      <div
-        ref={settingsOverlayRef}
-        onScroll={handleOverlayScroll}
-        className="absolute inset-0 overflow-y-auto pt-[100vh] px-6 pb-6 z-50 pointer-events-none scroll-smooth"
-      >
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl max-w-xl mx-auto pointer-events-auto min-h-[70vh] mb-[100vh]">
-          <div className="flex items-center gap-1 px-4 pt-3">
+      {/* 
+        The overlay container is fixed and pointer-events-none so it doesn't block video clicks.
+        The content panel is pointer-events-auto and uses CSS transform to slide up/down.
+        This avoids all scroll-hijacking and overlap issues.
+      */}
+      <div className="absolute inset-0 z-50 pointer-events-none flex flex-col justify-end">
+        <div 
+          className={`w-full max-w-xl mx-auto pointer-events-auto transition-transform duration-300 ease-out bg-black/60 backdrop-blur-xl border-t border-white/10 rounded-t-3xl max-h-[60vh] overflow-y-auto ${
+            isSettingsOpen ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          {/* Handle bar for visual cue */}
+          <div className="w-full flex justify-center pt-3 pb-1 cursor-pointer" onClick={toggleSettings}>
+             <div className="w-12 h-1.5 rounded-full bg-white/20" />
+          </div>
+
+          <div className="flex items-center gap-1 px-4 pt-2">
             <button
               title="Stream Settings"
               onClick={() => setActiveTab('settings')}
@@ -681,8 +703,15 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             >
               <Activity className="w-5 h-5" />
             </button>
+            <div className="flex-1" />
+            <button 
+              onClick={closeSettings}
+              className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <div className="p-6">
+          <div className="p-6 pb-20"> {/* Extra padding bottom for safe area */}
             {activeTab === 'settings' && (
               <div className="space-y-6">
                 <div className="relative w-full max-w-xs bg-white/10 rounded-full p-1 mx-auto">
