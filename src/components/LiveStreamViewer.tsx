@@ -52,6 +52,8 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   // Agora State
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
   const client = useRef(AgoraRTC.createClient({ mode: 'live', codec: 'vp8' }));
+  // Generate a consistent String UID for the viewer to match Host's String UID type
+  const [viewerUid] = useState(() => `viewer-${Math.random().toString(36).slice(2, 11)}`);
 
   // Load initial state (Likes, Follows)
   useEffect(() => {
@@ -119,7 +121,8 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
 
     const initAgora = async () => {
       try {
-        const token = await getAgoraToken(channelName, 0, 'subscriber'); // 0 for random UID
+        // Use the generated String UID for token generation
+        const token = await getAgoraToken(channelName, viewerUid, 'subscriber');
         if (!token) {
           setVideoError("Failed to join stream: missing Agora token");
           console.error("Agora subscriber token retrieval returned null for channel:", channelName);
@@ -131,11 +134,11 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
           await client.current.subscribe(user, mediaType);
           
           if (mediaType === "video") {
-            setRemoteUsers(prev => [...prev, user]);
-            // Play video (needs to happen after state update renders the div)
-            // But state update is async.
-            // Better to handle play in a separate effect or immediately if div exists.
-            // We'll rely on a separate effect to play/attach tracks when remoteUsers changes.
+            setRemoteUsers(prev => {
+                // Avoid duplicates
+                if (prev.find(u => u.uid === user.uid)) return prev;
+                return [...prev, user];
+            });
           }
           if (mediaType === "audio") {
             user.audioTrack?.play();
@@ -147,7 +150,8 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
         });
 
         await client.current.setClientRole('audience');
-        await client.current.join(AGORA_APP_ID, channelName, token, null);
+        // Join with the SAME String UID used for the token
+        await client.current.join(AGORA_APP_ID, channelName, token, viewerUid);
 
         setViewerCount(prev => prev + 1);
         try {
