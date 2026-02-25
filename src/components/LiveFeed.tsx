@@ -18,6 +18,7 @@ interface LiveStream {
   scheduledTime?: string;
   countdown?: number; // minutes until start
   host: string;
+  organizer_id: string; // Add organizer_id
   quality: 'HD' | '4K' | 'SD';
   isPaid?: boolean;
   price?: number;
@@ -250,6 +251,7 @@ export function LiveFeed() {
             e.organizer?.full_name ||
             e.organizer?.username ||
             'Event Organizer',
+          organizer_id: e.organizer_id, // Pass organizer_id
           viewers: e.streaming?.liveViewers || 0,
           isLive: true,
           playback_url: e.streaming?.playback_url,
@@ -269,6 +271,7 @@ export function LiveFeed() {
             e.organizer?.full_name ||
             e.organizer?.username ||
             'Event Organizer',
+          organizer_id: e.organizer_id,
           country: e.location?.split(',').pop()?.trim() || 'Tanzania', // Try to guess country
           countdown: Math.max(0, Math.floor((new Date(`${e.date}T${e.time}`).getTime() - new Date().getTime()) / (1000 * 60)))
         }));

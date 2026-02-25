@@ -1483,6 +1483,68 @@ export const updateEventStreamingStatus = async (eventId: number, isLive: boolea
   return data;
 };
 
+export const toggleLikeEvent = async (eventId: number, userId: string) => {
+  const { data: existing } = await supabase
+    .from('event_likes')
+    .select('user_id')
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .single();
+
+  if (existing) {
+    const { error } = await supabase.from('event_likes').delete().eq('event_id', eventId).eq('user_id', userId);
+    if (error) throw error;
+    return false;
+  } else {
+    const { error } = await supabase.from('event_likes').insert({ event_id: eventId, user_id: userId });
+    if (error) throw error;
+    return true;
+  }
+};
+
+export const getEventLikes = async (eventId: number) => {
+  const { count, error } = await supabase
+    .from('event_likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_id', eventId);
+
+  if (error) throw error;
+  return count || 0;
+};
+
+export const hasUserLikedEvent = async (eventId: number, userId: string) => {
+  const { data, error } = await supabase
+    .from('event_likes')
+    .select('user_id')
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+};
+
+export const sendGift = async (eventId: number, amount: number, currency: string = 'TZS') => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  // 1. Create a transaction record (pending)
+  const transaction = await createTransaction({
+    user_id: user.id,
+    event_id: eventId,
+    amount,
+    currency,
+    provider: 'System', // Internal gift
+    status: 'completed', // Assume instant for virtual items/wallet
+    metadata: { type: 'gift', message: 'Sent a gift' }
+  });
+
+  // 2. Send a special chat message
+  await sendStreamMessage(eventId, `🎁 Sent a gift of ${currency} ${amount}!`);
+
+  return transaction;
+};
+
 export const updateLiveViewerCount = async (eventId: number, delta: number) => {
   const { data: currentEvent, error: fetchError } = await supabase
     .from('events')

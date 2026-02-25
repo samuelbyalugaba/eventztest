@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, CreditCard, RotateCcw } from 'lucide-react';
+import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, CreditCard, RotateCcw, Heart } from 'lucide-react';
 import { toast } from 'sonner';
-import { Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, updateEventStreamingStatus, getEventAnalytics, generateStreamKeys } from '../utils/supabase/api';
+import { Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, updateEventStreamingStatus, getEventAnalytics, generateStreamKeys, getEventLikes } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../utils/agora';
@@ -17,7 +17,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
   const [streamHealth, setStreamHealth] = useState<'good' | 'poor' | 'offline'>(isLive ? 'good' : 'offline');
-  
+  const [likes, setLikes] = useState(0);
+
   // Chat State
   const [messages, setMessages] = useState<StreamMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -193,8 +194,12 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       try {
         const msgs = await getStreamMessages(event.id);
         if (msgs) setMessages(msgs);
+        
+        // Load initial likes
+        const initialLikes = await getEventLikes(event.id);
+        setLikes(initialLikes);
       } catch (error) {
-        console.error('Failed to load chat messages:', error);
+        console.error('Failed to load chat/likes:', error);
       }
     };
     loadChat();
@@ -202,6 +207,10 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     const subscription = subscribeToStreamMessages(event.id, (message) => {
       setMessages(prev => [...prev, message]);
     });
+    
+    // Subscribe to likes (optional: need real-time likes channel)
+    // For now, broadcaster sees updated likes on refresh or we can poll/subscribe to event_likes count
+    // Skipping real-time like count subscription for now to save resources, but can add if requested.
 
     return () => {
       subscription.unsubscribe();
@@ -438,6 +447,12 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 border border-white/10">
+              <Heart className="w-3.5 h-3.5 text-white/70" />
+              <span className="text-white text-xs font-medium">
+                {likes.toLocaleString()}
+              </span>
+            </div>
             <div className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 border border-white/10">
               <Eye className="w-3.5 h-3.5 text-white/70" />
               <span className="text-white text-xs font-medium">

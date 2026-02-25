@@ -30,7 +30,7 @@ While the basic WebRTC (Agora) video flow works, the backend architecture handle
 ### 🚨 4. Camera & Mic Not Closing (Hardware Leak)
 *   **Issue:** When the broadcaster closes the streaming window, the camera and microphone light remain on.
 *   **Root Cause:** The `useEffect` cleanup function in `StreamManager.tsx` has an empty dependency array `[]`. It captures the *initial* state of `localAudioTrack` and `localVideoTrack` (which are `null`). When the component unmounts, it tries to close `null` tracks, leaving the actual hardware tracks active.
-*   [ ] **Fix:** Use a `useRef` to track the active media tracks so the cleanup function can access the current instances, or update the dependency array correctly (though `useRef` is safer for cleanup).
+*   [x] **Fix:** Use a `useRef` to track the active media tracks so the cleanup function can access the current instances, or update the dependency array correctly (though `useRef` is safer for cleanup).
 
 ## 3. Scalability & Performance Flaws
 
@@ -87,7 +87,7 @@ While the basic WebRTC (Agora) video flow works, the backend architecture handle
 1.  [x] **Fix Hardware Leak:** Patch `StreamManager.tsx` cleanup logic immediately.
 2.  [ ] **Secure the Backend:** Rewrite `agora-rtc-token` to validate ownership.
 3.  [ ] **Fix the Counter:** Implement `rpc('increment_viewer_count')`.
-4.  [ ] **Implement Interactions:** Connect Like/Follow/Gift buttons to real API endpoints.
+4.  [x] **Implement Interactions:** Connect Like/Follow/Gift buttons to real API endpoints.
 5.  [ ] **Virtualize Chat:** Replace the chat list with a virtualized list.
 6.  [ ] **Real RTMP:** Integrate Mux/IVS or build a Node-Media-Server container.
 7.  [ ] **Optimize Network:** Switch Chat from "Persist-First" to "Broadcast-First" (Supabase Channels).

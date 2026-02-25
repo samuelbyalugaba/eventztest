@@ -1,7 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Heart, Share2, Send, Users, Volume2, VolumeX, Gift } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { getStreamMessages, sendStreamMessage, subscribeToStreamMessages, updateLiveViewerCount } from '../utils/supabase/api';
+import { 
+  getStreamMessages, 
+  sendStreamMessage, 
+  subscribeToStreamMessages, 
+  updateLiveViewerCount,
+  toggleLikeEvent,
+  getEventLikes,
+  hasUserLikedEvent,
+  sendGift,
+  followUser,
+  unfollowUser,
+  isFollowing,
+  supabase
+} from '../utils/supabase/api';
 import { toast } from 'sonner';
 import AgoraRTC, { IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../utils/agora';
@@ -15,6 +28,7 @@ interface LiveStreamViewerProps {
     host: string;
     quality: string;
     playback_url?: string;
+    organizer_id: string; // Add organizer_id to props
   };
   onClose: () => void;
   isUnlockedOverride?: boolean;
@@ -26,6 +40,8 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<{ user: string; text: string; avatar?: string }[]>([]);
   const [likes, setLikes] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isFollowingHost, setIsFollowingHost] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [reactions, setReactions] = useState<number[]>([]);
   const [viewerCount, setViewerCount] = useState(stream.viewers || 0);
@@ -36,6 +52,34 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   // Agora State
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
   const client = useRef(AgoraRTC.createClient({ mode: 'live', codec: 'vp8' }));
+
+  // Load initial state (Likes, Follows)
+  useEffect(() => {
+    const loadState = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Check Like status
+          const liked = await hasUserLikedEvent(stream.id, user.id);
+          setIsLiked(liked);
+          
+          // Check Follow status
+          if (stream.organizer_id) {
+            const following = await isFollowing(user.id, stream.organizer_id);
+            setIsFollowingHost(following);
+          }
+        }
+
+        // Get total likes
+        const totalLikes = await getEventLikes(stream.id);
+        setLikes(totalLikes);
+
+      } catch (error) {
+        console.error('Failed to load stream state:', error);
+      }
+    };
+    loadState();
+  }, [stream.id, stream.organizer_id]);
 
   // Load chat messages
   useEffect(() => {
@@ -199,6 +243,15 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     setReactions(prev => [...prev, Date.now()]);
   };
 
+  // Cleanup reactions (remove old hearts from DOM)
+  useEffect(() => {
+    if (reactions.length === 0) return;
+    const timer = setTimeout(() => {
+      setReactions(prev => prev.filter(r => Date.now() - r < 1200));
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [reactions]);
+
   const visibleMessages = messages;
 
   const handleShare = async () => {
@@ -339,14 +392,14 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
                 </button>
               </div>
 
-              <div className="pointer-events-none absolute inset-0">
+              <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 {reactions.map(r => (
                   <div
                     key={r}
-                    className="absolute bottom-24 right-6 animate-[floatUp_1.2s_ease-out]"
+                    className="absolute bottom-24 right-6 animate-[floatUp_1.2s_ease-out_forwards]"
                     style={{ animationDelay: '0s' }}
                   >
-                    <Heart className="w-5 h-5 text-pink-500 drop-shadow" />
+                    <Heart className="w-5 h-5 text-pink-500 fill-pink-500 drop-shadow" />
                   </div>
                 ))}
               </div>
@@ -377,9 +430,11 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
                   <button
                     type="button"
                     onClick={handleLike}
-                    className="p-2 rounded-full bg-[#8A2BE2] text-white"
+                    className={`p-2 rounded-full transition-colors ${
+                      isLiked ? 'bg-pink-600 text-white' : 'bg-black/60 border border-white/10 text-white'
+                    }`}
                   >
-                    <Heart className="w-5 h-5" />
+                    <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
                   </button>
                 </div>
               </form>
