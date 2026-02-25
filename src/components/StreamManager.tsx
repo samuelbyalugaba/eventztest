@@ -26,8 +26,14 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   // Agora State
   const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
   const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null);
+  const tracksRef = useRef<{ audio: IMicrophoneAudioTrack | null, video: ICameraVideoTrack | null }>({ audio: null, video: null });
   const client = useRef(AgoraRTC.createClient({ mode: 'live', codec: 'vp8' }));
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Keep tracksRef in sync with state
+  useEffect(() => {
+    tracksRef.current = { audio: localAudioTrack, video: localVideoTrack };
+  }, [localAudioTrack, localVideoTrack]);
   
   // Streaming method and legacy RTMP settings (for OBS mode UI)
   const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>('webcam');
@@ -103,6 +109,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           return;
         }
 
+        // Update ref immediately to ensure cleanup works even if unmount happens before state update
+        tracksRef.current = { audio: audioTrack, video: videoTrack };
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
         videoTrack.play('local-player');
@@ -119,16 +127,15 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
     return () => {
       mounted = false;
-      localAudioTrack?.close();
-      localVideoTrack?.close();
+      // Tracks are cleaned up in the main cleanup effect using tracksRef
     };
   }, []); // Only run once on mount
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      localAudioTrack?.close();
-      localVideoTrack?.close();
+      tracksRef.current.audio?.close();
+      tracksRef.current.video?.close();
       if (client.current) {
         client.current.leave();
       }
