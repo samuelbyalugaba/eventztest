@@ -71,32 +71,57 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [isSettingsDocked, setIsSettingsDocked] = useState(false);
   const settingsOverlayRef = useRef<HTMLDivElement>(null);
 
+  // Monitor scroll to handle docking and pointer events
   const handleOverlayScroll = () => {
     if (!settingsOverlayRef.current) return;
-    const { scrollTop } = settingsOverlayRef.current;
-    // If scrolled up past 100px (meaning panel is coming into view significantly), dock it
-    const shouldDock = scrollTop > 100;
-    setIsSettingsDocked(prev => (prev !== shouldDock ? shouldDock : prev));
+    const { scrollTop, clientHeight } = settingsOverlayRef.current;
+    
+    // Logic:
+    // Spacer is 100vh.
+    // Open position target is scrollTop = 100vh (Spacer scrolled out).
+    // Closed position is scrollTop = 0.
+    
+    // We consider it "Docked/Open" if we are significantly scrolled down.
+    // Let's say if we are past 10vh.
+    const isOpen = scrollTop > clientHeight * 0.1;
+    
+    if (isOpen !== isSettingsDocked) {
+        setIsSettingsDocked(isOpen);
+    }
   };
 
   const openSettingsPanel = () => {
-    setActiveTab('settings');
     if (!settingsOverlayRef.current) return;
-    // Scroll to reveal the panel
-    // The panel is pushed down by pt-[100vh] + h-[50vh] spacer.
-    // Total space before content = 150vh.
-    // To show content starting at 50vh from top (center), we need to scroll:
-    // (Total space before content) - (Target Offset from top)
-    // 150vh - 50vh = 100vh.
-    // So if we scroll to 100vh, the top of viewport is at 100vh offset in the container.
-    // The content starts at 150vh.
-    // So the content is at (150vh - 100vh) = 50vh from top of viewport.
-    // Perfect.
-    const targetScroll = window.innerHeight;
+    
+    // Enable pointer events before scrolling
+    setIsSettingsDocked(true);
+    
+    // We want the panel to snap to its natural position.
+    // The panel has `scroll-mt-[40vh]`.
+    // The Spacer is 100vh.
+    // If we scroll to 100vh, the Panel (snap-start) will try to align.
+    // With `scroll-mt-[40vh]`, it will align to 40vh from top.
+    // So we target scrolling to the Panel's offset.
+    // The Panel starts at 100vh.
+    // Let's just scroll "enough" and let Snap take over?
+    // Better: Smooth scroll to the exact target.
+    // Target: We want Panel top to be at 40vh.
+    // ScrollTop = PanelOffset (100vh) - DesiredScreenPosition (40vh) = 60vh.
+    // Wait, `scroll-margin` affects SNAP, not absolute coordinates.
+    // If we rely on snap, we just scroll to the element.
+    // But for smooth programmatic animation, explicit calculation is safer.
+    
+    const targetScroll = window.innerHeight * 0.6; // Scroll 60vh down. Panel moves up 60vh.
+    // Panel starts at 100vh.
+    // Panel Top relative to viewport = 100vh - 60vh = 40vh.
+    // Correct.
+    
     settingsOverlayRef.current.scrollTo({
       top: targetScroll,
       behavior: 'smooth',
     });
+    
+    setActiveTab('settings');
   };
   const [streamTitle, setStreamTitle] = useState<string>(event.title || '');
   const [streamCategory, setStreamCategory] = useState<string>(event.category || 'General');
@@ -640,12 +665,26 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       </div>
 
       {/* Scroll overlay for settings/chat/monetization panel */}
+      {/* 
+        Senior Dev Implementation:
+        - Uses CSS Scroll Snap for robust physics.
+        - Container is pointer-events-none by default to allow pass-through.
+        - Toggles to pointer-events-auto when "Docked" (scrolled down) to allow swipe interactions.
+        - Uses a 100vh Spacer to push content initially off-screen.
+      */}
       <div
         ref={settingsOverlayRef}
         onScroll={handleOverlayScroll}
-        className="absolute inset-0 overflow-y-auto px-6 pb-6 z-50 pointer-events-none scroll-smooth scrollbar-hide pt-[100vh]"
+        className={`absolute inset-0 overflow-y-auto z-50 snap-y snap-mandatory scroll-smooth scrollbar-hide ${
+            isSettingsDocked ? 'pointer-events-auto' : 'pointer-events-none'
+        }`}
       >
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl max-w-xl mx-auto pointer-events-auto min-h-[50vh] mb-[100vh]">
+        {/* Snap Point 1: Closed State (Top of Spacer) */}
+        <div className="h-[100vh] w-full snap-start pointer-events-none shrink-0" />
+        
+        {/* Snap Point 2: Open State (Panel) */}
+        {/* scroll-mt-[40vh] ensures that when this snaps to start, it leaves 40vh gap at top */}
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl max-w-xl mx-auto pointer-events-auto min-h-[50vh] mb-[100vh] snap-start scroll-mt-[40vh]">
           <div className="flex items-center gap-1 px-4 pt-3">
             <button
               title="Stream Settings"
