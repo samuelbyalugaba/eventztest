@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight } from 'lucide-react';
 import { EventCard } from './EventCard';
@@ -168,30 +168,31 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     return locationMatch && categoryMatch && subcategoryMatch;
   });
 
-  // Sort events into upcoming and past
-  const now = new Date();
-  const getEventDateTime = (event: ApiEvent) => {
-    try {
-      // Assuming date is YYYY-MM-DD
-      const dateStr = event.date;
-      // Try to parse time, default to end of day if looking for past events, but here we want precise
-      const timeStr = event.time ? event.time.replace(' ', '') : '00:00';
-      // simple check if time is AM/PM or 24h. 
-      // If the date string is just text like "Mon, Feb 3", this will fail.
-      // Based on HTML snippet "2026-02-03", it is ISO.
-      return new Date(`${dateStr} ${timeStr}`);
-    } catch (e) {
-      return new Date(event.date);
-    }
-  };
+  const { upcomingEvents, pastEvents } = React.useMemo(() => {
+    // Sort events into upcoming and past
+    const now = new Date();
+    const getEventDateTime = (event: ApiEvent) => {
+      try {
+        // Assuming date is YYYY-MM-DD
+        const dateStr = event.date;
+        // Try to parse time, default to end of day if looking for past events, but here we want precise
+        const timeStr = event.time ? event.time.replace(' ', '') : '00:00';
+        return new Date(`${dateStr} ${timeStr}`);
+      } catch (e) {
+        return new Date(event.date);
+      }
+    };
 
-  const upcomingEvents = filteredEvents
-    .filter(e => getEventDateTime(e) >= now)
-    .sort((a, b) => getEventDateTime(a).getTime() - getEventDateTime(b).getTime());
+    const upcoming = filteredEvents
+      .filter(e => getEventDateTime(e) >= now)
+      .sort((a, b) => getEventDateTime(a).getTime() - getEventDateTime(b).getTime());
 
-  const pastEvents = filteredEvents
-    .filter(e => getEventDateTime(e) < now)
-    .sort((a, b) => getEventDateTime(b).getTime() - getEventDateTime(a).getTime());
+    const past = filteredEvents
+      .filter(e => getEventDateTime(e) < now)
+      .sort((a, b) => getEventDateTime(b).getTime() - getEventDateTime(a).getTime());
+      
+    return { upcomingEvents: upcoming, pastEvents: past };
+  }, [filteredEvents]);
 
   // Filter locations based on search query
   const filteredLocations = locations.filter(location => 

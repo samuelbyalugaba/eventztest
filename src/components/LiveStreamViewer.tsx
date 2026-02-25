@@ -51,7 +51,13 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   
   // Agora State
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
-  const client = useRef(AgoraRTC.createClient({ mode: 'live', codec: 'vp8' }));
+  const client = useRef<ReturnType<typeof AgoraRTC.createClient> | null>(null);
+  
+  // Initialize Agora Client Lazy
+  if (!client.current) {
+    client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+  }
+
   // Generate a consistent String UID for the viewer to match Host's String UID type
   const [viewerUid] = useState(() => `viewer-${Math.random().toString(36).slice(2, 11)}`);
 

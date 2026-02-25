@@ -1480,6 +1480,19 @@ export const updateEventStreamingStatus = async (eventId: number, isLive: boolea
     .single();
 
   if (error) throw error;
+
+  // If stream is ending (isLive set to false), clear the chat history for this session
+  if (isLive === false) {
+    try {
+      await supabase
+        .from('stream_chat_messages')
+        .delete()
+        .eq('event_id', eventId);
+    } catch (cleanupError) {
+      console.error('Failed to cleanup stream chat:', cleanupError);
+    }
+  }
+
   return data;
 };
 
@@ -1535,7 +1548,7 @@ export const sendGift = async (eventId: number, amount: number, currency: string
     amount,
     currency,
     provider: 'System', // Internal gift
-    status: 'completed', // Assume instant for virtual items/wallet
+    status: 'pending', // Must be pending to pass RLS policy
     metadata: { type: 'gift', message: 'Sent a gift' }
   });
 

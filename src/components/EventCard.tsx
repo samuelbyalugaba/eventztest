@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Tv, User } from 'lucide-react';
+import { Calendar, MapPin, Tv } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Event as ApiEvent, getOrganizerProfile, getProfile } from '../utils/supabase/api';
+import { Event as ApiEvent } from '../utils/supabase/api';
 
 interface EventCardProps {
   event: ApiEvent;
@@ -10,48 +9,9 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, onClick, className = '' }: EventCardProps) {
-  const [organizerName, setOrganizerName] = useState<string>(
-    event.organizer?.organizer_details?.organizer_name || 
-    ''
-  );
-
-  useEffect(() => {
-    if (event.organizer?.organizer_details?.organizer_name) {
-      setOrganizerName(event.organizer.organizer_details.organizer_name);
-      return;
-    }
-    
-    let isMounted = true;
-
-    const fetchOrganizer = async () => {
-      if (!event.organizer_id) {
-        if (isMounted) setOrganizerName('Event Organizer');
-        return;
-      }
-
-      try {
-        // Try to get organizer profile first
-        const orgProfile = await getOrganizerProfile(event.organizer_id);
-        if (isMounted && orgProfile && orgProfile.organizer_name) {
-          setOrganizerName(orgProfile.organizer_name);
-          return;
-        }
-
-        if (isMounted) {
-          setOrganizerName('Event Organizer');
-        }
-      } catch (error) {
-        console.error('Error fetching organizer for card:', error);
-        if (isMounted) setOrganizerName('Event Organizer');
-      }
-    };
-
-    fetchOrganizer();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [event.organizer_id]);
+  // Use passed organizer data if available, otherwise fallback to "Event Organizer"
+  // Avoiding internal fetches to prevent N+1 request problem
+  const organizerName = event.organizer?.organizer_details?.organizer_name || 'Event Organizer';
 
   const getCategoryColor = (category: string) => {
     switch (category.toLowerCase()) {

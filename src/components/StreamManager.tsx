@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, CreditCard, RotateCcw, Heart } from 'lucide-react';
+import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, CreditCard, RotateCcw, Heart, Send, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, updateEventStreamingStatus, getEventAnalytics, generateStreamKeys, getEventLikes } from '../utils/supabase/api';
+import { Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, updateEventStreamingStatus, getEventAnalytics, generateStreamKeys, getEventLikes, supabase } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../utils/agora';
@@ -19,17 +19,43 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [streamHealth, setStreamHealth] = useState<'good' | 'poor' | 'offline'>(isLive ? 'good' : 'offline');
   const [likes, setLikes] = useState(0);
 
+  // Network Quality Monitoring
+  useEffect(() => {
+    if (!client.current) return;
+    
+    const handleNetworkQuality = (quality: any) => {
+        // Agora quality: 0: unknown, 1: excellent, 2: good, 3: poor, 4: bad, 5: vbad, 6: down
+        const uplink = quality.uplinkNetworkQuality;
+        if (uplink <= 2) setStreamHealth('good');
+        else if (uplink <= 4) setStreamHealth('poor');
+        else setStreamHealth('offline'); // or 'bad'
+    };
+
+    client.current.on('network-quality', handleNetworkQuality);
+    return () => {
+        client.current?.off('network-quality', handleNetworkQuality);
+    };
+  }, []);
+
   // Chat State
   const [messages, setMessages] = useState<StreamMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [likesAnimation, setLikesAnimation] = useState<number[]>([]);
+  const [showChat, setShowChat] = useState(true);
+
   // Agora State
   const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
   const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null);
   const tracksRef = useRef<{ audio: IMicrophoneAudioTrack | null, video: ICameraVideoTrack | null }>({ audio: null, video: null });
-  const client = useRef(AgoraRTC.createClient({ mode: 'live', codec: 'vp8' }));
+  const client = useRef<ReturnType<typeof AgoraRTC.createClient> | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Initialize Agora Client Lazy
+  if (!client.current) {
+    client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+  }
 
   // Keep tracksRef in sync with state
   useEffect(() => {
@@ -139,6 +165,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       tracksRef.current.video?.close();
       if (client.current) {
         client.current.leave();
+        client.current.removeAllListeners();
       }
     };
   }, []);
@@ -190,7 +217,22 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   // Load and Subscribe to Chat
   useEffect(() => {
+    // Only fetch historical messages if they belong to the current active session
+    // Since we don't have a "session_id" in messages, we rely on the backend cleaning up old messages when stream ends.
+    // However, if the page is refreshed during a stream, we want to see history.
+    // If the stream was offline and we just started it, the backend clean-up might have already run (or will run on end).
+    // To ensure "session-only" feel, we can just clear local state when isLive toggles to true? 
+    // No, isLive toggles true when we click "Go Live".
+    
+    // Better approach: When mounting, if stream is NOT live, do NOT fetch history.
+    // If stream IS live, fetch history (it's the current session).
+    
     const loadChat = async () => {
+      if (!isLive) {
+          setMessages([]);
+          return;
+      }
+
       try {
         const msgs = await getStreamMessages(event.id);
         if (msgs) setMessages(msgs);
@@ -205,24 +247,46 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     loadChat();
 
     const subscription = subscribeToStreamMessages(event.id, (message) => {
+      // Only append if we are live or monitoring
       setMessages(prev => [...prev, message]);
     });
     
-    // Subscribe to likes (optional: need real-time likes channel)
-    // For now, broadcaster sees updated likes on refresh or we can poll/subscribe to event_likes count
-    // Skipping real-time like count subscription for now to save resources, but can add if requested.
+    // Subscribe to likes (Real-time)
+    const likesSubscription = supabase
+      .channel(`likes:${event.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'event_likes',
+        filter: `event_id=eq.${event.id}`
+      }, (payload) => {
+         if (payload.eventType === 'INSERT') {
+           setLikes(prev => prev + 1);
+           setLikesAnimation(prev => [...prev, Date.now()]);
+         }
+         if (payload.eventType === 'DELETE') setLikes(prev => Math.max(0, prev - 1));
+      })
+      .subscribe();
 
     return () => {
       subscription.unsubscribe();
+      likesSubscription.unsubscribe();
     };
-  }, [event.id]);
+  }, [event.id, isLive]); // Add isLive dependency to re-run when status changes
 
   // Auto-scroll chat
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Cleanup likes animation
+  useEffect(() => {
+    if (likesAnimation.length === 0) return;
+    const timer = setTimeout(() => {
+      setLikesAnimation(prev => prev.filter(r => Date.now() - r < 1200));
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [likesAnimation]);
 
   useEffect(() => {
     if (activeTab !== 'analytics' || !isLive) return;
@@ -374,20 +438,21 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   const handleOverlayScroll = () => {
     if (!settingsOverlayRef.current) return;
-    const { scrollTop, clientHeight } = settingsOverlayRef.current;
-    const threshold = clientHeight * 0.2;
-    const shouldDock = scrollTop > threshold;
+    const { scrollTop } = settingsOverlayRef.current;
+    // If scrolled up past 100px (meaning panel is coming into view significantly), dock it
+    const shouldDock = scrollTop > 100;
     setIsSettingsDocked(prev => (prev !== shouldDock ? shouldDock : prev));
   };
 
   const openSettingsPanel = () => {
     setActiveTab('settings');
     if (!settingsOverlayRef.current) return;
-    const { scrollTop, clientHeight } = settingsOverlayRef.current;
-    const threshold = clientHeight * 0.2;
-    const targetTop = scrollTop <= threshold ? clientHeight : 0;
+    // Scroll to reveal the panel
+    // Since padding is 100vh, scrolling to 100vh brings the content to top
+    // We want it to slide up, so scroll to window.innerHeight
+    const targetScroll = window.innerHeight; 
     settingsOverlayRef.current.scrollTo({
-      top: targetTop,
+      top: targetScroll,
       behavior: 'smooth',
     });
   };
@@ -416,76 +481,70 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       </div>
 
       {/* On-top HUD: header + controls */}
-      <div className="absolute inset-0 pointer-events-none z-10">
-        <div className="px-3 pt-3 pb-1 flex items-center justify-between pointer-events-auto">
-          <div className="flex items-center gap-2 min-w-0">
+      <div className="absolute inset-0 pointer-events-none z-40">
+        <div className="px-4 pt-12 pb-2 flex items-center justify-between pointer-events-auto bg-gradient-to-b from-black/90 via-black/40 to-transparent">
+          
+          {/* LEFT: Exit & Basic Info */}
+          <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/10"
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors"
+              title="Exit Stream"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <h2 className="text-white font-semibold text-sm truncate max-w-[180px]">
-                  {streamTitle}
-                </h2>
-                {monetizationEnabled && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-green-500/15 px-2 py-0.5 border border-green-500/40">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                    <span className="text-[10px] text-green-200">Monetized</span>
-                  </span>
-                )}
-              </div>
-              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-white/70">
-                <span className="inline-flex items-center gap-1">
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'
-                    }`}
-                  />
-                  <span className="tracking-wide">
+            
+            <div className="flex flex-col">
+              <h2 className="text-white font-bold text-sm leading-tight max-w-[120px] truncate drop-shadow-md">
+                {streamTitle}
+              </h2>
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isLive ? 'bg-red-500/20 border border-red-500/50' : 'bg-white/10 border border-white/10'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
+                  <span className={`text-[10px] font-bold tracking-wider ${isLive ? 'text-red-200' : 'text-gray-300'}`}>
                     {isLive ? 'LIVE' : 'OFFLINE'}
                   </span>
-                  {isLive && (
-                    <span className="ml-1 rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] text-red-200 border border-red-500/40">
-                      {formatTime(elapsedTime)}
-                    </span>
-                  )}
-                </span>
-                <span className="text-white/50">
-                  {streamCategory} •{' '}
-                  {visibility === 'public'
-                    ? 'Public'
-                    : visibility === 'ticket'
-                    ? 'Tickets only'
-                    : 'Followers only'}
-                </span>
+                </div>
               </div>
             </div>
           </div>
 
+          {/* CENTER: Operational Intelligence */}
+          {isLive && (
+            <div className="absolute left-1/2 -translate-x-1/2 top-24 flex items-center gap-3 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg z-50">
+              <span className="text-white font-mono text-xs font-medium min-w-[40px] text-center">
+                {formatTime(elapsedTime)}
+              </span>
+              <div className="w-px h-3 bg-white/20" />
+              <div className="flex items-center gap-1.5">
+                <Users className="w-3 h-3 text-white/70" />
+                <span className="text-white text-xs font-medium">
+                  {(event.streaming?.liveViewers || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="w-px h-3 bg-white/20" />
+              <div className={`flex items-center gap-1 text-[10px] font-bold ${
+                streamHealth === 'good' ? 'text-green-400' : streamHealth === 'poor' ? 'text-yellow-400' : 'text-red-400'
+              }`}>
+                <Activity className="w-3 h-3" />
+                <span>{streamHealth === 'good' ? 'EXCELLENT' : streamHealth === 'poor' ? 'POOR' : 'BAD'}</span>
+              </div>
+            </div>
+          )}
+
+          {/* RIGHT: Earnings & Network */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 border border-white/10">
-              <Heart className="w-3.5 h-3.5 text-white/70" />
-              <span className="text-white text-xs font-medium">
-                {likes.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 border border-white/10">
-              <Eye className="w-3.5 h-3.5 text-white/70" />
-              <span className="text-white text-xs font-medium">
-                {isLive ? (event.streaming?.liveViewers || 0).toLocaleString() : 0}
-              </span>
-            </div>
-            <button
-              onClick={handleShare}
-              className="w-8 h-8 rounded-full bg-purple-600/90 hover:bg-purple-700 flex items-center justify-center text-white border border-white/15"
-              title="Share stream"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
+             <div className="flex flex-col items-end">
+                <div className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border border-yellow-500/30 px-2 py-1 rounded-lg backdrop-blur-md">
+                   <span className="text-yellow-400 font-bold text-xs">{(likes * 10).toLocaleString()}</span>
+                   <span className="text-[9px] text-yellow-200/80 font-medium uppercase tracking-wide">TKN</span>
+                </div>
+             </div>
+             <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10" title="Network Strength">
+                <Activity className={`w-4 h-4 ${streamHealth === 'good' ? 'text-green-400' : 'text-yellow-400'}`} />
+             </div>
           </div>
+
         </div>
 
         <div
@@ -547,13 +606,46 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         </div>
       </div>
 
+      {/* Chat Overlay */}
+      {showChat && (
+        <div className="absolute bottom-28 left-4 w-64 max-h-48 overflow-y-auto scrollbar-hide space-y-2 pointer-events-auto z-20">
+            {messages.slice(-2).map((m, i) => (
+                <div key={i} className="flex items-start gap-2 bg-black/40 backdrop-blur-md rounded-2xl px-2 py-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <div className="w-6 h-6 rounded-full bg-white/10 text-white flex items-center justify-center text-[10px] shrink-0">
+                        <span>{(m.user?.full_name || (m.user as any)?.username || 'G').charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-[11px] text-white/70 truncate">{m.user?.full_name || (m.user as any)?.username || 'Guest'}</div>
+                        <div className="text-[12px] text-white leading-snug break-words">{m.message}</div>
+                    </div>
+                </div>
+            ))}
+            <div ref={messagesEndRef} />
+        </div>
+      )}
+
+      {/* Chat Input Removed */}
+
+      {/* Floating Hearts Animation */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-20">
+        {likesAnimation.map(r => (
+          <div
+            key={r}
+            className="absolute bottom-24 right-6 animate-[floatUp_1.2s_ease-out_forwards]"
+            style={{ animationDelay: '0s' }}
+          >
+            <span className="text-yellow-400 font-bold text-sm drop-shadow-md">+10 TKN</span>
+          </div>
+        ))}
+      </div>
+
       {/* Scroll overlay for settings/chat/monetization panel */}
       <div
         ref={settingsOverlayRef}
         onScroll={handleOverlayScroll}
-        className="absolute inset-0 overflow-y-auto pt-[100vh] px-6 pb-6 z-0"
+        className="absolute inset-0 overflow-y-auto pt-[100vh] px-6 pb-6 z-50 pointer-events-none scroll-smooth"
       >
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl max-w-xl mx-auto">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl max-w-xl mx-auto pointer-events-auto min-h-[70vh] mb-[100vh]">
           <div className="flex items-center gap-1 px-4 pt-3">
             <button
               title="Stream Settings"
@@ -565,17 +657,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               }`}
             >
               <Settings className="w-5 h-5" />
-            </button>
-            <button
-              title="Chat"
-              onClick={() => setActiveTab('chat')}
-              className={`p-2 rounded-full transition-colors ${
-                activeTab === 'chat'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white/5 text-white/80'
-              }`}
-            >
-              <MessageCircle className="w-5 h-5" />
             </button>
             <button
               title="Monetization"
@@ -688,40 +769,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
                 )}
               </div>
             )}
-            {activeTab === 'chat' && (
-              <div className="space-y-4">
-                <div
-                  ref={chatContainerRef}
-                  className="h-64 rounded-xl bg-white/5 overflow-y-auto p-3 space-y-3"
-                >
-                  {messages.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-white/60">
-                      Say hello to your audience
-                    </div>
-                  ) : (
-                    messages.map((message) => (
-                      <div key={message.id} className="flex gap-2 text-sm">
-                        <div className="font-semibold truncate max-w-[40%] text-purple-400">
-                          {message.user?.full_name ||
-                            (message.user as any)?.username ||
-                            'Guest'}
-                        </div>
-                        <div className="text-white/60">•</div>
-                        <div className="flex-1 break-words text-white">
-                          {message.message}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <form onSubmit={handleSendMessage} className="relative">
-                  <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Send a message as host..." className="w-full bg-white/10 text-white rounded-full py-3 pl-4 pr-12 outline-none" />
-                  <button type="submit" disabled={!newMessage.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-600 rounded-full text-white disabled:opacity-50">
-                    <MessageCircle className="w-4 h-4" />
-                  </button>
-                </form>
-              </div>
-            )}
+            {activeTab === 'chat' && null}
             {activeTab === 'monetization' && (
               <div className="space-y-4 text-white/80">
                 <div className="text-sm">

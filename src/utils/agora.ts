@@ -3,18 +3,15 @@ import { supabase } from './supabase/client';
 
 export const AGORA_APP_ID = 'f5ff5998cbc248459a3c536a9997b970';
 
-export const client: IAgoraRTCClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+// Don't export a global client instance to avoid memory leaks
+// export const client: IAgoraRTCClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
 
 export const AGORA_config = {
   mode: 'live',
   codec: 'vp8',
 };
 
-export const getAgoraToken = async (
-  channelName: string,
-  uid: string | number,
-  role: 'publisher' | 'subscriber'
-) => {
+export const getAgoraToken = async (channelName: string, uid: string | number, role: 'publisher' | 'subscriber'): Promise<string> => {
   try {
     const {
       data: { session }

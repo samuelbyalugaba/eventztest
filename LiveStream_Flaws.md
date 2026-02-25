@@ -72,6 +72,21 @@ While the basic WebRTC (Agora) video flow works, the backend architecture handle
 *   **Issue:** The layout is hardcoded to `aspect-[9/16]` (Mobile Portrait). On a desktop, this looks like a giant phone screen in the middle of a black void.
 *   [ ] **Fix:** Responsive layout. Desktop should allow a landscape mode or a "Theater Mode" with chat on the side, not floating over the video.
 
+### ❌ 5. Database Permission Errors (RLS)
+*   **Issue:** Users receive a `403 Forbidden` error when trying to send Gifts or buy tickets. This is because the Row Level Security (RLS) policies on the `transactions` table are too restrictive or missing.
+*   [x] **Fix:** Create and apply `fix_transactions_rls.sql` to allow authenticated users to insert their own transaction records.
+
+### ❌ 6. Chat UI & Persistence Issues
+*   **Issue:** 
+    *   Streamer chat was hidden in a tab, not matching the viewer's "lively" overlay experience.
+    *   Like count wasn't updating in real-time for the streamer.
+    *   Chat history persisted between sessions.
+*   [x] **Fix:** 
+    *   Replaced streamer chat panel with a floating overlay matching `LiveStreamViewer`.
+    *   Added real-time subscription for `event_likes`.
+    *   Implemented auto-cleanup of chat messages when the stream ends (`isLive: false`).
+    *   **UI Tweaks:** Removed streamer chat input (monitoring only) and limited display to last 2 messages to prevent overlap with controls.
+
 ## 5. Code Quality & Maintenance
 
 ### 🔧 1. Hardcoded Secrets (Frontend)
