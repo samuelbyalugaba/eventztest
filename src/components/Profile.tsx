@@ -383,7 +383,10 @@ export function Profile({ onLogout }: ProfileProps) {
           {/* Settings Button - Top Right */}
           <button 
             className="absolute top-6 right-6 p-2.5 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40 transition-all z-10" 
-            onClick={() => setShowSettingsModal(true)}
+            onClick={() => {
+              setSettingsInitialView('main');
+              setShowSettingsModal(true);
+            }}
           >
             <Settings className="w-5 h-5" />
           </button>

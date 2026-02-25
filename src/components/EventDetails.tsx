@@ -205,15 +205,17 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       url: highlight.image!,
       eventName: selectedEvent?.title || '',
     })) || []),
-    ...eventPosts.filter(p => p.image_urls && p.image_urls.length > 0).map((post, _index) => ({
-      id: 1000 + post.id,
-      url: post.image_urls[0],
-      likes: post.likes_count || 0,
-      eventName: selectedEvent?.title || '',
-      isPost: true,
-      postId: post.id,
-      isLiked: post.is_liked || false
-    }))
+    ...eventPosts.filter(p => p.image_urls && p.image_urls.length > 0).flatMap((post) => 
+      post.image_urls.map((url: string, imgIndex: number) => ({
+        id: post.id * 1000 + imgIndex,
+        url: url,
+        likes: post.likes_count || 0,
+        eventName: selectedEvent?.title || '',
+        isPost: true,
+        postId: post.id,
+        isLiked: post.is_liked || false
+      }))
+    )
   ];
 
   const videosForViewer = [

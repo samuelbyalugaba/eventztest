@@ -6,9 +6,17 @@ import { CommentIcon } from './icons/CommentIcon';
 import { 
   MessageSquare, Share2, Bookmark, 
   Play, Volume2, VolumeX, 
-  ChevronLeft, ChevronRight, Send, ThumbsUp,
+  Send, ThumbsUp,
   Star, MessageCircle
 } from 'lucide-react';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "./ui/carousel";
 import {
   Drawer,
   DrawerContent,
@@ -42,6 +50,7 @@ const isVideo = (url?: string) => {
 
 export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onMessage, isFollowed = false, audioUnlocked = false }: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [api, setApi] = useState<CarouselApi>();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [likesCount, setLikesCount] = useState(post.likes);
@@ -63,6 +72,20 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       navigator.vibrate(10);
     }
   };
+
+  useEffect(() => {
+    if (!api) return;
+    
+    const onSelect = () => {
+      setCarouselIndex(api.selectedScrollSnap());
+    };
+    
+    api.on("select", onSelect);
+    
+    return () => {
+      api.off("select", onSelect);
+    };
+  }, [api]);
   
   // Intersection Observer for Video Autoplay & Concurrency Management
   useEffect(() => {
@@ -254,10 +277,10 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
     }
   };
 
+  const isCarousel = (post.content.images?.length ?? 0) > 1;
   const videoUrl = post.isHighlight && post.highlights?.[0]?.videoUrl;
   const currentMedia = videoUrl || post.content.images?.[carouselIndex] || post.content.image;
   const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
-  const isCarousel = (post.content.images?.length ?? 0) > 1;
 
   // Determine display profile (User vs Organizer)
   const displayProfile = post.posted_as_organizer && post.organizer_profile 
@@ -355,96 +378,149 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
 
       {/* 3. MEDIA CONTENT */}
       <div className="relative overflow-hidden group rounded-2xl bg-gray-50">
-        <div 
-          className={`relative w-full flex items-center justify-center ${isCarousel ? 'aspect-square bg-gray-100' : ''}`}
-          onDoubleClick={handleDoubleTap}
-        >
-          {isCurrentMediaVideo ? (
-            <div className={`relative w-full bg-black ${isCarousel ? 'h-full' : 'min-h-[250px]'}`}>
-              {isVideoLoading && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
-              <video
-                ref={videoRef}
-                src={currentMedia}
-                className={`w-full ${isCarousel ? 'h-full object-cover' : 'h-auto'}`}
-                loop
-                muted={isMuted}
-                playsInline
-                preload="metadata"
-                onClick={handleManualPlay}
-                onLoadedData={() => setIsVideoLoading(false)}
-              />
-              {/* Video Controls Overlay */}
-              <div className="absolute bottom-4 right-4 z-10">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                  className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
-                >
-                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
+        {isCarousel ? (
+          <div onDoubleClick={handleDoubleTap}>
+            <Carousel setApi={setApi} className="w-full">
+              <CarouselContent>
+                {post.content.images?.map((media, index) => {
+                  const isMediaVideo = isVideo(media);
+                  // Only attach ref if this is the ACTIVE slide to ensure IntersectionObserver works correctly
+                  const isActive = index === carouselIndex;
+
+                  return (
+                    <CarouselItem key={index} className="pl-0">
+                      <div 
+                        className="relative w-full flex items-center justify-center bg-gray-100 aspect-square"
+                      >
+                        {isMediaVideo ? (
+                          <div className="relative w-full h-full bg-black">
+                            {isVideoLoading && isActive && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
+                            <video
+                              ref={isActive ? videoRef : null}
+                              src={media}
+                              className="w-full h-full object-cover"
+                              loop
+                              muted={isMuted}
+                              playsInline
+                              preload="metadata"
+                              onClick={handleManualPlay}
+                              onLoadedData={() => setIsVideoLoading(false)}
+                            />
+                            {/* Video Controls (Show only on active slide) */}
+                            {isActive && (
+                              <>
+                                <div className="absolute bottom-4 right-4 z-10">
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                                    className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                                  >
+                                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                                  </button>
+                                </div>
+                                {!isPlaying && (
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div className="w-16 h-16 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
+                                      <Play className="w-8 h-8 text-white fill-white ml-1" />
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <ImageWithFallback
+                            src={media}
+                            alt={`Post content ${index + 1}`}
+                            className="w-full h-full object-cover"
+                            fallbackType="image"
+                            loading={index === 0 ? "eager" : "lazy"}
+                          />
+                        )}
+                      </div>
+                    </CarouselItem>
+                  );
+                })}
+              </CarouselContent>
+              {/* Show Navigation Arrows on Desktop / Hover */}
+              <div className="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
+                 <CarouselPrevious className="left-4" />
+                 <CarouselNext className="right-4" />
               </div>
-              {isMuted && (
-                <div className="absolute top-4 left-4 z-10">
-                  <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-black/50 text-white backdrop-blur-md">
-                    Tap to unmute
-                  </span>
-                </div>
-              )}
-              {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-16 h-16 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
-                    <Play className="w-8 h-8 text-white fill-white ml-1" />
+              
+              {/* Carousel Indicators */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                {post.content.images?.map((_, idx) => (
+                  <div 
+                    key={idx}
+                    className={`w-1.5 h-1.5 rounded-full transition-all shadow-sm ${
+                      idx === carouselIndex ? 'bg-white w-4' : 'bg-white/50'
+                    }`} 
+                  />
+                ))}
+              </div>
+            </Carousel>
+          </div>
+        ) : (
+          /* SINGLE MEDIA RENDER (No Carousel) */
+          <div 
+            className={`relative w-full flex items-center justify-center ${isCurrentMediaVideo ? 'bg-black min-h-[250px]' : 'min-h-[250px]'}`}
+            onDoubleClick={handleDoubleTap}
+          >
+             {isCurrentMediaVideo ? (
+                /* ... Existing Video Logic for Single File ... */
+                <div className="relative w-full bg-black min-h-[250px]">
+                  {isVideoLoading && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
+                  <video
+                    ref={videoRef}
+                    src={currentMedia}
+                    className="w-full h-auto max-h-[600px]"
+                    loop
+                    muted={isMuted}
+                    playsInline
+                    preload="metadata"
+                    onClick={handleManualPlay}
+                    onLoadedData={() => setIsVideoLoading(false)}
+                  />
+                  <div className="absolute bottom-4 right-4 z-10">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                      className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                    >
+                      {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                    </button>
                   </div>
+                  {isMuted && (
+                    <div className="absolute top-4 left-4 z-10">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-black/50 text-white backdrop-blur-md">
+                        Tap to unmute
+                      </span>
+                    </div>
+                  )}
+                  {!isPlaying && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-16 h-16 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
+                        <Play className="w-8 h-8 text-white fill-white ml-1" />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ) : (
-            <ImageWithFallback
-              src={currentMedia}
-              alt="Post content"
-              className={`w-full ${isCarousel ? 'h-full object-cover' : 'h-auto min-h-[250px]'}`}
-              fallbackType="image"
-              loading="lazy"
-            />
-          )}
-
-          {/* Double Tap ThumbsUp Animation */}
-          {showLikeAnimation && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 animate-in zoom-in-50 duration-300">
-              <ThumbsUp className="w-24 h-24 text-purple-600 fill-purple-600 drop-shadow-xl animate-bounce" />
-            </div>
-          )}
-        </div>
-
-        {/* Carousel Indicators */}
-        {post.content.images && post.content.images.length > 1 && (
-          <>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-              {post.content.images.map((_, idx) => (
-                <div 
-                  key={idx}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    idx === carouselIndex ? 'bg-white w-4' : 'bg-white/50'
-                  }`} 
+             ) : (
+                <ImageWithFallback
+                  src={currentMedia}
+                  alt="Post content"
+                  className="w-full h-auto object-cover max-h-[600px]"
+                  fallbackType="image"
+                  loading="lazy"
                 />
-              ))}
-            </div>
-            {carouselIndex > 0 && (
-              <button 
-                onClick={(e) => { e.stopPropagation(); setCarouselIndex(prev => prev - 1); }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 bg-black/30 backdrop-blur-sm rounded-full text-white hover:bg-black/50 transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            )}
-            {carouselIndex < (post.content.images.length - 1) && (
-              <button 
-                onClick={(e) => { e.stopPropagation(); setCarouselIndex(prev => prev + 1); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 bg-black/30 backdrop-blur-sm rounded-full text-white hover:bg-black/50 transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            )}
-          </>
+             )}
+          </div>
+        )}
+
+        {/* Double Tap Animation Overlay */}
+        {showLikeAnimation && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 animate-in zoom-in-50 duration-300">
+            <ThumbsUp className="w-24 h-24 text-purple-600 fill-purple-600 drop-shadow-xl animate-bounce" />
+          </div>
         )}
       </div>
 

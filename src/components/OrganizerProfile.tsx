@@ -204,14 +204,16 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             date: (() => { try { const d = new Date(p.created_at); return isNaN(d.getTime()) ? '' : d.toLocaleDateString(); } catch { return ''; } })(),
             attendees: p.likes_count || 0
           })),
-          photos: filteredPosts.map((p, index) => ({
-            id: p.id,
-            image: p.image_urls?.[0] || '',
-            video: p.video_url,
-            mediaType: p.video_url ? 'video' : 'image',
-            size: index % 3 === 0 ? 'large' : 'small',
-            eventName: p.content ? p.content.substring(0, 15) + '...' : 'Event'
-          })),
+          photos: filteredPosts.flatMap((p, postIndex) => 
+             (p.image_urls || []).map((url: string, imgIndex: number) => ({
+               id: p.id * 1000 + imgIndex,
+               image: url,
+               video: p.video_url,
+               mediaType: p.video_url ? 'video' : 'image',
+               size: (postIndex + imgIndex) % 3 === 0 ? 'large' : 'small',
+               eventName: p.content ? p.content.substring(0, 15) + '...' : 'Event'
+             }))
+           ),
           upcomingEvents: events.filter((e: any) => new Date(e.date) >= new Date()).map((e: any) => ({
             id: e.id,
             title: e.title,
@@ -731,7 +733,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                 videoUrl: item.videoUrl,
                 eventName: item.title,
                 isPost: true,
-                postId: item.id
+                postId: item.postId
               };
             } else {
               return {
@@ -740,7 +742,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                 likes: item.likes,
                 eventName: item.title,
                 isPost: true,
-                postId: item.id
+                postId: item.postId
               };
             }
           }) as any}
