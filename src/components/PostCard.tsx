@@ -333,7 +333,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             src={displayProfile.avatar} 
             name={displayProfile.name} 
             className="w-10 h-10 ring-2 ring-purple-50 cursor-pointer"
-            onClick={() => onProfileClick(targetUser as any)}
+            onClick={() => onProfileClick(post.user)}
           />
             );
           })()}
@@ -341,28 +341,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             <div className="flex items-center gap-1.5">
               <span 
                 className="text-gray-900 font-bold text-sm cursor-pointer hover:text-purple-600 transition-colors"
-                onClick={() => {
-                  const targetUser = post.posted_as_organizer && (post as any).organizer_profile
-                    ? {
-                        id: (post as any).organizer_profile.id,
-                        name: (post as any).organizer_profile.organizer_name || 'Organizer',
-                        username: '',
-                        avatar: (post as any).organizer_profile.organizer_avatar_url,
-                        verified: false,
-                        isOrganizer: true,
-                        isOrganizerPage: true,
-                      }
-                    : {
-                        id: post.user.id,
-                        name: post.user.name || post.user.username || 'User',
-                        username: post.user.username || '',
-                        avatar: post.user.avatar,
-                        verified: post.user.verified || false,
-                        isOrganizer: false,
-                        isOrganizerPage: false,
-                      };
-                  onProfileClick(targetUser as any);
-                }}
+                onClick={() => onProfileClick(post.user)}
               >
                 {displayProfile.name}
               </span>

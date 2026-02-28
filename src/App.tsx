@@ -131,7 +131,7 @@ export default function App() {
           return {
             id: p.id,
             user: {
-              id: p.user?.id || 'unknown',
+              id: isOrganizerPage ? (p.organizer_profile?.id || 'unknown') : (p.user?.id || 'unknown'),
               name: displayName || 'Unknown',
               username: p.user?.username || '@unknown',
               avatar: avatarUrl || '',
