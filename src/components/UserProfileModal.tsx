@@ -159,7 +159,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
   }));
 
   // Determine display data based on role
-  const isOrganizerView = user.type === 'Organizer' || !!profile?.is_organizer;
+  const isOrganizerView = user.type === 'Organizer';
   
   const displayData = {
     name: isOrganizerView ? (organizerProfile?.organizer_name || 'Organizer') : (profile?.full_name || user.name),
