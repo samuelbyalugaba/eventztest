@@ -303,33 +303,66 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       {/* 1. HEADER */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
+          {/*
+            Build the correct target user for profile navigation:
+            - If post was made as organizer page, open OrganizerProfile
+            - Otherwise open UserProfile (even if the user is an organizer account)
+          */}
+          {(() => {
+            const targetUser = post.posted_as_organizer && (post as any).organizer_profile
+              ? {
+                  id: (post as any).organizer_profile.id,
+                  name: (post as any).organizer_profile.organizer_name || 'Organizer',
+                  username: '',
+                  avatar: (post as any).organizer_profile.organizer_avatar_url,
+                  verified: false,
+                  isOrganizer: true,
+                  isOrganizerPage: true,
+                }
+              : {
+                  id: post.user.id,
+                  name: post.user.name || post.user.username || 'User',
+                  username: post.user.username || '',
+                  avatar: post.user.avatar,
+                  verified: post.user.verified || false,
+                  isOrganizer: false,
+                  isOrganizerPage: false,
+                };
+            return (
           <UserAvatar 
             src={displayProfile.avatar} 
             name={displayProfile.name} 
             className="w-10 h-10 ring-2 ring-purple-50 cursor-pointer"
-            onClick={() => onProfileClick({
-              id: displayProfile.id,
-              name: displayProfile.name,
-              username: post.user.username || '',
-              avatar: displayProfile.avatar,
-              verified: post.user.verified || false,
-              isOrganizer: displayProfile.isOrganizer,
-              isOrganizerPage: displayProfile.isOrganizer
-            })}
+            onClick={() => onProfileClick(targetUser as any)}
           />
+            );
+          })()}
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <span 
                 className="text-gray-900 font-bold text-sm cursor-pointer hover:text-purple-600 transition-colors"
-                onClick={() => onProfileClick({
-                  id: displayProfile.id,
-                  name: displayProfile.name,
-                  username: post.user.username || '',
-                  avatar: displayProfile.avatar,
-                  verified: post.user.verified || false,
-                  isOrganizer: displayProfile.isOrganizer,
-                  isOrganizerPage: displayProfile.isOrganizer
-                })}
+                onClick={() => {
+                  const targetUser = post.posted_as_organizer && (post as any).organizer_profile
+                    ? {
+                        id: (post as any).organizer_profile.id,
+                        name: (post as any).organizer_profile.organizer_name || 'Organizer',
+                        username: '',
+                        avatar: (post as any).organizer_profile.organizer_avatar_url,
+                        verified: false,
+                        isOrganizer: true,
+                        isOrganizerPage: true,
+                      }
+                    : {
+                        id: post.user.id,
+                        name: post.user.name || post.user.username || 'User',
+                        username: post.user.username || '',
+                        avatar: post.user.avatar,
+                        verified: post.user.verified || false,
+                        isOrganizer: false,
+                        isOrganizerPage: false,
+                      };
+                  onProfileClick(targetUser as any);
+                }}
               >
                 {displayProfile.name}
               </span>
