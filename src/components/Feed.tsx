@@ -1716,7 +1716,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
           user={{
             id: selectedUserProfile.id,
             name: selectedUserProfile.name,
-            type: selectedUserProfile.isOrganizer ? 'Organizer' : 'Attendee',
+            type: (selectedUserProfile as any).type ?? (selectedUserProfile.isOrganizer ? 'Organizer' : 'Attendee'),
             avatar: selectedUserProfile.avatar,
             verified: selectedUserProfile.verified,
           }}
