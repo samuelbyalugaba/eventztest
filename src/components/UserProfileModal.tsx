@@ -91,6 +91,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
     if (user.id) {
       fetchData();
     }
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+    return () => clearTimeout(timeout);
   }, [user.id, user.type]);
 
   const handleFollow = async () => {

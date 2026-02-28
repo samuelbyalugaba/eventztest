@@ -44,7 +44,10 @@ self.addEventListener('activate', (event) => {
 // Fetch event
 self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) {
+  const url = new URL(event.request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+  const isSupabaseStorage = url.hostname.endsWith('.supabase.co') && url.pathname.includes('/storage/');
+  if (!isSameOrigin && !isSupabaseStorage) {
     return;
   }
 
@@ -82,8 +85,67 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Static Assets (JS, CSS, Images) - Stale-While-Revalidate
+  // 2. Static Assets (JS, CSS, Images) - Stale-While-Revalidate (same-origin)
   // Serve from cache immediately for speed, then update in background
+  if (isSameOrigin) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          fetch(event.request)
+            .then((response) => {
+              if (response && response.status === 200) {
+                caches.open(RUNTIME_CACHE).then((cache) => {
+                  cache.put(event.request, response.clone());
+                });
+              }
+            })
+            .catch(() => {});
+          return cachedResponse;
+        }
+        return fetch(event.request)
+          .then((response) => {
+            if (!response || response.status !== 200 || response.type === 'error') {
+              return response;
+            }
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+            return response;
+          })
+          .catch(() => {
+            if (event.request.headers.get('accept').includes('image')) {
+            }
+          });
+      })
+    );
+    return;
+  }
+
+  // 3. Supabase Storage (cross-origin images/videos) - Cache First
+  if (isSupabaseStorage && event.request.method === 'GET') {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetch(event.request, { mode: 'no-cors' })
+          .then((response) => {
+            if (!response) return response;
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+            return response;
+          })
+          .catch(() => {
+            return caches.match('/icons/icon-192x192.png');
+          });
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {

@@ -542,7 +542,6 @@ export const getEvents = async () => {
       *,
       organizer:profiles(*)
     `)
-    .eq('status', 'published')
     .order('date', { ascending: true });
 
   if (error) {
@@ -983,7 +982,7 @@ export const getUserTickets = async (userId: string) => {
   return data;
 };
 
-export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'event'>) => {
+export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'event'> & { transaction_id?: number }) => {
   // Use the secure RPC function to purchase tickets (prevents free ticket glitch)
   const { data, error } = await supabase.rpc('purchase_ticket', {
     p_event_id: ticket.event_id,
@@ -993,7 +992,8 @@ export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'e
     p_ticket_number: ticket.ticket_number,
     p_qr_code: ticket.qr_code || null,
     p_user_id: (ticket as any).user_id || null,
-    p_price: ticket.price || null
+    p_price: ticket.price || null,
+    p_transaction_id: (ticket as any).transaction_id
   });
 
   if (error) {
@@ -1066,6 +1066,22 @@ export const initiatePayment = async (params: {
   }
 
   return data;
+};
+
+export const waitForTransactionCompletion = async (transactionId: number, timeoutMs = 60000, intervalMs = 3000) => {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('status')
+      .eq('id', transactionId)
+      .single();
+    if (!error && data && (data.status === 'completed' || data.status === 'success')) {
+      return true;
+    }
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  return false;
 };
 
 // --- SAVED EVENTS ---

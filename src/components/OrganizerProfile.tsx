@@ -6,7 +6,7 @@ import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
 import { toast } from 'sonner';
-import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiatePayment } from '../utils/supabase/api';
+import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiatePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 
@@ -323,9 +323,11 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             externalId: transaction.id.toString()
           });
 
-          toast.success(`Payment request sent to ${paymentPhone}! Please approve on your phone.`);
-          
-          // For MVP/Demo: Assume success and proceed to create tickets
+          toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
+          const ok = await waitForTransactionCompletion(transaction.id);
+          if (!ok) {
+            throw new Error('Payment not confirmed');
+          }
       }
 
       // Create tickets loop
@@ -342,7 +344,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             ticket_type: 'General Admission',
             status: 'valid'
           };
-          await createTicket(ticketData);
+          await createTicket({ ...ticketData, transaction_id: transaction.id });
       }
 
       // UI Update

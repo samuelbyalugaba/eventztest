@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, ChevronLeft, Tv, Calendar, MapPin, CheckCircle2, Phone, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { createTicket, createTransaction, initiatePayment, Event as ApiEvent } from '../utils/supabase/api';
+import { createTicket, createTransaction, initiatePayment, waitForTransactionCompletion, Event as ApiEvent } from '../utils/supabase/api';
 
 interface VirtualTicketPurchaseModalProps {
   isOpen: boolean;
@@ -85,17 +85,12 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         externalId: transaction.id.toString()
       });
 
-      toast.success(`Payment request sent to ${ticketFormData.phone}! Please approve on your phone.`);
-      
-      // In a real app, we would poll for status or wait for webhook.
-      // For this MVP, we'll simulate success after a delay or assume success for demo.
-      // Or better, we tell the user to check their phone and click "I have paid".
-      
-      // For now, let's auto-advance to success to allow ticket creation for demo purposes,
-      // but strictly we should wait.
-      // Let's call finalizeTicket immediately for the "happy path" demo, 
-      // but in production this must be gated by actual payment confirmation.
-      await finalizeTicket(user.id, priceString);
+      toast.info(`Payment request sent to ${ticketFormData.phone}. Waiting for confirmation...`);
+      const ok = await waitForTransactionCompletion(transaction.id);
+      if (!ok) {
+        throw new Error('Payment not confirmed');
+      }
+      await finalizeTicket(user.id, priceString, transaction.id);
 
     } catch (error: any) {
       const debugError = {
@@ -119,7 +114,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
     }
   };
 
-  const finalizeTicket = async (userId: string, priceDisplay: string) => {
+  const finalizeTicket = async (userId: string, priceDisplay: string, transactionId: number) => {
       // Generate ticket
       const ticketNumber = `EVT-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
       const barcode = crypto.randomUUID();
@@ -134,7 +129,8 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         customer_name: ticketFormData.name,
         customer_email: ticketFormData.email,
         ticket_type: 'Virtual',
-        status: 'active'
+        status: 'active',
+        transaction_id: transactionId
       };
 
       await createTicket(ticketData);

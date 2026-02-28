@@ -6,18 +6,18 @@ This checklist outlines the critical steps required to transition Eventz PWA fro
 
 The application is currently vulnerable to financial fraud and data manipulation. These issues must be resolved before any real-world usage.
 
-- [ ] **Secure Payment Flow (Anti-Fraud)**
-    - [ ] **Remove Client Trust**: Modify `purchase_ticket` RPC to **require** a valid, completed `transaction_id`.
-    - [ ] **Server-Side Verification**: Implement a check inside `purchase_ticket` that queries the `transactions` table to ensure:
+- [x] **Secure Payment Flow (Anti-Fraud)**
+    - [x] **Remove Client Trust**: Modify `purchase_ticket` RPC to **require** a valid, completed `transaction_id`.
+    - [x] **Server-Side Verification**: Implement a check inside `purchase_ticket` that queries the `transactions` table to ensure:
         1.  Transaction exists.
         2.  `status` is `'completed'`.
         3.  `amount` matches the ticket price.
         4.  Transaction has not already been used for a ticket.
-    - [ ] **Webhook Reliability**: Ensure `azampay-callback` handles idempotent requests (processing the same webhook twice doesn't create double records).
+    - [x] **Webhook Reliability**: Ensure `azampay-callback` handles idempotent requests (processing the same webhook twice doesn't create double records).
 
-- [ ] **Row Level Security (RLS) Auditing**
-    - [ ] **Organizer Privileges**: Update `events` table policies. Instead of trusting `is_organizer` flag on the client profile, verify the user exists in a secure `organizers` table or has a strictly managed role claim in `auth.users`.
-    - [ ] **Strict Profile Updates**: Ensure users can strictly only `UPDATE` their own profile columns (e.g., prevent a user from setting their own `is_verified` or `is_organizer` flags to true).
+- [x] **Row Level Security (RLS) Auditing**
+    - [x] **Organizer Privileges**: Update `events` table policies. Instead of trusting `is_organizer` flag on the client profile, verify the user exists in a secure `organizers` table or has a strictly managed role claim in `auth.users`.
+    - [x] **Strict Profile Updates**: Ensure users can strictly only `UPDATE` their own profile columns (e.g., prevent a user from setting their own `is_verified` or `is_organizer` flags to true).
 
 - [ ] **API Hardening**
     - [ ] **Error Handling**: Update Edge Functions (`azampay-payment`) to return proper HTTP error codes (400, 401, 500) instead of masking everything as "success: false" inside a 200 OK response.

@@ -8,7 +8,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -20,74 +19,65 @@ serve(async (req) => {
     )
 
     const payload = await req.json()
-    console.log('AzamPay Callback Payload:', payload)
-
-    // Extract status and ID
-    // AzamPay MNO Checkout Callback format:
-    // {
-    //   "utilityref": "12345",   <-- This is our externalId / transaction ID
-    //   "operator": "Airtel",
-    //   "reference": "12345678",
-    //   "transactionstatus": "success" | "failure", 
-    //   "submerchantAcc": "...",
-    //   "amount": "1000",
-    //   "message": "...",
-    //   "success": true
-    // }
-
     const { utilityref, transactionstatus, success } = payload
-    
-    // Normalize status
-    let status = 'pending';
+
+    let status = 'pending'
     if (success === true || transactionstatus?.toLowerCase() === 'success') {
-      status = 'completed';
+      status = 'completed'
     } else if (success === false || transactionstatus?.toLowerCase() === 'failure') {
-      status = 'failed';
+      status = 'failed'
     }
 
     if (!utilityref) {
-      throw new Error('Missing utilityref in callback payload');
+      throw new Error('Missing utilityref')
     }
 
-    // Update Transaction in Supabase
+    const txId = Number(utilityref)
+    if (!Number.isFinite(txId)) {
+      throw new Error('Invalid utilityref')
+    }
+
+    const { data: existing } = await supabaseClient
+      .from('transactions')
+      .select('id,status,metadata')
+      .eq('id', txId)
+      .single()
+
+    if (!existing) {
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
+      )
+    }
+
+    if (existing.status === 'completed') {
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
+      )
+    }
+
     const { error } = await supabaseClient
       .from('transactions')
       .update({ 
         status: status,
         provider_transaction_id: payload.reference || payload.transactionId,
-        metadata: {
-            ...payload,
-            updated_at: new Date().toISOString()
-        }
+        metadata: Object.assign({}, existing.metadata || {}, payload, { updated_at: new Date().toISOString() })
       })
-      .eq('id', utilityref)
+      .eq('id', txId)
 
     if (error) {
-        console.error('Error updating transaction:', error);
-        throw error;
+      throw error
     }
-
-    // If successful, we might want to trigger ticket creation if it wasn't done yet.
-    // However, in our current flow, we optimistically created the ticket or the client handles it.
-    // Ideally, the ticket creation should happen here if we want to be secure.
-    // For now, just updating the transaction status is a good first step.
 
     return new Response(
       JSON.stringify({ success: true }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
     )
-
   } catch (error) {
-    console.error('Callback Error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      },
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
     )
   }
 })

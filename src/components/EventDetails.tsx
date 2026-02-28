@@ -12,7 +12,7 @@ import { ShareModal } from './ShareModal';
 import { EventDetailModal } from './EventDetailModal';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView, createTransaction, initiatePayment } from '../utils/supabase/api';
+import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView, createTransaction, initiatePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 
 
 
@@ -378,7 +378,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         externalId: transaction.id.toString()
       });
 
-      toast.success(`Payment request sent to ${paymentPhone}! Please approve on your phone.`);
+      toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
+      const ok = await waitForTransactionCompletion(transaction.id);
+      if (!ok) {
+        throw new Error('Payment not confirmed');
+      }
 
       // Generate tickets for each quantity
       const tickets: PurchasedTicket[] = [];
@@ -399,7 +403,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           status: 'active'
         };
 
-        const newTicket = await createTicket(ticketData);
+        const newTicket = await createTicket({ ...ticketData, transaction_id: transaction.id });
 
         const ticket: PurchasedTicket = {
           id: newTicket.id.toString(),
@@ -488,7 +492,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         externalId: transaction.id.toString()
       });
 
-      toast.success(`Payment request sent to ${paymentPhone}! Please approve on your phone.`);
+      toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
+      const ok = await waitForTransactionCompletion(transaction.id);
+      if (!ok) {
+        throw new Error('Payment not confirmed');
+      }
 
       // For MVP/Demo: Assume success and proceed to create tickets
       // In production, we would wait for webhook/polling
@@ -511,7 +519,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           status: 'active'
         };
 
-        await createTicket(ticketData);
+        await createTicket({ ...ticketData, transaction_id: transaction.id });
       }
 
       // Show success toast

@@ -53,6 +53,9 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
           alt={alt} 
           className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} 
           style={style} 
+          loading="lazy"
+          decoding="async"
+          fetchpriority="low"
           {...rest} 
           onError={handleError} 
           onLoad={handleLoad}

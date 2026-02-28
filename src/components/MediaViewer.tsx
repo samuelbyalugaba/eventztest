@@ -393,7 +393,9 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
                   loop
                   muted={isMuted}
                   playsInline
-                  preload="auto"
+                  preload="metadata"
+                  disableRemotePlayback
+                  poster={(currentMedia as VideoClip).thumbnail}
                   onWaiting={() => setIsBuffering(true)}
                   onPlaying={() => {
                     setIsBuffering(false);
