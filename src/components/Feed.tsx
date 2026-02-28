@@ -632,7 +632,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       username: user.username,
       avatar: user.avatar,
       verified: user.verified,
-      isOrganizer: user.isOrganizer
+      isOrganizer: user.isOrganizer,
+      type: 'Attendee'
     });
   };
 
