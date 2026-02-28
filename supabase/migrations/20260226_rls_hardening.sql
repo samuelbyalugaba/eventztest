@@ -19,7 +19,10 @@ CREATE POLICY "Organizers can insert events" ON public.events
 FOR INSERT
 WITH CHECK (
   auth.uid() = organizer_id
-  AND EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_organizer = true)
+  AND (
+    EXISTS (SELECT 1 FROM public.organizer_profiles op WHERE op.id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_organizer = true)
+  )
 );
 
 CREATE POLICY "Organizers can update own events" ON public.events
@@ -29,7 +32,10 @@ USING (
 )
 WITH CHECK (
   auth.uid() = organizer_id
-  AND EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_organizer = true)
+  AND (
+    EXISTS (SELECT 1 FROM public.organizer_profiles op WHERE op.id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_organizer = true)
+  )
 );
 
 -- PROFILES: Users may update their own profile but cannot self-elevate is_organizer/verified
@@ -37,6 +43,9 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'profiles' AND policyname = 'Users can update own profile') THEN
     EXECUTE 'DROP POLICY "Users can update own profile" ON public.profiles';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'profiles' AND policyname = 'Users can update own profile (safe)') THEN
+    EXECUTE 'DROP POLICY "Users can update own profile (safe)" ON public.profiles';
   END IF;
 END$$;
 
