@@ -307,13 +307,29 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             src={displayProfile.avatar} 
             name={displayProfile.name} 
             className="w-10 h-10 ring-2 ring-purple-50 cursor-pointer"
-            onClick={() => onProfileClick(post.user)}
+            onClick={() => onProfileClick({
+              id: displayProfile.id,
+              name: displayProfile.name,
+              username: post.user.username || '',
+              avatar: displayProfile.avatar,
+              verified: post.user.verified || false,
+              isOrganizer: displayProfile.isOrganizer,
+              isOrganizerPage: displayProfile.isOrganizer
+            })}
           />
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <span 
                 className="text-gray-900 font-bold text-sm cursor-pointer hover:text-purple-600 transition-colors"
-                onClick={() => onProfileClick(post.user)}
+                onClick={() => onProfileClick({
+                  id: displayProfile.id,
+                  name: displayProfile.name,
+                  username: post.user.username || '',
+                  avatar: displayProfile.avatar,
+                  verified: post.user.verified || false,
+                  isOrganizer: displayProfile.isOrganizer,
+                  isOrganizerPage: displayProfile.isOrganizer
+                })}
               >
                 {displayProfile.name}
               </span>
