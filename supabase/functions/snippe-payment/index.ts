@@ -42,7 +42,29 @@ serve(async (req) => {
     const originalCurrency = currency.toUpperCase();
     
     if (originalCurrency !== 'TZS') {
-      const rate = EXCHANGE_RATES[originalCurrency] || 2600; // Default fallback to USD rate if unknown
+      let rate = EXCHANGE_RATES[originalCurrency];
+
+      // If rate not found in static list, try fetching from free API
+      if (!rate) {
+        try {
+          console.log(`Fetching live rate for ${originalCurrency}...`);
+          const rateResponse = await fetch(`https://open.er-api.com/v6/latest/${originalCurrency}`);
+          const rateData = await rateResponse.json();
+          
+          if (rateData && rateData.rates && rateData.rates.TZS) {
+            rate = rateData.rates.TZS;
+            console.log(`Live rate fetched: 1 ${originalCurrency} = ${rate} TZS`);
+          } else {
+            console.warn(`Could not fetch live rate for ${originalCurrency}. Using default fallback.`);
+          }
+        } catch (err) {
+          console.error(`Error fetching live rate: ${err}`);
+        }
+      }
+
+      // Final fallback if both static and API fail
+      rate = rate || 2600; 
+
       finalAmount = Math.ceil(amount * rate);
       console.log(`Converting ${amount} ${originalCurrency} to ${finalAmount} TZS (Rate: ${rate})`);
     } else {
