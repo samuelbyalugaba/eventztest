@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight, MessageCircle } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
