@@ -1212,7 +1212,7 @@ export const markConversationAsUnread = async (conversationId: number, userId: s
     .neq('sender_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (lastMessage) {
     const { error } = await supabase
@@ -1807,7 +1807,7 @@ export const getConversations = async (userId: string) => {
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // Get unread count
     const { count: unreadCount } = await supabase
@@ -1879,7 +1879,7 @@ export const startConversation = async (otherUserId: string) => {
     .from('conversations')
     .select('*')
     .or(`and(participant1_id.eq.${user.id},participant2_id.eq.${otherUserId}),and(participant1_id.eq.${otherUserId},participant2_id.eq.${user.id})`)
-    .single();
+    .maybeSingle();
 
   if (existing) return existing;
 
@@ -1936,7 +1936,7 @@ export const subscribeToMessages = (conversationId: number, callback: (message: 
           .from('profiles')
           .select('*')
           .eq('id', payload.new.sender_id)
-          .single();
+          .maybeSingle();
 
         const message = {
           ...payload.new,
@@ -1972,7 +1972,7 @@ export const getNotifications = async (userId: string) => {
     .from('profiles')
     .select('last_notification_read_at')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
     
   const lastReadTime = profile?.last_notification_read_at ? new Date(profile.last_notification_read_at).getTime() : 0;
 
