@@ -235,9 +235,9 @@ export default function App() {
               id: c.id,
               user: {
                 id: otherUser?.id,
-                name: otherUser?.full_name || 'Unknown User',
+                name: otherUser?.organizer_details?.organizer_name || otherUser?.full_name || 'Unknown User',
                 username: otherUser?.username || '',
-                avatar: otherUser?.avatar_url,
+                avatar: otherUser?.organizer_details?.organizer_avatar_url || otherUser?.avatar_url,
                 verified: otherUser?.verified || false,
                 isOrganizer: otherUser?.is_organizer || false,
               },

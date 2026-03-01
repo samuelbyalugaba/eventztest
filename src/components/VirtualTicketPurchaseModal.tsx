@@ -3,6 +3,7 @@ import { X, ChevronLeft, Tv, Calendar, MapPin, CheckCircle2, Phone, CreditCard }
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion, Event as ApiEvent } from '../utils/supabase/api';
+import { extractCurrencyFromPrice } from '../utils/currencies';
 
 interface VirtualTicketPurchaseModalProps {
   isOpen: boolean;
@@ -49,10 +50,11 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
       const priceString = event.streaming?.virtualPrice || event.price_range || '0';
       // Simple parsing: remove non-numeric chars except dot
       const price = parseFloat(priceString.replace(/[^0-9.]/g, '')) || 0;
+      const currency = extractCurrencyFromPrice(priceString);
 
       if (price <= 0) {
         // Free event logic (skip payment)
-        await finalizeTicket(user.id, 'Free');
+        await finalizeTicket(user.id, 'Free', 0);
         return;
       }
 
@@ -61,7 +63,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         user_id: user.id,
         event_id: event.id,
         amount: price,
-        currency: 'TZS',
+        currency: currency,
         provider: selectedProvider,
         status: 'pending',
         metadata: {
@@ -79,6 +81,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
 
       await initiateSnippePayment({
         amount: price,
+        currency: currency,
         phoneNumber: ticketFormData.phone,
         provider: selectedProvider,
         eventId: event.id,

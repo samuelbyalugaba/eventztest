@@ -157,10 +157,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
   }));
 
   // Determine display data based on role
-  const isOrganizerView = user.type === 'Organizer';
+  const isOrganizerView = user.type === 'Organizer' || !!profile?.is_organizer;
   
   const displayData = {
-    name: isOrganizerView ? (organizerProfile?.organizer_name || 'Organizer') : (profile?.full_name || user.name),
+    name: isOrganizerView ? (organizerProfile?.organizer_name || user.name || 'Organizer') : (profile?.full_name || user.name),
     avatar: isOrganizerView ? (organizerProfile?.organizer_avatar_url || 'https://images.unsplash.com/photo-1475721027767-f4242310f17a?w=400&h=400&fit=crop') : (profile?.avatar_url || user.avatar),
     cover: isOrganizerView ? (organizerProfile?.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop') : (profile?.cover_url || user.coverImage),
     bio: isOrganizerView ? (organizerProfile?.bio || organizerProfile?.description || 'No bio available') : (profile?.bio || user.bio),

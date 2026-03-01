@@ -159,3 +159,31 @@ export const currencies = [
   { code: 'ZMW', name: 'Zambian Kwacha', symbol: 'ZK' },
   { code: 'ZWL', name: 'Zimbabwean Dollar', symbol: '$' },
 ];
+
+export const extractCurrencyFromPrice = (priceString: string): string => {
+  if (!priceString) return 'TZS';
+  
+  // Clean string
+  const clean = priceString.trim();
+  
+  // Check for common symbols/codes at start
+  for (const currency of currencies) {
+    if (clean.startsWith(currency.code)) return currency.code;
+    if (clean.startsWith(currency.symbol)) {
+      // Ambiguous symbols like $ need care, usually default to USD if just $
+      if (currency.symbol === '$' && clean.startsWith('$')) return 'USD';
+      return currency.code;
+    }
+  }
+  
+  // Specific checks for formats like "10,000 TZS" or "TSh 10,000"
+  if (clean.includes('TSh') || clean.includes('TZS')) return 'TZS';
+  if (clean.includes('KSh') || clean.includes('KES')) return 'KES';
+  if (clean.includes('USh') || clean.includes('UGX')) return 'UGX';
+  if (clean.includes('$') || clean.includes('USD')) return 'USD';
+  if (clean.includes('€') || clean.includes('EUR')) return 'EUR';
+  if (clean.includes('£') || clean.includes('GBP')) return 'GBP';
+  
+  // Default to TZS if purely numeric or unknown
+  return 'TZS';
+};

@@ -15,11 +15,38 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, phoneNumber, provider, eventId, userId, metadata } = await req.json();
+    // Exchange Rates (Static for now, can be replaced with an API later)
+    // 1 [CURRENCY] = X TZS
+    const EXCHANGE_RATES: Record<string, number> = {
+      'TZS': 1,
+      'USD': 2600,
+      'EUR': 2800,
+      'GBP': 3300,
+      'KES': 20,
+      'UGX': 0.7,
+      'RWF': 2,
+      'ZAR': 140,
+      'NGN': 3, // Very volatile
+      'GHS': 180,
+    };
+
+    const { amount, currency = "TZS", phoneNumber, provider, eventId, userId, metadata } = await req.json();
 
     // Basic Validation
     if (!amount || !phoneNumber) {
       throw new Error("Amount and Phone Number are required");
+    }
+
+    // Currency Conversion Logic
+    let finalAmount = amount;
+    const originalCurrency = currency.toUpperCase();
+    
+    if (originalCurrency !== 'TZS') {
+      const rate = EXCHANGE_RATES[originalCurrency] || 2600; // Default fallback to USD rate if unknown
+      finalAmount = Math.ceil(amount * rate);
+      console.log(`Converting ${amount} ${originalCurrency} to ${finalAmount} TZS (Rate: ${rate})`);
+    } else {
+      finalAmount = Math.ceil(amount); // Ensure integer for TZS
     }
 
     const apiKey = Deno.env.get("SNIPPE_API_KEY") || "snp_0af9b516c248f7b62a1d82d130d174f0ddacd92b7241870b06251fb200a4d2bf";
@@ -48,7 +75,7 @@ serve(async (req) => {
     const payload = {
       phone_number: formattedPhone,
       details: {
-        amount: amount,
+        amount: finalAmount, // Converted TZS Amount
         currency: "TZS",
         description: `Ticket purchase for event ${eventId}`
       },
@@ -61,7 +88,9 @@ serve(async (req) => {
       metadata: {
         transaction_id: metadata?.transactionId,
         user_id: userId,
-        event_id: eventId
+        event_id: eventId,
+        original_amount: amount, // Store original amount
+        original_currency: currency // Store original currency
       }
     };
 

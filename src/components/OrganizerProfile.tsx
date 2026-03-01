@@ -7,6 +7,7 @@ import { PurchasedTicket } from '../types';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
 import { toast } from 'sonner';
 import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
+import { extractCurrencyFromPrice } from '../utils/currencies';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 
@@ -178,7 +179,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         
         setOrganizerData({
           id: profile.id,
-          name: organizerProfile?.organizer_name || 'Organizer',
+          name: organizerProfile?.organizer_name || organizerName || 'Organizer',
           bio: organizerProfile?.bio || 'No bio available',
           coverImage: organizerProfile?.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
           avatar: organizerProfile?.organizer_avatar_url || 'https://images.unsplash.com/photo-1475721027767-f4242310f17a?w=400&h=400&fit=crop',
@@ -278,6 +279,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       // Calculate total price (parse "TSh 10,000" or similar)
       const priceString = event.price?.toString().replace(/[^0-9.]/g, '') || '0';
       const priceNumeric = parseFloat(priceString);
+      const currency = extractCurrencyFromPrice(event.price?.toString());
       const totalPrice = priceNumeric * quantity;
 
       // Only process payment if price > 0
@@ -293,7 +295,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             user_id: currentUser.id,
             event_id: event.id,
             amount: totalPrice,
-            currency: 'TZS',
+            currency: currency,
             provider: selectedProvider,
             status: 'pending',
             metadata: {
@@ -311,6 +313,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           toast.info('Initiating payment request...');
           await initiateSnippePayment({
             amount: totalPrice,
+            currency: currency,
             phoneNumber: paymentPhone,
             provider: selectedProvider,
             eventId: event.id,

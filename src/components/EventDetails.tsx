@@ -13,6 +13,7 @@ import { EventDetailModal } from './EventDetailModal';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { supabase } from '../utils/supabase/client';
 import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
+import { extractCurrencyFromPrice } from '../utils/currencies';
 
 
 
@@ -348,6 +349,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
       const priceStr = eventToPurchase.price_range;
       const numericPrice = parseInt(priceStr.replace(/[^\d]/g, '')) || 0;
+      const currency = extractCurrencyFromPrice(priceStr);
       const totalPrice = numericPrice * normalTicketQuantity;
 
       // 1. Create Transaction
@@ -355,7 +357,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         user_id: user.id,
         event_id: eventToPurchase.id,
         amount: totalPrice,
-        currency: 'TZS',
+        currency: currency,
         provider: selectedProvider,
         status: 'pending',
         metadata: {
@@ -373,6 +375,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       toast.info('Initiating payment request...');
       await initiateSnippePayment({
         amount: totalPrice,
+        currency: currency,
         phoneNumber: paymentPhone,
         provider: selectedProvider,
         eventId: eventToPurchase.id,
@@ -469,13 +472,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       }
 
       const totalPrice = tierData.priceNumeric * tierTicketQuantity;
+      const currency = extractCurrencyFromPrice(tierData.price);
 
       // 1. Create Transaction
       const transactionData = {
         user_id: user.id,
         event_id: eventToPurchase.id,
         amount: totalPrice,
-        currency: 'TZS',
+        currency: currency,
         provider: selectedProvider,
         status: 'pending',
         metadata: {
@@ -493,6 +497,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       toast.info('Initiating payment request...');
       await initiateSnippePayment({
         amount: totalPrice,
+        currency: currency,
         phoneNumber: paymentPhone,
         provider: selectedProvider,
         eventId: eventToPurchase.id,

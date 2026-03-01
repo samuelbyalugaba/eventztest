@@ -1040,6 +1040,7 @@ export const createTransaction = async (transactionData: {
 
 export const initiateSnippePayment = async (params: {
   amount: number;
+  currency?: string;
   phoneNumber: string; // e.g., "2557..."
   provider: string; // "Airtel", "Tigo", "Halopesa", "Mpesa"
   eventId: number;
@@ -1053,7 +1054,10 @@ export const initiateSnippePayment = async (params: {
   // but supabase-js client handles it.
   // If we want to be explicit about headers:
   const { data, error } = await supabase.functions.invoke('snippe-payment', {
-    body: params,
+    body: {
+      ...params,
+      currency: params.currency || 'TZS'
+    },
     headers: {
       // 'Authorization': `Bearer ${anon_key}`, // Usually handled automatically
     }
@@ -1816,6 +1820,16 @@ export const getConversations = async (userId: string) => {
       .eq('conversation_id', conv.id)
       .eq('is_read', false)
       .neq('sender_id', userId);
+
+    // Fetch organizer details if participants are organizers
+    if (conv.participant1 && conv.participant1.is_organizer) {
+       const { data: org1 } = await supabase.from('organizer_profiles').select('*').eq('id', conv.participant1.id).maybeSingle();
+       if (org1) conv.participant1.organizer_details = org1;
+    }
+    if (conv.participant2 && conv.participant2.is_organizer) {
+       const { data: org2 } = await supabase.from('organizer_profiles').select('*').eq('id', conv.participant2.id).maybeSingle();
+       if (org2) conv.participant2.organizer_details = org2;
+    }
 
     return {
       ...conv,
