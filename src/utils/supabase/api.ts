@@ -655,7 +655,8 @@ export const getEventAnalytics = async (eventId: number) => {
         interested: { total: 0, change: 0, trend: 'neutral' },
         shares: { total: 0, change: 0, trend: 'neutral' },
         ticketsSold: { total: 0, change: 0, trend: 'neutral' },
-        revenue: { total: 'TSh 0', change: 0, trend: 'neutral' }
+      revenue: { total: 'TSh 0', change: 0, trend: 'neutral' },
+      demographics: { locations: [], ageGroups: [] }
       };
     }
 
@@ -1037,32 +1038,47 @@ export const createTransaction = async (transactionData: {
   return data;
 };
 
-export const initiatePayment = async (params: {
+export const initiateSnippePayment = async (params: {
   amount: number;
-  accountNumber: string; // e.g., "2557..."
-  provider: string; // "Airtel", "Tigo", "Halantel", "Azampesa"
-  externalId: string; // Transaction ID
+  phoneNumber: string; // e.g., "2557..."
+  provider: string; // "Airtel", "Tigo", "Halopesa", "Mpesa"
+  eventId: number;
+  ticketId?: number;
+  userId: string;
+  metadata?: any;
 }) => {
-  console.log('initiatePayment called', params);
+  console.log('initiateSnippePayment called', params);
 
-  const { data, error } = await supabase.functions.invoke('azampay-payment', {
+  // When using --no-verify-jwt, invoke without auth headers/session context if needed, 
+  // but supabase-js client handles it.
+  // If we want to be explicit about headers:
+  const { data, error } = await supabase.functions.invoke('snippe-payment', {
     body: params,
+    headers: {
+      // 'Authorization': `Bearer ${anon_key}`, // Usually handled automatically
+    }
   });
 
-  console.log('initiatePayment response', {
+  console.log('initiateSnippePayment response', {
     hasData: !!data,
     data,
     error,
   });
 
   if (error) {
-    console.error('Supabase functions.invoke error (azampay-payment)', error);
+    console.error('Supabase functions.invoke error (snippe-payment)', error);
     throw error;
   }
 
+  // Handle successful initiation but logical failure from Snippe
   if (data && !data.success) {
-    console.error('azampay-payment function returned failure', data);
+    console.error('snippe-payment function returned failure', data);
     throw new Error(data.error || 'Payment initiation failed');
+  }
+
+  // Handle case where Snippe returns success=true but data is missing
+  if (data && data.success && !data.data) {
+     console.warn("Snippe returned success but no data payload:", data);
   }
 
   return data;

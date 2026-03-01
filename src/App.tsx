@@ -26,9 +26,9 @@ import {
   subscribeToOnlineUsers,
   deleteConversation,
   Event
-} from '@/utils/supabase/api';
+} from './utils/supabase/api';
 import { Message, Conversation } from './types';
-import { getPosts } from '@/utils/supabase/api';
+import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
 
 type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile';
@@ -285,7 +285,7 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
 
-    const subscription = subscribeToAllMessages(async (newMessage) => {
+    const subscription = subscribeToAllMessages(async (newMessage: any) => {
       // Avoid processing our own messages if we're optimistically updating (optional, but good for consistency)
       // Actually, we might want to confirm the ID matches or replace the temp one. 
       // For now, let's just process everything and assume optimistic updates handle their own duplicates if any,
@@ -360,7 +360,7 @@ export default function App() {
         const friends = await getMutualFollows(currentUser.id);
         
         // 2. Subscribe to presence
-        channel = subscribeToOnlineUsers(currentUser.id, (onlineIds) => {
+        channel = subscribeToOnlineUsers(currentUser.id, (onlineIds: any[]) => {
           // Filter friends who are online
           const online = friends.filter((friend: any) => onlineIds.includes(friend.id));
           

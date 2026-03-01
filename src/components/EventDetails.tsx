@@ -12,7 +12,7 @@ import { ShareModal } from './ShareModal';
 import { EventDetailModal } from './EventDetailModal';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView, createTransaction, initiatePayment, waitForTransactionCompletion } from '../utils/supabase/api';
+import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 
 
 
@@ -130,7 +130,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [tierTicketQuantity, setTierTicketQuantity] = useState(1);
   const [tierTicketStep, setTierTicketStep] = useState<'tier' | 'quantity' | 'details' | 'payment' | 'confirm'>('tier');
   const [paymentPhone, setPaymentPhone] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState('Azampesa');
+  const [selectedProvider, setSelectedProvider] = useState('Airtel');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex] = useState(0);
@@ -371,11 +371,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
       // 2. Initiate Payment
       toast.info('Initiating payment request...');
-      await initiatePayment({
+      await initiateSnippePayment({
         amount: totalPrice,
-        accountNumber: paymentPhone,
+        phoneNumber: paymentPhone,
         provider: selectedProvider,
-        externalId: transaction.id.toString()
+        eventId: eventToPurchase.id,
+        userId: user.id,
+        metadata: { transactionId: transaction.id }
       });
 
       toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
@@ -434,7 +436,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       setNormalTicketQuantity(1);
       setNormalTicketStep('quantity');
       setPaymentPhone('');
-      setSelectedProvider('Azampesa');
+      setSelectedProvider('Airtel');
     } catch (error: any) {
       console.error('Error purchasing ticket:', error);
       toast.error(`Failed to purchase tickets: ${error.message || 'Unknown error'}`);
@@ -485,11 +487,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
       // 2. Initiate Payment
       toast.info('Initiating payment request...');
-      await initiatePayment({
+      await initiateSnippePayment({
         amount: totalPrice,
-        accountNumber: paymentPhone,
+        phoneNumber: paymentPhone,
         provider: selectedProvider,
-        externalId: transaction.id.toString()
+        eventId: eventToPurchase.id,
+        userId: user.id,
+        metadata: { transactionId: transaction.id }
       });
 
       toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
@@ -536,7 +540,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       setSelectedTier(null);
       setTierTicketStep('tier');
       setPaymentPhone('');
-      setSelectedProvider('Azampesa');
+      setSelectedProvider('Airtel');
     } catch (error: any) {
       console.error('Error purchasing ticket:', error);
       toast.error(`Purchase failed: ${error.message || 'Unknown error'}`);
@@ -870,7 +874,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             setTierTicketStep('tier');
             setTicketFormData({ name: '', email: '' });
             setPaymentPhone('');
-            setSelectedProvider('Azampesa');
+            setSelectedProvider('Airtel');
             setIsProcessingPayment(false);
           }}
           onSubmit={handleTierTicketSubmit}
@@ -1171,7 +1175,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
                 {/* Provider Selection */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
-                  {['Azampesa', 'Airtel', 'Tigo', 'Halopesa'].map((provider) => (
+                  {['Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map((provider) => (
                     <button
                       key={provider}
                       onClick={() => setSelectedProvider(provider)}

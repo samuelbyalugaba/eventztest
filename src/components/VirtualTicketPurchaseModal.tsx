@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, ChevronLeft, Tv, Calendar, MapPin, CheckCircle2, Phone, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { createTicket, createTransaction, initiatePayment, waitForTransactionCompletion, Event as ApiEvent } from '../utils/supabase/api';
+import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion, Event as ApiEvent } from '../utils/supabase/api';
 
 interface VirtualTicketPurchaseModalProps {
   isOpen: boolean;
@@ -14,7 +14,6 @@ const PAYMENT_PROVIDERS = [
   { id: 'Airtel', name: 'Airtel Money', color: 'bg-red-500' },
   { id: 'Tigo', name: 'Tigo Pesa', color: 'bg-blue-500' },
   { id: 'Halopesa', name: 'HaloPesa', color: 'bg-orange-500' },
-  { id: 'Azampesa', name: 'AzamPesa', color: 'bg-blue-600' },
   { id: 'Mpesa', name: 'M-Pesa', color: 'bg-red-600' }
 ];
 
@@ -74,15 +73,17 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
 
       const transaction = await createTransaction(transactionData);
       
-      // 3. Initiate Payment (AzamPay)
+      // 3. Initiate Payment (Snippe)
       setPaymentStep('processing');
       toast.info('Initiating payment request...');
 
-      await initiatePayment({
+      await initiateSnippePayment({
         amount: price,
-        accountNumber: ticketFormData.phone,
+        phoneNumber: ticketFormData.phone,
         provider: selectedProvider,
-        externalId: transaction.id.toString()
+        eventId: event.id,
+        userId: user.id,
+        metadata: { transactionId: transaction.id }
       });
 
       toast.info(`Payment request sent to ${ticketFormData.phone}. Waiting for confirmation...`);

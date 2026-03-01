@@ -6,7 +6,7 @@ import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
 import { toast } from 'sonner';
-import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiatePayment, waitForTransactionCompletion } from '../utils/supabase/api';
+import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 
@@ -131,7 +131,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   
   // Payment State
   const [paymentPhone, setPaymentPhone] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState('Azampesa');
+  const [selectedProvider, setSelectedProvider] = useState('Airtel');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
@@ -316,11 +316,13 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
 
           // 2. Initiate Payment
           toast.info('Initiating payment request...');
-          await initiatePayment({
+          await initiateSnippePayment({
             amount: totalPrice,
-            accountNumber: paymentPhone,
+            phoneNumber: paymentPhone,
             provider: selectedProvider,
-            externalId: transaction.id.toString()
+            eventId: event.id,
+            userId: currentUser.id,
+            metadata: { transactionId: transaction.id }
           });
 
           toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
@@ -373,7 +375,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       // Reset state
       setTicketStep('quantity');
       setPaymentPhone('');
-      setSelectedProvider('Azampesa');
+      setSelectedProvider('Airtel');
 
     } catch (error: any) {
       console.error('Error purchasing ticket:', error);
@@ -885,7 +887,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                   <div className="space-y-4">
                      {/* Provider Selection */}
                       <div className="grid grid-cols-2 gap-2 mb-4">
-                        {['Azampesa', 'Airtel', 'Tigo', 'Halopesa'].map((provider) => (
+                        {['Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map((provider) => (
                           <button
                             key={provider}
                             onClick={() => setSelectedProvider(provider)}

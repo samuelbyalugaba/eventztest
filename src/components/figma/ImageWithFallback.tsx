@@ -55,7 +55,6 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
           style={style} 
           loading="lazy"
           decoding="async"
-          fetchpriority="low"
           {...rest} 
           onError={handleError} 
           onLoad={handleLoad}

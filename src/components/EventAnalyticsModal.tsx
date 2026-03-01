@@ -272,7 +272,7 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <h3 className="text-gray-900 text-lg mb-5">Top Locations</h3>
               <div className="space-y-4">
-                {analytics.demographics.locations.map((location: any, index: number) => (
+                {(analytics?.demographics?.locations || []).map((location: any, index: number) => (
                   <div key={index}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -308,7 +308,7 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-purple-600 mt-1">✓</span>
-                    <span>Most of your audience is from <strong>{analytics.demographics.locations[0]?.city || 'your area'}</strong>. Consider local partnerships</span>
+                    <span>Most of your audience is from <strong>{(analytics?.demographics?.locations || [])[0]?.city || 'your area'}</strong>. Consider local partnerships</span>
                   </li>
                 </ul>
               </div>

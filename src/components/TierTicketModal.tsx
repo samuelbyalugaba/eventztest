@@ -382,7 +382,7 @@ export function TierTicketModal({
             <div className="p-6">
               {/* Provider Selection */}
               <div className="grid grid-cols-2 gap-3 mb-6">
-                {['Azampesa', 'Airtel', 'Tigo', 'Halopesa'].map((provider) => (
+                {['Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map((provider) => (
                   <button
                     key={provider}
                     onClick={() => onProviderChange(provider)}
