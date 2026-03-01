@@ -1016,7 +1016,9 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
           {/* Fallback/Summary Price Input */}
           <div className="relative">
-            <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-5 h-5 text-gray-400 font-bold text-sm pointer-events-none">
+              {currencies.find(c => c.code === formData.currency)?.symbol || '$'}
+            </div>
             <input
               type="text"
               value={formData.price}
@@ -1066,7 +1068,9 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             <div className="animate-in fade-in slide-in-from-top-2">
               <label className="block text-gray-900 mb-3 text-sm font-medium">Virtual Ticket Price ({currencies.find(c => c.code === formData.currency)?.symbol || formData.currency})</label>
               <div className="relative">
-                <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-5 h-5 text-gray-400 font-bold text-sm pointer-events-none">
+                  {currencies.find(c => c.code === formData.currency)?.symbol || '$'}
+                </div>
                 <input
                   type="number"
                   value={formData.streaming.virtualPriceNumeric || ''}
