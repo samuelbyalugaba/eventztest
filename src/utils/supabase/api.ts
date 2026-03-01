@@ -1092,8 +1092,15 @@ export const waitForTransactionCompletion = async (transactionId: number, timeou
       .select('status')
       .eq('id', transactionId)
       .single();
-    if (!error && data && (data.status === 'completed' || data.status === 'success')) {
-      return true;
+
+    if (!error && data) {
+      if (data.status === 'completed' || data.status === 'success') {
+        return true;
+      }
+      if (data.status === 'failed' || data.status === 'cancelled') {
+        console.warn(`Transaction ${transactionId} failed or cancelled`);
+        return false;
+      }
     }
     await new Promise(r => setTimeout(r, intervalMs));
   }

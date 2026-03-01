@@ -322,7 +322,11 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             provider: selectedProvider,
             eventId: event.id,
             userId: currentUser.id,
-            metadata: { transactionId: transaction.id }
+            metadata: { 
+              transactionId: transaction.id,
+              customer_name: name,
+              customer_email: email
+            }
           });
 
           toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);

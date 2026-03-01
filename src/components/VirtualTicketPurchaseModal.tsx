@@ -83,7 +83,11 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         provider: selectedProvider,
         eventId: event.id,
         userId: user.id,
-        metadata: { transactionId: transaction.id }
+        metadata: { 
+          transactionId: transaction.id,
+          customer_name: ticketFormData.name,
+          customer_email: ticketFormData.email
+        }
       });
 
       toast.info(`Payment request sent to ${ticketFormData.phone}. Waiting for confirmation...`);
