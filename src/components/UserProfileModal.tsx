@@ -50,36 +50,38 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
         const { data: { user: authUser } } = await supabase.auth.getUser();
         setCurrentUser(authUser);
 
-        // Fetch full profile details
-        const profileData = await getProfile(user.id);
+        // Fetch essential data first (Parallel)
+        const [profileData, followingStatus] = await Promise.all([
+          getProfile(user.id),
+          authUser ? checkIsFollowing(authUser.id, user.id) : Promise.resolve(false)
+        ]);
+
         setProfile(profileData);
+        setIsFollowing(followingStatus);
 
-        if (authUser) {
-           const following = await checkIsFollowing(authUser.id, user.id);
-           setIsFollowing(following);
-        }
+        // Load secondary data in background
+        const loadSecondaryData = async () => {
+          if (user.type === 'Organizer' || (profileData && profileData.is_organizer)) {
+            const [statsData, eventsData, orgProfileData] = await Promise.all([
+              getOrganizerStats(user.id),
+              getOrganizerEvents(user.id),
+              getOrganizerProfile(user.id)
+            ]);
+            setStats(statsData);
+            setOrganizerEvents(eventsData || []);
+            setOrganizerProfile(orgProfileData);
+          } else {
+            const tickets = await getUserTickets(user.id);
+            setAttendedEvents(tickets?.map(t => t.event).filter(Boolean) || []);
+            setOrganizerProfile(null);
+          }
 
-        if (user.type === 'Organizer' || (profileData && profileData.is_organizer)) {
-          // Fetch organizer details, stats and events
-          const [statsData, eventsData, orgProfileData] = await Promise.all([
-            getOrganizerStats(user.id),
-            getOrganizerEvents(user.id),
-            getOrganizerProfile(user.id)
-          ]);
-          setStats(statsData);
-          setOrganizerEvents(eventsData || []);
-          setOrganizerProfile(orgProfileData);
-        } else {
-          // Fetch attendee data (tickets -> attended events)
-          const tickets = await getUserTickets(user.id);
-          setAttendedEvents(tickets?.map(t => t.event).filter(Boolean) || []);
-          setOrganizerProfile(null);
-        }
+          const postsData = await getPosts({ authorId: user.id });
+          setUserPosts(postsData || []);
+        };
 
-        // Fetch posts for photos/videos tab
-        const postsData = await getPosts({ authorId: user.id });
-        console.log('Fetched user posts for modal:', postsData);
-        setUserPosts(postsData || []);
+        // Don't await secondary data to show profile quickly
+        loadSecondaryData();
 
       } catch (error) {
         console.error('Error fetching user profile data:', error);
@@ -91,10 +93,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
     if (user.id) {
       fetchData();
     }
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 3000);
-    return () => clearTimeout(timeout);
   }, [user.id, user.type]);
 
   const handleFollow = async () => {
@@ -262,7 +260,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
             {/* Message Button */}
             {onMessage && (
               <button
-                onClick={onMessage}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMessage();
+                }}
                 className="w-full mb-6 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -537,6 +538,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                             muted
                             playsInline
                             loop
+                            preload="metadata"
                             onMouseOver={(e) => e.currentTarget.play()}
                             onMouseOut={(e) => {
                               e.currentTarget.pause();

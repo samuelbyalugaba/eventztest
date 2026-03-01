@@ -159,29 +159,22 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           return;
         }
 
-        // 1. Fetch Profile
-        const profile = await getProfile(organizerId);
+        // Parallel Fetching
+        const [profile, organizerProfile, stats, events, posts] = await Promise.all([
+          getProfile(organizerId),
+          getOrganizerProfile(organizerId),
+          getOrganizerStats(organizerId),
+          getOrganizerEvents(organizerId),
+          getPosts({ authorId: organizerId })
+        ]);
+
         if (!profile) throw new Error('Organizer not found');
 
-        // 1b. Fetch Organizer Profile (New separate profile)
-        const organizerProfile = await getOrganizerProfile(organizerId);
-
-        // 2. Fetch Stats
-        const stats = await getOrganizerStats(organizerId);
-
-        // 3. Fetch Events
-        const events = await getOrganizerEvents(organizerId);
-
-        // 4. Fetch Posts (as highlights/photos)
-        const posts = await getPosts({ authorId: organizerId });
         const filteredPosts = (posts || []).filter((p: any) => {
           const asOrganizer = !!p.posted_as_organizer;
           const belongsToOrganizerEvent = !!p.event && p.event.organizer_id === organizerId;
           return asOrganizer || belongsToOrganizerEvent;
         });
-
-        // Map to component state
-        // Prefer organizer-specific data from separate table
         
         setOrganizerData({
           id: profile.id,
@@ -509,7 +502,8 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
 
           {/* Message Button */}
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (onMessage) {
                 onMessage({
                   name: organizerData.name,
