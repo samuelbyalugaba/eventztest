@@ -1097,7 +1097,8 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               name: organizer.name,
               avatar: organizer.avatar,
               verified: organizer.verified,
-              isOrganizer: true
+              isOrganizer: true,
+              id: organizer.id
             });
             if (conv) {
               setActiveConversation(conv);

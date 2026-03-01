@@ -240,7 +240,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     }))
   ];
 
-  const handleStartConversationLocal = async (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => {
+  const handleStartConversationLocal = async (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => {
     // Close user profile modal
     setSelectedUser(null);
     
@@ -903,6 +903,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       {selectedUser && (
         <UserProfileModal
           user={{
+            id: selectedUser.id,
             name: selectedUser.full_name || selectedUser.name,
             type: selectedUser.is_organizer ? 'Organizer' : (selectedUser.type || 'Attendee'),
             followers: organizerStats?.followers?.toString() || selectedUser.followers || '0',
