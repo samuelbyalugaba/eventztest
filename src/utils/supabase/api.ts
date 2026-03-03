@@ -540,7 +540,8 @@ export const getEvents = async () => {
     .from('events')
     .select(`
       *,
-      organizer:profiles(*)
+      organizer:profiles(*),
+      tickets(count)
     `)
     .order('date', { ascending: true });
 
@@ -549,8 +550,18 @@ export const getEvents = async () => {
     throw error;
   }
 
+  // Calculate attendees from tickets count
+  // Prioritize using the 'attendees' column from the events table if it exists and is not null
+  // Otherwise fall back to counting tickets (which may be limited by RLS)
+  const events = data.map((event: any) => ({
+    ...event,
+    attendees: (event.attendees !== undefined && event.attendees !== null) 
+      ? event.attendees 
+      : (event.tickets?.[0]?.count || 0)
+  }));
+
   // Manually join organizer_profiles to avoid missing FK relationship error
-  const organizerIds = [...new Set(data.map((e: any) => e.organizer_id).filter(Boolean))];
+  const organizerIds = [...new Set(events.map((e: any) => e.organizer_id).filter(Boolean))];
   
   if (organizerIds.length > 0) {
     const { data: orgDetails } = await supabase
@@ -560,7 +571,7 @@ export const getEvents = async () => {
 
     if (orgDetails) {
       const orgMap = new Map(orgDetails.map((o: any) => [o.id, o]));
-      return data.map((event: any) => ({
+      return events.map((event: any) => ({
         ...event,
         organizer: {
           ...event.organizer,
@@ -570,7 +581,7 @@ export const getEvents = async () => {
     }
   }
 
-  return data;
+  return events;
 };
 
 export const getOrganizerEvents = async (organizerId: string) => {

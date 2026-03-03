@@ -565,18 +565,18 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       alt={event.title}
                       className="w-full h-full object-cover opacity-90"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex items-end p-6">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex items-end p-6">
                       <div className="w-full">
                         <div className="flex items-center justify-between mb-2">
                           <span className="bg-[#8A2BE2] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide shadow-lg">
                             Featured
                           </span>
-                          <span className="bg-white/20 backdrop-blur-md text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-white" /> {event.views ? event.views + 120 : 120} Interested
+                          <span className="bg-black/30 backdrop-blur-md text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1 border border-white/10">
+                            <Ticket className="w-3 h-3 text-white" /> {event.attendees || 0} Going
                           </span>
                         </div>
                         <h2 className="text-white text-3xl font-black mb-2 leading-tight drop-shadow-lg line-clamp-2">{event.title}</h2>
-                        <div className="flex items-center gap-3 text-white/90 text-sm font-medium">
+                        <div className="flex items-center gap-3 text-white text-sm font-medium drop-shadow-md">
                           <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {event.date}</span>
                           <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {event.location.split(',')[0]}</span>
                         </div>

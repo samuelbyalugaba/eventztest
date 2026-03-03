@@ -1,8 +1,8 @@
 import { Event as ApiEvent } from '../utils/supabase/api';
 
-const STORAGE_KEY = 'eventz-events-cache-v1';
-const STORAGE_TIMESTAMP_KEY = 'eventz-events-cache-timestamp';
-const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
+const STORAGE_KEY = 'eventz-events-cache-v2';
+const STORAGE_TIMESTAMP_KEY = 'eventz-events-cache-timestamp-v2';
+const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
 
 // Simple store implementation with persistence
 let cachedEvents: ApiEvent[] = [];
