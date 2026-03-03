@@ -7,11 +7,11 @@ import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
 import { PremiumSearchModal } from './PremiumSearchModal';
 import { UserProfileModal } from './UserProfileModal';
-import { TierTicketModal } from './TierTicketModal';
 import { MediaViewer } from './MediaViewer';
 import { ShareModal } from './ShareModal';
 import { EventDetailModal } from './EventDetailModal';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
+import { SimplifiedTicketModal } from './SimplifiedTicketModal';
 import { supabase } from '../utils/supabase/client';
 import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 import { extractCurrencyFromPrice } from '../utils/currencies';
@@ -121,9 +121,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketFormData, setTicketFormData] = useState({ name: '', email: '' });
   const [eventToPurchase, setEventToPurchase] = useState<ApiEvent | null>(null);
-  const [showNormalTicketModal, setShowNormalTicketModal] = useState(false);
-  const [normalTicketQuantity, setNormalTicketQuantity] = useState(1);
-  const [normalTicketStep, setNormalTicketStep] = useState<'quantity' | 'details' | 'payment' | 'confirm'>('quantity');
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   
@@ -137,13 +135,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   const organizerEvents = selectedUser?.is_organizer ? (selectedUser.upcomingEvents || []) : [];
 
-  const [showTierTicketModal, setShowTierTicketModal] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<string | null>(null);
-  const [tierTicketQuantity, setTierTicketQuantity] = useState(1);
-  const [tierTicketStep, setTierTicketStep] = useState<'tier' | 'quantity' | 'details' | 'payment' | 'confirm'>('tier');
-  const [paymentPhone, setPaymentPhone] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState('Airtel');
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex] = useState(0);
   const [mediaViewerType] = useState<'photo' | 'video'>('photo');
@@ -322,218 +313,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   const handleNormalTicketPurchase = (event: ApiEvent) => {
     setEventToPurchase(event);
-    if (event.ticket_tiers && event.ticket_tiers.length > 0) {
-      setShowTierTicketModal(true);
-      setTierTicketStep('tier');
-      setSelectedTier(null);
-      setTierTicketQuantity(1);
-    } else {
-      setShowNormalTicketModal(true);
-      setNormalTicketStep('quantity');
-      setNormalTicketQuantity(1);
-    }
-    setTicketFormData({ name: '', email: '' });
+    setShowPurchaseModal(true);
     if (selectedEvent) setSelectedEvent(null);
   };
 
   const handleTierSelection = (event: ApiEvent, tierName: string) => {
     setEventToPurchase(event);
-    setShowTierTicketModal(true);
-    setSelectedTier(tierName);
-    setTierTicketStep('quantity');
-    setTierTicketQuantity(1);
-    setTicketFormData({ name: '', email: '' });
+    setShowPurchaseModal(true);
     if (selectedEvent) setSelectedEvent(null);
-  };
-
-  const handleNormalTicketSubmit = async () => {
-    if (!eventToPurchase || !ticketFormData.name || !ticketFormData.email || !paymentPhone) {
-      toast.error('Please fill in all fields including payment details');
-      return;
-    }
-
-    try {
-      setIsProcessingPayment(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Please sign in to purchase tickets');
-        setIsProcessingPayment(false);
-        return;
-      }
-
-      const priceStr = eventToPurchase.price_range;
-      const numericPrice = parseInt(priceStr.replace(/[^\d]/g, '')) || 0;
-      const currency = extractCurrencyFromPrice(priceStr);
-      const totalPrice = numericPrice * normalTicketQuantity;
-
-      const transactionData = {
-        user_id: user.id,
-        event_id: eventToPurchase.id,
-        amount: totalPrice,
-        currency: currency,
-        provider: selectedProvider,
-        status: 'pending',
-        metadata: {
-          customer_name: ticketFormData.name,
-          customer_email: ticketFormData.email,
-          customer_phone: paymentPhone,
-          ticket_tier: 'Normal',
-          quantity: normalTicketQuantity
-        }
-      };
-
-      const transaction = await createTransaction(transactionData);
-      toast.info('Initiating payment request...');
-      await initiateSnippePayment({
-        amount: totalPrice,
-        currency: currency,
-        phoneNumber: paymentPhone,
-        provider: selectedProvider,
-        eventId: eventToPurchase.id,
-        userId: user.id,
-        metadata: { 
-          transactionId: transaction.id,
-          customer_name: ticketFormData.name,
-          customer_email: ticketFormData.email
-        }
-      });
-
-      toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
-      const ok = await waitForTransactionCompletion(transaction.id);
-      if (!ok) throw new Error('Payment not confirmed');
-
-      for (let i = 0; i < normalTicketQuantity; i++) {
-        const ticketNumber = `TKT-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
-        const barcode = crypto.randomUUID();
-        const ticketData = {
-          user_id: user.id,
-          event_id: eventToPurchase.id,
-          ticket_number: ticketNumber,
-          barcode: barcode,
-          price: eventToPurchase.price_range,
-          purchase_date: new Date().toISOString(),
-          customer_name: ticketFormData.name,
-          customer_email: ticketFormData.email,
-          ticket_type: 'Normal',
-          status: 'active'
-        };
-        await createTicket({ ...ticketData, transaction_id: transaction.id });
-      }
-
-      toast.success(`${normalTicketQuantity} Ticket${normalTicketQuantity > 1 ? 's' : ''} Purchased! 🎉`, {
-        description: `Sent to ${ticketFormData.email}. Check Alerts for details.`,
-        duration: 5000,
-      });
-
-      setShowNormalTicketModal(false);
-      setEventToPurchase(null);
-      setTicketFormData({ name: '', email: '' });
-      setNormalTicketQuantity(1);
-      setNormalTicketStep('quantity');
-      setPaymentPhone('');
-      setSelectedProvider('Airtel');
-    } catch (error: any) {
-      console.error('Error purchasing ticket:', error);
-      toast.error(`Failed to purchase tickets: ${error.message || 'Unknown error'}`);
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
-
-  const handleTierTicketSubmit = async () => {
-    if (!eventToPurchase || !selectedTier || !ticketFormData.name || !ticketFormData.email || !paymentPhone) {
-      toast.error('Please fill in all fields including payment details');
-      return;
-    }
-
-    const tierData = eventToPurchase.ticket_tiers?.find(t => t.name === selectedTier);
-    if (!tierData) return;
-
-    try {
-      setIsProcessingPayment(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Please sign in to purchase tickets');
-        setIsProcessingPayment(false);
-        return;
-      }
-
-      const totalPrice = tierData.priceNumeric * tierTicketQuantity;
-      const currency = extractCurrencyFromPrice(tierData.price);
-
-      const transactionData = {
-        user_id: user.id,
-        event_id: eventToPurchase.id,
-        amount: totalPrice,
-        currency: currency,
-        provider: selectedProvider,
-        status: 'pending',
-        metadata: {
-          customer_name: ticketFormData.name,
-          customer_email: ticketFormData.email,
-          customer_phone: paymentPhone,
-          ticket_tier: selectedTier,
-          quantity: tierTicketQuantity
-        }
-      };
-
-      const transaction = await createTransaction(transactionData);
-      toast.info('Initiating payment request...');
-      await initiateSnippePayment({
-        amount: totalPrice,
-        currency: currency,
-        phoneNumber: paymentPhone,
-        provider: selectedProvider,
-        eventId: eventToPurchase.id,
-        userId: user.id,
-        metadata: { 
-          transactionId: transaction.id,
-          customer_name: ticketFormData.name,
-          customer_email: ticketFormData.email
-        }
-      });
-
-      toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
-      const ok = await waitForTransactionCompletion(transaction.id);
-      if (!ok) throw new Error('Payment not confirmed');
-
-      for (let i = 0; i < tierTicketQuantity; i++) {
-        const ticketNumber = `${selectedTier.toUpperCase()}-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
-        const barcode = crypto.randomUUID();
-        const ticketData = {
-          user_id: user.id,
-          event_id: eventToPurchase.id,
-          ticket_number: ticketNumber,
-          barcode: barcode,
-          price: tierData.price,
-          purchase_date: new Date().toISOString(),
-          customer_name: ticketFormData.name,
-          customer_email: ticketFormData.email,
-          ticket_type: selectedTier,
-          status: 'active'
-        };
-        await createTicket({ ...ticketData, transaction_id: transaction.id });
-      }
-
-      toast.success(`${tierTicketQuantity} ${selectedTier} Ticket${tierTicketQuantity > 1 ? 's' : ''} Purchased! 🎉`, {
-        description: `Sent to ${ticketFormData.email}. Check Alerts for details.`,
-        duration: 5000,
-      });
-
-      setShowTierTicketModal(false);
-      setEventToPurchase(null);
-      setTicketFormData({ name: '', email: '' });
-      setTierTicketQuantity(1);
-      setSelectedTier(null);
-      setTierTicketStep('tier');
-      setPaymentPhone('');
-      setSelectedProvider('Airtel');
-    } catch (error: any) {
-      console.error('Error purchasing ticket:', error);
-      toast.error(`Purchase failed: ${error.message || 'Unknown error'}`);
-    } finally {
-      setIsProcessingPayment(false);
-    }
   };
 
   // Embla Carousel setup
@@ -915,56 +702,21 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       )}
 
       {/* Modals */}
-      {showTierTicketModal && eventToPurchase && (
-        <TierTicketModal
+      {showPurchaseModal && eventToPurchase && (
+        <SimplifiedTicketModal
           event={{
             id: eventToPurchase.id,
             title: eventToPurchase.title,
             date: eventToPurchase.date,
             location: eventToPurchase.location,
             ticketTiers: eventToPurchase.ticket_tiers,
+            price_range: eventToPurchase.price_range,
+            image_url: eventToPurchase.image_url
           }}
-          step={tierTicketStep}
-          selectedTier={selectedTier}
-          quantity={tierTicketQuantity}
-          formData={ticketFormData}
-          paymentPhone={paymentPhone}
-          selectedProvider={selectedProvider}
-          isProcessingPayment={isProcessingPayment}
-          onSelectTier={(tier) => setSelectedTier(tier)}
-          onQuantityChange={(qty) => setTierTicketQuantity(qty)}
-          onFormDataChange={(field, value) => setTicketFormData(prev => ({ ...prev, [field]: value }))}
-          onPaymentPhoneChange={setPaymentPhone}
-          onProviderChange={setSelectedProvider}
-          onNext={() => {
-            if (tierTicketStep === 'tier' && selectedTier) {
-              setTierTicketStep('quantity');
-            } else if (tierTicketStep === 'quantity') {
-              setTierTicketStep('details');
-            } else if (tierTicketStep === 'details') {
-              setTierTicketStep('payment');
-            } else if (tierTicketStep === 'payment') {
-              setTierTicketStep('confirm');
-            }
+          onClose={() => setShowPurchaseModal(false)}
+          onSuccess={() => {
+            window.dispatchEvent(new Event('savedEventsUpdated'));
           }}
-          onBack={() => {
-            if (tierTicketStep === 'confirm') setTierTicketStep('payment');
-            else if (tierTicketStep === 'payment') setTierTicketStep('details');
-            else if (tierTicketStep === 'details') setTierTicketStep('quantity');
-            else if (tierTicketStep === 'quantity') setTierTicketStep('tier');
-          }}
-          onClose={() => {
-            setShowTierTicketModal(false);
-            setEventToPurchase(null);
-            setSelectedTier(null);
-            setTierTicketQuantity(1);
-            setTierTicketStep('tier');
-            setTicketFormData({ name: '', email: '' });
-            setPaymentPhone('');
-            setSelectedProvider('Airtel');
-            setIsProcessingPayment(false);
-          }}
-          onSubmit={handleTierTicketSubmit}
         />
       )}
 
@@ -1078,304 +830,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         />
       )}
 
-      {showNormalTicketModal && eventToPurchase && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowNormalTicketModal(false)}>
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            
-            {normalTicketStep === 'quantity' && (
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-gray-900 text-2xl mb-1">Get Tickets</h2>
-                    <p className="text-gray-600">{eventToPurchase.title}</p>
-                  </div>
-                  <button 
-                    onClick={() => setShowNormalTicketModal(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-
-                <div className="mb-6 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden">
-                      <img src={eventToPurchase.image_url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-gray-900">{eventToPurchase.title}</p>
-                      <p className="text-sm text-gray-600">{eventToPurchase.date}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-white rounded-lg">
-                    <span className="text-gray-700">Price per ticket</span>
-                    <span className="text-purple-600">{eventToPurchase.price_range}</span>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-gray-900 mb-3">How many tickets?</label>
-                  <div className="flex items-center justify-center gap-4">
-                    <button
-                      onClick={() => setNormalTicketQuantity(Math.max(1, normalTicketQuantity - 1))}
-                      className="w-12 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center text-gray-700"
-                    >
-                      <span className="text-2xl">−</span>
-                    </button>
-                    <div className="text-center">
-                      <div className="text-4xl text-purple-600 mb-1">{normalTicketQuantity}</div>
-                      <div className="text-sm text-gray-600">ticket{normalTicketQuantity > 1 ? 's' : ''}</div>
-                    </div>
-                    <button
-                      onClick={() => setNormalTicketQuantity(normalTicketQuantity + 1)}
-                      className="w-12 h-12 rounded-xl bg-purple-600 hover:bg-purple-700 transition-colors flex items-center justify-center text-white"
-                    >
-                      <span className="text-2xl">+</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mb-6 p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-white">
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg">Total</span>
-                    <span className="text-2xl">
-                      {(() => {
-                        const priceStr = eventToPurchase.price_range;
-                        const numericPrice = parseInt(priceStr.replace(/[^\d]/g, '')) || 0;
-                        const total = numericPrice * normalTicketQuantity;
-                        
-                        if (priceStr.toLowerCase().includes('free')) return 'Free';
-                        if (priceStr.includes('TSh')) return `TSh ${total.toLocaleString()}`;
-                        if (priceStr.includes('$')) return `$${total.toLocaleString()}`;
-                        if (/\d/.test(priceStr)) return total.toLocaleString();
-                        return priceStr;
-                      })()}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setNormalTicketStep('details')}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg text-lg"
-                >
-                  Continue
-                </button>
-              </div>
-            )}
-
-            {normalTicketStep === 'details' && (
-              <div className="p-6">
-                <div className="mb-6">
-                  <button 
-                    onClick={() => setNormalTicketStep('quantity')}
-                    className="text-purple-600 hover:text-purple-700 mb-3 flex items-center gap-1"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Back
-                  </button>
-                  <h2 className="text-gray-900 text-2xl mb-1">Your Details</h2>
-                  <p className="text-gray-600">Almost there! Just need a few details</p>
-                </div>
-
-                <div className="mb-6 p-3 bg-purple-50 rounded-xl flex items-center justify-between">
-                  <span className="text-gray-700">{normalTicketQuantity} ticket{normalTicketQuantity > 1 ? 's' : ''}</span>
-                  <span className="text-purple-600">
-                    {eventToPurchase.price_range.includes('TSh') 
-                      ? `TSh ${(parseInt(eventToPurchase.price_range.replace(/[^\d]/g, '')) * normalTicketQuantity).toLocaleString()}`
-                      : eventToPurchase.price_range.includes('$')
-                      ? `$${(parseInt(eventToPurchase.price_range.replace(/[^\d]/g, '')) * normalTicketQuantity).toLocaleString()}`
-                      : eventToPurchase.price_range
-                    }
-                  </span>
-                </div>
-
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="block text-gray-700 mb-2">Full Name</label>
-                    <input
-                      type="text"
-                      value={ticketFormData.name}
-                      onChange={(e) => setTicketFormData({ ...ticketFormData, name: e.target.value })}
-                      placeholder="John Doe"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={ticketFormData.email}
-                      onChange={(e) => setTicketFormData({ ...ticketFormData, email: e.target.value })}
-                      placeholder="john@example.com"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                    <p className="text-gray-500 text-sm mt-1">📧 Tickets will be sent here</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    if (ticketFormData.name && ticketFormData.email) {
-                      setNormalTicketStep('payment');
-                    } else {
-                      toast.error('Please fill in all fields');
-                    }
-                  }}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg text-lg"
-                >
-                  Continue to Payment
-                </button>
-              </div>
-            )}
-
-            {normalTicketStep === 'payment' && (
-              <div className="p-6">
-                <div className="mb-6">
-                  <button 
-                    onClick={() => setNormalTicketStep('details')}
-                    className="text-purple-600 hover:text-purple-700 mb-3 flex items-center gap-1"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Back
-                  </button>
-                  <h2 className="text-gray-900 text-2xl mb-1">Payment Method</h2>
-                  <p className="text-gray-600">Select your preferred payment provider</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  {['Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map((provider) => (
-                    <button
-                      key={provider}
-                      onClick={() => setSelectedProvider(provider)}
-                      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                        selectedProvider === provider
-                          ? 'border-purple-500 bg-purple-50 text-purple-700'
-                          : 'border-gray-200 hover:border-purple-200 text-gray-600'
-                      }`}
-                    >
-                      <CreditCard className={`w-6 h-6 ${selectedProvider === provider ? 'text-purple-600' : 'text-gray-400'}`} />
-                      <span className="font-medium">{provider}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-gray-700 mb-2 font-medium">Mobile Number</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Smartphone className="w-5 h-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="tel"
-                      value={paymentPhone}
-                      onChange={(e) => setPaymentPhone(e.target.value)}
-                      placeholder="2557..."
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-lg"
-                    />
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">Enter the number registered with {selectedProvider}</p>
-                </div>
-
-                <button
-                  onClick={() => {
-                    if (paymentPhone && paymentPhone.length >= 10) {
-                      setNormalTicketStep('confirm');
-                    } else {
-                      toast.error('Please enter a valid phone number');
-                    }
-                  }}
-                  disabled={!paymentPhone || paymentPhone.length < 10}
-                  className={`w-full py-4 rounded-xl text-white flex items-center justify-center gap-2 transition-all shadow-lg text-lg ${
-                    paymentPhone && paymentPhone.length >= 10
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
-                      : 'bg-gray-300 cursor-not-allowed'
-                  }`}
-                >
-                  Review Order
-                </button>
-              </div>
-            )}
-
-            {normalTicketStep === 'confirm' && (
-              <div className="p-6">
-                <div className="mb-6">
-                  <button 
-                    onClick={() => setNormalTicketStep('payment')}
-                    className="text-purple-600 hover:text-purple-700 mb-3 flex items-center gap-1"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Back
-                  </button>
-                  <h2 className="text-gray-900 text-2xl mb-1">Confirm Purchase</h2>
-                  <p className="text-gray-600">Review your order</p>
-                </div>
-
-                <div className="mb-6 space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-sm text-gray-600 mb-1">Event</p>
-                    <p className="text-gray-900">{eventToPurchase.title}</p>
-                    <p className="text-sm text-gray-600">{eventToPurchase.date}</p>
-                    <p className="text-sm text-gray-600">{eventToPurchase.location}</p>
-                  </div>
-
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-sm text-gray-600 mb-1">Ticket Holder</p>
-                    <p className="text-gray-900">{ticketFormData.name}</p>
-                    <p className="text-sm text-gray-600">{ticketFormData.email}</p>
-                  </div>
-
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600">Tickets</p>
-                        <p className="text-gray-900">{normalTicketQuantity} × {eventToPurchase.price_range}</p>
-                      </div>
-                      <p className="text-2xl text-purple-600">
-                        {(() => {
-                          const priceStr = eventToPurchase.price_range;
-                          const numericPrice = parseInt(priceStr.replace(/[^\d]/g, '')) || 0;
-                          const total = numericPrice * normalTicketQuantity;
-                          
-                          if (priceStr.toLowerCase().includes('free')) return 'Free';
-                          if (priceStr.includes('TSh')) return `TSh ${total.toLocaleString()}`;
-                          if (priceStr.includes('$')) return `$${total.toLocaleString()}`;
-                          if (/\d/.test(priceStr)) return total.toLocaleString();
-                          return priceStr;
-                        })()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-6 p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                  <p className="text-green-900 mb-2 flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5" />
-                    What you'll receive
-                  </p>
-                  <ul className="space-y-2 text-sm text-green-800">
-                    <li>✅ {normalTicketQuantity} digital ticket{normalTicketQuantity > 1 ? 's' : ''} via email</li>
-                    <li>✅ Unique ticket number & barcode</li>
-                    <li>✅ Event details & location</li>
-                    <li>✅ Entry to {eventToPurchase.title}</li>
-                  </ul>
-                </div>
-
-                <button
-                  onClick={handleNormalTicketSubmit}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg text-lg flex items-center justify-center gap-2"
-                >
-                  <CheckCircle2 className="w-6 h-6" />
-                  Confirm & Purchase
-                </button>
-                <p className="text-gray-500 text-xs text-center mt-3">
-                  🔒 Secure checkout
-                </p>
-              </div>
-            )}
-
-          </div>
-        </div>
-      )}
 
       {showMediaViewer && (
         <MediaViewer

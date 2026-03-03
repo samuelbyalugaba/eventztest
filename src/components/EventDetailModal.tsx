@@ -399,42 +399,25 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             <div className="mb-6">
               <h3 className="text-gray-900 font-semibold mb-3 flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-purple-600" />
-                Ticket Options
+                Ticket Prices
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {event.ticket_tiers.map((tier, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-purple-50 hover:border-purple-200 transition-colors group">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900">{tier.name}</span>
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
+                    <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                          <Ticket className="w-4 h-4" />
+                       </div>
+                       <div>
+                        <span className="font-medium text-gray-900 block">{tier.name}</span>
                         {tier.available < 10 && (
-                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full font-medium">
+                          <span className="text-xs text-red-500 font-medium">
                             Only {tier.available} left
                           </span>
                         )}
-                      </div>
-                      <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-2">
-                        {tier.features.slice(0, 2).map((feature, idx) => (
-                          <span key={idx} className="flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-green-500" />
-                            {feature}
-                          </span>
-                        ))}
-                        {tier.features.length > 2 && (
-                          <span className="text-xs text-gray-400">+{tier.features.length - 2} more</span>
-                        )}
-                      </div>
+                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end gap-2">
-                      <span className="block text-lg font-bold text-purple-600">{tier.price}</span>
-                      <button
-                        onClick={() => !isEventPast && onTierSelect && onTierSelect(event, tier.name)}
-                        disabled={isEventPast}
-                        className={`px-4 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors ${isEventPast ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        Buy
-                      </button>
-                    </div>
+                    <span className="font-bold text-gray-900">{tier.price}</span>
                   </div>
                 ))}
               </div>
