@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import useEmblaCarousel from 'embla-carousel-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight, MessageCircle } from 'lucide-react';
+import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight, MessageCircle, Ticket, ShoppingBag, QrCode, Music, Trophy } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
@@ -34,8 +35,15 @@ interface EventDetailsProps {
 }
 
 export function EventDetails({ conversations: globalConversations, onStartConversation, onSendMessage }: EventDetailsProps) {
+  const [viewMode, setViewMode] = useState<'home' | 'list'>('home');
+  const [emblaRef] = useEmblaCarousel({ loop: true, align: 'start' });
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Scroll to top when switching views
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [viewMode]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -194,6 +202,32 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       
     return { upcomingEvents: upcoming, pastEvents: past };
   }, [filteredEvents]);
+
+  // Featured content for Home View (Unfiltered)
+  const featuredEvents = React.useMemo(() => {
+    const now = new Date();
+    return events
+      .filter(e => new Date(e.date) >= now) // Only future events
+      .sort((a, b) => (b.views || 0) - (a.views || 0)) // Sort by popularity
+      .slice(0, 5);
+  }, [events]);
+
+  const featuredOrganizers = React.useMemo(() => {
+    const organizers = new Map();
+    events.forEach(e => {
+      // Use organizer_details if available, otherwise organizer profile
+      const org = e.organizer?.organizer_details || e.organizer;
+      if (org && !organizers.has(org.id)) {
+        organizers.set(org.id, {
+          id: org.id,
+          name: (org as any).organizer_name || (org as any).full_name,
+          avatar: (org as any).organizer_avatar_url || (org as any).avatar_url,
+          verified: (org as any).verified
+        });
+      }
+    });
+    return Array.from(organizers.values()).slice(0, 8);
+  }, [events]);
 
   // Filter locations based on search query
   const filteredLocations = locations.filter(location => 
@@ -571,12 +605,162 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   return (
     <div className="bg-gray-50 min-h-screen">
+      {viewMode === 'home' ? (
+        <div className="pb-24 animate-in fade-in duration-500">
+          {/* 1. Hero Slideshow */}
+          <div className="relative overflow-hidden bg-gray-900" ref={emblaRef}>
+            <div className="flex">
+              {loading ? (
+                <div className="flex-[0_0_100%] min-w-0 h-[55vh] bg-gray-200 animate-pulse" />
+              ) : featuredEvents.length > 0 ? (
+                featuredEvents.map((event) => (
+                  <div key={event.id} className="flex-[0_0_100%] min-w-0 relative h-[55vh]" onClick={() => setSelectedEvent(event)}>
+                    <ImageWithFallback 
+                      src={event.image_url} 
+                      alt={event.title}
+                      className="w-full h-full object-cover opacity-90"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex items-end p-6">
+                      <div className="w-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="bg-[#8A2BE2] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                            Featured
+                          </span>
+                          <span className="bg-white/20 backdrop-blur-md text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-white" /> {event.views || 0}
+                          </span>
+                        </div>
+                        <h2 className="text-white text-3xl font-black mb-2 leading-tight drop-shadow-lg">{event.title}</h2>
+                        <div className="flex items-center gap-3 text-white/90 text-sm font-medium">
+                          <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {event.date}</span>
+                          <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {event.location.split(',')[0]}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex-[0_0_100%] min-w-0 h-[55vh] flex items-center justify-center text-white/50">
+                  No featured events
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Organizers Strip */}
+          <div className="py-6 pl-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-5">
+              {featuredOrganizers.map((org: any) => (
+                <div 
+                  key={org.id} 
+                  className="flex flex-col items-center gap-2 min-w-[72px] cursor-pointer group"
+                  onClick={() => {
+                    handleStartConversationLocal({
+                      name: org.name,
+                      username: org.name.toLowerCase().replace(/\s/g, ''),
+                      avatar: org.avatar,
+                      verified: org.verified,
+                      isOrganizer: true,
+                      id: org.id
+                    });
+                  }}
+                >
+                  <div className="w-[72px] h-[72px] rounded-full p-[2px] bg-gradient-to-tr from-[#8A2BE2] to-pink-500 group-hover:scale-105 transition-transform">
+                    <div className="w-full h-full rounded-full border-2 border-white overflow-hidden">
+                      <ImageWithFallback src={org.avatar} className="w-full h-full object-cover" />
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-700 font-medium truncate w-full text-center group-hover:text-[#8A2BE2] transition-colors">
+                    {org.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. Category Grid - "Award Winning Layout" */}
+          <div className="px-4 pb-8">
+            <h3 className="text-gray-900 font-bold text-lg mb-4">Discover</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Entertainment */}
+              <button 
+                onClick={() => { setSelectedCategory('entertainment'); setViewMode('list'); }} 
+                className="bg-[#1e1e2e] p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-gray-200 hover:scale-[1.02] transition-transform group"
+              >
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-[#8A2BE2] transition-colors">
+                  <Music className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-white font-semibold">Entertainment</span>
+              </button>
+              
+              {/* Events (All) */}
+              <button 
+                onClick={() => setViewMode('list')} 
+                className="bg-[#2563EB] p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-blue-200 hover:scale-[1.02] transition-transform group"
+              >
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-white font-semibold">All Events</span>
+              </button>
+
+              {/* TV / Live */}
+              <button 
+                onClick={() => toast.info('Check the "Live" tab for streams!')}
+                className="bg-[#1e1e2e] p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-gray-200 hover:scale-[1.02] transition-transform relative overflow-hidden group"
+              >
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-cyan-500 transition-colors">
+                  <Tv className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-white font-semibold">TV</span>
+                <div className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                  LIVE
+                </div>
+              </button>
+
+              {/* Shopping */}
+              <button 
+                onClick={() => toast.info('Merch store coming soon!')}
+                className="bg-[#1e1e2e] p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-gray-200 hover:scale-[1.02] transition-transform group"
+              >
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-orange-500 transition-colors">
+                  <ShoppingBag className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-white font-semibold">Shopping</span>
+              </button>
+
+              {/* Scan Ticket - Full Width */}
+              <button 
+                onClick={() => toast.info('Scanner feature coming soon!')}
+                className="col-span-2 bg-gradient-to-r from-gray-900 to-gray-800 p-6 rounded-3xl flex items-center justify-between shadow-xl hover:scale-[1.01] transition-transform"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                    <QrCode className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-white font-semibold text-lg">Scan Ticket</span>
+                    <span className="block text-white/50 text-xs">Verify entry codes</span>
+                  </div>
+                </div>
+                <ArrowRight className="w-6 h-6 text-white/50" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Professional Header with Search & Filter */}
         <div className="mb-1 sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-2 pb-2 -mx-4 px-4 transition-all">
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h1 className="text-gray-900 text-2xl"><strong>EVENTZ</strong></h1>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setViewMode('home')}
+                className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6 text-gray-900" />
+              </button>
+              <h1 className="text-gray-900 text-2xl"><strong>Events</strong></h1>
             </div>
             
             <div className="flex items-center gap-3">
@@ -606,7 +790,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
           
           {/* Tagline below - clean left-aligned with EVENTZ */}
-          <p className="text-gray-600 text-sm">Discover amazing events happening around you</p>
+          <p className="text-gray-600 text-sm ml-10">Discover amazing events happening around you</p>
         </div>
 
         {/* Active Filters Chips - Only shown when filters are active */}
@@ -746,6 +930,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
         )}
       </div>
+      )}
 
       {/* Filter Panel Sheet */}
       {showFilters && (
