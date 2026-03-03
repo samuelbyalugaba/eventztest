@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Check, Users, Sparkles, Crown, ArrowRight, Smartphone, CreditCard, ChevronLeft, Ticket, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { extractCurrencyFromPrice } from '../utils/currencies';
+import { extractCurrencyFromPrice, currencies } from '../utils/currencies';
 import { createTransaction, initiateSnippePayment, waitForTransactionCompletion, createTicket } from '../utils/supabase/api';
 
 interface TicketTier {
@@ -41,7 +41,10 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
 
   // Normalize tiers (handle single price events)
   const tiers: TicketTier[] = (event.ticketTiers && event.ticketTiers.length > 0) 
-    ? event.ticketTiers 
+    ? event.ticketTiers.map(t => ({
+        ...t,
+        priceNumeric: parseInt(t.price.replace(/[^\d]/g, '')) || 0
+      }))
     : [{
         name: 'Standard',
         price: event.price_range,
@@ -89,6 +92,14 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
     const tier = tiers.find(t => t.name === name);
     return sum + (tier ? tier.priceNumeric * qty : 0);
   }, 0);
+
+  const getCurrencySymbol = (priceString: string) => {
+    const currencyCode = extractCurrencyFromPrice(priceString);
+    const currency = currencies.find(c => c.code === currencyCode);
+    return currency ? currency.symbol : 'TSh';
+  };
+
+  const currencySymbol = getCurrencySymbol(tiers[0]?.price || '');
 
   const handlePurchase = async () => {
     if (totalTickets === 0 || !formData.name || !formData.email || !paymentPhone) {
@@ -233,7 +244,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                             </div>
                             <div>
                               <h3 className="font-bold text-gray-900">{tier.name}</h3>
-                              <p className="text-sm text-gray-500">{tier.price}</p>
+                              <p className="text-sm text-gray-500">{currencySymbol} {tier.priceNumeric.toLocaleString()}</p>
                             </div>
                           </div>
                           
@@ -280,7 +291,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                      <div key={name} className="flex justify-between items-center text-sm">
                        <span className="text-gray-700">{qty}x {name} Ticket</span>
                        <span className="font-medium text-gray-900">
-                         {tier ? (tier.priceNumeric * qty).toLocaleString() : 0}
+                         {currencySymbol} {tier ? (tier.priceNumeric * qty).toLocaleString() : 0}
                        </span>
                      </div>
                    );
@@ -288,7 +299,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                 <div className="border-t border-purple-200 my-2 pt-2 flex justify-between items-center">
                   <span className="font-bold text-purple-900">Total</span>
                   <span className="text-lg font-bold text-purple-900">
-                    TSh {totalPrice.toLocaleString()}
+                    {currencySymbol} {totalPrice.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -366,7 +377,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
               <span>Checkout</span>
               {totalTickets > 0 && (
                 <span className="bg-white/20 px-2 py-0.5 rounded text-sm">
-                  TSh {totalPrice.toLocaleString()}
+                  {currencySymbol} {totalPrice.toLocaleString()}
                 </span>
               )}
               <ArrowRight className="w-4 h-4" />
@@ -393,7 +404,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                   </>
                 ) : (
                   <>
-                    <span>Pay TSh {totalPrice.toLocaleString()}</span>
+                    <span>Pay {currencySymbol} {totalPrice.toLocaleString()}</span>
                     <CreditCard className="w-4 h-4" />
                   </>
                 )}
