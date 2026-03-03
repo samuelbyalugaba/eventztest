@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight, MessageCircle, Ticket, ShoppingBag, QrCode, Music, Trophy, RotateCw } from 'lucide-react';
+import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight, MessageCircle, Ticket, ShoppingBag, Music, Trophy, RotateCw } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
@@ -659,21 +659,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 <ArrowRight className="w-6 h-6 text-white/80" />
               </button>
 
-              <button 
-                onClick={() => toast.info('Scanner feature coming soon!')}
-                className="col-span-2 bg-white border border-gray-100 p-6 rounded-3xl flex items-center justify-between shadow-lg shadow-gray-100 hover:scale-[1.01] transition-transform group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center group-hover:bg-gray-100 transition-colors">
-                    <QrCode className="w-6 h-6 text-gray-900" />
-                  </div>
-                  <div className="text-left">
-                    <span className="block text-gray-900 font-semibold text-lg">Scan Ticket</span>
-                    <span className="block text-gray-500 text-xs">Verify entry codes</span>
-                  </div>
-                </div>
-                <ArrowRight className="w-6 h-6 text-gray-400" />
-              </button>
+
             </div>
           </div>
         </div>

@@ -44,6 +44,7 @@
             "hls.js": "^1.6.15",
             "hono": "*",
             "html-to-image": "^1.11.13",
+            "html5-qrcode": "^2.3.8",
             "input-otp": "^1.4.2",
             "lucide-react": "^0.487.0",
             "next-themes": "^0.4.6",

@@ -9,13 +9,14 @@ import { HighlightViewerModal } from './HighlightViewerModal';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
 import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
-import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2, MoreHorizontal, QrCode } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile, deletePost, deleteEvent, updateEventStreamingStatus } from '../utils/supabase/api';
 import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { StreamManager } from './StreamManager';
+import { TicketScannerModal } from './TicketScannerModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
   const [organizerPosts, setOrganizerPosts] = useState<any[]>([]);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'published' | 'drafts'>('published');
   
   // User Profile Modal State
@@ -399,10 +401,10 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                 </div>
               </div>
               <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
-                <div className="flex items-center gap-2 bg-white/10 text-white rounded-xl border border-white/20 backdrop-blur-sm p-1 w-full md:w-auto">
+                <div className="flex items-center justify-center gap-2 bg-white/10 text-white rounded-xl border border-white/20 backdrop-blur-sm p-1 w-full md:w-auto">
                   <button 
                     onClick={() => setShowSettings(true)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/20 transition-colors w-full md:w-auto"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/20 transition-colors w-auto"
                   >
                     <Settings className="w-4 h-4" />
                     <span className="text-sm font-semibold whitespace-nowrap">Manage</span>
@@ -410,10 +412,27 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                   <span className="w-px h-5 bg-white/20 hidden md:block" />
                   <button
                     onClick={onCreateEvent}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/20 transition-colors w-full md:w-auto"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/20 transition-colors w-auto"
                   >
                     <PlusCircle className="w-4 h-4" />
                     <span className="text-sm font-semibold whitespace-nowrap">Create Event</span>
+                  </button>
+                  <span className="w-px h-5 bg-white/20 hidden md:block" />
+                  <button
+                    onClick={() => {
+                        // For now, default to the first published event or show a selection if multiple
+                        // Ideally we should let them select which event they are scanning for
+                        if (publishedEvents.length === 0) {
+                            toast.error('No events to scan for');
+                            return;
+                        }
+                        setShowScanner(true);
+                    }}
+                    className="p-2 rounded-lg hover:bg-white/20 transition-colors"
+                    title="Scan Ticket"
+                    aria-label="Scan Ticket"
+                  >
+                    <QrCode className="w-5 h-5" />
                   </button>
                 </div>
                 <button 
@@ -900,6 +919,14 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             // Refresh followers list if needed
             handleShowFollowers();
           }}
+        />
+      )}
+
+      {showScanner && (
+        <TicketScannerModal
+          eventId={publishedEvents[0]?.id || 0} // Defaulting to first event for now - Logic can be improved to select event
+          eventTitle={publishedEvents[0]?.title || 'Event'}
+          onClose={() => setShowScanner(false)}
         />
       )}
     </>

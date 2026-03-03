@@ -442,103 +442,52 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           )}
 
           {/* HD Live Streaming Section - CORE DIFFERENTIATOR */}
-          {event.streaming?.available ? (
-            <div className="mb-6 border-2 border-gradient-to-r from-purple-500 to-cyan-500 rounded-2xl overflow-hidden bg-gradient-to-br from-purple-50 via-white to-cyan-50">
-              {/* Streaming Header */}
-              <div className="bg-gradient-to-r from-purple-600 to-cyan-500 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                      <Tv className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-white mb-1">HD Live Streaming Available</h2>
-                      <p className="text-white/90 text-sm">Watch from anywhere in the world</p>
-                    </div>
+          {event.streaming?.available && (
+            <div className="mb-6 bg-gray-50 rounded-2xl p-4 border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <Tv className="w-5 h-5 text-purple-600" />
                   </div>
-                  {event.streaming.isLive && (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-red-500 rounded-full animate-pulse">
-                      <Radio className="w-4 h-4 text-white" />
-                      <span className="text-white text-sm">LIVE</span>
-                    </div>
-                  )}
+                  <div>
+                    <h3 className="text-gray-900 font-semibold text-sm">Virtual Access</h3>
+                    <p className="text-gray-500 text-xs">HD Live Stream</p>
+                  </div>
                 </div>
+                {event.streaming.isLive && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-600 rounded-full">
+                    <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse" />
+                    <span className="text-xs font-medium">LIVE</span>
+                  </div>
+                )}
               </div>
 
-              <div className="p-5">
-                {/* Live Viewer Count */}
-                {event.streaming.isLive && event.streaming.liveViewers && event.streaming.liveViewers > 0 && (
-                  <div className="flex items-center gap-2 mb-4 p-3 bg-purple-100 rounded-lg">
-                    <Eye className="w-5 h-5 text-purple-600" />
-                    <span className="text-purple-900">{event.streaming.liveViewers.toLocaleString()} people watching now</span>
-                  </div>
-                )}
-
-                {/* Streaming Quality & Price */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="p-4 bg-white rounded-xl border border-purple-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-                        <Tv className="w-4 h-4 text-white" />
-                      </div>
-                      <span className="text-gray-900">Quality</span>
-                    </div>
-                    <p className="text-purple-600">{event.streaming.quality} Streaming</p>
-                  </div>
-                  
-                  <div className="p-4 bg-white rounded-xl border border-cyan-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
-                        <DollarSign className="w-4 h-4 text-white" />
-                      </div>
-                      <span className="text-gray-900">Virtual Ticket</span>
-                    </div>
-                    <p className="text-cyan-600">{event.streaming.virtualPrice}</p>
-                  </div>
+              {/* Live Viewer Count */}
+              {event.streaming.isLive && event.streaming.liveViewers && event.streaming.liveViewers > 0 && (
+                <div className="flex items-center gap-2 mb-4 text-sm text-gray-600">
+                  <Eye className="w-4 h-4" />
+                  <span>{event.streaming.liveViewers.toLocaleString()} watching now</span>
                 </div>
+              )}
 
-                {/* Streaming Features */}
-                {event.streaming.features && event.streaming.features.length > 0 && (
-                  <div className="mb-4">
-                    <h3 className="text-gray-900 mb-3">Streaming Features</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      {event.streaming.features.map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-gray-700">
-                          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                          <span className="text-sm">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Replay Availability */}
-                {event.streaming.replayAvailable && (
-                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg mb-4">
-                    <Play className="w-5 h-5 text-pink-600" />
-                    <span className="text-gray-900">Replay available for 48 hours after event</span>
-                  </div>
-                )}
-
-                {/* Virtual Ticket CTA */}
-                  <button 
-                    onClick={() => !isEventPast && onPurchaseTicket(event)}
-                    disabled={isEventPast}
-                    className={`w-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:from-purple-700 hover:to-cyan-600'}`}
-                  >
-                    <Tv className="w-5 h-5" />
-                    <span>{isEventPast ? 'Event Ended' : `Get Virtual Ticket - ${event.streaming.virtualPrice}`}</span>
-                  </button>
-
-                {/* Info Badge */}
-                <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
-                  <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">i</div>
-                  <p>You'll receive an email with your unique access link immediately after purchase.</p>
-                </div>
+              <div className="flex items-center justify-between mb-4 p-3 bg-white rounded-xl border border-gray-100">
+                <span className="text-gray-600 text-sm">Virtual Ticket</span>
+                <span className="text-gray-900 font-semibold">{event.streaming.virtualPrice}</span>
               </div>
+
+              {/* Virtual Ticket CTA */}
+              <button 
+                onClick={() => !isEventPast && onPurchaseTicket(event)}
+                disabled={isEventPast}
+                className={`w-full bg-gray-900 text-white py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`}
+              >
+                <Tv className="w-4 h-4" />
+                <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : 'Get Access'}</span>
+              </button>
             </div>
-          ) : (
-            (!event.ticket_tiers || event.ticket_tiers.length === 0) && (
+          )}
+
+          {(!event.ticket_tiers || event.ticket_tiers.length === 0) && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-900">Get Tickets</h3>
@@ -587,7 +536,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 )}
               </div>
             </div>
-            )
           )}
 
           {/* Spacer */}

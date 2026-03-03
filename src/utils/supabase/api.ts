@@ -1028,6 +1028,20 @@ export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'e
   return data;
 };
 
+export const scanTicket = async (ticketCode: string, eventId: number) => {
+  const { data, error } = await supabase.rpc('scan_ticket', {
+    p_ticket_code: ticketCode,
+    p_event_id: eventId
+  });
+
+  if (error) {
+    console.error('Error scanning ticket:', error);
+    throw error;
+  }
+
+  return data;
+};
+
 // --- TRANSACTIONS / PAYMENTS ---
 
 export const createTransaction = async (transactionData: {
