@@ -638,26 +638,8 @@ export default function App() {
     );
   }
 
-  // Show auth screen if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <>
-        <Toaster 
-          position="top-center" 
-          richColors 
-          closeButton
-          toastOptions={{
-            style: {
-              background: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: '12px',
-            },
-          }}
-        />
-        <AuthScreen onAuthSuccess={handleAuthSuccess} />
-      </>
-    );
-  }
+  // ALLOW PUBLIC ACCESS: Removed blocking auth check
+  // if (!isAuthenticated) { ... }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -708,7 +690,13 @@ export default function App() {
         )}
         {(activeTab === 'create' || visitedTabs.has('create')) && (
           <div className={activeTab === 'create' ? '' : 'hidden'}>
-            {!isOrganizer ? (
+            {!isAuthenticated ? (
+               <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
+                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Amazing Events</h2>
+                 <p className="text-gray-600 mb-6">Sign in to start organizing your own events</p>
+                 <AuthScreen onAuthSuccess={handleAuthSuccess} embedded={true} />
+               </div>
+            ) : !isOrganizer ? (
               <BecomeOrganizer onComplete={handleBecomeOrganizer} />
             ) : !hasOrganizerProfile ? (
               <OrganizerProfileSetup onComplete={handleProfileComplete} />
@@ -721,7 +709,15 @@ export default function App() {
         )}
         {(activeTab === 'profile' || visitedTabs.has('profile')) && (
           <div className={activeTab === 'profile' ? '' : 'hidden'}>
-            <Profile onLogout={handleLogout} />
+            {!isAuthenticated ? (
+               <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
+                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Profile</h2>
+                 <p className="text-gray-600 mb-6">Sign in to view your profile and settings</p>
+                 <AuthScreen onAuthSuccess={handleAuthSuccess} embedded={true} />
+               </div>
+            ) : (
+              <Profile onLogout={handleLogout} />
+            )}
           </div>
         )}
       </div>

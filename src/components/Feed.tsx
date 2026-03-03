@@ -602,6 +602,11 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const handleStartConversationLocal = async (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
+    if (!currentUser) {
+      toast.error('Please sign in to start a conversation');
+      return;
+    }
+    
     // Close post detail if open
     setSelectedPost(null);
     
@@ -667,6 +672,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 <button
                   className={`p-2.5 rounded-xl transition-colors relative ${showNotifications ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
                   onClick={() => {
+                    if (!currentUser) {
+                      toast.error('Sign in to view notifications');
+                      return;
+                    }
                     setShowNotifications(!showNotifications);
                     setShowMessages(false);
                   }}
@@ -680,6 +689,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                 <button
                   className={`p-2.5 rounded-xl transition-colors relative ${showMessages ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
                   onClick={() => {
+                    if (!currentUser) {
+                      toast.error('Sign in to view messages');
+                      return;
+                    }
                     setShowMessages(!showMessages);
                     setShowNotifications(false);
                   }}
@@ -1091,6 +1104,10 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
             setSelectedOrganizer(null);
           }}
           onMessage={async (organizer) => {
+            if (!currentUser) {
+              toast.error('Please sign in to message organizers');
+              return;
+            }
             setShowOrganizerProfile(false);
             setSelectedOrganizer(null);
             const conv = await onStartConversation({

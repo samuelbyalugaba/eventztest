@@ -242,6 +242,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   ];
 
   const handleStartConversationLocal = async (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => {
+    // Check auth
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      toast.error('Please sign in to start a conversation');
+      return;
+    }
+
     // Close user profile modal
     setSelectedUser(null);
     

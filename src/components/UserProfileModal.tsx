@@ -96,7 +96,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
   }, [user.id, user.type]);
 
   const handleFollow = async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      toast.error('Please sign in to follow users');
+      return;
+    }
     
     const newStatus = !isFollowing;
     setIsFollowing(newStatus);

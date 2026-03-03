@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 
 interface AuthScreenProps {
   onAuthSuccess: (accessToken: string, user: any) => void;
+  embedded?: boolean;
 }
 
-export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
+export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps) {
   // Mode state
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -168,7 +169,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div className={`w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 ${embedded ? 'min-h-[60vh] bg-transparent' : 'min-h-[100dvh] bg-gradient-to-br from-indigo-50 via-white to-purple-50'}`}>
       <div className="w-full max-w-md space-y-8">
         
         {/* Header Section */}
