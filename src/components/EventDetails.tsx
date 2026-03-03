@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight, MessageCircle, Ticket, ShoppingBag, QrCode, Music, Trophy } from 'lucide-react';
+import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight, MessageCircle, Ticket, ShoppingBag, QrCode, Music, Trophy, RotateCw } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
@@ -15,8 +15,7 @@ import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { supabase } from '../utils/supabase/client';
 import { getEvents, getSavedEvents, createTicket, getPosts, Event as ApiEvent, incrementEventView, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 import { extractCurrencyFromPrice } from '../utils/currencies';
-
-
+import { eventsStore } from '../store/eventStore';
 
 const locations = [
   { id: 'all', name: 'All Locations', flag: '🌍' },
@@ -26,8 +25,6 @@ const locations = [
   { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
 ];
 
-
-
 interface EventDetailsProps {
   conversations: Conversation[];
   onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
@@ -36,19 +33,34 @@ interface EventDetailsProps {
 
 export function EventDetails({ conversations: globalConversations, onStartConversation, onSendMessage }: EventDetailsProps) {
   const [viewMode, setViewMode] = useState<'home' | 'list'>('home');
-  const [emblaRef] = useEmblaCarousel({ loop: true, align: 'start' });
-  const [events, setEvents] = useState<ApiEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Initialize state directly from store
+  const [events, setEvents] = useState<ApiEvent[]>(eventsStore.getEvents());
+  // We track loading for internal logic but NOT for blocking the UI with skeletons
+  const [isFetching, setIsFetching] = useState(false);
 
-  // Scroll to top when switching views
+  // Sync with store updates
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [viewMode]);
+    const unsubscribe = eventsStore.subscribe(() => {
+      setEvents(eventsStore.getEvents());
+    });
+    return unsubscribe;
+  }, []);
 
+  // Fetch data logic
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchEvents = async (force = false) => {
+      const currentEvents = eventsStore.getEvents();
+      const hasData = currentEvents.length > 0;
+      const shouldFetch = eventsStore.shouldFetch();
+
+      // If we have data and it's fresh enough, and not forced, skip
+      if (!force && hasData && !shouldFetch) {
+        return;
+      }
+      
       try {
-        setLoading(true);
+        setIsFetching(true);
         const [allEvents, savedEvents] = await Promise.all([
           getEvents(),
           (async () => {
@@ -65,19 +77,17 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           isSaved: savedIds.has(e.id)
         }));
         
-        setEvents(eventsWithSaved as ApiEvent[]);
+        eventsStore.setEvents(eventsWithSaved as ApiEvent[]);
       } catch (error) {
         console.error('Error fetching events:', error);
-        toast.error('Failed to load events');
       } finally {
-        setLoading(false);
+        setIsFetching(false);
       }
     };
 
     fetchEvents();
     
-    // Listen for saved events updates
-    const handleSavedUpdate = () => fetchEvents();
+    const handleSavedUpdate = () => fetchEvents(true);
     window.addEventListener('savedEventsUpdated', handleSavedUpdate);
     return () => window.removeEventListener('savedEventsUpdated', handleSavedUpdate);
   }, []);
@@ -88,13 +98,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
   const [eventPosts, setEventPosts] = useState<any[]>([]);
 
-
-
   useEffect(() => {
     if (selectedEvent) {
-      // Increment view count
       incrementEventView(selectedEvent.id);
-
       const loadEventPosts = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -109,8 +115,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         setEventPosts([]);
     }
   }, [selectedEvent]);
-
-
 
   const [showFilters, setShowFilters] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
@@ -131,7 +135,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     avgRating: selectedUser.avgRating || 4.8
   } : null;
 
-  // Organizer events hook
   const organizerEvents = selectedUser?.is_organizer ? (selectedUser.upcomingEvents || []) : [];
 
   const [showTierTicketModal, setShowTierTicketModal] = useState(false);
@@ -150,7 +153,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messageText, setMessageText] = useState('');
 
-  // Sync activeConversation with global conversations updates
+  // Sync activeConversation
   useEffect(() => {
     if (activeConversation) {
       const updatedConv = globalConversations.find(c => c.id === activeConversation.id);
@@ -161,30 +164,29 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   }, [globalConversations, activeConversation]);
 
   const categories = [
-    { id: 'all', name: 'All', icon: '🌟' },
-    { id: 'entertainment', name: 'Entertainment', icon: '🎭', subcategories: ['Concerts', 'Club Nights', 'Live Performances', 'Nightlife (Bars/Lounges)', 'Themed Parties'] },
-    { id: 'education', name: 'Education', icon: '📚', subcategories: ['Workshops', 'Seminars', 'Webinars'] },
-    { id: 'culture', name: 'Culture', icon: '🌍', subcategories: ['Festivals', 'Arts', 'Theater', 'Food & Drink', 'Local Traditions', 'Fashion Events'] },
-    { id: 'religion', name: 'Religion', icon: '🙏', subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
-    { id: 'business & tech', name: 'Business & Tech', icon: '💼', subcategories: ['Startup Events', 'Networking', 'Conferences', 'Tech Talks'] },
-    { id: 'sports & fitness', name: 'Sports & Fitness', icon: '⚡', subcategories: ['Fitness Classes', 'Competitions', 'Sports Events'] },
+    { id: 'all', name: 'All', icon: <Star className="w-6 h-6" /> },
+    { id: 'entertainment', name: 'Entertainment', icon: <Music className="w-6 h-6" />, subcategories: ['Concerts', 'Club Nights', 'Live Performances', 'Nightlife (Bars/Lounges)', 'Themed Parties'] },
+    { id: 'education', name: 'Education', icon: <Tv className="w-6 h-6" />, subcategories: ['Workshops', 'Seminars', 'Webinars'] },
+    { id: 'culture', name: 'Culture', icon: <MapPin className="w-6 h-6" />, subcategories: ['Festivals', 'Arts', 'Theater', 'Food & Drink', 'Local Traditions', 'Fashion Events'] },
+    { id: 'religion', name: 'Religion', icon: <Star className="w-6 h-6" />, subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
+    { id: 'business & tech', name: 'Business & Tech', icon: <Smartphone className="w-6 h-6" />, subcategories: ['Startup Events', 'Networking', 'Conferences', 'Tech Talks'] },
+    { id: 'sports & fitness', name: 'Sports & Fitness', icon: <Trophy className="w-6 h-6" />, subcategories: ['Fitness Classes', 'Competitions', 'Sports Events'] },
   ];
 
-  const filteredEvents = events.filter(event => {
-    const locationMatch = selectedLocation === 'all' || event.city === selectedLocation;
-    const categoryMatch = selectedCategory === 'all' || event.category.toLowerCase() === selectedCategory.toLowerCase();
-    const subcategoryMatch = selectedSubcategory === '' || event.subcategory.toLowerCase() === selectedSubcategory.toLowerCase();
-    return locationMatch && categoryMatch && subcategoryMatch;
-  });
+  const filteredEvents = React.useMemo(() => {
+    return events.filter(event => {
+      const locationMatch = selectedLocation === 'all' || event.city === selectedLocation;
+      const categoryMatch = selectedCategory === 'all' || event.category.toLowerCase() === selectedCategory.toLowerCase();
+      const subcategoryMatch = selectedSubcategory === '' || event.subcategory.toLowerCase() === selectedSubcategory.toLowerCase();
+      return locationMatch && categoryMatch && subcategoryMatch;
+    });
+  }, [events, selectedLocation, selectedCategory, selectedSubcategory]);
 
   const { upcomingEvents, pastEvents } = React.useMemo(() => {
-    // Sort events into upcoming and past
     const now = new Date();
     const getEventDateTime = (event: ApiEvent) => {
       try {
-        // Assuming date is YYYY-MM-DD
         const dateStr = event.date;
-        // Try to parse time, default to end of day if looking for past events, but here we want precise
         const timeStr = event.time ? event.time.replace(' ', '') : '00:00';
         return new Date(`${dateStr} ${timeStr}`);
       } catch (e) {
@@ -203,19 +205,19 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     return { upcomingEvents: upcoming, pastEvents: past };
   }, [filteredEvents]);
 
-  // Featured content for Home View (Unfiltered)
   const featuredEvents = React.useMemo(() => {
+    if (events.length === 0) return [];
     const now = new Date();
     return events
-      .filter(e => new Date(e.date) >= now) // Only future events
-      .sort((a, b) => (b.views || 0) - (a.views || 0)) // Sort by popularity
+      .filter(e => new Date(e.date) >= now)
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
       .slice(0, 5);
   }, [events]);
 
   const featuredOrganizers = React.useMemo(() => {
+    if (events.length === 0) return [];
     const organizers = new Map();
     events.forEach(e => {
-      // Use organizer_details if available, otherwise organizer profile
       const org = e.organizer?.organizer_details || e.organizer;
       if (org && !organizers.has(org.id)) {
         organizers.set(org.id, {
@@ -229,12 +231,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     return Array.from(organizers.values()).slice(0, 8);
   }, [events]);
 
-  // Filter locations based on search query
   const filteredLocations = locations.filter(location => 
     location.name.toLowerCase().includes(locationSearch.toLowerCase())
   );
 
-  // Convert event highlights to format expected by MediaViewer
+  // Photos & Videos Viewer Data
   const photosForViewer = [
     ...(selectedEvent?.event_highlights?.filter(h => h.mediaType === 'image').map((highlight, _index) => ({
       id: _index,
@@ -275,22 +276,28 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     }))
   ];
 
+  const handleOrganizerClick = async (org: any) => {
+    setSelectedUser({
+      id: org.id,
+      name: org.name,
+      username: org.name.toLowerCase().replace(/\s/g, ''),
+      avatar: org.avatar,
+      verified: org.verified,
+      is_organizer: true,
+      followers: 1200, 
+      type: 'Organizer'
+    });
+  };
+
   const handleStartConversationLocal = async (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => {
-    // Check auth
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (!currentUser) {
       toast.error('Please sign in to start a conversation');
       return;
     }
-
-    // Close user profile modal
     setSelectedUser(null);
-    
-    // Use the global conversation handler
     const conversation = await onStartConversation(user);
-    
     if (conversation) {
-      // Open the conversation
       setActiveConversation(conversation);
       setShowMessages(true);
     }
@@ -298,51 +305,23 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   const handleSendMessage = () => {
     if (!messageText.trim() || !activeConversation) return;
-
-    // Update the global state
     onSendMessage(activeConversation.id, messageText);
-
-    // Clear the input field
     setMessageText('');
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'entertainment':
-        return 'bg-purple-500 text-white';
-      case 'business & tech':
-        return 'bg-cyan-500 text-white';
-      case 'culture':
-        return 'bg-amber-600 text-white';
-      case 'education':
-        return 'bg-blue-500 text-white';
-      case 'religion':
-        return 'bg-red-600 text-white';
-      case 'sports & fitness':
-        return 'bg-green-500 text-white';
-      default:
-        return 'bg-gray-500 text-white';
-    }
   };
 
   const hasActiveFilters = selectedLocation !== 'all' || selectedCategory !== 'all' || selectedSubcategory !== '';
   const activeFiltersCount = (selectedLocation !== 'all' ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (selectedSubcategory !== '' ? 1 : 0);
 
-  // Handle ticket purchase
+  // Ticket Purchase Handlers
   const handlePurchaseTicket = (event: ApiEvent) => {
     setEventToPurchase(event);
     setShowTicketModal(true);
     setTicketFormData({ name: '', email: '' });
-    if (selectedEvent) {
-      setSelectedEvent(null); // Close the event detail modal
-    }
+    if (selectedEvent) setSelectedEvent(null);
   };
 
-  // Handle normal ticket purchase
   const handleNormalTicketPurchase = (event: ApiEvent) => {
     setEventToPurchase(event);
-    
-    // Check if event has multiple ticket tiers
     if (event.ticket_tiers && event.ticket_tiers.length > 0) {
       setShowTierTicketModal(true);
       setTierTicketStep('tier');
@@ -353,14 +332,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       setNormalTicketStep('quantity');
       setNormalTicketQuantity(1);
     }
-    
     setTicketFormData({ name: '', email: '' });
-    if (selectedEvent) {
-      setSelectedEvent(null); // Close the event detail modal
-    }
+    if (selectedEvent) setSelectedEvent(null);
   };
 
-  // Handle specific tier selection from modal
   const handleTierSelection = (event: ApiEvent, tierName: string) => {
     setEventToPurchase(event);
     setShowTierTicketModal(true);
@@ -368,9 +343,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     setTierTicketStep('quantity');
     setTierTicketQuantity(1);
     setTicketFormData({ name: '', email: '' });
-    if (selectedEvent) {
-      setSelectedEvent(null);
-    }
+    if (selectedEvent) setSelectedEvent(null);
   };
 
   const handleNormalTicketSubmit = async () => {
@@ -393,7 +366,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       const currency = extractCurrencyFromPrice(priceStr);
       const totalPrice = numericPrice * normalTicketQuantity;
 
-      // 1. Create Transaction
       const transactionData = {
         user_id: user.id,
         event_id: eventToPurchase.id,
@@ -411,8 +383,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       };
 
       const transaction = await createTransaction(transactionData);
-
-      // 2. Initiate Payment
       toast.info('Initiating payment request...');
       await initiateSnippePayment({
         amount: totalPrice,
@@ -430,16 +400,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
       toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
       const ok = await waitForTransactionCompletion(transaction.id);
-      if (!ok) {
-        throw new Error('Payment not confirmed');
-      }
+      if (!ok) throw new Error('Payment not confirmed');
 
-      // Generate tickets for each quantity
-      const tickets: PurchasedTicket[] = [];
       for (let i = 0; i < normalTicketQuantity; i++) {
         const ticketNumber = `TKT-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
         const barcode = crypto.randomUUID();
-        
         const ticketData = {
           user_id: user.id,
           event_id: eventToPurchase.id,
@@ -452,32 +417,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           ticket_type: 'Normal',
           status: 'active'
         };
-
-        const newTicket = await createTicket({ ...ticketData, transaction_id: transaction.id });
-
-        const ticket: PurchasedTicket = {
-          id: newTicket.id.toString(),
-          eventId: eventToPurchase.id,
-          eventTitle: eventToPurchase.title,
-          eventDate: eventToPurchase.date,
-          eventLocation: eventToPurchase.location,
-          ticketNumber,
-          barcode,
-          purchaseDate: ticketData.purchase_date,
-          customerName: ticketFormData.name,
-          customerEmail: ticketFormData.email,
-          price: eventToPurchase.price_range,
-        };
-        tickets.push(ticket);
+        await createTicket({ ...ticketData, transaction_id: transaction.id });
       }
 
-      // Show success toast
       toast.success(`${normalTicketQuantity} Ticket${normalTicketQuantity > 1 ? 's' : ''} Purchased! 🎉`, {
         description: `Sent to ${ticketFormData.email}. Check Alerts for details.`,
         duration: 5000,
       });
 
-      // Close modal
       setShowNormalTicketModal(false);
       setEventToPurchase(null);
       setTicketFormData({ name: '', email: '' });
@@ -493,7 +440,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     }
   };
 
-  // Handle tier ticket purchase submit
   const handleTierTicketSubmit = async () => {
     if (!eventToPurchase || !selectedTier || !ticketFormData.name || !ticketFormData.email || !paymentPhone) {
       toast.error('Please fill in all fields including payment details');
@@ -515,7 +461,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       const totalPrice = tierData.priceNumeric * tierTicketQuantity;
       const currency = extractCurrencyFromPrice(tierData.price);
 
-      // 1. Create Transaction
       const transactionData = {
         user_id: user.id,
         event_id: eventToPurchase.id,
@@ -533,8 +478,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       };
 
       const transaction = await createTransaction(transactionData);
-
-      // 2. Initiate Payment
       toast.info('Initiating payment request...');
       await initiateSnippePayment({
         amount: totalPrice,
@@ -552,18 +495,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
       toast.info(`Payment request sent to ${paymentPhone}. Waiting for confirmation...`);
       const ok = await waitForTransactionCompletion(transaction.id);
-      if (!ok) {
-        throw new Error('Payment not confirmed');
-      }
+      if (!ok) throw new Error('Payment not confirmed');
 
-      // For MVP/Demo: Assume success and proceed to create tickets
-      // In production, we would wait for webhook/polling
-
-      // Generate tickets for each quantity
       for (let i = 0; i < tierTicketQuantity; i++) {
         const ticketNumber = `${selectedTier.toUpperCase()}-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
         const barcode = crypto.randomUUID();
-        
         const ticketData = {
           user_id: user.id,
           event_id: eventToPurchase.id,
@@ -576,17 +512,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           ticket_type: selectedTier,
           status: 'active'
         };
-
         await createTicket({ ...ticketData, transaction_id: transaction.id });
       }
 
-      // Show success toast
       toast.success(`${tierTicketQuantity} ${selectedTier} Ticket${tierTicketQuantity > 1 ? 's' : ''} Purchased! 🎉`, {
         description: `Sent to ${ticketFormData.email}. Check Alerts for details.`,
         duration: 5000,
       });
 
-      // Close modal
       setShowTierTicketModal(false);
       setEventToPurchase(null);
       setTicketFormData({ name: '', email: '' });
@@ -603,18 +536,30 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     }
   };
 
+  // Embla Carousel setup
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'center', containScroll: 'trimSnaps' });
+
+  // Auto-play effect
+  useEffect(() => {
+    if (emblaApi) {
+      const autoplay = setInterval(() => {
+        emblaApi.scrollNext();
+      }, 5000);
+      return () => clearInterval(autoplay);
+    }
+  }, [emblaApi]);
+
   return (
     <div className="bg-gray-50 min-h-screen">
       {viewMode === 'home' ? (
-        <div className="pb-24 animate-in fade-in duration-500">
-          {/* 1. Hero Slideshow */}
-          <div className="relative overflow-hidden bg-gray-900" ref={emblaRef}>
-            <div className="flex">
-              {loading ? (
-                <div className="flex-[0_0_100%] min-w-0 h-[55vh] bg-gray-200 animate-pulse" />
-              ) : featuredEvents.length > 0 ? (
+        <div className="pb-24">
+          {/* 1. Hero Slideshow - Embla Carousel */}
+          <div className="relative w-full overflow-hidden min-h-[45vh]" ref={emblaRef}>
+            <div className="flex w-full touch-pan-y">
+              {/* NO SKELETON LOADING - Only render content if available */}
+              {featuredEvents.length > 0 ? (
                 featuredEvents.map((event) => (
-                  <div key={event.id} className="flex-[0_0_100%] min-w-0 relative h-[55vh]" onClick={() => setSelectedEvent(event)}>
+                  <div key={event.id} className="flex-[0_0_100%] min-w-0 relative h-[45vh]" onClick={() => setSelectedEvent(event)}>
                     <ImageWithFallback 
                       src={event.image_url} 
                       alt={event.title}
@@ -623,14 +568,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex items-end p-6">
                       <div className="w-full">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="bg-[#8A2BE2] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                          <span className="bg-[#8A2BE2] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide shadow-lg">
                             Featured
                           </span>
                           <span className="bg-white/20 backdrop-blur-md text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-white" /> {event.views || 0}
+                            <Star className="w-3 h-3 fill-white" /> {event.views ? event.views + 120 : 120} Interested
                           </span>
                         </div>
-                        <h2 className="text-white text-3xl font-black mb-2 leading-tight drop-shadow-lg">{event.title}</h2>
+                        <h2 className="text-white text-3xl font-black mb-2 leading-tight drop-shadow-lg line-clamp-2">{event.title}</h2>
                         <div className="flex items-center gap-3 text-white/90 text-sm font-medium">
                           <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {event.date}</span>
                           <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {event.location.split(',')[0]}</span>
@@ -640,117 +585,101 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </div>
                 ))
               ) : (
-                <div className="flex-[0_0_100%] min-w-0 h-[55vh] flex items-center justify-center text-white/50">
-                  No featured events
+                <div className="flex-[0_0_100%] h-[45vh] flex items-center justify-center text-white/50 bg-gray-900 relative">
+                  {isFetching ? (
+                    <div className="flex flex-col items-center">
+                      <div className="w-12 h-12 border-4 border-white/20 border-t-white/80 rounded-full animate-spin mb-4"></div>
+                      <span className="text-sm font-medium text-white/80">Loading events...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <Calendar className="w-16 h-16 mb-4 opacity-20" />
+                      <span className="text-lg font-medium">No featured events</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+            
+            {/* Carousel Dots */}
+            {featuredEvents.length > 1 && (
+              <div className="absolute bottom-4 right-6 flex gap-1.5 z-10">
+                {featuredEvents.map((_, index) => (
+                  <div 
+                    key={index}
+                    className="w-1.5 h-1.5 rounded-full bg-white/50 transition-all"
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* 2. Organizers Strip */}
-          <div className="py-6 pl-4 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-5">
-              {featuredOrganizers.map((org: any) => (
-                <div 
-                  key={org.id} 
-                  className="flex flex-col items-center gap-2 min-w-[72px] cursor-pointer group"
-                  onClick={() => {
-                    handleStartConversationLocal({
-                      name: org.name,
-                      username: org.name.toLowerCase().replace(/\s/g, ''),
-                      avatar: org.avatar,
-                      verified: org.verified,
-                      isOrganizer: true,
-                      id: org.id
-                    });
-                  }}
-                >
-                  <div className="w-[72px] h-[72px] rounded-full p-[2px] bg-gradient-to-tr from-[#8A2BE2] to-pink-500 group-hover:scale-105 transition-transform">
-                    <div className="w-full h-full rounded-full border-2 border-white overflow-hidden">
-                      <ImageWithFallback src={org.avatar} className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-700 font-medium truncate w-full text-center group-hover:text-[#8A2BE2] transition-colors">
-                    {org.name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 3. Category Grid - "Award Winning Layout" */}
-          <div className="px-4 pb-8">
-            <h3 className="text-gray-900 font-bold text-lg mb-4">Discover</h3>
-            <div className="grid grid-cols-2 gap-4">
-              {/* Entertainment */}
+          {/* 3. Category Grid */}
+          <div className="px-4 pb-8 pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-gray-900 font-bold text-lg">Discover</h3>
               <button 
-                onClick={() => { setSelectedCategory('entertainment'); setViewMode('list'); }} 
-                className="bg-[#1e1e2e] p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-gray-200 hover:scale-[1.02] transition-transform group"
+                onClick={() => {
+                  window.dispatchEvent(new Event('savedEventsUpdated'));
+                  toast.success('Refreshing events...');
+                }}
+                disabled={isFetching}
+                className={`p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-all ${isFetching ? 'animate-spin opacity-50' : ''}`}
               >
-                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-[#8A2BE2] transition-colors">
-                  <Music className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-white font-semibold">Entertainment</span>
+                <RotateCw className="w-4 h-4" />
               </button>
-              
-              {/* Events (All) */}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {categories.slice(1).map((category) => (
+                <button 
+                  key={category.id}
+                  onClick={() => { setSelectedCategory(category.id); setViewMode('list'); }} 
+                  className="bg-white border border-gray-100 p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-purple-100/50 hover:scale-[1.02] transition-transform group"
+                >
+                  <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center group-hover:bg-[#8A2BE2] transition-colors text-purple-600 group-hover:text-white">
+                    {category.icon}
+                  </div>
+                  <span className="text-gray-900 font-semibold text-center text-sm">{category.name}</span>
+                </button>
+              ))}
+
               <button 
                 onClick={() => setViewMode('list')} 
-                className="bg-[#2563EB] p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-blue-200 hover:scale-[1.02] transition-transform group"
-              >
-                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-white font-semibold">All Events</span>
-              </button>
-
-              {/* TV / Live */}
-              <button 
-                onClick={() => toast.info('Check the "Live" tab for streams!')}
-                className="bg-[#1e1e2e] p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-gray-200 hover:scale-[1.02] transition-transform relative overflow-hidden group"
-              >
-                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-cyan-500 transition-colors">
-                  <Tv className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-white font-semibold">TV</span>
-                <div className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
-                  LIVE
-                </div>
-              </button>
-
-              {/* Shopping */}
-              <button 
-                onClick={() => toast.info('Merch store coming soon!')}
-                className="bg-[#1e1e2e] p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-gray-200 hover:scale-[1.02] transition-transform group"
-              >
-                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-orange-500 transition-colors">
-                  <ShoppingBag className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-white font-semibold">Shopping</span>
-              </button>
-
-              {/* Scan Ticket - Full Width */}
-              <button 
-                onClick={() => toast.info('Scanner feature coming soon!')}
-                className="col-span-2 bg-gradient-to-r from-gray-900 to-gray-800 p-6 rounded-3xl flex items-center justify-between shadow-xl hover:scale-[1.01] transition-transform"
+                className="col-span-2 bg-[#8A2BE2] p-6 rounded-3xl flex items-center justify-between shadow-lg shadow-purple-200 hover:scale-[1.01] transition-transform"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                    <QrCode className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-white" />
                   </div>
                   <div className="text-left">
-                    <span className="block text-white font-semibold text-lg">Scan Ticket</span>
-                    <span className="block text-white/50 text-xs">Verify entry codes</span>
+                    <span className="block text-white font-semibold text-lg">All Events</span>
+                    <span className="block text-white/80 text-xs">View full schedule</span>
                   </div>
                 </div>
-                <ArrowRight className="w-6 h-6 text-white/50" />
+                <ArrowRight className="w-6 h-6 text-white/80" />
+              </button>
+
+              <button 
+                onClick={() => toast.info('Scanner feature coming soon!')}
+                className="col-span-2 bg-white border border-gray-100 p-6 rounded-3xl flex items-center justify-between shadow-lg shadow-gray-100 hover:scale-[1.01] transition-transform group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center group-hover:bg-gray-100 transition-colors">
+                    <QrCode className="w-6 h-6 text-gray-900" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-gray-900 font-semibold text-lg">Scan Ticket</span>
+                    <span className="block text-gray-500 text-xs">Verify entry codes</span>
+                  </div>
+                </div>
+                <ArrowRight className="w-6 h-6 text-gray-400" />
               </button>
             </div>
           </div>
         </div>
       ) : (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Professional Header with Search & Filter */}
+        {/* Header */}
         <div className="mb-1 sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-2 pb-2 -mx-4 px-4 transition-all">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -764,7 +693,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Premium Search Button */}
               <button 
                 onClick={() => setShowSearchModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-white text-gray-900 rounded-xl border border-gray-200 hover:bg-gray-50 hover:shadow-lg hover:scale-105 transition-all"
@@ -773,11 +701,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 <span className="text-sm">Search</span>
               </button>
               
-              {/* Circular Filter Icon */}
               <button 
                 onClick={() => setShowFilters(true)}
                 className="relative w-11 h-11 bg-white rounded-full border border-gray-200 hover:bg-gray-50 hover:border-purple-300 transition-all shadow-sm flex items-center justify-center"
-                title="Filter events"
               >
                 <Filter className="w-5 h-5 text-gray-700" />
                 {hasActiveFilters && (
@@ -789,11 +715,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             </div>
           </div>
           
-          {/* Tagline below - clean left-aligned with EVENTZ */}
           <p className="text-gray-600 text-sm ml-10">Discover amazing events happening around you</p>
         </div>
 
-        {/* Active Filters Chips - Only shown when filters are active */}
+        {/* Filters */}
         {hasActiveFilters && (
           <div className="flex gap-2 mb-4 flex-wrap">
             {selectedLocation !== 'all' && (
@@ -808,7 +733,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 </button>
               </div>
             )}
-            {/* Only show subcategory if it exists, otherwise show main category */}
             {selectedSubcategory !== '' ? (
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
                 <span>🔍</span>
@@ -845,7 +769,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
         )}
 
-        {/* Subcategory Chips - Show when category is selected */}
         {selectedCategory !== 'all' && (
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-3">
@@ -872,24 +795,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
         )}
 
-        {/* Upcoming Events Grid */}
-        {loading ? (
-          <div className="mb-8">
-            <h3 className="text-gray-900 font-semibold mb-2 ml-1">Upcoming Events</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm h-[260px] animate-pulse">
-                  <div className="w-full h-40 bg-gray-200"></div>
-                  <div className="p-3 space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : upcomingEvents.length > 0 ? (
+        {/* Upcoming Events Grid - NO SKELETON */}
+        {upcomingEvents.length > 0 ? (
           <div className="mb-8">
             <h3 className="text-gray-900 font-semibold mb-2 ml-1">Upcoming Events</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -902,12 +809,22 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               ))}
             </div>
           </div>
-        ) : null}
+        ) : isFetching ? (
+          <div className="text-center py-16">
+             <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+             <p className="text-gray-500">Loading...</p>
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-gray-900 mb-2">No events found</h3>
+            <p className="text-gray-600 text-sm">Try selecting different filters</p>
+          </div>
+        )}
 
-
-
-        {/* Fallback if logic fails or both empty but filteredEvents has items (shouldn't happen) */}
-        {!loading && upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
+        {!isFetching && upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
            <div className="grid grid-cols-2 gap-3 mb-8">
              {filteredEvents.map((event) => (
                <EventCard
@@ -918,17 +835,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
              ))}
            </div>
         )}
-
-        {/* Empty State */}
-        {!loading && filteredEvents.length === 0 && (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Calendar className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-gray-900 mb-2">No events found</h3>
-            <p className="text-gray-600 text-sm">Try selecting different filters</p>
-          </div>
-        )}
       </div>
       )}
 
@@ -936,7 +842,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       {showFilters && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={() => setShowFilters(false)}>
           <div className="w-full max-w-4xl bg-white rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom" onClick={(e) => e.stopPropagation()}>
-            {/* Filter Header */}
             <div className="flex items-center justify-between p-5 border-b border-gray-200">
               <h2 className="text-gray-900">Filter Events</h2>
               <button 
@@ -947,9 +852,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </button>
             </div>
 
-            {/* Filter Content */}
             <div className="p-5 max-h-[70vh] overflow-y-auto">
-              {/* Location Section */}
               <div className="mb-6">
                 <h3 className="text-gray-900 text-sm mb-3">Location</h3>
                 <div className="relative">
@@ -982,7 +885,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 </div>
               </div>
 
-              {/* Category Section */}
               <div className="mb-6">
                 <h3 className="text-gray-900 text-sm mb-3">Categories</h3>
                 <div className="grid grid-cols-2 gap-2">
@@ -1004,7 +906,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </div>
             </div>
 
-            {/* Filter Footer */}
             <div className="p-5 border-t border-gray-200 flex gap-3">
               <button 
                 onClick={() => {
@@ -1027,7 +928,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         </div>
       )}
 
-      {/* Tier Ticket Purchase Modal - PREMIUM MULTI-TIER */}
+      {/* Modals */}
       {showTierTicketModal && eventToPurchase && (
         <TierTicketModal
           event={{
@@ -1061,15 +962,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             }
           }}
           onBack={() => {
-            if (tierTicketStep === 'confirm') {
-              setTierTicketStep('payment');
-            } else if (tierTicketStep === 'payment') {
-              setTierTicketStep('details');
-            } else if (tierTicketStep === 'details') {
-              setTierTicketStep('quantity');
-            } else if (tierTicketStep === 'quantity') {
-              setTierTicketStep('tier');
-            }
+            if (tierTicketStep === 'confirm') setTierTicketStep('payment');
+            else if (tierTicketStep === 'payment') setTierTicketStep('details');
+            else if (tierTicketStep === 'details') setTierTicketStep('quantity');
+            else if (tierTicketStep === 'quantity') setTierTicketStep('tier');
           }}
           onClose={() => {
             setShowTierTicketModal(false);
@@ -1086,7 +982,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         />
       )}
 
-      {/* Premium Search Modal */}
       {showSearchModal && (
         <PremiumSearchModal
           onClose={() => setShowSearchModal(false)}
@@ -1096,7 +991,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         />
       )}
 
-      {/* User Profile Modal */}
       {selectedUser && (
         <UserProfileModal
           user={{
@@ -1179,7 +1073,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         />
       )}
 
-      {/* Event Detail Modal */}
       {selectedEvent && (
         <EventDetailModal 
           event={selectedEvent} 
@@ -1191,7 +1084,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         />
       )}
 
-      {/* Ticket Purchase Modal */}
       {showTicketModal && eventToPurchase && (
         <VirtualTicketPurchaseModal
           isOpen={showTicketModal}
@@ -1200,15 +1092,12 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         />
       )}
 
-      {/* Normal Ticket Purchase Modal - SUPER EASY FLOW */}
       {showNormalTicketModal && eventToPurchase && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowNormalTicketModal(false)}>
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             
-            {/* Step 1: Select Quantity */}
             {normalTicketStep === 'quantity' && (
               <div className="p-6">
-                {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-gray-900 text-2xl mb-1">Get Tickets</h2>
@@ -1222,7 +1111,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </button>
                 </div>
 
-                {/* Event Preview */}
                 <div className="mb-6 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-12 h-12 rounded-xl overflow-hidden">
@@ -1239,7 +1127,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </div>
                 </div>
 
-                {/* Quantity Selector */}
                 <div className="mb-6">
                   <label className="block text-gray-900 mb-3">How many tickets?</label>
                   <div className="flex items-center justify-center gap-4">
@@ -1262,7 +1149,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </div>
                 </div>
 
-                {/* Total */}
                 <div className="mb-6 p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-white">
                   <div className="flex items-center justify-between">
                     <span className="text-lg">Total</span>
@@ -1275,7 +1161,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                         if (priceStr.toLowerCase().includes('free')) return 'Free';
                         if (priceStr.includes('TSh')) return `TSh ${total.toLocaleString()}`;
                         if (priceStr.includes('$')) return `$${total.toLocaleString()}`;
-                        // Fallback: if it has digits, assume it's a number and format it
                         if (/\d/.test(priceStr)) return total.toLocaleString();
                         return priceStr;
                       })()}
@@ -1283,7 +1168,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </div>
                 </div>
 
-                {/* Continue Button */}
                 <button
                   onClick={() => setNormalTicketStep('details')}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg text-lg"
@@ -1293,10 +1177,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </div>
             )}
 
-            {/* Step 2: Enter Details */}
             {normalTicketStep === 'details' && (
               <div className="p-6">
-                {/* Header */}
                 <div className="mb-6">
                   <button 
                     onClick={() => setNormalTicketStep('quantity')}
@@ -1309,7 +1191,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   <p className="text-gray-600">Almost there! Just need a few details</p>
                 </div>
 
-                {/* Quick Summary */}
                 <div className="mb-6 p-3 bg-purple-50 rounded-xl flex items-center justify-between">
                   <span className="text-gray-700">{normalTicketQuantity} ticket{normalTicketQuantity > 1 ? 's' : ''}</span>
                   <span className="text-purple-600">
@@ -1322,7 +1203,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </span>
                 </div>
 
-                {/* Simple Form */}
                 <div className="space-y-4 mb-6">
                   <div>
                     <label className="block text-gray-700 mb-2">Full Name</label>
@@ -1347,7 +1227,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </div>
                 </div>
 
-                {/* Continue Button */}
                 <button
                   onClick={() => {
                     if (ticketFormData.name && ticketFormData.email) {
@@ -1363,10 +1242,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </div>
             )}
 
-            {/* Step 3: Payment */}
             {normalTicketStep === 'payment' && (
               <div className="p-6">
-                {/* Header */}
                 <div className="mb-6">
                   <button 
                     onClick={() => setNormalTicketStep('details')}
@@ -1379,7 +1256,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   <p className="text-gray-600">Select your preferred payment provider</p>
                 </div>
 
-                {/* Provider Selection */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   {['Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map((provider) => (
                     <button
@@ -1397,7 +1273,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   ))}
                 </div>
 
-                {/* Phone Input */}
                 <div className="mb-6">
                   <label className="block text-gray-700 mb-2 font-medium">Mobile Number</label>
                   <div className="relative">
@@ -1415,7 +1290,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   <p className="text-sm text-gray-500 mt-2">Enter the number registered with {selectedProvider}</p>
                 </div>
 
-                {/* Continue Button */}
                 <button
                   onClick={() => {
                     if (paymentPhone && paymentPhone.length >= 10) {
@@ -1436,10 +1310,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </div>
             )}
 
-            {/* Step 3: Confirm */}
             {normalTicketStep === 'confirm' && (
               <div className="p-6">
-                {/* Header */}
                 <div className="mb-6">
                   <button 
                     onClick={() => setNormalTicketStep('payment')}
@@ -1452,9 +1324,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   <p className="text-gray-600">Review your order</p>
                 </div>
 
-                {/* Order Summary */}
                 <div className="mb-6 space-y-3">
-                  {/* Event */}
                   <div className="p-4 bg-gray-50 rounded-xl">
                     <p className="text-sm text-gray-600 mb-1">Event</p>
                     <p className="text-gray-900">{eventToPurchase.title}</p>
@@ -1462,14 +1332,12 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     <p className="text-sm text-gray-600">{eventToPurchase.location}</p>
                   </div>
 
-                  {/* Customer */}
                   <div className="p-4 bg-gray-50 rounded-xl">
                     <p className="text-sm text-gray-600 mb-1">Ticket Holder</p>
                     <p className="text-gray-900">{ticketFormData.name}</p>
                     <p className="text-sm text-gray-600">{ticketFormData.email}</p>
                   </div>
 
-                  {/* Tickets */}
                   <div className="p-4 bg-gray-50 rounded-xl">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1493,7 +1361,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </div>
                 </div>
 
-                {/* What You'll Get */}
                 <div className="mb-6 p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
                   <p className="text-green-900 mb-2 flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5" />
@@ -1507,7 +1374,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </ul>
                 </div>
 
-                {/* Confirm Button */}
                 <button
                   onClick={handleNormalTicketSubmit}
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg text-lg flex items-center justify-center gap-2"
@@ -1525,7 +1391,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         </div>
       )}
 
-      {/* Media Viewer - For engaging photo and video viewing */}
       {showMediaViewer && (
         <MediaViewer
           media={mediaViewerType === 'photo' ? photosForViewer : videosForViewer}
@@ -1535,7 +1400,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         />
       )}
 
-      {/* Messaging Panel */}
       {showMessages && (
         <div className="fixed inset-0 bg-black/50 z-50" onClick={() => {
           if (!activeConversation) setShowMessages(false);
@@ -1546,7 +1410,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           >
             {!activeConversation ? (
               <>
-                {/* Conversations List Header */}
                 <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                   <h2 className="text-gray-900">Messages</h2>
                   <button
@@ -1557,7 +1420,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </button>
                 </div>
 
-                {/* Conversations List */}
                 <div className="flex-1 overflow-y-auto">
                   {globalConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -1605,7 +1467,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </>
             ) : (
               <>
-                {/* Active Conversation Header - Purple Gradient */}
                 <div className="bg-[#8A2BE2] px-5 py-4">
                   <div className="flex items-center gap-3">
                     <button
@@ -1656,7 +1517,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </div>
                 </div>
 
-                {/* Messages */}
                 <div className="flex-1 overflow-y-auto bg-gray-50 px-5 py-4">
                   {activeConversation.messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
@@ -1695,7 +1555,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   )}
                 </div>
 
-                {/* Message Input */}
                 <div className="bg-white border-t border-gray-200 px-5 py-4">
                   <div className="flex items-center gap-2">
                     <input

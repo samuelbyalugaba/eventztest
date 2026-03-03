@@ -25,9 +25,6 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
 
   return (
     <>
-      {isLoading && !didError && (
-        <div className={`absolute inset-0 z-10 animate-pulse bg-gray-200 ${className ?? ''}`} style={style} />
-      )}
       {didError ? (
         <div
           className={`inline-block bg-gray-100 text-center align-middle ${className ?? ''}`}
