@@ -449,13 +449,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
         <div className="relative -mt-16 bg-white rounded-t-[2.5rem] px-6 pt-16 pb-6 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
           
           {/* Header Info */}
-          <div className="flex items-start justify-between mb-4">
-            <div>
+          <div className="mb-4">
+            <div className="mb-3">
               <h1 className="text-gray-900 text-2xl font-bold mb-1">
-                {organizerProfile?.organizerName || userProfile?.full_name || 'Loading...'}
+                {displayName || 'Loading...'}
               </h1>
               <p className="text-gray-500 text-sm font-medium">
-                {organizerProfile?.organizerType || `@${userProfile?.username || 'user'}`}
+                {isOrganizerView ? (organizerProfile?.organizerType || 'Organizer') : `@${userProfile?.username || 'user'}`}
               </p>
             </div>
             
