@@ -110,6 +110,14 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const savedEventsSubscriptionRef = useRef<any>(null);
 
+  const isOrganizerView = viewMode === 'organizer' && organizerProfile;
+  const profileImage = isOrganizerView 
+    ? (organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url) 
+    : userProfile?.avatar_url;
+  const displayName = isOrganizerView 
+    ? organizerProfile?.organizerName 
+    : (userProfile?.full_name || 'User');
+
   // Load all data
   useEffect(() => {
 
@@ -143,6 +151,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                 ...orgProfile
               });
               setViewMode('organizer');
+              setActiveTab('my_events');
               
               // Load stats only if organizer
               const stats = await getOrganizerStats(user.id);
@@ -314,7 +323,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
         image_urls: postType === 'photo' ? uploadedUrls : [],
         video_url: postType === 'video' ? uploadedUrls[0] : undefined,
         hashtags: [],
-        user_id: user.id
+        user_id: user.id,
+        posted_as_organizer: isOrganizerView
       });
 
       toast.success('Post shared successfully! 🎉', {
@@ -367,7 +377,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   };
 
   // Derive media from posts
-  const filteredUserPosts = userPosts.filter(p => !p.posted_as_organizer);
+  const filteredUserPosts = userPosts.filter(p => {
+    if (isOrganizerView) {
+      return !!p.posted_as_organizer;
+    }
+    return !p.posted_as_organizer;
+  });
   const photos = filteredUserPosts.flatMap(p => 
     (p.image_urls || []).map((url, idx) => ({
       id: p.id * 1000 + idx,
@@ -406,14 +421,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   }, {} as Record<number, Ticket[]>);
 
   const uniqueTicketGroups = Object.values(groupedTickets);
-
-  const isOrganizerView = viewMode === 'organizer' && organizerProfile;
-  const profileImage = isOrganizerView 
-    ? (organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url) 
-    : userProfile?.avatar_url;
-  const displayName = isOrganizerView 
-    ? organizerProfile?.organizerName 
-    : (userProfile?.full_name || 'User');
 
   return (
     <div className="bg-white min-h-screen pb-20">
@@ -476,7 +483,15 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
             {organizerProfile ? (
               <>
                 <button
-                  onClick={() => setViewMode(viewMode === 'user' ? 'organizer' : 'user')}
+                  onClick={() => {
+                    if (viewMode === 'user') {
+                      setViewMode('organizer');
+                      setActiveTab('my_events');
+                    } else {
+                      setViewMode('user');
+                      setActiveTab('events');
+                    }
+                  }}
                   className="p-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
                   title={viewMode === 'user' ? "Switch to Organizer View" : "Switch to User View"}
                 >
@@ -621,17 +636,19 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
               <TicketIcon className="w-6 h-6" />
               <span className="text-[11px] whitespace-nowrap">Tickets</span>
             </button>
-            <button
-              onClick={() => setActiveTab('events')}
-              className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                activeTab === 'events'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Clock className="w-6 h-6" />
-              <span className="text-[11px] whitespace-nowrap">History</span>
-            </button>
+            {!isOrganizerView && (
+              <button
+                onClick={() => setActiveTab('events')}
+                className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
+                  activeTab === 'events'
+                    ? 'bg-white text-purple-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Clock className="w-6 h-6" />
+                <span className="text-[11px] whitespace-nowrap">History</span>
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('media')}
               className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
