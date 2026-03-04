@@ -1,6 +1,6 @@
 import { Calendar, MapPin, Tv } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Event as ApiEvent } from '../utils/supabase/api';
+import type { Event as ApiEvent } from '../utils/supabase/api';
 
 interface EventCardProps {
   event: ApiEvent;

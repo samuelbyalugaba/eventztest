@@ -8,7 +8,7 @@ import { LiveStreamViewer } from './LiveStreamViewer';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, getOrganizerProfile, getProfile, Event as ApiEvent } from '../utils/supabase/api';
+import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, getOrganizerProfile, getProfile, type Event as ApiEvent } from '../utils/supabase/api';
 import { validateYouTubeUrl, getYouTubeVideoId } from '../utils/sanitize';
 
 export interface EventDetailModalProps {

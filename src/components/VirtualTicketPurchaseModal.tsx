@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, ChevronLeft, Tv, Calendar, MapPin, CheckCircle2, Phone, CreditCard, User, Mail, Smartphone, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion, Event as ApiEvent } from '../utils/supabase/api';
+import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion, type Event as ApiEvent } from '../utils/supabase/api';
 import { extractCurrencyFromPrice } from '../utils/currencies';
 
 interface VirtualTicketPurchaseModalProps {

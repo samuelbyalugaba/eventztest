@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
@@ -9,20 +9,25 @@ import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Event, Ticket, Post, getFollowers, getFollowing, deletePost } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, Post, getFollowers, getFollowing, deletePost, getOrganizerProfile, getOrganizerStats, getOrganizerEvents, deleteEvent } from '../utils/supabase/api';
+import type { Event as AppEvent } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
+import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"; // Generic event background
 
 interface ProfileProps {
   onLogout: () => Promise<void>;
+  onCreateEvent?: () => void;
+  onEditEvent?: (event: any) => void;
 }
 
-export function Profile({ onLogout }: ProfileProps) {
-  const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'photos' | 'videos' | 'saved'>('events');
-  const [savedEvents, setSavedEvents] = useState<(Event & { isSaved: boolean; hasReminder: boolean })[]>([]);
+export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) {
+  const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events'>('events');
+  const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
@@ -37,7 +42,7 @@ export function Profile({ onLogout }: ProfileProps) {
   const [showTicketViewer, setShowTicketViewer] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showAllEvents, setShowAllEvents] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
   
   // Ticket List Modal State
   const [showTicketListModal, setShowTicketListModal] = useState(false);
@@ -45,7 +50,12 @@ export function Profile({ onLogout }: ProfileProps) {
   
   // Data states
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [attendedEvents, setAttendedEvents] = useState<Event[]>([]);
+  const [organizerProfile, setOrganizerProfile] = useState<any>(null);
+  const [organizerStats, setOrganizerStats] = useState<any>(null);
+  const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
+  const [showProfessionalDashboard, setShowProfessionalDashboard] = useState(false);
+  
+  const [attendedEvents, setAttendedEvents] = useState<AppEvent[]>([]);
   const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -124,6 +134,34 @@ export function Profile({ onLogout }: ProfileProps) {
           // 1. Profile
           const profile = await getProfile(user.id);
           if (profile) setUserProfile(profile);
+
+          // 1b. Organizer Profile & Stats
+          try {
+            const orgProfile = await getOrganizerProfile(user.id);
+            if (orgProfile) {
+              setOrganizerProfile({
+                organizerName: orgProfile.organizer_name || profile?.full_name || 'Organizer',
+                ...orgProfile
+              });
+              
+              // Load stats only if organizer
+              const stats = await getOrganizerStats(user.id);
+              setOrganizerStats(stats);
+
+              // Load created events
+              const events = await getOrganizerEvents(user.id);
+              if (events) {
+                 const mapEvent = (e: any) => ({
+                   ...e,
+                   coverImage: e.image_url || e.coverImage,
+                   price: e.price_range || e.price
+                });
+                setPublishedEvents(events.map(mapEvent));
+              }
+            }
+          } catch (err) {
+            console.error('Error loading organizer data:', err);
+          }
 
           // Load Follow Stats
           try {
@@ -376,7 +414,7 @@ export function Profile({ onLogout }: ProfileProps) {
         {/* Large Cover Photo - Half Screen */}
         <div className="relative w-full h-[45vh] overflow-hidden">
           <ImageWithFallback
-            src={userProfile?.avatar_url || FALLBACK_COVER_IMAGE}
+            src={organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url || userProfile?.avatar_url || FALLBACK_COVER_IMAGE}
             alt="Profile"
             className="w-full h-full object-cover"
           />
@@ -398,28 +436,43 @@ export function Profile({ onLogout }: ProfileProps) {
           {/* Header Info */}
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h1 className="text-gray-900 text-2xl font-bold mb-1">{userProfile?.full_name || 'Loading...'}</h1>
-              <p className="text-gray-500 text-sm font-medium">@{userProfile?.username || 'user'}</p>
+              <h1 className="text-gray-900 text-2xl font-bold mb-1">
+                {organizerProfile?.organizerName || userProfile?.full_name || 'Loading...'}
+              </h1>
+              <p className="text-gray-500 text-sm font-medium">
+                {organizerProfile?.organizerType || `@${userProfile?.username || 'user'}`}
+              </p>
             </div>
             
-            {/* Edit Button */}
-            <button 
-              onClick={() => {
-                setSettingsInitialView('profile');
-                setShowSettingsModal(true);
-              }}
-              className="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors flex items-center gap-2"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              Edit
-            </button>
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              {organizerProfile && (
+                <button
+                  onClick={() => setShowProfessionalDashboard(true)}
+                  className="px-4 py-2 bg-[#8A2BE2] text-white rounded-xl text-sm font-semibold hover:bg-[#7825d4] transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  Dashboard
+                </button>
+              )}
+              <button 
+                onClick={() => {
+                  setSettingsInitialView('profile');
+                  setShowSettingsModal(true);
+                }}
+                className="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors flex items-center gap-2"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                Edit
+              </button>
+            </div>
           </div>
 
           {/* Bio */}
           <div className="mb-6">
             <p className="text-gray-700 leading-relaxed text-[15px]">
-              {userProfile?.bio ? (
-                userProfile.bio
+              {organizerProfile?.bio || userProfile?.bio ? (
+                organizerProfile?.bio || userProfile?.bio
               ) : (
                 <span className="text-gray-400 italic">No bio yet</span>
               )}
@@ -429,14 +482,20 @@ export function Profile({ onLogout }: ProfileProps) {
           {/* Stats Cards - Modern Grid */}
           <div className="grid grid-cols-3 gap-3 mb-6">
             <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
-              <span className="block text-gray-900 font-bold text-lg mb-0.5">{attendedEvents.length}</span>
-              <span className="text-gray-500 text-xs font-medium">Events</span>
+              <span className="block text-gray-900 font-bold text-lg mb-0.5">
+                {organizerStats ? organizerStats.totalEvents : attendedEvents.length}
+              </span>
+              <span className="text-gray-500 text-xs font-medium">
+                {organizerStats ? 'Hosted' : 'Attended'}
+              </span>
             </div>
             <div 
               className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100 cursor-pointer hover:border-purple-200 hover:bg-purple-50 transition-all"
               onClick={handleShowFollowers}
             >
-              <span className="block text-gray-900 font-bold text-lg mb-0.5">{followStats.followers}</span>
+              <span className="block text-gray-900 font-bold text-lg mb-0.5">
+                {organizerStats ? organizerStats.followers : followStats.followers}
+              </span>
               <span className="text-gray-500 text-xs font-medium">Followers</span>
             </div>
             <div 
@@ -499,45 +558,56 @@ export function Profile({ onLogout }: ProfileProps) {
           )}
 
           {/* Modern Tab Navigation */}
-          <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
+          <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
+            {organizerProfile && (
+               <button
+                onClick={() => setActiveTab('my_events')}
+                className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
+                  activeTab === 'my_events'
+                    ? 'bg-white text-purple-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Calendar className="w-6 h-6" />
+                <span className="text-[11px] whitespace-nowrap">Created</span>
+              </button>
+            )}
+            <button
+              onClick={() => setActiveTab('tickets')}
+              className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
+                activeTab === 'tickets'
+                  ? 'bg-white text-purple-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <TicketIcon className="w-6 h-6" />
+              <span className="text-[11px] whitespace-nowrap">Tickets</span>
+            </button>
             <button
               onClick={() => setActiveTab('events')}
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
+              className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
                 activeTab === 'events'
                   ? 'bg-white text-purple-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Calendar className="w-6 h-6" />
-              <span className="text-[11px]">Events</span>
+              <Clock className="w-6 h-6" />
+              <span className="text-[11px] whitespace-nowrap">History</span>
             </button>
             <button
-              onClick={() => setActiveTab('photos')}
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                activeTab === 'photos'
+              onClick={() => setActiveTab('media')}
+              className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
+                activeTab === 'media'
                   ? 'bg-white text-purple-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="text-[11px]">Photos</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('videos')}
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                activeTab === 'videos'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Video className="w-6 h-6" />
-              <span className="text-[11px]">Videos</span>
+              <ImageIcon className="w-6 h-6" />
+              <span className="text-[11px] whitespace-nowrap">Media</span>
             </button>
             <button
               onClick={() => setActiveTab('saved')}
-              className={`relative flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
+              className={`relative flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
                 activeTab === 'saved'
                   ? 'bg-white text-purple-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -551,18 +621,7 @@ export function Profile({ onLogout }: ProfileProps) {
                   </span>
                 )}
               </div>
-              <span className="text-[11px]">Saved</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('tickets')}
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                activeTab === 'tickets'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <TicketIcon className="w-6 h-6" />
-              <span className="text-[11px]">Tickets</span>
+              <span className="text-[11px] whitespace-nowrap">Saved</span>
             </button>
           </div>
         </div>
@@ -573,6 +632,102 @@ export function Profile({ onLogout }: ProfileProps) {
         {isLoading && (
           <div className="py-3 text-gray-500 text-sm">Loading...</div>
         )}
+        {/* Created Events - Organizer Only */}
+        {activeTab === 'my_events' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-gray-900">Created Events</h3>
+              <button 
+                onClick={onCreateEvent}
+                className="text-purple-600 text-sm font-semibold flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                Create
+              </button>
+            </div>
+            
+            {publishedEvents.length === 0 ? (
+               <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                 <Calendar className="w-12 h-12 text-gray-300 mb-3" />
+                 <p className="text-gray-900 font-medium mb-1">No events created yet</p>
+                 <button 
+                   onClick={onCreateEvent}
+                   className="text-purple-600 text-sm font-medium hover:underline"
+                 >
+                   Create your first event
+                 </button>
+               </div>
+            ) : (
+              publishedEvents.map((event) => (
+                <div key={event.id} className="flex gap-4 bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group relative">
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                    <ImageWithFallback
+                      src={event.coverImage}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-1 left-1 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded text-[10px] text-white">
+                      {event.status || 'Published'}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-gray-900 text-sm mb-1 line-clamp-1">{event.title}</h4>
+                    <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>{new Date(event.date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-2">
+                       <div className="flex items-center gap-1 text-xs text-gray-500">
+                         <TicketIcon className="w-3 h-3" />
+                         <span>{event.ticketsSold || 0}</span>
+                       </div>
+                       <div className="flex items-center gap-1 text-xs text-gray-500">
+                         <Eye className="w-3 h-3" />
+                         <span>{event.views || 0}</span>
+                       </div>
+                    </div>
+                  </div>
+                  
+                  {/* Actions Menu */}
+                  <div className="absolute top-3 right-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="p-1 hover:bg-gray-100 rounded-full">
+                          <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEditEvent?.(event)}>
+                          <Edit2 className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                           className="text-red-600"
+                           onClick={async (e) => {
+                             e.stopPropagation();
+                             if (window.confirm('Delete this event?')) {
+                               try {
+                                 await deleteEvent(event.id);
+                                 setPublishedEvents(prev => prev.filter(p => p.id !== event.id));
+                                 toast.success('Event deleted');
+                               } catch (err) {
+                                 toast.error('Failed to delete event');
+                               }
+                             }
+                           }}
+                        >
+                          <Trash className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {/* Attended Events - Vertical Cards */}
         {activeTab === 'events' && (
           <div className="space-y-4">
@@ -633,102 +788,115 @@ export function Profile({ onLogout }: ProfileProps) {
           </div>
         )}
 
-        {/* Photos Grid - Instagram Style */}
-        {activeTab === 'photos' && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-900">Photos</h3>
-              <span className="text-gray-500 text-sm">{photos.length} photos</span>
-            </div>
-            <div className="grid grid-cols-3 gap-1">
-            {photos.map((photo, index) => (
-              <div
-                key={photo.id}
-                onClick={() => {
-                  setMediaViewerIndex(index);
-                  setMediaViewerType('photo');
-                  setShowMediaViewer(true);
-                }}
-                className="relative aspect-square cursor-pointer group"
-              >
-                <ImageWithFallback
-                  src={photo.url}
-                  alt={`Photo ${photo.id}`}
-                  className="w-full h-full object-cover"
-                />
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <button 
-                      onClick={(e) => handleDeletePost(photo.postId, e)}
-                      className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
-                      title="Delete post"
-                    >
-                      <Trash className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="flex items-center gap-1 text-white text-sm">
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span>{photo.likes}</span>
-                    </div>
-                  </div>
+        {/* Media Grid (Photos & Videos) */}
+        {activeTab === 'media' && (
+          <div className="space-y-8">
+            {/* Photos Section */}
+            {photos.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-gray-900">Photos</h3>
+                  <span className="text-gray-500 text-sm">{photos.length} photos</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Videos Grid - Instagram Style */}
-        {activeTab === 'videos' && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-900">Videos</h3>
-              <span className="text-gray-500 text-sm">{videoClips.length} videos</span>
-            </div>
-            <div className="grid grid-cols-3 gap-1">
-              {videoClips.map((video, index) => (
-                <div
-                  key={video.id}
-                  onClick={() => {
-                    setMediaViewerIndex(index);
-                    setMediaViewerType('video');
-                    setShowMediaViewer(true);
-                  }}
-                  className="relative aspect-square cursor-pointer group"
-                >
-                  <video
-                    src={video.videoUrl}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                    loop
-                    onMouseOver={(e) => e.currentTarget.play()}
-                    onMouseOut={(e) => {
-                      e.currentTarget.pause();
-                      e.currentTarget.currentTime = 0;
-                    }}
-                  />
-                  {/* Duration Badge */}
-                  <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px] pointer-events-none">
-                    {video.duration}
-                  </div>
-                  {/* Hover Stats */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <button 
-                      onClick={(e) => handleDeletePost(video.postId, e)}
-                      className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
-                      title="Delete post"
+                <div className="grid grid-cols-3 gap-1">
+                  {photos.map((photo, index) => (
+                    <div
+                      key={photo.id}
+                      onClick={() => {
+                        setMediaViewerIndex(index);
+                        setMediaViewerType('photo');
+                        setShowMediaViewer(true);
+                      }}
+                      className="relative aspect-square cursor-pointer group"
                     >
-                      <Trash className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="flex flex-col items-center gap-1 text-white text-xs pointer-events-none">
-                      <div className="flex items-center gap-1">
-                        <Play className="w-3 h-3" />
-                        <span>{video.views.toLocaleString()}</span>
+                      <ImageWithFallback
+                        src={photo.url}
+                        alt={`Photo ${photo.id}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Hover Overlay */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button 
+                          onClick={(e) => handleDeletePost(photo.postId, e)}
+                          className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
+                          title="Delete post"
+                        >
+                          <Trash className="w-3.5 h-3.5" />
+                        </button>
+                        <div className="flex items-center gap-1 text-white text-sm">
+                          <Heart className="w-4 h-4 fill-white" />
+                          <span>{photo.likes}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {/* Videos Section */}
+            {videoClips.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-gray-900">Videos</h3>
+                  <span className="text-gray-500 text-sm">{videoClips.length} videos</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {videoClips.map((video, index) => (
+                    <div
+                      key={video.id}
+                      onClick={() => {
+                        setMediaViewerIndex(index);
+                        setMediaViewerType('video');
+                        setShowMediaViewer(true);
+                      }}
+                      className="relative aspect-square cursor-pointer group"
+                    >
+                      <video
+                        src={video.videoUrl}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        loop
+                        onMouseOver={(e) => e.currentTarget.play()}
+                        onMouseOut={(e) => {
+                          e.currentTarget.pause();
+                          e.currentTarget.currentTime = 0;
+                        }}
+                      />
+                      {/* Duration Badge */}
+                      <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px] pointer-events-none">
+                        {video.duration}
+                      </div>
+                      {/* Hover Stats */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button 
+                          onClick={(e) => handleDeletePost(video.postId, e)}
+                          className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
+                          title="Delete post"
+                        >
+                          <Trash className="w-3.5 h-3.5" />
+                        </button>
+                        <div className="flex flex-col items-center gap-1 text-white text-xs pointer-events-none">
+                          <div className="flex items-center gap-1">
+                            <Play className="w-3 h-3" />
+                            <span>{video.views.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {photos.length === 0 && videoClips.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                <ImageIcon className="w-12 h-12 text-gray-300 mb-3" />
+                <p className="text-gray-900 font-medium mb-1">No media shared yet</p>
+                <p className="text-gray-500 text-sm">Share photos and videos from events you attend</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1206,6 +1374,21 @@ export function Profile({ onLogout }: ProfileProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {showProfessionalDashboard && organizerProfile && (
+        <ProfessionalDashboardModal
+          onClose={() => setShowProfessionalDashboard(false)}
+          organizerProfile={organizerProfile}
+          onCreateEvent={() => {
+             setShowProfessionalDashboard(false);
+             onCreateEvent?.();
+          }}
+          onEditEvent={(event) => {
+             setShowProfessionalDashboard(false);
+             onEditEvent?.(event);
+          }}
+        />
       )}
 
       {/* Settings Modal */}

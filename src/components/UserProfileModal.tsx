@@ -27,7 +27,7 @@ interface UserProfileModalProps {
 
 export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserProfileModalProps) {
   const [isFollowing, setIsFollowing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'events' | 'photos' | 'videos'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'media'>('events');
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
@@ -300,9 +300,9 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                 <span className="text-[11px]">Events</span>
               </button>
               <button
-                onClick={() => setActiveTab('photos')}
+                onClick={() => setActiveTab('media')}
                 className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                  activeTab === 'photos'
+                  activeTab === 'media'
                     ? 'bg-white text-purple-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -310,18 +310,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span className="text-[11px]">Photos</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('videos')}
-                className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                  activeTab === 'videos'
-                    ? 'bg-white text-purple-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Video className="w-6 h-6" />
-                <span className="text-[11px]">Videos</span>
+                <span className="text-[11px]">Media</span>
               </button>
             </div>
 
@@ -462,10 +451,11 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
               </div>
             )}
 
-            {/* Photos Tab */}
-            {activeTab === 'photos' && (
-              <div>
-                {photos.length > 0 ? (
+            {/* Media Tab */}
+            {activeTab === 'media' && (
+              <div className="space-y-8">
+                {/* Photos Section */}
+                {photos.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-gray-900">Photos</h3>
@@ -503,21 +493,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                       })}
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="text-gray-500 text-sm">No photos to show</p>
-                  </div>
                 )}
-              </div>
-            )}
 
-            {/* Videos Tab */}
-            {activeTab === 'videos' && (
-              <div>
-                {videos.length > 0 ? (
+                {/* Videos Section */}
+                {videos.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-gray-900">Videos</h3>
@@ -560,10 +539,16 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                       ))}
                     </div>
                   </div>
-                ) : (
+                )}
+
+                {photos.length === 0 && videos.length === 0 && (
                   <div className="text-center py-12">
-                    <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">No videos to show</p>
+                    <div className="flex justify-center gap-2 mb-3">
+                       <svg className="w-12 h-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                       </svg>
+                    </div>
+                    <p className="text-gray-500 text-sm">No media to show</p>
                   </div>
                 )}
               </div>

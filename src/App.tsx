@@ -5,10 +5,9 @@ import { Feed } from './components/Feed';
 import { CreateEvent } from './components/CreateEvent';
 import { BecomeOrganizer } from './components/BecomeOrganizer';
 import { OrganizerProfileSetup } from './components/OrganizerProfileSetup';
-import { OrganizerDashboard } from './components/OrganizerDashboard';
 import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
-import { Calendar, Radio, PlusCircle, User, Rss } from 'lucide-react';
+import { Calendar, Radio, User, Rss } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { supabase } from './utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -24,12 +23,14 @@ import {
   getLiveStreams,
   getMutualFollows,
   subscribeToOnlineUsers,
-  deleteConversation,
-  Event
+  deleteConversation
 } from './utils/supabase/api';
+import type { Event as AppEvent } from './utils/supabase/api';
 import { Message, Conversation } from './types';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
+
+import { CreatePostModal } from './components/CreatePostModal';
 
 type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile';
 type OrganizerView = 'dashboard' | 'createEvent';
@@ -40,7 +41,9 @@ export default function App() {
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [hasOrganizerProfile, setHasOrganizerProfile] = useState(false);
   const [organizerView, setOrganizerView] = useState<OrganizerView>('dashboard');
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [editingEvent, setEditingEvent] = useState<AppEvent | null>(null);
+  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+
   
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -614,14 +617,16 @@ export default function App() {
     setVisitedTabs(prev => new Set(prev).add('create'));
   };
 
-  const handleEditEvent = (event: Event) => {
+  const handleEditEvent = (event: AppEvent) => {
     setEditingEvent(event);
     setOrganizerView('createEvent');
+    setActiveTab('create');
   };
 
   const handleBackToDashboard = () => {
     setEditingEvent(null);
     setOrganizerView('dashboard');
+    setActiveTab('profile');
   };
 
 
@@ -700,8 +705,6 @@ export default function App() {
               <BecomeOrganizer onComplete={handleBecomeOrganizer} />
             ) : !hasOrganizerProfile ? (
               <OrganizerProfileSetup onComplete={handleProfileComplete} />
-            ) : organizerView === 'dashboard' ? (
-              <OrganizerDashboard onCreateEvent={handleCreateEvent} onEditEvent={handleEditEvent} />
             ) : (
               <CreateEvent onBack={handleBackToDashboard} event={editingEvent} />
             )}
@@ -716,11 +719,28 @@ export default function App() {
                  <AuthScreen onAuthSuccess={handleAuthSuccess} embedded={true} />
                </div>
             ) : (
-              <Profile onLogout={handleLogout} />
+              <Profile 
+                onLogout={handleLogout} 
+                onCreateEvent={handleCreateEvent}
+                onEditEvent={handleEditEvent}
+              />
             )}
           </div>
         )}
       </div>
+
+
+
+      <CreatePostModal
+        isOpen={showCreatePostModal}
+        onClose={() => setShowCreatePostModal(false)}
+        onPostCreated={() => {
+          // Optionally refresh feed
+          window.dispatchEvent(new Event('postsUpdated'));
+        }}
+        isOrganizer={isOrganizer}
+        organizerName={currentUser?.user_metadata?.full_name} // Fallback, usually fetched inside
+      />
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
@@ -769,19 +789,7 @@ export default function App() {
                 <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               )}
             </button>
-            <button
-              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('create'))}
-              onClick={() => {
-                setActiveTab('create');
-                setVisitedTabs(prev => new Set(prev).add('create'));
-              }}
-              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
-                activeTab === 'create' ? 'text-purple-600' : 'text-gray-500'
-              }`}
-            >
-              <PlusCircle className="w-6 h-6" />
-              <span className="text-xs">Create</span>
-            </button>
+
             <button
               onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('profile'))}
               onClick={() => {

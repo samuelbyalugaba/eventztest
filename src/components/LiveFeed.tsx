@@ -5,7 +5,7 @@ import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
 import { toast } from 'sonner';
-import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile, Event as ApiEvent } from '../utils/supabase/api';
+import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile, type Event as ApiEvent } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 
 interface LiveStream {

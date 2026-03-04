@@ -1,4 +1,4 @@
-import { Event as ApiEvent } from '../utils/supabase/api';
+import type { Event as ApiEvent } from '../utils/supabase/api';
 
 const STORAGE_KEY = 'eventz-events-cache-v2';
 const STORAGE_TIMESTAMP_KEY = 'eventz-events-cache-timestamp-v2';
