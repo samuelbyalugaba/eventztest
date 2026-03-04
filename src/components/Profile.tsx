@@ -17,8 +17,6 @@ import { TicketListModal } from './TicketListModal';
 import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
-const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"; // Generic event background
-
 interface ProfileProps {
   onLogout: () => Promise<void>;
   onCreateEvent?: () => void;
@@ -384,7 +382,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
     .filter(p => p.video_url)
     .map(p => ({
       id: p.id,
-      thumbnail: p.image_urls?.[0] || FALLBACK_COVER_IMAGE,
+      thumbnail: p.image_urls?.[0],
       videoUrl: p.video_url!,
       views: 0,
       likes: p.likes_count || 0,
@@ -407,17 +405,27 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
   const uniqueTicketGroups = Object.values(groupedTickets);
 
+  const profileImage = organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url || userProfile?.avatar_url;
+  const displayName = organizerProfile?.organizerName || userProfile?.full_name || 'User';
+
   return (
     <div className="bg-white min-h-screen pb-20">
       {/* Immersive Header Design */}
       <div className="relative">
         {/* Large Cover Photo - Half Screen */}
         <div className="relative w-full h-[45vh] overflow-hidden">
-          <ImageWithFallback
-            src={organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url || userProfile?.avatar_url || FALLBACK_COVER_IMAGE}
-            alt="Profile"
-            className="w-full h-full object-cover"
-          />
+          {profileImage ? (
+            <ImageWithFallback
+              src={profileImage}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+             <UserAvatar 
+              name={displayName} 
+              className="w-full h-full rounded-none text-6xl" 
+            />
+          )}
           {/* Settings Button - Top Right */}
           <button 
             className="absolute top-6 right-6 p-2.5 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40 transition-all z-10" 
@@ -953,7 +961,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                     className="relative aspect-square cursor-pointer group"
                   >
                     <ImageWithFallback
-                      src={ticket.event?.image_url || FALLBACK_COVER_IMAGE}
+                      src={ticket.event?.image_url}
                       alt={`Event ${ticket.event?.title}`}
                       className="w-full h-full object-cover"
                     />

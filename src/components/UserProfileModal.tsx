@@ -150,7 +150,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
 
   const videosForViewer = videos.map((post) => ({
     id: post.id,
-    thumbnail: post.image_urls?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
+    thumbnail: post.image_urls?.[0],
     videoUrl: post.video_url!,
     likes: post.likes_count || 0,
     eventName: post.event?.title || 'Post',
@@ -164,8 +164,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
   
   const displayData = {
     name: isOrganizerView ? (organizerProfile?.organizer_name || user.name || 'Organizer') : (profile?.full_name || user.name),
-    avatar: isOrganizerView ? (organizerProfile?.organizer_avatar_url || 'https://images.unsplash.com/photo-1475721027767-f4242310f17a?w=400&h=400&fit=crop') : (profile?.avatar_url || user.avatar),
-    cover: isOrganizerView ? (organizerProfile?.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop') : (profile?.cover_url || user.coverImage),
+    avatar: isOrganizerView ? organizerProfile?.organizer_avatar_url : (profile?.avatar_url || user.avatar),
+    cover: isOrganizerView ? organizerProfile?.cover_url : (profile?.cover_url || user.coverImage),
     bio: isOrganizerView ? (organizerProfile?.bio || organizerProfile?.description || 'No bio available') : (profile?.bio || user.bio),
     location: isOrganizerView ? (organizerProfile?.location || 'Tanzania') : profile?.location,
     verified: isOrganizerView ? false : (profile?.verified ?? user.verified)
@@ -183,11 +183,18 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
           
           {/* Hero Section with Cover */}
           <div className="relative h-52 rounded-t-3xl overflow-hidden">
-            <ImageWithFallback
-              src={displayData.cover || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200'}
-              alt={displayData.name}
-              className="w-full h-full object-cover"
-            />
+            {displayData.cover ? (
+              <ImageWithFallback
+                src={displayData.cover}
+                alt={displayData.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <UserAvatar 
+                name={displayData.name} 
+                className="w-full h-full rounded-none text-6xl" 
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
             
             {/* Top Actions */}

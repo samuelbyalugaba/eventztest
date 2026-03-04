@@ -35,9 +35,10 @@ export function UserAvatar({ src, name, className = '', onClick }: UserAvatarPro
   }, [name]);
 
   if (!src || imageError) {
+    const hasRoundedClass = className.includes('rounded-');
     return (
       <div 
-        className={`flex items-center justify-center rounded-full text-white font-medium ${bgColor} ${className}`}
+        className={`flex items-center justify-center ${hasRoundedClass ? '' : 'rounded-full'} text-white font-medium ${bgColor} ${className}`}
         onClick={onClick}
       >
         {initials}
@@ -45,11 +46,13 @@ export function UserAvatar({ src, name, className = '', onClick }: UserAvatarPro
     );
   }
 
+  const hasRoundedClass = className.includes('rounded-');
+
   return (
     <img 
       src={src} 
       alt={name} 
-      className={`rounded-full object-cover ${className}`}
+      className={`${hasRoundedClass ? '' : 'rounded-full'} object-cover ${className}`}
       onError={() => setImageError(true)}
       onClick={onClick}
     />

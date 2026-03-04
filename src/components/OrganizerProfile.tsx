@@ -60,17 +60,6 @@ interface OrganizerProfileProps {
   onMessage?: (organizer: { name: string; avatar: string; verified: boolean; isOrganizer: boolean; id?: string }) => void;
 }
 
-const PLACEHOLDERS = [
-  "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=800&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1459749411177-8c275d849fae?w=800&auto=format&fit=crop&q=60"
-];
-
-const getFallbackImage = (index: number) => PLACEHOLDERS[index % PLACEHOLDERS.length];
-
 export function OrganizerProfile({ organizerName, organizerId, onClose, onTicketPurchase, onMessage }: OrganizerProfileProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [organizerData, setOrganizerData] = useState<OrganizerData | null>(null);
@@ -181,8 +170,8 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           id: profile.id,
           name: organizerProfile?.organizer_name || organizerName || 'Organizer',
           bio: organizerProfile?.bio || 'No bio available',
-          coverImage: organizerProfile?.cover_url || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=400&fit=crop',
-          avatar: organizerProfile?.organizer_avatar_url || 'https://images.unsplash.com/photo-1475721027767-f4242310f17a?w=400&h=400&fit=crop',
+          coverImage: organizerProfile?.cover_url || '',
+          avatar: organizerProfile?.organizer_avatar_url || '',
           location: organizerProfile?.location || 'Tanzania',
           totalEvents: stats.totalEvents,
           followers: stats.followers,
@@ -437,11 +426,17 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         
         {/* Hero Section with Cover */}
         <div className="relative h-52 rounded-t-3xl overflow-hidden">
-          <ImageWithFallback
-            src={organizerData.coverImage}
-            alt={organizerData.name}
-            className="w-full h-full object-cover"
-          />
+          {organizerData.coverImage ? (
+            <ImageWithFallback
+              src={organizerData.coverImage}
+              alt={organizerData.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+              <span className="text-white text-6xl font-bold opacity-20">{organizerData.name.charAt(0)}</span>
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
           
           {/* Top Actions */}

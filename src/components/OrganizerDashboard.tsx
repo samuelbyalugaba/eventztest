@@ -62,17 +62,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [followersList, setFollowersList] = useState<any[]>([]);
   const [loadingFollowers, setLoadingFollowers] = useState(false);
 
-  const PLACEHOLDERS = [
-    "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60",
-    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&auto=format&fit=crop&q=60",
-    "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop&q=60",
-    "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&auto=format&fit=crop&q=60",
-    "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=800&auto=format&fit=crop&q=60",
-    "https://images.unsplash.com/photo-1459749411177-8c275d849fae?w=800&auto=format&fit=crop&q=60"
-  ];
-  
-  const getFallbackImage = (index: number) => PLACEHOLDERS[index % PLACEHOLDERS.length];
-
   const handleShowFollowers = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -192,9 +181,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                isLiked: p.is_liked,
                posted_as_organizer: p.posted_as_organizer,
                event: p.event,
-               fallbackSrc: p.video_url 
-                 ? "https://images.unsplash.com/photo-1536240478700-b869070f9279?w=800&auto=format&fit=crop&q=60" 
-                 : getFallbackImage(index)
+               fallbackSrc: ''
             })));
           }
         } catch (err) {
