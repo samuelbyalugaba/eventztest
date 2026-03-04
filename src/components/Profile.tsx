@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye, User } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye, User, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
@@ -458,68 +458,63 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                 {isOrganizerView ? (organizerProfile?.organizerType || 'Organizer') : `@${userProfile?.username || 'user'}`}
               </p>
             </div>
-            
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              {organizerProfile ? (
-                <>
-                  <button
-                    onClick={() => setViewMode(viewMode === 'user' ? 'organizer' : 'user')}
-                    className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    {viewMode === 'user' ? (
-                      <>
-                        <BarChart3 className="w-3.5 h-3.5" />
-                        Organizer View
-                      </>
-                    ) : (
-                      <>
-                        <Smile className="w-3.5 h-3.5" />
-                        User View
-                      </>
-                    )}
-                  </button>
-                  {viewMode === 'organizer' && (
-                    <button
-                      onClick={() => setShowProfessionalDashboard(true)}
-                      className="px-4 py-2 bg-[#8A2BE2] text-white rounded-xl text-sm font-semibold hover:bg-[#7825d4] transition-colors flex items-center gap-2 shadow-sm"
-                    >
-                      <BarChart3 className="w-3.5 h-3.5" />
-                      Dashboard
-                    </button>
-                  )}
-                </>
-              ) : (
-                <button
-                  onClick={onCreateEvent}
-                  className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-xl text-sm font-semibold hover:from-purple-200 hover:to-pink-200 transition-colors flex items-center gap-2 shadow-sm"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Organizer Mode
-                </button>
-              )}
-              <button 
-                onClick={() => {
-                  setSettingsInitialView('profile');
-                  setShowSettingsModal(true);
-                }}
-                className="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors flex items-center gap-2"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                Edit
-              </button>
-            </div>
           </div>
 
           {/* Bio */}
           <div className="mb-6">
             <p className="text-gray-700 leading-relaxed text-[15px]">
-              {organizerProfile?.bio || userProfile?.bio ? (
-                organizerProfile?.bio || userProfile?.bio
+              {isOrganizerView ? (
+                organizerProfile?.bio || <span className="text-gray-400 italic">No organizer bio yet</span>
               ) : (
-                <span className="text-gray-400 italic">No bio yet</span>
+                userProfile?.bio || <span className="text-gray-400 italic">No bio yet</span>
               )}
             </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 mb-6">
+            {organizerProfile ? (
+              <>
+                <button
+                  onClick={() => setViewMode(viewMode === 'user' ? 'organizer' : 'user')}
+                  className="p-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                  title={viewMode === 'user' ? "Switch to Organizer View" : "Switch to User View"}
+                >
+                  {viewMode === 'user' ? (
+                    <Briefcase className="w-5 h-5" />
+                  ) : (
+                    <User className="w-5 h-5" />
+                  )}
+                </button>
+                {viewMode === 'organizer' && (
+                  <button
+                    onClick={() => setShowProfessionalDashboard(true)}
+                    className="px-4 py-2 bg-[#8A2BE2] text-white rounded-xl text-sm font-semibold hover:bg-[#7825d4] transition-colors flex items-center gap-2 shadow-sm"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    Dashboard
+                  </button>
+                )}
+              </>
+            ) : (
+              <button
+                onClick={onCreateEvent}
+                className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-xl text-sm font-semibold hover:from-purple-200 hover:to-pink-200 transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Organizer Mode
+              </button>
+            )}
+            <button 
+              onClick={() => {
+                setSettingsInitialView('profile');
+                setShowSettingsModal(true);
+              }}
+              className="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors flex items-center gap-2"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              Edit
+            </button>
           </div>
 
           {/* Stats Cards - Modern Grid */}
@@ -1466,7 +1461,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
             category: selectedTicket.event?.category || '',
             ticketType: selectedTicket.ticket_type,
             price: selectedTicket.price,
-            qrCode: selectedTicket.qr_code || '',
+            qrCode: selectedTicket.ticket_number || selectedTicket.qr_code || '',
           }}
           onClose={() => {
             setShowTicketViewer(false);
