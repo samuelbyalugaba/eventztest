@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
@@ -68,6 +68,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   // User Profile Modal State
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'user' | 'organizer'>('user');
 
   const handleShowFollowers = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -141,6 +142,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                 organizerName: orgProfile.organizer_name || profile?.full_name || 'Organizer',
                 ...orgProfile
               });
+              setViewMode('organizer');
               
               // Load stats only if organizer
               const stats = await getOrganizerStats(user.id);
@@ -405,8 +407,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
   const uniqueTicketGroups = Object.values(groupedTickets);
 
-  const profileImage = organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url || userProfile?.avatar_url;
-  const displayName = organizerProfile?.organizerName || userProfile?.full_name || 'User';
+  const isOrganizerView = viewMode === 'organizer' && organizerProfile;
+  const profileImage = isOrganizerView 
+    ? (organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url) 
+    : userProfile?.avatar_url;
+  const displayName = isOrganizerView 
+    ? organizerProfile?.organizerName 
+    : (userProfile?.full_name || 'User');
 
   return (
     <div className="bg-white min-h-screen pb-20">
@@ -454,13 +461,41 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
             
             {/* Actions */}
             <div className="flex items-center gap-2">
-              {organizerProfile && (
+              {organizerProfile ? (
+                <>
+                  <button
+                    onClick={() => setViewMode(viewMode === 'user' ? 'organizer' : 'user')}
+                    className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    {viewMode === 'user' ? (
+                      <>
+                        <BarChart3 className="w-3.5 h-3.5" />
+                        Organizer View
+                      </>
+                    ) : (
+                      <>
+                        <Smile className="w-3.5 h-3.5" />
+                        User View
+                      </>
+                    )}
+                  </button>
+                  {viewMode === 'organizer' && (
+                    <button
+                      onClick={() => setShowProfessionalDashboard(true)}
+                      className="px-4 py-2 bg-[#8A2BE2] text-white rounded-xl text-sm font-semibold hover:bg-[#7825d4] transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                      <BarChart3 className="w-3.5 h-3.5" />
+                      Dashboard
+                    </button>
+                  )}
+                </>
+              ) : (
                 <button
-                  onClick={() => setShowProfessionalDashboard(true)}
-                  className="px-4 py-2 bg-[#8A2BE2] text-white rounded-xl text-sm font-semibold hover:bg-[#7825d4] transition-colors flex items-center gap-2 shadow-sm"
+                  onClick={onCreateEvent}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-xl text-sm font-semibold hover:from-purple-200 hover:to-pink-200 transition-colors flex items-center gap-2 shadow-sm"
                 >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  Dashboard
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Organizer Mode
                 </button>
               )}
               <button 
@@ -567,7 +602,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
           {/* Modern Tab Navigation */}
           <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
-            {organizerProfile && (
+            {isOrganizerView && (
                <button
                 onClick={() => setActiveTab('my_events')}
                 className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
