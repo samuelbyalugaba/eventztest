@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, ArrowRight, MessageCircle, Ticket, ShoppingBag, Music, Trophy, RotateCw } from 'lucide-react';
+import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, MessageCircle, Ticket, ShoppingBag, Music, Trophy } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
@@ -401,52 +401,62 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             )}
           </div>
 
-          {/* 3. Category Grid */}
+          {/* 3. Search & Events List */}
           <div className="px-4 pb-8 pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-900 font-bold text-lg">Discover</h3>
+            {/* Search Bar & Filter */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search events..." 
+                  className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#8A2BE2] focus:ring-4 focus:ring-[#8A2BE2]/10 transition-all shadow-sm"
+                  onClick={() => setShowSearchModal(true)}
+                  readOnly
+                />
+              </div>
               <button 
-                onClick={() => {
-                  window.dispatchEvent(new Event('savedEventsUpdated'));
-                  toast.success('Refreshing events...');
-                }}
-                disabled={isFetching}
-                className={`p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-all ${isFetching ? 'animate-spin opacity-50' : ''}`}
+                onClick={() => setShowFilters(true)}
+                className="p-3.5 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-all shadow-sm relative group"
               >
-                <RotateCw className="w-4 h-4" />
+                <Filter className="w-5 h-5 text-gray-600 group-hover:text-[#8A2BE2] transition-colors" />
+                {hasActiveFilters && (
+                  <span className="absolute top-3 right-3 w-2 h-2 bg-[#8A2BE2] rounded-full"></span>
+                )}
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {categories.slice(1).map((category) => (
+
+            {/* Events List */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-gray-900 font-bold text-lg">Upcoming Events</h3>
                 <button 
-                  key={category.id}
-                  onClick={() => { setSelectedCategory(category.id); setViewMode('list'); }} 
-                  className="bg-white border border-gray-100 p-6 rounded-3xl flex flex-col items-center justify-center gap-4 aspect-[4/3] shadow-lg shadow-purple-100/50 hover:scale-[1.02] transition-transform group"
+                  onClick={() => setViewMode('list')}
+                  className="text-[#8A2BE2] text-sm font-semibold hover:bg-purple-50 px-3 py-1 rounded-lg transition-colors"
                 >
-                  <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center group-hover:bg-[#8A2BE2] transition-colors text-purple-600 group-hover:text-white">
-                    {category.icon}
-                  </div>
-                  <span className="text-gray-900 font-semibold text-center text-sm">{category.name}</span>
+                  See All
                 </button>
-              ))}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                {upcomingEvents.slice(0, 10).map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={setSelectedEvent}
+                  />
+                ))}
+              </div>
 
-              <button 
-                onClick={() => setViewMode('list')} 
-                className="col-span-2 bg-[#8A2BE2] p-6 rounded-3xl flex items-center justify-between shadow-lg shadow-purple-200 hover:scale-[1.01] transition-transform"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-white" />
+              {upcomingEvents.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <Calendar className="w-8 h-8 text-gray-400" />
                   </div>
-                  <div className="text-left">
-                    <span className="block text-white font-semibold text-lg">All Events</span>
-                    <span className="block text-white/80 text-xs">View full schedule</span>
-                  </div>
+                  <h3 className="text-gray-900 font-medium mb-1">No upcoming events</h3>
+                  <p className="text-gray-500 text-sm max-w-[200px]">Check back later or try adjusting your filters</p>
                 </div>
-                <ArrowRight className="w-6 h-6 text-white/80" />
-              </button>
-
-
+              )}
             </div>
           </div>
         </div>
