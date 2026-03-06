@@ -662,8 +662,8 @@ export default function App() {
       />
       {/* Main Content */}
       <div className="max-w-7xl mx-auto pb-20">
-        {(activeTab === 'event' || visitedTabs.has('event')) && (
-          <div key="tab-event" className={activeTab === 'event' ? '' : 'hidden'}>
+        {activeTab === 'event' && (
+          <div key="tab-event" className="animate-in fade-in duration-200">
             <EventDetails 
               conversations={conversations} 
               onStartConversation={handleStartConversation} 
@@ -671,8 +671,8 @@ export default function App() {
             />
           </div>
         )}
-        {(activeTab === 'feed' || visitedTabs.has('feed')) && (
-          <div key="tab-feed" className={activeTab === 'feed' ? '' : 'hidden'}>
+        {activeTab === 'feed' && (
+          <div key="tab-feed" className="animate-in fade-in duration-200">
             <Feed 
               conversations={conversations} 
               onStartConversation={handleStartConversation} 
@@ -688,13 +688,13 @@ export default function App() {
             />
           </div>
         )}
-        {(activeTab === 'live' || visitedTabs.has('live')) && (
-          <div key="tab-live" className={activeTab === 'live' ? '' : 'hidden'}>
+        {activeTab === 'live' && (
+          <div key="tab-live" className="animate-in fade-in duration-200">
             <LiveFeed />
           </div>
         )}
-        {(activeTab === 'create' || visitedTabs.has('create')) && (
-          <div key="tab-create" className={activeTab === 'create' ? '' : 'hidden'}>
+        {activeTab === 'create' && (
+          <div key="tab-create" className="animate-in fade-in duration-200">
             {!isAuthenticated ? (
                <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Amazing Events</h2>
@@ -710,8 +710,8 @@ export default function App() {
             )}
           </div>
         )}
-        {(activeTab === 'profile' || visitedTabs.has('profile')) && (
-          <div key="tab-profile" className={activeTab === 'profile' ? '' : 'hidden'}>
+        {activeTab === 'profile' && (
+          <div key="tab-profile" className="animate-in fade-in duration-200">
             {!isAuthenticated ? (
                <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Profile</h2>

@@ -203,6 +203,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                 });
                 setPublishedEvents(events.map(mapEvent));
               }
+            } else {
+              // If no organizer profile exists but view mode was set to organizer (e.g., from localStorage),
+              // revert to personal view to avoid misleading UI labels.
+              if (viewMode === 'organizer') {
+                setViewMode('user');
+                localStorage.setItem('profileViewMode', 'user');
+              }
             }
           } catch (err) {
             console.error('Error loading organizer data:', err);
@@ -683,13 +690,29 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
       {/* Bio Section */}
       <div className="mb-6">
-        <p className="text-gray-600 leading-relaxed text-[15px]">
-            {isOrganizerView ? (
-            organizerProfile?.bio || <span className="text-gray-400 italic">No organizer bio yet</span>
-            ) : (
-            userProfile?.bio || "Digital designer & photography enthusiast. Always chasing the next immersive art experience. Currently exploring the intersection of tech and culture in NYC. ✨"
+        {isOrganizerView ? (
+          <p className="text-gray-600 leading-relaxed text-[15px]">
+            {organizerProfile?.bio || <span className="text-gray-400 italic">No organizer bio yet</span>}
+          </p>
+        ) : (
+          <div className="flex items-start justify-between">
+            <p className="text-gray-600 leading-relaxed text-[15px]">
+              {userProfile?.bio ? (
+                userProfile.bio
+              ) : (
+                <span className="text-gray-400 italic">No bio yet. Add your bio in Settings.</span>
+              )}
+            </p>
+            {!userProfile?.bio && (
+              <button 
+                onClick={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
+                className="ml-4 px-3 py-1.5 text-xs rounded-full bg-purple-50 text-purple-700 font-semibold hover:bg-purple-100 transition-colors"
+              >
+                Set Bio
+              </button>
             )}
-        </p>
+          </div>
+        )}
       </div>
 
       
@@ -776,10 +799,14 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                 </div>
                 <div>
                     <h3 className="text-gray-900 font-bold text-sm">
-                        {viewMode === 'user' ? 'Switch to creator account' : 'Switch to personal account'}
+                        {viewMode === 'user'
+                          ? (organizerProfile ? 'Switch to creator account' : 'Create a creator account')
+                          : 'Switch to personal account'}
                     </h3>
                     <p className="text-gray-500 text-xs">
-                        {viewMode === 'user' ? 'Start creating events and go live' : 'View your tickets and saved events'}
+                        {viewMode === 'user'
+                          ? (organizerProfile ? 'Start creating events and go live' : 'Set up your creator profile to start')
+                          : 'View your tickets and saved events'}
                     </p>
                 </div>
             </div>
@@ -1157,10 +1184,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
       {/* Floating Action Button - Share Post */}
       <button
         onClick={() => setShowSharePostModal(true)}
-        className="fixed bottom-24 right-6 w-16 h-16 rounded-full bg-[#8A2BE2] shadow-2xl hover:shadow-purple-500/50 hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
+        className="fixed bottom-24 right-6 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
         title="Share a post"
       >
-        <Camera className="w-7 h-7 text-white group-hover:rotate-12 transition-transform" />
+        <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
       </button>
 
       {/* Share Post Modal */}
