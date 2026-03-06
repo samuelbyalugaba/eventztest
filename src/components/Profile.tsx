@@ -10,6 +10,8 @@ import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
 import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, Post, getFollowers, getFollowing, deletePost, getOrganizerProfile, getOrganizerStats, getOrganizerEvents, deleteEvent } from '../utils/supabase/api';
+import { WalletModal } from './WalletModal';
+import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
@@ -45,6 +47,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
   
   // Ticket List Modal State
   const [showTicketListModal, setShowTicketListModal] = useState(false);
@@ -506,7 +510,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                     <User className="w-4 h-4 mr-2" />
                     Switch to Personal
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => toast.info("Going live feature coming soon!")}>
+                  <DropdownMenuItem onClick={() => setShowLiveSetupModal(true)}>
                     <Radio className="w-4 h-4 mr-2" />
                     Go Live
                   </DropdownMenuItem>
@@ -526,7 +530,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                   </DropdownMenuItem>
                 )
               )}
-              <DropdownMenuItem onClick={() => toast.info("Wallet feature coming soon!")}>
+              <DropdownMenuItem onClick={() => setShowWalletModal(true)}>
                 <Wallet className="w-4 h-4 mr-2" />
                 Wallet
               </DropdownMenuItem>
@@ -563,66 +567,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
         </p>
       </div>
 
-      {/* Action Buttons (Organizer) or Switch Banner (User) */}
-      {isOrganizerView ? (
-        <div className="flex gap-3 mb-8">
-           <button 
-             onClick={onCreateEvent}
-             className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
-           >
-             <Plus className="w-4 h-4" />
-             Create Events
-           </button>
-           <button 
-             onClick={() => setShowProfessionalDashboard(true)}
-             className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
-           >
-             <BarChart3 className="w-4 h-4" />
-             See Dashboard
-           </button>
-        </div>
-      ) : (
-        /* Switch Account Banner */
-        <div 
-            onClick={() => {
-                const newMode = viewMode === 'user' ? 'organizer' : 'user';
-                
-                if (newMode === 'organizer') {
-                    if (organizerProfile) {
-                        setViewMode('organizer');
-                        setActiveTab('media'); // Default to media/posts for organizer
-                        localStorage.setItem('profileViewMode', 'organizer');
-                    } else {
-                        onCreateEvent?.(); // Trigger onboarding/create
-                    }
-                } else {
-                    setViewMode('user');
-                    setActiveTab('events');
-                    localStorage.setItem('profileViewMode', 'user');
-                }
-            }}
-            className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
-        >
-            <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${viewMode === 'user' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-                    {viewMode === 'user' ? <Sparkles className="w-6 h-6" /> : <User className="w-6 h-6" />}
-                </div>
-                <div>
-                    <h3 className="text-gray-900 font-bold text-sm">
-                        {viewMode === 'user' ? 'Switch to creator account' : 'Switch to personal account'}
-                    </h3>
-                    <p className="text-gray-500 text-xs">
-                        {viewMode === 'user' ? 'Start creating events and go live' : 'View your tickets and saved events'}
-                    </p>
-                </div>
-            </div>
-            <div className="text-gray-400">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-            </div>
-        </div>
-      )}
+      
 
       {/* Stats Row */}
       <div className="flex items-center justify-between px-4 mb-8">
@@ -660,6 +605,66 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
             </div>
          </div>
       </div>
+
+      {/* Action Buttons (Organizer) or Switch Banner (User) */}
+      {isOrganizerView ? (
+        <div className="flex gap-3 mb-8">
+           <button 
+             onClick={onCreateEvent}
+             className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+           >
+             <Plus className="w-4 h-4" />
+             Create Events
+           </button>
+           <button 
+             onClick={() => setShowProfessionalDashboard(true)}
+             className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+           >
+             <BarChart3 className="w-4 h-4" />
+             See Dashboard
+           </button>
+        </div>
+      ) : (
+        <div 
+            onClick={() => {
+                const newMode = viewMode === 'user' ? 'organizer' : 'user';
+                
+                if (newMode === 'organizer') {
+                    if (organizerProfile) {
+                        setViewMode('organizer');
+                        setActiveTab('media');
+                        localStorage.setItem('profileViewMode', 'organizer');
+                    } else {
+                        onCreateEvent?.();
+                    }
+                } else {
+                    setViewMode('user');
+                    setActiveTab('events');
+                    localStorage.setItem('profileViewMode', 'user');
+                }
+            }}
+            className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
+        >
+            <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${viewMode === 'user' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                    {viewMode === 'user' ? <Sparkles className="w-6 h-6" /> : <User className="w-6 h-6" />}
+                </div>
+                <div>
+                    <h3 className="text-gray-900 font-bold text-sm">
+                        {viewMode === 'user' ? 'Switch to creator account' : 'Switch to personal account'}
+                    </h3>
+                    <p className="text-gray-500 text-xs">
+                        {viewMode === 'user' ? 'Start creating events and go live' : 'View your tickets and saved events'}
+                    </p>
+                </div>
+            </div>
+            <div className="text-gray-400">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+            </div>
+        </div>
+      )}
 
       {/* Tabs - Pill Shaped */}
       <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6">
@@ -1634,6 +1639,22 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
           initialIndex={mediaViewerIndex}
           onClose={() => setShowMediaViewer(false)}
           type={mediaViewerType}
+        />
+      )}
+
+      {/* Wallet Modal */}
+      {showWalletModal && (
+        <WalletModal
+          isOpen={showWalletModal}
+          onClose={() => setShowWalletModal(false)}
+        />
+      )}
+
+      {/* Live Setup Modal */}
+      {showLiveSetupModal && (
+        <LiveSetupModal
+          isOpen={showLiveSetupModal}
+          onClose={() => setShowLiveSetupModal(false)}
         />
       )}
 
