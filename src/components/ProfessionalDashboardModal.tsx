@@ -125,19 +125,19 @@ export function ProfessionalDashboardModal({
       <div className="bg-gray-50 w-full max-w-4xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col shadow-2xl">
         
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-white border-b border-gray-200 px-5 py-3.5 flex items-center justify-between sticky top-0 z-10">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-[#8A2BE2]" />
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-[#8A2BE2]" />
               Professional Dashboard
             </h2>
-            <p className="text-sm text-gray-500">Analytics and tools for {organizerProfile.organizerName}</p>
+            <p className="text-xs sm:text-sm text-gray-500">Analytics and tools for {organizerProfile.organizerName}</p>
           </div>
           <button 
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <X className="w-6 h-6 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
@@ -145,15 +145,15 @@ export function ProfessionalDashboardModal({
         <div className="flex-1 overflow-y-auto p-6">
           
           {/* Quick Actions Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <button
               onClick={() => setShowSettings(true)}
-              className="flex flex-col items-center justify-center gap-3 bg-white p-4 rounded-2xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all group"
+              className="flex flex-col items-center justify-center gap-2.5 bg-white p-3 rounded-xl border border-gray-200 hover:border-purple-300 transition-all group"
             >
-              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Settings className="w-6 h-6 text-purple-600" />
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Settings className="w-5 h-5 text-purple-600" />
               </div>
-              <span className="font-semibold text-gray-700 text-sm">Settings</span>
+              <span className="font-medium text-gray-700 text-xs sm:text-sm">Settings</span>
             </button>
 
             <button
@@ -161,12 +161,12 @@ export function ProfessionalDashboardModal({
                 onClose(); // Close dashboard to show create modal
                 onCreateEvent();
               }}
-              className="flex flex-col items-center justify-center gap-3 bg-white p-4 rounded-2xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all group"
+              className="flex flex-col items-center justify-center gap-2.5 bg-white p-3 rounded-xl border border-gray-200 hover:border-purple-300 transition-all group"
             >
-              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <PlusCircle className="w-6 h-6 text-purple-600" />
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <PlusCircle className="w-5 h-5 text-purple-600" />
               </div>
-              <span className="font-semibold text-gray-700 text-sm">Create Event</span>
+              <span className="font-medium text-gray-700 text-xs sm:text-sm">Create Event</span>
             </button>
 
             <button
@@ -177,106 +177,106 @@ export function ProfessionalDashboardModal({
                 }
                 setShowScanner(true);
               }}
-              className="flex flex-col items-center justify-center gap-3 bg-white p-4 rounded-2xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all group"
+              className="flex flex-col items-center justify-center gap-2.5 bg-white p-3 rounded-xl border border-gray-200 hover:border-purple-300 transition-all group"
             >
-              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <QrCode className="w-6 h-6 text-purple-600" />
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <QrCode className="w-5 h-5 text-purple-600" />
               </div>
-              <span className="font-semibold text-gray-700 text-sm">Scan Tickets</span>
+              <span className="font-medium text-gray-700 text-xs sm:text-sm">Scan Tickets</span>
             </button>
 
             <button
               onClick={handleGoLive}
-              className="flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-red-500 to-pink-600 p-4 rounded-2xl shadow-lg hover:shadow-red-500/30 transition-all group relative overflow-hidden"
+              className="flex flex-col items-center justify-center gap-2.5 bg-gradient-to-br from-red-500 to-pink-600 p-3 rounded-xl shadow-md hover:shadow-red-500/30 transition-all group relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform" />
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform">
-                <Radio className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-105 transition-transform">
+                <Radio className="w-5 h-5 text-white" />
               </div>
-              <span className="font-semibold text-white text-sm">Go Live</span>
+              <span className="font-medium text-white text-xs sm:text-sm">Go Live</span>
             </button>
           </div>
 
           {/* Performance Overview */}
-          <div className="mb-8">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-gray-500" />
+          <div className="mb-6">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-gray-400" />
               Performance
             </h3>
             
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
               {/* Revenue */}
-              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <div className="bg-white p-4 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center">
                     <DollarSign className="w-4 h-4 text-green-600" />
                   </div>
-                  <span className="text-sm text-gray-500 font-medium">Revenue</span>
+                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Revenue</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">TSh {formatNumber(stats.revenue)}</p>
+                <p className="text-xl font-semibold text-gray-900">TSh {formatNumber(stats.revenue)}</p>
               </div>
 
               {/* Tickets */}
-              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="bg-white p-4 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
                     <Ticket className="w-4 h-4 text-blue-600" />
                   </div>
-                  <span className="text-sm text-gray-500 font-medium">Tickets Sold</span>
+                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Tickets Sold</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{formatNumber(stats.ticketsSold)}</p>
+                <p className="text-xl font-semibold text-gray-900">{formatNumber(stats.ticketsSold)}</p>
               </div>
 
               {/* Views */}
-              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+              <div className="bg-white p-4 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
                     <Eye className="w-4 h-4 text-purple-600" />
                   </div>
-                  <span className="text-sm text-gray-500 font-medium">Total Views</span>
+                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Total Views</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{formatNumber(stats.totalViews)}</p>
+                <p className="text-xl font-semibold text-gray-900">{formatNumber(stats.totalViews)}</p>
               </div>
 
               {/* Followers */}
-              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
+              <div className="bg-white p-4 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-7 h-7 bg-pink-100 rounded-full flex items-center justify-center">
                     <Users className="w-4 h-4 text-pink-600" />
                   </div>
-                  <span className="text-sm text-gray-500 font-medium">Followers</span>
+                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Followers</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{formatNumber(stats.followers)}</p>
+                <p className="text-xl font-semibold text-gray-900">{formatNumber(stats.followers)}</p>
               </div>
 
               {/* Events */}
-              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+              <div className="bg-white p-4 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-7 h-7 bg-orange-100 rounded-full flex items-center justify-center">
                     <Calendar className="w-4 h-4 text-orange-600" />
                   </div>
-                  <span className="text-sm text-gray-500 font-medium">Events Hosted</span>
+                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Events Hosted</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalEvents}</p>
+                <p className="text-xl font-semibold text-gray-900">{stats.totalEvents}</p>
               </div>
             </div>
           </div>
 
           {/* Account Status */}
-          <div className="bg-purple-50 rounded-2xl p-5 border border-purple-100 flex items-start gap-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Star className="w-5 h-5 text-purple-600" />
+          <div className="bg-white rounded-xl p-4 border border-gray-200 flex items-start gap-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Star className="w-4 h-4 text-purple-600" />
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-1">Account Status: Active</h4>
-              <p className="text-sm text-gray-600 mb-3">
+              <h4 className="font-semibold text-gray-900 mb-1">Account Status: Active</h4>
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">
                 Your profile is visible to the public. Complete your profile to reach more people.
               </p>
               <button 
                 onClick={() => setShowSettings(true)}
-                className="text-purple-700 text-sm font-semibold flex items-center gap-1 hover:gap-2 transition-all"
+                className="text-purple-700 text-xs sm:text-sm font-medium flex items-center gap-1 hover:gap-1.5 transition-all"
               >
-                Edit Profile <ArrowRight className="w-4 h-4" />
+                Edit Profile <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

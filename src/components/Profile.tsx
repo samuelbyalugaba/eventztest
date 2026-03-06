@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye, User, Briefcase, LayoutGrid, Radio, Repeat, Menu, Wallet, Layers } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye, User, Briefcase, LayoutGrid, Radio, Repeat, Menu, Wallet, Layers, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
@@ -40,6 +40,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
   const [mediaTab, setMediaTab] = useState<'photos' | 'videos'>('photos');
+  const [postAsOrganizer, setPostAsOrganizer] = useState(false);
   const [showTicketViewer, setShowTicketViewer] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showAllEvents, setShowAllEvents] = useState(false);
@@ -127,6 +128,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   const displayName = isOrganizerView 
     ? organizerProfile?.organizerName 
     : (userProfile?.full_name || 'User');
+  
+  useEffect(() => {
+    setPostAsOrganizer(!!isOrganizerView);
+  }, [isOrganizerView]);
 
   // Load all data
   useEffect(() => {
@@ -344,7 +349,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
         video_url: postType === 'video' ? uploadedUrls[0] : undefined,
         hashtags: [],
         user_id: user.id,
-        posted_as_organizer: isOrganizerView
+        posted_as_organizer: postAsOrganizer
       });
 
       toast.success('Post shared successfully! 🎉', {
@@ -450,91 +455,100 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   return (
     <div className="bg-white min-h-screen pb-20 pt-6 px-6">
       {/* Header Section */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="relative">
-             <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-purple-500 to-pink-500">
-               <div className="w-full h-full rounded-full border-4 border-white overflow-hidden bg-white">
-                  {profileImage ? (
-                    <ImageWithFallback
-                      src={profileImage}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <UserAvatar 
-                      name={displayName} 
-                      className="w-full h-full text-3xl" 
-                    />
-                  )}
-               </div>
-             </div>
-             {/* Status Indicator */}
-             <div className="absolute bottom-1 right-1 w-6 h-6 bg-green-500 border-4 border-white rounded-full"></div>
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-white ring-1 ring-gray-200">
+              {profileImage ? (
+                <ImageWithFallback
+                  src={profileImage}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <UserAvatar 
+                  name={displayName} 
+                  className="w-full h-full text-2xl" 
+                />
+              )}
+            </div>
           </div>
           
           <div className="flex-1 min-w-0">
-             <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+             <h1 className="text-xl font-semibold text-gray-900 leading-tight">
                {displayName || 'Loading...'}
              </h1>
-             <p className="text-gray-500 font-medium text-sm flex items-center gap-1">
-               {isOrganizerView ? (organizerProfile?.organizerType || 'Organizer') : `@${userProfile?.username || 'user'}`}
-               {isOrganizerView && <Sparkles className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
+             <p className="text-gray-500 font-medium text-xs flex items-center gap-1">
+               {isOrganizerView ? (organizerProfile?.organizer_type || organizerProfile?.organizerType || 'Organizer') : `@${userProfile?.username || 'user'}`}
              </p>
           </div>
         </div>
 
         {/* Header Actions */}
         <div className="flex gap-2 items-center">
-            {isOrganizerView ? (
-               <DropdownMenu>
-                 <DropdownMenuTrigger asChild>
-                   <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200">
-                     <Menu className="w-6 h-6" />
-                   </button>
-                 </DropdownMenuTrigger>
-                 <DropdownMenuContent align="end" className="w-56">
-                   <DropdownMenuItem 
-                     onClick={() => {
-                        setViewMode('user');
-                        setActiveTab('media');
-                        localStorage.setItem('profileViewMode', 'user');
-                        toast.success("Switched to personal profile");
-                     }}
-                   >
-                     <User className="w-4 h-4 mr-2" />
-                     Switch to Personal
-                   </DropdownMenuItem>
-                   <DropdownMenuItem onClick={() => toast.info("Going live feature coming soon!")}>
-                     <Radio className="w-4 h-4 mr-2" />
-                     Go Live
-                   </DropdownMenuItem>
-                   <DropdownMenuItem onClick={() => toast.info("Wallet feature coming soon!")}>
-                     <Wallet className="w-4 h-4 mr-2" />
-                     Wallet
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => {
-                       setSettingsInitialView('main');
-                       setShowSettingsModal(true);
-                     }}
-                   >
-                     <Settings className="w-4 h-4 mr-2" />
-                     Settings
-                   </DropdownMenuItem>
-                 </DropdownMenuContent>
-               </DropdownMenu>
-            ) : (
-                <button 
-                  onClick={() => {
-                    setSettingsInitialView('main');
-                    setShowSettingsModal(true);
-                  }}
-                  className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <Settings className="w-6 h-6" />
-                </button>
-            )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1.5 text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200">
+                <Menu className="w-5 h-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {isOrganizerView ? (
+                <>
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      setViewMode('user');
+                      setActiveTab('media');
+                      localStorage.setItem('profileViewMode', 'user');
+                      toast.success("Switched to personal profile");
+                    }}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Switch to Personal
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toast.info("Going live feature coming soon!")}>
+                    <Radio className="w-4 h-4 mr-2" />
+                    Go Live
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                organizerProfile && (
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      setViewMode('organizer');
+                      setActiveTab('my_events');
+                      localStorage.setItem('profileViewMode', 'organizer');
+                      toast.success("Switched to creator profile");
+                    }}
+                  >
+                    <Briefcase className="w-4 h-4 mr-2" />
+                    Switch to Creator
+                  </DropdownMenuItem>
+                )
+              )}
+              <DropdownMenuItem onClick={() => toast.info("Wallet feature coming soon!")}>
+                <Wallet className="w-4 h-4 mr-2" />
+                Wallet
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  setSettingsInitialView('main');
+                  setShowSettingsModal(true);
+                }}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  onLogout?.().then(() => toast.success("Logged out"));
+                }}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -887,7 +901,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                 <ImageIcon className="w-4 h-4" />
                 Photos
                 <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-600 font-medium">
-                  {photos.length}
+                  {allPhotosForViewer.length}
                 </span>
                 {mediaTab === 'photos' && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 rounded-t-full" />
@@ -914,9 +928,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
             {/* Photos Content */}
             {mediaTab === 'photos' && (
-              photos.length > 0 ? (
+              allPhotosForViewer.length > 0 ? (
                 <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
-                  {photos.map((photo, index) => (
+                  {allPhotosForViewer.map((photo, index) => (
                     <div
                       key={photo.id}
                       onClick={() => {
