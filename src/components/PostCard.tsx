@@ -365,7 +365,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
           <p className={`text-gray-800 text-[15px] leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-3'}`}>
             {post.content.text}
           </p>
-          {post.content.text.length > 150 && (
+          {(post.content.text.length > 100 || post.content.text.split('\n').length > 3) && (
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-gray-500 text-sm mt-1 hover:text-gray-700 font-medium"

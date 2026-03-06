@@ -9,7 +9,7 @@ import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, Post, getFollowers, getFollowing, deletePost, getOrganizerProfile, getOrganizerStats, getOrganizerEvents, deleteEvent } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, Post as ApiPost, getFollowers, getFollowing, deletePost, getOrganizerProfile, getOrganizerStats, getOrganizerEvents, deleteEvent, toggleLikePost, toggleSavePost } from '../utils/supabase/api';
 import { WalletModal } from './WalletModal';
 import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
@@ -18,6 +18,10 @@ import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { PostCard } from './PostCard';
+import { Post as UiPost } from '../types';
+import { formatTimeAgo } from '../utils/format';
+import { handleShare } from '../utils/share';
 
 import { EventListModal } from './EventListModal';
 
@@ -28,7 +32,7 @@ interface ProfileProps {
 }
 
 export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) {
-  const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events'>('events');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events'>('media');
   const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -43,9 +47,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
   const [mediaTab, setMediaTab] = useState<'photos' | 'videos'>('photos');
   const [postAsOrganizer, setPostAsOrganizer] = useState(false);
+  const [mediaViewerItems, setMediaViewerItems] = useState<any[]>([]);
   const [showTicketViewer, setShowTicketViewer] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [showAllEvents, setShowAllEvents] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
@@ -53,6 +57,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   // Ticket List Modal State
   const [showTicketListModal, setShowTicketListModal] = useState(false);
   const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   
   // Data states
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -63,8 +68,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   
   const [attendedEvents, setAttendedEvents] = useState<AppEvent[]>([]);
   const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
-  const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [userPosts, setUserPosts] = useState<ApiPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedDetailedPost, setSelectedDetailedPost] = useState<UiPost | null>(null);
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   
   // Event List Modal State
@@ -143,7 +149,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
     const savedViewMode = localStorage.getItem('profileViewMode') as 'user' | 'organizer' | null;
     if (savedViewMode) {
        setViewMode(savedViewMode);
-       setActiveTab(savedViewMode === 'organizer' ? 'my_events' : 'events');
+       setActiveTab('media');
     }
 
     const fetchSavedEvents = async (userId: string) => {
@@ -163,6 +169,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
+          setCurrentUser(user);
           // 1. Profile
           const profile = await getProfile(user.id);
           if (profile) setUserProfile(profile);
@@ -179,7 +186,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
               // Only auto-switch if no preference saved or preference is organizer
               if (!localStorage.getItem('profileViewMode') || localStorage.getItem('profileViewMode') === 'organizer') {
                  setViewMode('organizer');
-                 setActiveTab('my_events');
+                 setActiveTab('media');
               }
               
               // Load stats only if organizer
@@ -381,14 +388,17 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
     }
   };
 
-  const handleDeletePost = async (postId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeletePost = async (postId: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     
     if (!window.confirm("Are you sure you want to delete this post?")) return;
 
     try {
       // Optimistic update
       setUserPosts(prev => prev.filter(p => p.id !== postId));
+      if (selectedDetailedPost?.id === postId) {
+        setSelectedDetailedPost(null);
+      }
 
       await deletePost(postId);
       toast.success('Post deleted');
@@ -403,6 +413,121 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
         if (posts) setUserPosts(posts);
       }
     }
+  };
+
+  const handleLike = async (postId: number) => {
+    // Optimistic update
+    setUserPosts(prev => prev.map(p => {
+        if (p.id === postId) {
+            const newIsLiked = !p.is_liked;
+            return { ...p, is_liked: newIsLiked, likes_count: newIsLiked ? (p.likes_count || 0) + 1 : (p.likes_count || 0) - 1 };
+        }
+        return p;
+    }));
+
+    if (selectedDetailedPost && selectedDetailedPost.id === postId) {
+        setSelectedDetailedPost(prev => prev ? ({
+            ...prev,
+            isLiked: !prev.isLiked,
+            likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1
+        }) : null);
+    }
+
+    if (currentUser) {
+        try {
+            await toggleLikePost(postId, currentUser.id);
+        } catch (error) {
+            console.error('Error liking post:', error);
+            toast.error('Failed to update like');
+        }
+    }
+  };
+
+  const handleSave = async (postId: number) => {
+     setUserPosts(prev => prev.map(p => {
+        if (p.id === postId) {
+            return { ...p, is_saved: !p.is_saved };
+        }
+        return p;
+    }));
+
+    if (selectedDetailedPost && selectedDetailedPost.id === postId) {
+        setSelectedDetailedPost(prev => prev ? ({
+            ...prev,
+            isSaved: !prev.isSaved
+        }) : null);
+    }
+
+    if (currentUser) {
+        try {
+            await toggleSavePost(postId, currentUser.id);
+            if (!selectedDetailedPost?.isSaved) {
+                toast.success('Saved for later! 📌');
+            }
+        } catch (error) {
+            console.error('Error saving post:', error);
+        }
+    }
+  };
+
+  const handleShareCard = async (post: UiPost) => {
+      await handleShare({
+        title: `Check out this post from ${post.user.name}`,
+        text: post.content.text || 'Check out this amazing post on EVENTZ!',
+        url: window.location.href,
+      });
+  };
+
+  const handleOpenPost = (post: ApiPost) => {
+    const isOrganizerPage = !!post.posted_as_organizer && !!post.organizer_profile;
+    const displayName = isOrganizerPage ? (post.organizer_profile!.organizer_name || 'Unknown Organizer') : (post.user?.full_name || post.user?.username || 'Unknown User');
+    const avatarUrl = isOrganizerPage ? post.organizer_profile!.organizer_avatar_url : post.user?.avatar_url;
+
+    const uiPost: UiPost = {
+      id: post.id,
+      user: {
+        id: isOrganizerPage ? (post.organizer_profile!.id || 'unknown') : (post.user?.id || 'unknown'),
+        name: displayName || 'Unknown',
+        username: post.user?.username || '@unknown',
+        avatar: avatarUrl || '',
+        verified: post.user?.verified || false,
+        isOrganizer: post.user?.is_organizer || false,
+        isOrganizerPage: isOrganizerPage
+      },
+      event: post.event ? {
+        id: post.event.id,
+        name: post.event.title,
+        date: post.event.date,
+        time: post.event.time,
+        location: post.event.location,
+        image: post.event.image_url,
+        price: post.event.price_range,
+      } : undefined,
+      content: {
+        text: post.content,
+        images: post.image_urls,
+        image: post.image_urls?.[0],
+        hashtags: post.hashtags,
+      },
+      timestamp: formatTimeAgo(post.created_at),
+      likes: post.likes_count || 0,
+      comments: [],
+      comments_count: post.comments_count || 0,
+      shares: 0,
+      views: post.views || 0,
+      isLiked: post.is_liked || false,
+      isSaved: post.is_saved || false,
+      isHighlight: !!post.video_url,
+      highlights: post.video_url ? [{
+        id: post.id,
+        thumbnail: (post.image_urls?.find(url => !url.match(/\.(mp4|webm|ogg|mov)$/i))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
+        duration: post.duration || '',
+        title: post.content || 'Video Highlight',
+        videoUrl: post.video_url,
+        views: post.views || 0,
+      }] : undefined,
+    };
+    setSelectedDetailedPost(uiPost);
   };
 
   // Derive media from posts
@@ -520,7 +645,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                   <DropdownMenuItem 
                     onClick={() => {
                       setViewMode('organizer');
-                      setActiveTab('my_events');
+                      setActiveTab('media');
                       localStorage.setItem('profileViewMode', 'organizer');
                       toast.success("Switched to creator profile");
                     }}
@@ -667,19 +792,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
       )}
 
       {/* Tabs - Pill Shaped */}
-      <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6">
-        {isOrganizerView ? (
+      {!isOrganizerView && (
+        <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6">
           <>
-            <button
-              onClick={() => setActiveTab('my_events')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
-                activeTab === 'my_events'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Events
-            </button>
             <button
               onClick={() => setActiveTab('media')}
               className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
@@ -689,19 +804,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
               }`}
             >
               Posts
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => setActiveTab('media')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
-                activeTab === 'media'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Media
             </button>
             
             <button
@@ -726,234 +828,87 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
               Saved
             </button>
           </>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Content Area */}
       <div>
         {isLoading && (
           <div className="py-3 text-gray-500 text-sm">Loading...</div>
         )}
-        {/* Created Events - Organizer Only */}
-        {activeTab === 'my_events' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-gray-900">Created Events</h3>
-              <button 
-                onClick={onCreateEvent}
-                className="text-purple-600 text-sm font-semibold flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                Create
-              </button>
-            </div>
-            
-            {publishedEvents.length === 0 ? (
-               <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                 <Calendar className="w-12 h-12 text-gray-300 mb-3" />
-                 <p className="text-gray-900 font-medium mb-1">No events created yet</p>
-                 <button 
-                   onClick={onCreateEvent}
-                   className="text-purple-600 text-sm font-medium hover:underline"
-                 >
-                   Create your first event
-                 </button>
-               </div>
-            ) : (
-              publishedEvents.map((event) => (
-                <div key={event.id} className="flex gap-4 bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group relative">
-                  <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                    <ImageWithFallback
-                      src={event.coverImage}
-                      alt={event.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-1 left-1 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded text-[10px] text-white">
-                      {event.status || 'Published'}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-gray-900 text-sm mb-1 line-clamp-1">{event.title}</h4>
-                    <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>{new Date(event.date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-3 mt-2">
-                       <div className="flex items-center gap-1 text-xs text-gray-500">
-                         <TicketIcon className="w-3 h-3" />
-                         <span>{event.ticketsSold || 0}</span>
-                       </div>
-                       <div className="flex items-center gap-1 text-xs text-gray-500">
-                         <Eye className="w-3 h-3" />
-                         <span>{event.views || 0}</span>
-                       </div>
-                    </div>
-                  </div>
-                  
-                  {/* Actions Menu */}
-                  <div className="absolute top-3 right-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="p-1 hover:bg-gray-100 rounded-full">
-                          <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEditEvent?.(event)}>
-                          <Edit2 className="w-4 h-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                           className="text-red-600"
-                           onClick={async (e) => {
-                             e.stopPropagation();
-                             if (window.confirm('Delete this event?')) {
-                               try {
-                                 await deleteEvent(event.id);
-                                 setPublishedEvents(prev => prev.filter(p => p.id !== event.id));
-                                 toast.success('Event deleted');
-                               } catch (err) {
-                                 toast.error('Failed to delete event');
-                               }
-                             }
-                           }}
-                        >
-                          <Trash className="w-4 h-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+        {/* Created Events - removed */}
 
-        {/* Attended Events - Vertical Cards */}
-        {activeTab === 'events' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-gray-900">Attended Events</h3>
-              <span className="text-gray-500 text-sm">{attendedEvents.length} events</span>
-            </div>
-            {attendedEvents.slice(0, showAllEvents ? attendedEvents.length : 6).map((event) => (
-              <div key={event.id} className="flex gap-4 bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group">
-                <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                  <ImageWithFallback
-                    src={event.image_url}
-                    alt={event.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-gray-900 text-sm mb-1 line-clamp-1">{event.title}</h4>
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-                    <Calendar className="w-3 h-3" />
-                    <span>{event.date}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-500 text-xs">
-                    <MapPin className="w-3 h-3" />
-                    <span>{event.location}</span>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <span className="px-2.5 py-1 bg-purple-50 text-purple-600 text-xs rounded-full">
-                    {event.category}
-                  </span>
-                </div>
-              </div>
-            ))}
-            
-            {/* View All / Show Less Button */}
-            {attendedEvents.length > 6 && (
-              <div className="mt-4">
-                <button
-                  onClick={() => setShowAllEvents(!showAllEvents)}
-                  className="w-full bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-600 py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group border border-purple-200"
-                >
-                  <span className="font-medium">
-                    {showAllEvents ? 'Show Less' : `View All ${attendedEvents.length} Events`}
-                  </span>
-                  <svg
-                    className={`w-5 h-5 transition-transform duration-300 ${showAllEvents ? 'rotate-180' : ''}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Attended Events - removed */}
 
         {/* Media Grid (Photos & Videos) */}
         {activeTab === 'media' && (
-          <div className="space-y-6">
-            {/* Media Tabs */}
-            <div className="flex items-center justify-center gap-8 border-b border-gray-100 mb-6">
-              <button
-                onClick={() => setMediaTab('photos')}
-                className={`pb-3 text-sm font-semibold transition-all relative flex items-center gap-2 ${
-                  mediaTab === 'photos'
-                    ? 'text-purple-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <ImageIcon className="w-4 h-4" />
-                Photos
-                <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-600 font-medium">
-                  {allPhotosForViewer.length}
-                </span>
-                {mediaTab === 'photos' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 rounded-t-full" />
-                )}
-              </button>
-              <button
-                onClick={() => setMediaTab('videos')}
-                className={`pb-3 text-sm font-semibold transition-all relative flex items-center gap-2 ${
-                  mediaTab === 'videos'
-                    ? 'text-purple-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Video className="w-4 h-4" />
-                Videos
-                <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-600 font-medium">
-                  {videoClips.length}
-                </span>
-                {mediaTab === 'videos' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 rounded-t-full" />
-                )}
-              </button>
-            </div>
+          <div className="space-y-4">
+            {isOrganizerView && (
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-gray-900 flex items-center gap-2">
+                  <LayoutGrid className="w-4 h-4" />
+                  Event Posts
+                </h3>
+                <span className="text-gray-500 text-sm">{filteredUserPosts.length}</span>
+              </div>
+            )}
+            {filteredUserPosts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <ImageIcon className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-900 font-medium mb-1">No posts yet</p>
+                <p className="text-gray-500 text-sm max-w-xs mx-auto">Share event photos and videos</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
+                {filteredUserPosts.map((post) => {
+                  const isVideo = !!post.video_url;
+                  const firstImage = post.image_urls?.[0];
+                  const isCarousel = (post.image_urls?.length || 0) > 1;
 
-            {/* Photos Content */}
-            {mediaTab === 'photos' && (
-              allPhotosForViewer.length > 0 ? (
-                <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
-                  {allPhotosForViewer.map((photo, index) => (
+                  return (
                     <div
-                      key={photo.id}
-                      onClick={() => {
-                        setMediaViewerIndex(index);
-                        setMediaViewerType('photo');
-                        setShowMediaViewer(true);
-                      }}
-                      className="relative aspect-square cursor-pointer group"
+                      key={post.id}
+                      onClick={() => handleOpenPost(post)}
+                      className="relative aspect-square cursor-pointer group bg-gray-100 overflow-hidden"
                     >
-                      <ImageWithFallback
-                        src={photo.url}
-                        alt={`Photo ${photo.id}`}
-                        className="w-full h-full object-cover"
-                      />
-                      {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      {isVideo ? (
+                        <video
+                          src={post.video_url!}
+                          className="w-full h-full object-cover"
+                          muted
+                          playsInline
+                          loop
+                          onMouseOver={(e) => e.currentTarget.play()}
+                          onMouseOut={(e) => {
+                            e.currentTarget.pause();
+                            e.currentTarget.currentTime = 0;
+                          }}
+                        />
+                      ) : (
+                        <ImageWithFallback
+                          src={firstImage}
+                          alt={`Post ${post.id}`}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+
+                      {!isVideo && isCarousel && (
+                        <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
+                          <Layers className="w-3 h-3" />
+                        </div>
+                      )}
+
+                      {isVideo && (
+                        <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
+                          <Play className="w-3 h-3" />
+                        </div>
+                      )}
+
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <button 
-                          onClick={(e) => handleDeletePost(photo.postId, e)}
+                          onClick={(e) => handleDeletePost(post.id, e)}
                           className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
                           title="Delete post"
                         >
@@ -961,81 +916,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                         </button>
                         <div className="flex items-center gap-1 text-white text-sm">
                           <Heart className="w-4 h-4 fill-white" />
-                          <span>{photo.likes}</span>
+                          <span>{post.likes_count || 0}</span>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                 <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-500">
-                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                     <ImageIcon className="w-8 h-8 text-gray-300" />
-                   </div>
-                   <p className="text-gray-900 font-medium mb-1">No photos yet</p>
-                   <p className="text-gray-500 text-sm max-w-xs mx-auto">Share your favorite moments from events you've attended</p>
-                 </div>
-              )
-            )}
-
-            {/* Videos Content */}
-            {mediaTab === 'videos' && (
-              videoClips.length > 0 ? (
-                <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
-                  {videoClips.map((video, index) => (
-                    <div
-                      key={video.id}
-                      onClick={() => {
-                        setMediaViewerIndex(index);
-                        setMediaViewerType('video');
-                        setShowMediaViewer(true);
-                      }}
-                      className="relative aspect-square cursor-pointer group"
-                    >
-                      <video
-                        src={video.videoUrl}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                        loop
-                        onMouseOver={(e) => e.currentTarget.play()}
-                        onMouseOut={(e) => {
-                          e.currentTarget.pause();
-                          e.currentTarget.currentTime = 0;
-                        }}
-                      />
-                      {/* Duration Badge */}
-                      <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px] pointer-events-none">
-                        {video.duration}
-                      </div>
-                      {/* Hover Stats */}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button 
-                          onClick={(e) => handleDeletePost(video.postId, e)}
-                          className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
-                          title="Delete post"
-                        >
-                          <Trash className="w-3.5 h-3.5" />
-                        </button>
-                        <div className="flex flex-col items-center gap-1 text-white text-xs pointer-events-none">
-                          <div className="flex items-center gap-1">
-                            <Play className="w-3 h-3" />
-                            <span>{video.views.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                 <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-500">
-                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                     <Video className="w-8 h-8 text-gray-300" />
-                   </div>
-                   <p className="text-gray-900 font-medium mb-1">No videos yet</p>
-                   <p className="text-gray-500 text-sm max-w-xs mx-auto">Capture and share video highlights from events</p>
-                 </div>
-              )
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
@@ -1632,15 +1519,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
         />
       )}
 
-      {/* Media Viewer */}
-      {showMediaViewer && (
-        <MediaViewer
-          media={mediaViewerType === 'photo' ? allPhotosForViewer : videoClips}
-          initialIndex={mediaViewerIndex}
-          onClose={() => setShowMediaViewer(false)}
-          type={mediaViewerType}
-        />
-      )}
 
       {/* Wallet Modal */}
       {showWalletModal && (
@@ -1691,6 +1569,39 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
             setShowTicketViewer(true);
           }}
         />
+      )}
+
+      {/* Post Detail Modal */}
+      {selectedDetailedPost && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setSelectedDetailedPost(null)}
+        >
+          <div 
+            className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl no-scrollbar"
+            onClick={e => e.stopPropagation()}
+          >
+             <PostCard
+                post={selectedDetailedPost}
+                currentUser={currentUser}
+                onLike={handleLike}
+                onSave={handleSave}
+                onShare={handleShareCard}
+                onProfileClick={() => {
+                   setSelectedDetailedPost(null);
+                }}
+                onDelete={(id) => handleDeletePost(id)}
+                isFollowed={false}
+             />
+          </div>
+          
+          <button 
+            onClick={() => setSelectedDetailedPost(null)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-colors z-50"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
       )}
     </div>
   );

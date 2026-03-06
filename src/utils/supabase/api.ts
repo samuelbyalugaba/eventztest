@@ -2120,10 +2120,10 @@ export const getNotifications = async (userId: string) => {
       id,
       created_at,
       ticket_type,
-      event:events!inner(id, title, organizer_id),
+      events!inner(id, title, organizer_id),
       user:profiles(id, full_name, avatar_url)
     `)
-    .eq('event.organizer_id', userId)
+    .eq('events.organizer_id', userId)
     .order('created_at', { ascending: false })
     .limit(20);
 
@@ -2140,7 +2140,7 @@ export const getNotifications = async (userId: string) => {
           name: buyerName, 
           avatar: buyerAvatar
         },
-        content: `bought a ${ticket.ticket_type} ticket for "${ticket.event?.title || 'Event'}"`,
+        content: `bought a ${ticket.ticket_type} ticket for "${ticket.events?.title || 'Event'}"`,
         time: ticket.created_at,
         read: new Date(ticket.created_at).getTime() <= lastReadTime,
         created_at: ticket.created_at
@@ -2153,11 +2153,11 @@ export const getNotifications = async (userId: string) => {
     .from('tickets')
     .select(`
       id,
-      event:events!inner(id, title, date, time, image_url)
+      events!inner(id, title, date, time, image_url)
     `)
     .eq('user_id', userId)
     .eq('status', 'valid')
-    .gte('event.date', new Date().toISOString().split('T')[0]); // Events in future or today
+    .gte('events.date', new Date().toISOString().split('T')[0]); // Events in future or today
 
   if (upcomingTickets) {
     const now = new Date();
@@ -2165,19 +2165,19 @@ export const getNotifications = async (userId: string) => {
     twoDaysFromNow.setDate(now.getDate() + 2);
 
     upcomingTickets.forEach((ticket: any) => {
-      if (ticket.event) {
-        const eventDate = new Date(`${ticket.event.date}T${ticket.event.time || '00:00:00'}`);
+      if (ticket.events) {
+        const eventDate = new Date(`${ticket.events.date}T${ticket.events.time || '00:00:00'}`);
         
         // If event is within next 48 hours
         if (eventDate > now && eventDate <= twoDaysFromNow) {
            notifications.push({
-            id: `reminder-${ticket.event.id}`,
+            id: `reminder-${ticket.events.id}`,
             type: 'event',
             user: {
               name: 'Eventz Reminder',
-              avatar: ticket.event.image_url || '/logo.png' // Fallback to logo or event image
+              avatar: ticket.events.image_url || '/logo.png' // Fallback to logo or event image
             },
-            content: `Event "${ticket.event.title}" is coming up on ${new Date(ticket.event.date).toLocaleDateString()}`,
+            content: `Event "${ticket.events.title}" is coming up on ${new Date(ticket.events.date).toLocaleDateString()}`,
             time: new Date().toISOString(), // Current time as notification time
             read: false, // Always show as new for urgency (or logic to check if seen)
             created_at: new Date().toISOString()
