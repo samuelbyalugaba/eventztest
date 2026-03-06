@@ -4,7 +4,7 @@ import { LiveFeed } from './components/LiveFeed';
 import { Feed } from './components/Feed';
 import { CreateEvent } from './components/CreateEvent';
 import { BecomeOrganizer } from './components/BecomeOrganizer';
-import { OrganizerProfileSetup } from './components/OrganizerProfileSetup';
+import { OrganizerProfileSetup } from './components/OrganizerProfileSetupSimple';
 import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
 import { Calendar, Radio, User, Rss } from 'lucide-react';
@@ -617,6 +617,14 @@ export default function App() {
     setVisitedTabs(prev => new Set(prev).add('create'));
   };
 
+  const handleStartOrganizerSetup = () => {
+    setEditingEvent(null);
+    setIsOrganizer(true);
+    setOrganizerView('dashboard');
+    setActiveTab('create');
+    setVisitedTabs(prev => new Set(prev).add('create'));
+  };
+
   const handleEditEvent = (event: AppEvent) => {
     setEditingEvent(event);
     setOrganizerView('createEvent');
@@ -723,6 +731,7 @@ export default function App() {
                 onLogout={handleLogout} 
                 onCreateEvent={handleCreateEvent}
                 onEditEvent={handleEditEvent}
+                onStartOrganizerSetup={handleStartOrganizerSetup}
               />
             )}
           </div>

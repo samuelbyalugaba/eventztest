@@ -29,9 +29,10 @@ interface ProfileProps {
   onLogout: () => Promise<void>;
   onCreateEvent?: () => void;
   onEditEvent?: (event: any) => void;
+  onStartOrganizerSetup?: () => void;
 }
 
-export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) {
+export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup }: ProfileProps) {
   const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events'>('media');
   const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
@@ -143,6 +144,24 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
     setPostAsOrganizer(!!isOrganizerView);
   }, [isOrganizerView]);
 
+  useEffect(() => {
+    const handleProfileUpdated = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const profile = await getProfile(user.id);
+        if (profile) {
+          setUserProfile(profile);
+        }
+      } catch (e) {
+        console.error('Profile refresh failed', e);
+      }
+    };
+    window.addEventListener('profileUpdated', handleProfileUpdated as EventListener);
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdated as EventListener);
+    };
+  }, []);
   // Load all data
   useEffect(() => {
     // Check local storage for preferred view mode
@@ -690,7 +709,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
       {/* Bio Section */}
       <div className="mb-6">
-        {isOrganizerView ? (
+        {isLoading ? (
+          <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+        ) : isOrganizerView ? (
           <p className="text-gray-600 leading-relaxed text-[15px]">
             {organizerProfile?.bio || <span className="text-gray-400 italic">No organizer bio yet</span>}
           </p>
@@ -719,39 +740,58 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
       {/* Stats Row */}
       <div className="flex items-center justify-between px-4 mb-8">
-         <div 
-            className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
-            onClick={handleShowEventsList}
-         >
-            <div className="text-xl font-bold text-gray-900 mb-1">
-                {organizerStats ? organizerStats.totalEvents : attendedEvents.length}
+        {isLoading ? (
+          <div className="flex w-full justify-between">
+            <div className="flex-1 px-2">
+              <div className="h-6 w-12 bg-gray-200 rounded mx-auto mb-1 animate-pulse" />
+              <div className="h-3 w-16 bg-gray-100 rounded mx-auto animate-pulse" />
             </div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
-                {isOrganizerView ? 'Hosted' : 'Attended'}
+            <div className="flex-1 px-2">
+              <div className="h-6 w-12 bg-gray-200 rounded mx-auto mb-1 animate-pulse" />
+              <div className="h-3 w-16 bg-gray-100 rounded mx-auto animate-pulse" />
             </div>
-         </div>
-         <div 
-            className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
-            onClick={handleShowFollowers}
-         >
-            <div className="text-xl font-bold text-gray-900 mb-1">
-                {organizerStats ? organizerStats.followers : followStats.followers}
+            <div className="flex-1 px-2">
+              <div className="h-6 w-12 bg-gray-200 rounded mx-auto mb-1 animate-pulse" />
+              <div className="h-3 w-16 bg-gray-100 rounded mx-auto animate-pulse" />
             </div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
-                Followers
+          </div>
+        ) : (
+          <>
+            <div 
+              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+              onClick={handleShowEventsList}
+            >
+              <div className="text-xl font-bold text-gray-900 mb-1">
+                  {organizerStats ? organizerStats.totalEvents : attendedEvents.length}
+              </div>
+              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                  {isOrganizerView ? 'Hosted' : 'Attended'}
+              </div>
             </div>
-         </div>
-         <div 
-            className="text-center flex-1 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
-            onClick={handleShowFollowing}
-         >
-            <div className="text-xl font-bold text-gray-900 mb-1">
-                {followStats.following}
+            <div 
+              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+              onClick={handleShowFollowers}
+            >
+              <div className="text-xl font-bold text-gray-900 mb-1">
+                  {organizerStats ? organizerStats.followers : followStats.followers}
+              </div>
+              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                  Followers
+              </div>
             </div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
-                Following
+            <div 
+              className="text-center flex-1 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+              onClick={handleShowFollowing}
+            >
+              <div className="text-xl font-bold text-gray-900 mb-1">
+                  {followStats.following}
+              </div>
+              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                  Following
+              </div>
             </div>
-         </div>
+          </>
+        )}
       </div>
 
       {/* Action Buttons (Organizer) or Switch Banner (User) */}
@@ -783,7 +823,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                         setActiveTab('media');
                         localStorage.setItem('profileViewMode', 'organizer');
                     } else {
-                        onCreateEvent?.();
+                        onStartOrganizerSetup?.();
                     }
                 } else {
                     setViewMode('user');
@@ -860,178 +900,169 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
       {/* Content Area */}
       <div>
-        {isLoading && (
-          <div className="py-3 text-gray-500 text-sm">Loading...</div>
-        )}
-        {/* Created Events - removed */}
-
-        {/* Attended Events - removed */}
-
-        {/* Media Grid (Photos & Videos) */}
-        {activeTab === 'media' && (
+        {isLoading ? (
           <div className="space-y-4">
-            {isOrganizerView && (
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-gray-900 flex items-center gap-2">
-                  <LayoutGrid className="w-4 h-4" />
-                  Event Posts
-                </h3>
-                <span className="text-gray-500 text-sm">{filteredUserPosts.length}</span>
+            <div className="grid grid-cols-3 gap-1">
+              {[...Array(9)].map((_, i) => (
+                <div key={i} className="aspect-square bg-gray-200 rounded animate-pulse" />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'media' && (
+              <div className="space-y-4">
+                {isOrganizerView && (
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-gray-900 flex items-center gap-2">
+                      <LayoutGrid className="w-4 h-4" />
+                      Event Posts
+                    </h3>
+                    <span className="text-gray-500 text-sm">{filteredUserPosts.length}</span>
+                  </div>
+                )}
+                {filteredUserPosts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                      <ImageIcon className="w-8 h-8 text-gray-300" />
+                    </div>
+                    <p className="text-gray-900 font-medium mb-1">No posts yet</p>
+                    <p className="text-gray-500 text-sm max-w-xs mx-auto">Share event photos and videos</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
+                    {filteredUserPosts.map((post) => {
+                      const isVideo = !!post.video_url;
+                      const firstImage = post.image_urls?.[0];
+                      const isCarousel = (post.image_urls?.length || 0) > 1;
+                      return (
+                        <div
+                          key={post.id}
+                          onClick={() => handleOpenPost(post)}
+                          className="relative aspect-square cursor-pointer group bg-gray-100 overflow-hidden"
+                        >
+                          {isVideo ? (
+                            <video
+                              src={post.video_url!}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                              loop
+                              onMouseOver={(e) => e.currentTarget.play()}
+                              onMouseOut={(e) => {
+                                e.currentTarget.pause();
+                                e.currentTarget.currentTime = 0;
+                              }}
+                            />
+                          ) : (
+                            <ImageWithFallback
+                              src={firstImage}
+                              alt={`Post ${post.id}`}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                          {!isVideo && isCarousel && (
+                            <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
+                              <Layers className="w-3 h-3" />
+                            </div>
+                          )}
+                          {isVideo && (
+                            <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
+                              <Play className="w-3 h-3" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button 
+                              onClick={(e) => handleDeletePost(post.id, e)}
+                              className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
+                              title="Delete post"
+                            >
+                              <Trash className="w-3.5 h-3.5" />
+                            </button>
+                            <div className="flex items-center gap-1 text-white text-sm">
+                              <Heart className="w-4 h-4 fill-white" />
+                              <span>{post.likes_count || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
-            {filteredUserPosts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                  <ImageIcon className="w-8 h-8 text-gray-300" />
+            {activeTab === 'saved' && (
+              <>
+                {savedEvents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 px-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-4 relative">
+                      <Bookmark className="w-10 h-10 text-purple-600" />
+                      <Sparkles className="w-5 h-5 text-pink-500 absolute -top-1 -right-1 animate-pulse" />
+                    </div>
+                    <h3 className="text-gray-900 mb-2">No Saved Events Yet</h3>
+                    <p className="text-gray-600 text-center text-sm max-w-xs leading-relaxed">
+                      Discover amazing events and tap the bookmark icon to save them here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-gray-900">Saved Events</h3>
+                      <span className="text-gray-500 text-sm">{savedEvents.length} saved</span>
+                    </div>
+                    {savedEvents.map((event) => (
+                      <EventCard
+                        key={event.id}
+                        event={event}
+                        onClick={(e) => setSelectedEvent(e)}
+                        className="border border-gray-100 hover:shadow-md transition-all"
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            {activeTab === 'tickets' && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-gray-900">Tickets</h3>
+                  <span className="text-gray-500 text-sm">{uniqueTicketGroups.length} events</span>
                 </div>
-                <p className="text-gray-900 font-medium mb-1">No posts yet</p>
-                <p className="text-gray-500 text-sm max-w-xs mx-auto">Share event photos and videos</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
-                {filteredUserPosts.map((post) => {
-                  const isVideo = !!post.video_url;
-                  const firstImage = post.image_urls?.[0];
-                  const isCarousel = (post.image_urls?.length || 0) > 1;
-
-                  return (
-                    <div
-                      key={post.id}
-                      onClick={() => handleOpenPost(post)}
-                      className="relative aspect-square cursor-pointer group bg-gray-100 overflow-hidden"
-                    >
-                      {isVideo ? (
-                        <video
-                          src={post.video_url!}
-                          className="w-full h-full object-cover"
-                          muted
-                          playsInline
-                          loop
-                          onMouseOver={(e) => e.currentTarget.play()}
-                          onMouseOut={(e) => {
-                            e.currentTarget.pause();
-                            e.currentTarget.currentTime = 0;
-                          }}
-                        />
-                      ) : (
+                <div className="grid grid-cols-3 gap-1">
+                  {uniqueTicketGroups.map((tickets) => {
+                    const ticket = tickets[0];
+                    return (
+                      <div
+                        key={ticket.event_id}
+                        onClick={() => {
+                          setSelectedEventTickets(tickets);
+                          setShowTicketListModal(true);
+                        }}
+                        className="relative aspect-square cursor-pointer group"
+                      >
                         <ImageWithFallback
-                          src={firstImage}
-                          alt={`Post ${post.id}`}
+                          src={ticket.event?.image_url}
+                          alt={`Event ${ticket.event?.title}`}
                           className="w-full h-full object-cover"
                         />
-                      )}
-
-                      {!isVideo && isCarousel && (
-                        <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
-                          <Layers className="w-3 h-3" />
+                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
+                          {tickets.length} Ticket{tickets.length > 1 ? 's' : ''}
                         </div>
-                      )}
-
-                      {isVideo && (
-                        <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
-                          <Play className="w-3 h-3" />
+                        <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
+                          <p className="text-white text-[10px] line-clamp-1 font-medium">{ticket.event?.title}</p>
                         </div>
-                      )}
-
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button 
-                          onClick={(e) => handleDeletePost(post.id, e)}
-                          className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
-                          title="Delete post"
-                        >
-                          <Trash className="w-3.5 h-3.5" />
-                        </button>
-                        <div className="flex items-center gap-1 text-white text-sm">
-                          <Heart className="w-4 h-4 fill-white" />
-                          <span>{post.likes_count || 0}</span>
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
+                            <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Saved Events - Compact Cards */}
-        {activeTab === 'saved' && (
-          <>
-            {savedEvents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-4 relative">
-                  <Bookmark className="w-10 h-10 text-purple-600" />
-                  <Sparkles className="w-5 h-5 text-pink-500 absolute -top-1 -right-1 animate-pulse" />
+                    );
+                  })}
                 </div>
-                <h3 className="text-gray-900 mb-2">No Saved Events Yet</h3>
-                <p className="text-gray-600 text-center text-sm max-w-xs leading-relaxed">
-                  Discover amazing events and tap the bookmark icon to save them here
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-gray-900">Saved Events</h3>
-                  <span className="text-gray-500 text-sm">{savedEvents.length} saved</span>
-                </div>
-                {savedEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onClick={(e) => setSelectedEvent(e)}
-                    className="border border-gray-100 hover:shadow-md transition-all"
-                  />
-                ))}
               </div>
             )}
           </>
-        )}
-
-        {/* Tickets Grid - Instagram Style */}
-        {activeTab === 'tickets' && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-900">Tickets</h3>
-              <span className="text-gray-500 text-sm">{uniqueTicketGroups.length} events</span>
-            </div>
-            <div className="grid grid-cols-3 gap-1">
-              {uniqueTicketGroups.map((tickets) => {
-                const ticket = tickets[0];
-                return (
-                  <div
-                    key={ticket.event_id}
-                    onClick={() => {
-                      setSelectedEventTickets(tickets);
-                      setShowTicketListModal(true);
-                    }}
-                    className="relative aspect-square cursor-pointer group"
-                  >
-                    <ImageWithFallback
-                      src={ticket.event?.image_url}
-                      alt={`Event ${ticket.event?.title}`}
-                      className="w-full h-full object-cover"
-                    />
-                    {/* Count Badge */}
-                    <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
-                      {tickets.length} Ticket{tickets.length > 1 ? 's' : ''}
-                    </div>
-                    
-                    {/* Event Name (Bottom) */}
-                    <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
-                      <p className="text-white text-[10px] line-clamp-1 font-medium">{ticket.event?.title}</p>
-                    </div>
-
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
-                        <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         )}
       </div>
 

@@ -63,6 +63,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
       setProfileData(prev => ({ ...prev, avatarUrl: publicUrl }));
       await updateProfile(user.id, { avatar_url: publicUrl });
       toast.success('Profile photo updated successfully');
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['avatar_url'] } }));
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
       toast.error(error.message || 'Error uploading avatar');
@@ -215,6 +216,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
       }
       toast.success('Profile updated successfully! ✅');
       setCurrentView('main');
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','contact_email','phone','location','bio','birthdate','avatar_url'] } }));
     } catch (error) {
       console.error('Error saving profile:', error);
       const message = (error as any)?.message || (error as any)?.error_description || (error as any)?.details || 'Failed to save profile';
@@ -246,6 +248,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
       }
       toast.success('Privacy settings updated! 🔒');
       setCurrentView('main');
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['privacy_settings'] } }));
     } catch (error) {
       console.error('Error saving privacy settings:', error);
       toast.error('Failed to save privacy settings');
