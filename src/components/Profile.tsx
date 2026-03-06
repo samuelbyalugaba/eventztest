@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye, User, Briefcase } from 'lucide-react';
+import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye, User, Briefcase, LayoutGrid, Radio, Repeat, Menu, Wallet, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { MediaViewer } from './MediaViewer';
@@ -16,6 +16,8 @@ import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+
+import { EventListModal } from './EventListModal';
 
 interface ProfileProps {
   onLogout: () => Promise<void>;
@@ -37,6 +39,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
+  const [mediaTab, setMediaTab] = useState<'photos' | 'videos'>('photos');
   const [showTicketViewer, setShowTicketViewer] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showAllEvents, setShowAllEvents] = useState(false);
@@ -58,6 +61,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
+  
+  // Event List Modal State
+  const [showEventListModal, setShowEventListModal] = useState(false);
+
+  const handleShowEventsList = () => {
+    setShowEventListModal(true);
+  };
   
   // Follower/Following Modal State
   const [showFollowersModal, setShowFollowersModal] = useState(false);
@@ -120,6 +130,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
   // Load all data
   useEffect(() => {
+    // Check local storage for preferred view mode
+    const savedViewMode = localStorage.getItem('profileViewMode') as 'user' | 'organizer' | null;
+    if (savedViewMode) {
+       setViewMode(savedViewMode);
+       setActiveTab(savedViewMode === 'organizer' ? 'my_events' : 'events');
+    }
 
     const fetchSavedEvents = async (userId: string) => {
       try {
@@ -150,8 +166,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                 organizerName: orgProfile.organizer_name || profile?.full_name || 'Organizer',
                 ...orgProfile
               });
-              setViewMode('organizer');
-              setActiveTab('my_events');
+              
+              // Only auto-switch if no preference saved or preference is organizer
+              if (!localStorage.getItem('profileViewMode') || localStorage.getItem('profileViewMode') === 'organizer') {
+                 setViewMode('organizer');
+                 setActiveTab('my_events');
+              }
               
               // Load stats only if organizer
               const stats = await getOrganizerStats(user.id);
@@ -383,7 +403,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
     }
     return !p.posted_as_organizer;
   });
-  const photos = filteredUserPosts.flatMap(p => 
+
+  // For the Viewer: Flatten all photos
+  const allPhotosForViewer = filteredUserPosts.flatMap(p => 
     (p.image_urls || []).map((url, idx) => ({
       id: p.id * 1000 + idx,
       url,
@@ -394,6 +416,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
       isLiked: p.is_liked
     }))
   );
+
+  // For the Grid: One item per post
+  const photoPosts = filteredUserPosts.filter(p => p.image_urls && p.image_urls.length > 0);
 
   const videoClips = filteredUserPosts
     .filter(p => p.video_url)
@@ -423,267 +448,270 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
   const uniqueTicketGroups = Object.values(groupedTickets);
 
   return (
-    <div className="bg-white min-h-screen pb-20">
-      {/* Immersive Header Design */}
-      <div className="relative">
-        {/* Large Cover Photo - Half Screen */}
-        <div className="relative w-full h-[45vh] overflow-hidden">
-          {profileImage ? (
-            <ImageWithFallback
-              src={profileImage}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-             <UserAvatar 
-              name={displayName} 
-              className="w-full h-full rounded-none text-6xl" 
-            />
-          )}
-          {/* Settings Button - Top Right */}
-          <button 
-            className="absolute top-6 right-6 p-2.5 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40 transition-all z-10" 
-            onClick={() => {
-              setSettingsInitialView('main');
-              setShowSettingsModal(true);
-            }}
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+    <div className="bg-white min-h-screen pb-20 pt-6 px-6">
+      {/* Header Section */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+             <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-purple-500 to-pink-500">
+               <div className="w-full h-full rounded-full border-4 border-white overflow-hidden bg-white">
+                  {profileImage ? (
+                    <ImageWithFallback
+                      src={profileImage}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <UserAvatar 
+                      name={displayName} 
+                      className="w-full h-full text-3xl" 
+                    />
+                  )}
+               </div>
+             </div>
+             {/* Status Indicator */}
+             <div className="absolute bottom-1 right-1 w-6 h-6 bg-green-500 border-4 border-white rounded-full"></div>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+             <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+               {displayName || 'Loading...'}
+             </h1>
+             <p className="text-gray-500 font-medium text-sm flex items-center gap-1">
+               {isOrganizerView ? (organizerProfile?.organizerType || 'Organizer') : `@${userProfile?.username || 'user'}`}
+               {isOrganizerView && <Sparkles className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
+             </p>
+          </div>
         </div>
 
-        {/* Profile Content Sheet - Slides up */}
-        <div className="relative -mt-16 bg-white rounded-t-[2.5rem] px-6 pt-16 pb-6 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-          
-          {/* Header Info */}
-          <div className="mb-4">
-            <div className="mb-3">
-              <h1 className="text-gray-900 text-2xl font-bold mb-1">
-                {displayName || 'Loading...'}
-              </h1>
-              <p className="text-gray-500 text-sm font-medium">
-                {isOrganizerView ? (organizerProfile?.organizerType || 'Organizer') : `@${userProfile?.username || 'user'}`}
-              </p>
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div className="mb-6">
-            <p className="text-gray-700 leading-relaxed text-[15px]">
-              {isOrganizerView ? (
-                organizerProfile?.bio || <span className="text-gray-400 italic">No organizer bio yet</span>
-              ) : (
-                userProfile?.bio || <span className="text-gray-400 italic">No bio yet</span>
-              )}
-            </p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 mb-6">
-            {organizerProfile ? (
-              <>
-                <button
-                  onClick={() => {
-                    if (viewMode === 'user') {
-                      setViewMode('organizer');
-                      setActiveTab('my_events');
-                    } else {
-                      setViewMode('user');
-                      setActiveTab('events');
-                    }
-                  }}
-                  className="p-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-                  title={viewMode === 'user' ? "Switch to Organizer View" : "Switch to User View"}
-                >
-                  {viewMode === 'user' ? (
-                    <Briefcase className="w-5 h-5" />
-                  ) : (
-                    <User className="w-5 h-5" />
-                  )}
-                </button>
-                {viewMode === 'organizer' && (
-                  <button
-                    onClick={() => setShowProfessionalDashboard(true)}
-                    className="px-4 py-2 bg-[#8A2BE2] text-white rounded-xl text-sm font-semibold hover:bg-[#7825d4] transition-colors flex items-center gap-2 shadow-sm"
-                  >
-                    <BarChart3 className="w-3.5 h-3.5" />
-                    Dashboard
-                  </button>
-                )}
-              </>
+        {/* Header Actions */}
+        <div className="flex gap-2 items-center">
+            {isOrganizerView ? (
+               <DropdownMenu>
+                 <DropdownMenuTrigger asChild>
+                   <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200">
+                     <Menu className="w-6 h-6" />
+                   </button>
+                 </DropdownMenuTrigger>
+                 <DropdownMenuContent align="end" className="w-56">
+                   <DropdownMenuItem 
+                     onClick={() => {
+                        setViewMode('user');
+                        setActiveTab('media');
+                        localStorage.setItem('profileViewMode', 'user');
+                        toast.success("Switched to personal profile");
+                     }}
+                   >
+                     <User className="w-4 h-4 mr-2" />
+                     Switch to Personal
+                   </DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => toast.info("Going live feature coming soon!")}>
+                     <Radio className="w-4 h-4 mr-2" />
+                     Go Live
+                   </DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => toast.info("Wallet feature coming soon!")}>
+                     <Wallet className="w-4 h-4 mr-2" />
+                     Wallet
+                   </DropdownMenuItem>
+                   <DropdownMenuItem 
+                     onClick={() => {
+                       setSettingsInitialView('main');
+                       setShowSettingsModal(true);
+                     }}
+                   >
+                     <Settings className="w-4 h-4 mr-2" />
+                     Settings
+                   </DropdownMenuItem>
+                 </DropdownMenuContent>
+               </DropdownMenu>
             ) : (
-              <button
-                onClick={onCreateEvent}
-                className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-xl text-sm font-semibold hover:from-purple-200 hover:to-pink-200 transition-colors flex items-center gap-2 shadow-sm"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Organizer Mode
-              </button>
+                <button 
+                  onClick={() => {
+                    setSettingsInitialView('main');
+                    setShowSettingsModal(true);
+                  }}
+                  className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <Settings className="w-6 h-6" />
+                </button>
             )}
-            <button 
-              onClick={() => {
-                setSettingsInitialView('profile');
-                setShowSettingsModal(true);
-              }}
-              className="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors flex items-center gap-2"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              Edit
-            </button>
-          </div>
-
-          {/* Stats Cards - Modern Grid */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
-              <span className="block text-gray-900 font-bold text-lg mb-0.5">
-                {organizerStats ? organizerStats.totalEvents : attendedEvents.length}
-              </span>
-              <span className="text-gray-500 text-xs font-medium">
-                {organizerStats ? 'Hosted' : 'Attended'}
-              </span>
-            </div>
-            <div 
-              className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100 cursor-pointer hover:border-purple-200 hover:bg-purple-50 transition-all"
-              onClick={handleShowFollowers}
-            >
-              <span className="block text-gray-900 font-bold text-lg mb-0.5">
-                {organizerStats ? organizerStats.followers : followStats.followers}
-              </span>
-              <span className="text-gray-500 text-xs font-medium">Followers</span>
-            </div>
-            <div 
-              className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100 cursor-pointer hover:border-purple-200 hover:bg-purple-50 transition-all"
-              onClick={handleShowFollowing}
-            >
-              <span className="block text-gray-900 font-bold text-lg mb-0.5">{followStats.following}</span>
-              <span className="text-gray-500 text-xs font-medium">Following</span>
-            </div>
-          </div>
-
-          <UserListModal 
-            isOpen={showFollowersModal}
-            onClose={() => setShowFollowersModal(false)}
-            title="Followers"
-            users={followList}
-            loading={isLoadingFollowList}
-            onUserSelect={(user) => {
-              setSelectedUserForModal({
-                ...user,
-                type: user.is_organizer ? 'Organizer' : 'Attendee',
-                name: user.full_name || user.username || 'User',
-                avatar: user.avatar_url || '',
-                verified: false
-              });
-              setShowUserProfileModal(true);
-            }}
-          />
-
-          <UserListModal 
-            isOpen={showFollowingModal}
-            onClose={() => setShowFollowingModal(false)}
-            title="Following"
-            users={followList}
-            loading={isLoadingFollowList}
-            onUserSelect={(user) => {
-              setSelectedUserForModal({
-                ...user,
-                type: user.is_organizer ? 'Organizer' : 'Attendee',
-                name: user.full_name || user.username || 'User',
-                avatar: user.avatar_url || '',
-                verified: false
-              });
-              setShowUserProfileModal(true);
-            }}
-          />
-
-          {showUserProfileModal && selectedUserForModal && (
-            <UserProfileModal
-              user={selectedUserForModal}
-              onClose={() => {
-                setShowUserProfileModal(false);
-                setSelectedUserForModal(null);
-              }}
-              onFollow={() => {
-                 if (showFollowersModal) handleShowFollowers();
-                 if (showFollowingModal) handleShowFollowing();
-              }}
-            />
-          )}
-
-          {/* Modern Tab Navigation */}
-          <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
-            {isOrganizerView && (
-               <button
-                onClick={() => setActiveTab('my_events')}
-                className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                  activeTab === 'my_events'
-                    ? 'bg-white text-purple-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Calendar className="w-6 h-6" />
-                <span className="text-[11px] whitespace-nowrap">Created</span>
-              </button>
-            )}
-            <button
-              onClick={() => setActiveTab('tickets')}
-              className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                activeTab === 'tickets'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <TicketIcon className="w-6 h-6" />
-              <span className="text-[11px] whitespace-nowrap">Tickets</span>
-            </button>
-            {!isOrganizerView && (
-              <button
-                onClick={() => setActiveTab('events')}
-                className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                  activeTab === 'events'
-                    ? 'bg-white text-purple-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Clock className="w-6 h-6" />
-                <span className="text-[11px] whitespace-nowrap">History</span>
-              </button>
-            )}
-            <button
-              onClick={() => setActiveTab('media')}
-              className={`flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                activeTab === 'media'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <ImageIcon className="w-6 h-6" />
-              <span className="text-[11px] whitespace-nowrap">Media</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('saved')}
-              className={`relative flex-1 min-w-[70px] flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-lg transition-all ${
-                activeTab === 'saved'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <div className="relative">
-                <Bookmark className={`w-6 h-6 ${activeTab === 'saved' ? 'fill-purple-600' : ''}`} />
-                {savedEvents.length > 0 && (
-                  <span className="absolute -top-1.5 -right-2.5 w-4.5 h-4.5 bg-purple-600 text-white rounded-full flex items-center justify-center text-[10px] shadow-md font-medium">
-                    {savedEvents.length}
-                  </span>
-                )}
-              </div>
-              <span className="text-[11px] whitespace-nowrap">Saved</span>
-            </button>
-          </div>
         </div>
       </div>
 
+      {/* Bio Section */}
+      <div className="mb-6">
+        <p className="text-gray-600 leading-relaxed text-[15px]">
+            {isOrganizerView ? (
+            organizerProfile?.bio || <span className="text-gray-400 italic">No organizer bio yet</span>
+            ) : (
+            userProfile?.bio || "Digital designer & photography enthusiast. Always chasing the next immersive art experience. Currently exploring the intersection of tech and culture in NYC. ✨"
+            )}
+        </p>
+      </div>
+
+      {/* Action Buttons (Organizer) or Switch Banner (User) */}
+      {isOrganizerView ? (
+        <div className="flex gap-3 mb-8">
+           <button 
+             onClick={onCreateEvent}
+             className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+           >
+             <Plus className="w-4 h-4" />
+             Create Events
+           </button>
+           <button 
+             onClick={() => setShowProfessionalDashboard(true)}
+             className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+           >
+             <BarChart3 className="w-4 h-4" />
+             See Dashboard
+           </button>
+        </div>
+      ) : (
+        /* Switch Account Banner */
+        <div 
+            onClick={() => {
+                const newMode = viewMode === 'user' ? 'organizer' : 'user';
+                
+                if (newMode === 'organizer') {
+                    if (organizerProfile) {
+                        setViewMode('organizer');
+                        setActiveTab('media'); // Default to media/posts for organizer
+                        localStorage.setItem('profileViewMode', 'organizer');
+                    } else {
+                        onCreateEvent?.(); // Trigger onboarding/create
+                    }
+                } else {
+                    setViewMode('user');
+                    setActiveTab('events');
+                    localStorage.setItem('profileViewMode', 'user');
+                }
+            }}
+            className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
+        >
+            <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${viewMode === 'user' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                    {viewMode === 'user' ? <Sparkles className="w-6 h-6" /> : <User className="w-6 h-6" />}
+                </div>
+                <div>
+                    <h3 className="text-gray-900 font-bold text-sm">
+                        {viewMode === 'user' ? 'Switch to creator account' : 'Switch to personal account'}
+                    </h3>
+                    <p className="text-gray-500 text-xs">
+                        {viewMode === 'user' ? 'Start creating events and go live' : 'View your tickets and saved events'}
+                    </p>
+                </div>
+            </div>
+            <div className="text-gray-400">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+            </div>
+        </div>
+      )}
+
+      {/* Stats Row */}
+      <div className="flex items-center justify-between px-4 mb-8">
+         <div 
+            className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+            onClick={handleShowEventsList}
+         >
+            <div className="text-xl font-bold text-gray-900 mb-1">
+                {organizerStats ? organizerStats.totalEvents : attendedEvents.length}
+            </div>
+            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                {isOrganizerView ? 'Hosted' : 'Attended'}
+            </div>
+         </div>
+         <div 
+            className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+            onClick={handleShowFollowers}
+         >
+            <div className="text-xl font-bold text-gray-900 mb-1">
+                {organizerStats ? organizerStats.followers : followStats.followers}
+            </div>
+            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                Followers
+            </div>
+         </div>
+         <div 
+            className="text-center flex-1 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+            onClick={handleShowFollowing}
+         >
+            <div className="text-xl font-bold text-gray-900 mb-1">
+                {followStats.following}
+            </div>
+            <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                Following
+            </div>
+         </div>
+      </div>
+
+      {/* Tabs - Pill Shaped */}
+      <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6">
+        {isOrganizerView ? (
+          <>
+            <button
+              onClick={() => setActiveTab('my_events')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+                activeTab === 'my_events'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Events
+            </button>
+            <button
+              onClick={() => setActiveTab('media')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+                activeTab === 'media'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Posts
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => setActiveTab('media')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+                activeTab === 'media'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Media
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('tickets')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+                activeTab === 'tickets'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Tickets
+            </button>
+    
+            <button
+              onClick={() => setActiveTab('saved')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+                activeTab === 'saved'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Saved
+            </button>
+          </>
+        )}
+      </div>
+
       {/* Content Area */}
-      <div className="px-6">
+      <div>
         {isLoading && (
           <div className="py-3 text-gray-500 text-sm">Loading...</div>
         )}
@@ -845,15 +873,49 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
 
         {/* Media Grid (Photos & Videos) */}
         {activeTab === 'media' && (
-          <div className="space-y-8">
-            {/* Photos Section */}
-            {photos.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-gray-900">Photos</h3>
-                  <span className="text-gray-500 text-sm">{photos.length} photos</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
+          <div className="space-y-6">
+            {/* Media Tabs */}
+            <div className="flex items-center justify-center gap-8 border-b border-gray-100 mb-6">
+              <button
+                onClick={() => setMediaTab('photos')}
+                className={`pb-3 text-sm font-semibold transition-all relative flex items-center gap-2 ${
+                  mediaTab === 'photos'
+                    ? 'text-purple-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <ImageIcon className="w-4 h-4" />
+                Photos
+                <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-600 font-medium">
+                  {photos.length}
+                </span>
+                {mediaTab === 'photos' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 rounded-t-full" />
+                )}
+              </button>
+              <button
+                onClick={() => setMediaTab('videos')}
+                className={`pb-3 text-sm font-semibold transition-all relative flex items-center gap-2 ${
+                  mediaTab === 'videos'
+                    ? 'text-purple-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Video className="w-4 h-4" />
+                Videos
+                <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-600 font-medium">
+                  {videoClips.length}
+                </span>
+                {mediaTab === 'videos' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 rounded-t-full" />
+                )}
+              </button>
+            </div>
+
+            {/* Photos Content */}
+            {mediaTab === 'photos' && (
+              photos.length > 0 ? (
+                <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
                   {photos.map((photo, index) => (
                     <div
                       key={photo.id}
@@ -886,17 +948,21 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                     </div>
                   ))}
                 </div>
-              </div>
+              ) : (
+                 <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-500">
+                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                     <ImageIcon className="w-8 h-8 text-gray-300" />
+                   </div>
+                   <p className="text-gray-900 font-medium mb-1">No photos yet</p>
+                   <p className="text-gray-500 text-sm max-w-xs mx-auto">Share your favorite moments from events you've attended</p>
+                 </div>
+              )
             )}
 
-            {/* Videos Section */}
-            {videoClips.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-gray-900">Videos</h3>
-                  <span className="text-gray-500 text-sm">{videoClips.length} videos</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
+            {/* Videos Content */}
+            {mediaTab === 'videos' && (
+              videoClips.length > 0 ? (
+                <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
                   {videoClips.map((video, index) => (
                     <div
                       key={video.id}
@@ -942,15 +1008,15 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {photos.length === 0 && videoClips.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                <ImageIcon className="w-12 h-12 text-gray-300 mb-3" />
-                <p className="text-gray-900 font-medium mb-1">No media shared yet</p>
-                <p className="text-gray-500 text-sm">Share photos and videos from events you attend</p>
-              </div>
+              ) : (
+                 <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-500">
+                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                     <Video className="w-8 h-8 text-gray-300" />
+                   </div>
+                   <p className="text-gray-900 font-medium mb-1">No videos yet</p>
+                   <p className="text-gray-500 text-sm max-w-xs mx-auto">Capture and share video highlights from events</p>
+                 </div>
+              )
             )}
           </div>
         )}
@@ -1390,10 +1456,32 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
                     <p className="text-gray-500 text-xs">{postCaption.length}/500 characters</p>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 pt-2">
-                    <button
-                      onClick={() => {
+                  <div className="flex items-center gap-3">
+            {organizerProfile && (
+              <button
+                onClick={() => setPostAsOrganizer(!postAsOrganizer)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  postAsOrganizer 
+                    ? 'bg-purple-100 text-purple-700 border border-purple-200' 
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {postAsOrganizer ? (
+                  <>
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>{organizerProfile.organizerName || 'Organizer'}</span>
+                  </>
+                ) : (
+                  <>
+                    <User className="w-3.5 h-3.5" />
+                    <span>Myself</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={() => {
                         if (!isUploading) {
                           setPostType(null);
                           setSelectedFiles([]);
@@ -1431,6 +1519,76 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
         </div>
       )}
 
+      {/* Event List Modal */}
+      {showEventListModal && (
+        <EventListModal
+          title={isOrganizerView ? "Hosted Events" : "Attended Events"}
+          events={isOrganizerView ? publishedEvents : attendedEvents}
+          onClose={() => setShowEventListModal(false)}
+          onEventClick={(event) => {
+             setSelectedEvent(event);
+             // Don't close the list modal to allow going back? 
+             // Or close it? Usually clicking an item opens details on top.
+             // If EventDetailModal opens on top, we can keep this open or close it.
+             // Let's keep it open so back navigation works if implemented, or just close it.
+             // Standard behavior: Close list, open detail.
+             // But if detail is a modal, it stacks.
+             // Let's stack it.
+          }}
+        />
+      )}
+
+      {/* Modals for Followers/Following/User Profile */}
+      <UserListModal 
+        isOpen={showFollowersModal}
+        onClose={() => setShowFollowersModal(false)}
+        title="Followers"
+        users={followList}
+        loading={isLoadingFollowList}
+        onUserSelect={(user) => {
+          setSelectedUserForModal({
+            ...user,
+            type: user.is_organizer ? 'Organizer' : 'Attendee',
+            name: user.full_name || user.username || 'User',
+            avatar: user.avatar_url || '',
+            verified: false
+          });
+          setShowUserProfileModal(true);
+        }}
+      />
+
+      <UserListModal 
+        isOpen={showFollowingModal}
+        onClose={() => setShowFollowingModal(false)}
+        title="Following"
+        users={followList}
+        loading={isLoadingFollowList}
+        onUserSelect={(user) => {
+          setSelectedUserForModal({
+            ...user,
+            type: user.is_organizer ? 'Organizer' : 'Attendee',
+            name: user.full_name || user.username || 'User',
+            avatar: user.avatar_url || '',
+            verified: false
+          });
+          setShowUserProfileModal(true);
+        }}
+      />
+
+      {showUserProfileModal && selectedUserForModal && (
+        <UserProfileModal
+          user={selectedUserForModal}
+          onClose={() => {
+            setShowUserProfileModal(false);
+            setSelectedUserForModal(null);
+          }}
+          onFollow={() => {
+             if (showFollowersModal) handleShowFollowers();
+             if (showFollowingModal) handleShowFollowing();
+          }}
+        />
+      )}
+
       {showProfessionalDashboard && organizerProfile && (
         <ProfessionalDashboardModal
           onClose={() => setShowProfessionalDashboard(false)}
@@ -1458,7 +1616,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent }: ProfileProps) 
       {/* Media Viewer */}
       {showMediaViewer && (
         <MediaViewer
-          media={mediaViewerType === 'photo' ? photos : videoClips}
+          media={mediaViewerType === 'photo' ? allPhotosForViewer : videoClips}
           initialIndex={mediaViewerIndex}
           onClose={() => setShowMediaViewer(false)}
           type={mediaViewerType}

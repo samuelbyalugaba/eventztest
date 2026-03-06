@@ -751,49 +751,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             eventsAttended: !selectedUser.is_organizer ? 156 : undefined,
             avatar: selectedUser.avatar_url || selectedUser.avatar,
             coverImage: selectedUser.cover_url || (selectedUser.full_name === 'Buki Jenard' ? 'https://i.ibb.co/F2wGf9R/B-Cover.jpg' : selectedUser.name === 'Luchy Ranks' ? 'https://i.ibb.co/k2Jg34Nv/L-cover.jpg' : 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200'),
-            bio: selectedUser.bio || (selectedUser.is_organizer 
-              ? 'Professional event organizer specializing in creating unforgettable experiences. Passionate about bringing people together through music, culture, and celebration.' 
-              : selectedUser.type === 'Performer'
-              ? 'Professional performer and artist bringing energy and entertainment to events across the globe. Book me for your next event!'
-              : 'Event enthusiast and social butterfly. Love discovering new experiences and meeting amazing people!'),
+            bio: selectedUser.bio,
             location: selectedUser.location || 'Unknown',
             verified: selectedUser.verified,
             joinedDate: 'January 2023',
-            email: selectedUser.contact_email || (selectedUser.full_name ? selectedUser.full_name.toLowerCase().replace(' ', '.') + '@eventz.com' : ''),
-            phone: selectedUser.phone || '+255 712 345 678',
-            instagram: selectedUser.social_links?.instagram || (selectedUser.full_name ? selectedUser.full_name.toLowerCase().replace(' ', '') : ''),
-            twitter: selectedUser.social_links?.twitter || (selectedUser.full_name ? selectedUser.full_name.toLowerCase().replace(' ', '_') : ''),
-            highlights: selectedUser.is_organizer ? [
-              {
-                id: 1,
-                image: 'https://images.unsplash.com/photo-1658046413536-6e5933dfd939?w=400&h=300&fit=crop',
-                title: 'Summer Festival 2024',
-                date: 'Dec 15, 2024',
-                attendees: 4500,
-              },
-              {
-                id: 2,
-                image: 'https://images.unsplash.com/photo-1751998689590-f7ae39d9d218?w=400&h=300&fit=crop',
-                title: 'New Year Bash',
-                date: 'Jan 1, 2025',
-                attendees: 5200,
-              },
-            ] : undefined,
-            photos: selectedUser.type === 'Organizer' ? [
-              { id: 1, image: 'https://images.unsplash.com/photo-1658046413536-6e5933dfd939?w=400&h=300&fit=crop', size: 'large' as const },
-              { id: 2, image: 'https://images.unsplash.com/photo-1605286232233-e448650f5914?w=400&h=300&fit=crop', size: 'small' as const },
-              { id: 3, image: 'https://images.unsplash.com/photo-1607313029691-fa108ddf807d?w=400&h=300&fit=crop', size: 'small' as const },
-              { id: 4, image: 'https://images.unsplash.com/photo-1756978303719-57095d8bd250?w=400&h=300&fit=crop', size: 'large' as const },
-              { id: 5, image: 'https://images.unsplash.com/photo-1751998689590-f7ae39d9d218?w=400&h=300&fit=crop', size: 'small' as const },
-              { id: 6, image: 'https://images.unsplash.com/photo-1704830657561-a6a663931172?w=400&h=300&fit=crop', size: 'small' as const },
-            ] : selectedUser.type === 'Attendee' ? [
-              { id: 1, image: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400&h=300&fit=crop', size: 'large' as const },
-              { id: 2, image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop', size: 'small' as const },
-              { id: 3, image: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=300&fit=crop', size: 'small' as const },
-              { id: 4, image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop', size: 'large' as const },
-              { id: 5, image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop', size: 'small' as const },
-              { id: 6, image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=300&fit=crop', size: 'small' as const },
-            ] : undefined,
+            email: selectedUser.contact_email,
+            phone: selectedUser.phone,
+            instagram: selectedUser.social_links?.instagram,
+            twitter: selectedUser.social_links?.twitter,
             upcomingEvents: selectedUser.is_organizer ? organizerEvents.map(event => ({
               id: event.id,
               title: event.title,
@@ -807,8 +772,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             stats: selectedUser.is_organizer ? {
               totalEvents: organizerStats?.totalEvents || 0,
               totalAttendees: organizerStats?.ticketsSold || 0,
-              avgRating: organizerStats?.avgRating || 4.8,
-              reviewsCount: 342,
+              avgRating: organizerStats?.avgRating || 0,
+              reviewsCount: 0,
             } : undefined,
           }}
           onClose={() => setSelectedUser(null)}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, X, Radio, Tv, Play, Eye, CheckCircle2, Star, Bell, Ticket } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, X, Radio, Tv, Play, Eye, CheckCircle2, Star, Bell, Ticket, ChevronLeft } from 'lucide-react';
 import { OrganizerProfile } from './OrganizerProfile';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
@@ -188,7 +188,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-white animate-in slide-in-from-right duration-300 flex flex-col">
       {/* Live Stream Viewer Overlay */}
       {showLiveStream && event.streaming && (
         <div className="fixed inset-0 z-[60]" onClick={(e) => e.stopPropagation()}>
@@ -207,21 +207,21 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
         </div>
       )}
 
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl animate-in slide-in-from-bottom max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="overflow-y-auto flex-1 relative">
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto relative bg-white pb-6">
         {/* Cover Image with Overlays */}
         <div className="relative w-full h-96">
           <ImageWithFallback
             src={event.image_url}
             alt={event.title}
-            className="w-full h-full object-cover rounded-t-3xl"
+            className="w-full h-full object-cover"
           />
           
           {/* Organizer Badge */}
           {(event.organizer || event.organizer_id) && (
             <button
               onClick={() => setShowOrganizerProfile(true)}
-              className="absolute top-4 left-4 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg z-20 hover:bg-white transition-all cursor-pointer group"
+              className="absolute top-4 left-16 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg z-20 hover:bg-white transition-all cursor-pointer group"
             >
               <p className="text-gray-900 text-sm group-hover:text-[#8A2BE2] transition-colors">by {organizerDisplayName}</p>
             </button>
@@ -243,23 +243,31 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             />
           )}
           
-          {/* Close Button */}
+          {/* Back Button */}
           <button
             onClick={onClose}
+            className="absolute top-4 left-4 p-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all shadow-lg z-20"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-900" />
+          </button>
+
+          {/* Share Button (moved to top right for better reachability) */}
+          <button
+            onClick={handleShareEvent}
             className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all shadow-lg z-20"
           >
-            <X className="w-5 h-5 text-gray-900" />
+            <Share2 className="w-5 h-5 text-gray-900" />
           </button>
           
           {/* Minimal gradient overlay - poster fully visible */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent rounded-t-3xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
         </div>
 
         <div className="px-6 py-6">
           {/* Event Title with Action Buttons - Professional Layout */}
           <div className="mb-6 pb-4 border-b border-gray-100">
             <div className="flex items-start justify-between gap-4">
-              <h2 className="text-gray-900 text-lg flex-1">{event.title}</h2>
+              <h2 className="text-gray-900 text-2xl font-bold flex-1">{event.title}</h2>
               <div className="flex gap-2">
                 <button 
                   onClick={handleToggleSave}
@@ -270,14 +278,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   }`}
                   title={isSaved ? 'Unsave event' : 'Save event'}
                 >
-                  <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-purple-600' : ''}`} />
-                </button>
-                <button 
-                  onClick={handleShareEvent}
-                  className="p-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  title="Share event"
-                >
-                  <Share2 className="w-4 h-4" />
+                  <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-purple-600' : ''}`} />
                 </button>
               </div>
             </div>
@@ -524,63 +525,62 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           {/* Spacer */}
           <div className="h-6"></div>
         </div>
-        </div>
-
-        {/* Sticky Action Bar */}
-        <div className="p-4 border-t border-gray-100 bg-white flex gap-3 z-30 rounded-b-3xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-           {event.streaming?.isLive ? (
-             <button 
-               onClick={() => setShowLiveStream(true)}
-               className="flex-1 bg-red-600 text-white py-3 rounded-xl font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2 animate-pulse shadow-lg shadow-red-200"
-             >
-               <Tv className="w-5 h-5" />
-               Watch Live
-             </button>
-           ) : (
-             !isEventPast && (
-               <button 
-                 onClick={() => onPurchaseNormalTicket(event)}
-                 className="flex-1 bg-[#8A2BE2] text-white py-3 rounded-xl font-medium hover:bg-[#7b26c9] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
-               >
-                 <Ticket className="w-5 h-5" />
-                {event.price_range === 'Free' ? 'Register' : 'Get Tickets Now'}
-              </button>
-             )
-           )}
-           
-           {isEventPast && (
-              <div className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-medium text-center cursor-not-allowed">
-                Event Ended
-              </div>
-           )}
-
-           <button 
-              onClick={handleToggleSave}
-              className={`w-14 bg-white border-2 ${isSaved ? 'border-[#FF4081] bg-[#FF4081]/10' : 'border-gray-200'} text-gray-700 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-all`}
-            >
-              <Bell className={`w-6 h-6 ${isSaved ? 'fill-[#FF4081] text-[#FF4081]' : 'text-gray-400'}`} />
-            </button>
-        </div>
-
-        {/* Media Viewer - Rendered outside modal for engaging photo/video viewing */}
-        {showMediaViewer && event.event_highlights && (
-          <MediaViewer
-            media={mediaViewerType === 'photo' ? photosForViewer : videosForViewer}
-            initialIndex={mediaViewerIndex}
-            onClose={() => setShowMediaViewer(false)}
-            type={mediaViewerType}
-          />
-        )}
-
-        {/* Share Modal */}
-        <ShareModal
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          title={event.title}
-          text={`${event.date} at ${event.location}\nPrice: ${event.price_range}`}
-          url={window.location.href}
-        />
       </div>
+
+      {/* Sticky Action Bar */}
+      <div className="p-4 border-t border-gray-100 bg-white flex gap-3 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] shrink-0 safe-area-bottom">
+         {event.streaming?.isLive ? (
+           <button 
+             onClick={() => setShowLiveStream(true)}
+             className="flex-1 bg-red-600 text-white py-3 rounded-xl font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2 animate-pulse shadow-lg shadow-red-200"
+           >
+             <Tv className="w-5 h-5" />
+             Watch Live
+           </button>
+         ) : (
+           !isEventPast && (
+             <button 
+               onClick={() => onPurchaseNormalTicket(event)}
+               className="flex-1 bg-[#8A2BE2] text-white py-3 rounded-xl font-medium hover:bg-[#7b26c9] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+             >
+               <Ticket className="w-5 h-5" />
+              {event.price_range === 'Free' ? 'Register' : 'Get Tickets Now'}
+            </button>
+           )
+         )}
+         
+         {isEventPast && (
+            <div className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-medium text-center cursor-not-allowed">
+              Event Ended
+            </div>
+         )}
+
+         <button 
+            onClick={handleToggleSave}
+            className={`w-14 bg-white border-2 ${isSaved ? 'border-[#FF4081] bg-[#FF4081]/10' : 'border-gray-200'} text-gray-700 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-all`}
+          >
+            <Bell className={`w-6 h-6 ${isSaved ? 'fill-[#FF4081] text-[#FF4081]' : 'text-gray-400'}`} />
+          </button>
+      </div>
+
+      {/* Media Viewer - Rendered outside modal for engaging photo/video viewing */}
+      {showMediaViewer && event.event_highlights && (
+        <MediaViewer
+          media={mediaViewerType === 'photo' ? photosForViewer : videosForViewer}
+          initialIndex={mediaViewerIndex}
+          onClose={() => setShowMediaViewer(false)}
+          type={mediaViewerType}
+        />
+      )}
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={event.title}
+        text={`${event.date} at ${event.location}\nPrice: ${event.price_range}`}
+        url={window.location.href}
+      />
     </div>
   );
 }

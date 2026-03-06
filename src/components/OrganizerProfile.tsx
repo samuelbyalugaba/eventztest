@@ -1,15 +1,26 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical } from 'lucide-react';
+import { X, MapPin, Calendar, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical, ChevronLeft } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { VideoPreview } from './VideoPreview';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
-import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
+import { ProfileSkeleton, ProfileSkeletonContent } from './skeletons/ProfileSkeleton';
 import { toast } from 'sonner';
 import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 import { extractCurrencyFromPrice } from '../utils/currencies';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
+
+const getFallbackImage = (index: number) => {
+  const fallbacks = [
+    'https://images.unsplash.com/photo-1492684223066-81342ee5ff30',
+    'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4',
+    'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b',
+    'https://images.unsplash.com/photo-1533174072545-e8d4aa97d848',
+    'https://images.unsplash.com/photo-1514525253440-b393452e8d26'
+  ];
+  return fallbacks[index % fallbacks.length];
+};
 
 interface OrganizerData {
   id?: string;
@@ -374,10 +385,6 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     }
   };
 
-  if (loading) {
-    return <ProfileSkeleton onClose={onClose} />;
-  }
-
   if (error) {
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -398,11 +405,11 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     );
   }
 
-  if (!organizerData) return null;
+  if (!organizerData && !loading) return null;
 
   // Combine highlights and photos into a unified gallery for the combined layout
   // Use photos array as it contains all posts with correct media types
-  const combinedGallery = organizerData.photos.map((p, index) => ({
+  const combinedGallery = organizerData ? organizerData.photos.map((p, index) => ({
       id: p.id, // Use number ID for MediaViewer compatibility
       uniqueId: `post-${p.id}`, // Unique ID for key
       image: p.image,
@@ -417,15 +424,18 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       thumbnail: p.image,
       videoUrl: p.video || '',
       fallbackSrc: getFallbackImage(index),
-    }));
+    })) : [];
 
   return (
     <>
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] bg-white overflow-y-auto animate-in slide-in-from-right duration-300">
+      {loading ? (
+        <ProfileSkeletonContent onClose={onClose} />
+      ) : organizerData ? (
+      <div className="w-full min-h-screen bg-white pb-20">
         
         {/* Hero Section with Cover */}
-        <div className="relative h-52 rounded-t-3xl overflow-hidden">
+        <div className="relative h-64 md:h-80 w-full">
           {organizerData.coverImage ? (
             <ImageWithFallback
               src={organizerData.coverImage}
@@ -437,118 +447,147 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
               <span className="text-white text-6xl font-bold opacity-20">{organizerData.name.charAt(0)}</span>
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
           
           {/* Top Actions */}
-          <div className="absolute top-4 right-4 flex gap-2">
-            <button className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors">
-              <Share2 className="w-5 h-5 text-gray-900" />
-            </button>
+          <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
             <button 
               onClick={onClose}
-              className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
+              className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/40 transition-colors border border-white/10"
             >
-              <X className="w-5 h-5 text-gray-900" />
+              <ChevronLeft className="w-6 h-6 text-white" />
             </button>
+            <div className="flex gap-2">
+              <button className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/40 transition-colors border border-white/10">
+                <Share2 className="w-5 h-5 text-white" />
+              </button>
+            </div>
           </div>
 
-          {/* Organizer Name & Follow Button */}
-          <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="text-white drop-shadow-lg">{organizerData.name}</h2>
-              {organizerData.verified && (
-                <CheckCircle2 className="w-5 h-5 text-white fill-[#8A2BE2]" />
-              )}
-            </div>
-            <button
-              onClick={handleFollow}
-              className={`px-6 py-2 rounded-full transition-all ${
-                isFollowing
-                  ? 'bg-white/20 backdrop-blur-sm text-white border border-white/40'
-                  : 'bg-white text-gray-900'
-              }`}
-            >
-              {isFollowing ? 'Following' : 'Follow'}
-            </button>
+          {/* Organizer Info Overlay */}
+          <div className="absolute -bottom-16 left-0 right-0 px-6 flex flex-col items-center">
+             <div className="w-32 h-32 rounded-full p-1 bg-white shadow-xl relative z-10">
+                <div className="w-full h-full rounded-full overflow-hidden relative">
+                  <ImageWithFallback 
+                     src={organizerData.avatar}
+                     alt={organizerData.name}
+                     className="w-full h-full object-cover"
+                  />
+                </div>
+                {organizerData.verified && (
+                  <div className="absolute bottom-1 right-1 bg-white rounded-full p-0.5 shadow-sm">
+                    <CheckCircle2 className="w-6 h-6 text-[#8A2BE2] fill-white" />
+                  </div>
+                )}
+             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="pt-20 px-6 max-w-2xl mx-auto">
           
-          {/* Stats Section */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {/* Events */}
-            <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-3 text-center border border-gray-300 shadow-sm">
-              <div className="text-lg text-gray-900 font-bold">{organizerData.totalEvents}</div>
-              <div className="text-xs text-gray-600 font-semibold">Events</div>
-            </div>
-
-            {/* Followers */}
-            <div 
-              className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-3 text-center border border-gray-300 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={handleShowFollowers}
-            >
-              <div className="text-lg text-gray-900 font-bold">
-                {organizerData.followers >= 1000 
-                  ? `${(organizerData.followers / 1000).toFixed(1)}k` 
-                  : organizerData.followers}
+          {/* Name & Bio */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{organizerData.name}</h1>
+            {organizerData.location && (
+              <div className="flex items-center justify-center gap-1.5 text-sm text-gray-500 mb-4">
+                <MapPin className="w-4 h-4" />
+                <span>{organizerData.location}</span>
               </div>
-              <div className="text-xs text-gray-600 font-semibold">Followers</div>
+            )}
+            
+            {/* Follow & Message Buttons */}
+            <div className="flex justify-center gap-3 mb-6">
+              <button
+                onClick={handleFollow}
+                className={`px-8 py-2.5 rounded-full text-sm font-semibold transition-all shadow-sm ${
+                  isFollowing
+                    ? 'bg-white text-gray-900 border border-gray-200 hover:bg-gray-50'
+                    : 'bg-[#8A2BE2] text-white hover:bg-[#7a26c9] hover:shadow-purple-200'
+                }`}
+              >
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onMessage) {
+                    onMessage({
+                      name: organizerData.name,
+                      avatar: organizerData.avatar,
+                      verified: organizerData.verified,
+                      isOrganizer: true,
+                      id: organizerData.id
+                    });
+                  } else {
+                    toast.info("Messaging feature coming soon");
+                  }
+                }}
+                className="p-2.5 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </button>
             </div>
-          </div>
 
-          {/* Message Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onMessage) {
-                onMessage({
-                  name: organizerData.name,
-                  avatar: organizerData.avatar,
-                  verified: organizerData.verified,
-                  isOrganizer: true,
-                  id: organizerData.id
-                });
-              }
-            }}
-            className="w-full mb-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span className="text-sm font-medium">Message</span>
-          </button>
+            {/* Stats Row */}
+            <div className="flex justify-center divide-x divide-gray-200 mb-6 border-y border-gray-100 py-4">
+              <div className="px-6 text-center">
+                <div className="text-xl font-bold text-gray-900">{organizerData.totalEvents}</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wide mt-1">Events</div>
+              </div>
+              <div 
+                className="px-6 text-center cursor-pointer hover:opacity-70 transition-opacity"
+                onClick={handleShowFollowers}
+              >
+                <div className="text-xl font-bold text-gray-900">
+                  {organizerData.followers >= 1000 
+                    ? `${(organizerData.followers / 1000).toFixed(1)}k` 
+                    : organizerData.followers}
+                </div>
+                <div className="text-xs text-gray-500 uppercase tracking-wide mt-1">Followers</div>
+              </div>
+              <div className="px-6 text-center">
+                 <div className="text-xl font-bold text-gray-900">{organizerData.rating}</div>
+                 <div className="text-xs text-gray-500 uppercase tracking-wide mt-1">Rating</div>
+              </div>
+            </div>
+
+            <p className="text-gray-600 text-sm leading-relaxed max-w-lg mx-auto">
+              {organizerData.bio}
+            </p>
+          </div>
 
           {/* Contact - Ultra Minimal Single Line */}
-          {organizerData.phone && organizerData.whatsapp && (
+          {(organizerData.phone || organizerData.whatsapp) && (
             <div className="mb-6 flex items-center justify-center gap-3 pb-3 border-b border-gray-100">
-              <a 
-                href={`tel:${organizerData.phone}`}
-                className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#8A2BE2] transition-colors"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>{organizerData.phone}</span>
-              </a>
-              <div className="w-px h-3 bg-gray-300"></div>
-              <a 
-                href={`https://wa.me/${organizerData.whatsapp}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs text-[#25D366] hover:text-[#128C7E] transition-colors"
-                aria-label="WhatsApp"
-              >
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-                <span>WhatsApp</span>
-              </a>
+              {organizerData.phone && (
+                <a 
+                  href={`tel:${organizerData.phone}`}
+                  className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#8A2BE2] transition-colors"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Call</span>
+                </a>
+              )}
+              {organizerData.phone && organizerData.whatsapp && (
+                <div className="w-px h-3 bg-gray-300"></div>
+              )}
+              {organizerData.whatsapp && (
+                <a 
+                  href={`https://wa.me/${organizerData.whatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-[#25D366] hover:text-[#128C7E] transition-colors"
+                  aria-label="WhatsApp"
+                >
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  <span>WhatsApp</span>
+                </a>
+              )}
             </div>
           )}
-
-          {/* About */}
-          <div className="mb-6">
-            <h3 className="text-gray-900 mb-2">About</h3>
-            <p className="text-sm text-gray-600 leading-relaxed">{organizerData.bio}</p>
-          </div>
 
           <UserListModal 
             isOpen={showFollowersModal}
@@ -702,6 +741,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
 
         </div>
       </div>
+      ) : null}
     </div>
 
     {showUserProfileModal && selectedUser && (
@@ -766,7 +806,10 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
             
             {/* Top Actions */}
             <div className="absolute top-4 right-4 flex gap-2">
-              <button className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors">
+              <button 
+                onClick={() => handleShareEvent(selectedEvent)}
+                className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
+              >
                 <Share2 className="w-5 h-5 text-gray-900" />
               </button>
               <button 
