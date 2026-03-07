@@ -654,6 +654,12 @@ export default function App() {
   // ALLOW PUBLIC ACCESS: Removed blocking auth check
   // if (!isAuthenticated) { ... }
 
+  const handleBackToProfile = () => {
+    setActiveTab('profile');
+    // If they cancel setup, we might want to revert isOrganizer state if it was just set locally
+    // But usually once they click "Become Organizer", they are committed or we can leave it
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster 
@@ -712,7 +718,10 @@ export default function App() {
             ) : !isOrganizer ? (
               <BecomeOrganizer onComplete={handleBecomeOrganizer} />
             ) : !hasOrganizerProfile ? (
-              <OrganizerProfileSetup onComplete={handleProfileComplete} />
+              <OrganizerProfileSetup 
+                onComplete={handleProfileComplete} 
+                onBack={handleBackToProfile}
+              />
             ) : (
               <CreateEvent onBack={handleBackToDashboard} event={editingEvent} />
             )}

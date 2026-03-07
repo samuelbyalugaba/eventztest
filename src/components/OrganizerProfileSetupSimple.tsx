@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, Star } from 'lucide-react';
+import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, Star, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase, getProfile, getOrganizerProfile, upsertOrganizerProfile, uploadImage, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;
+  onBack?: () => void;
 }
 
 const CREATOR_CATEGORIES = [
@@ -25,7 +26,7 @@ const CREATOR_CATEGORIES = [
   'Writer', 'Yoga Studio', 'Youth Organization'
 ].sort();
 
-export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps) {
+export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSetupProps) {
   const [organizerName, setOrganizerName] = useState('');
   const [username, setUsername] = useState('');
   const [category, setCategory] = useState('');
@@ -67,12 +68,14 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
     }
     setLoadingLocations(true);
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
+      if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       setLocationSuggestions(data);
       setShowLocationDropdown(true);
     } catch (error) {
       console.error('Error fetching locations:', error);
+      toast.error('Failed to load location suggestions');
     } finally {
       setLoadingLocations(false);
     }
@@ -92,15 +95,22 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const org = await getOrganizerProfile(user.id);
+      
+      const p = await getProfile(user.id);
+      
       if (org) {
-        setOrganizerName(org.organizer_name || '');
+        setOrganizerName(org.organizer_name || p?.full_name || '');
         setCategory(org.organizer_type || '');
         setCategorySearch(org.organizer_type || '');
         setLocation(org.location || '');
         setBio(org.bio || '');
-        setAvatarUrl(org.organizer_avatar_url || '');
+        setAvatarUrl(org.organizer_avatar_url || p?.avatar_url || '');
+      } else if (p) {
+        // Pre-fill from user profile if no organizer profile exists
+        setOrganizerName(p.full_name || '');
+        setAvatarUrl(p.avatar_url || '');
       }
-      const p = await getProfile(user.id);
+
       if (p?.username) {
         setUsername(p.username);
         setAvailable(true);
@@ -177,9 +187,19 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
     <div className="bg-white min-h-screen flex flex-col">
       {/* Mobile Header */}
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Creator Profile</h1>
-          <p className="text-xs text-gray-500 font-medium">Setup your public profile</p>
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-900" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Creator Profile</h1>
+            <p className="text-xs text-gray-500 font-medium">Setup your public profile</p>
+          </div>
         </div>
         <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center text-purple-600 shadow-sm border border-purple-100">
           <Star className="w-5 h-5 fill-current" />
