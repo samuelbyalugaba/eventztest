@@ -13,15 +13,19 @@ import {
   Star,
   ArrowRight,
   TrendingUp,
-  Calendar
+  Calendar,
+  Clock,
+  Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getOrganizerStats, getOrganizerEvents, updateEventStreamingStatus } from '../utils/supabase/api';
+import { getOrganizerStats, getOrganizerEvents, updateEventStreamingStatus, getUserTickets } from '../utils/supabase/api';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
 import { CreatePostModal } from './CreatePostModal';
 import { StreamManager } from './StreamManager';
 import { TicketScannerModal } from './TicketScannerModal';
+import { UserAvatar } from './UserAvatar';
+import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface ProfessionalDashboardModalProps {
   onClose: () => void;
@@ -43,6 +47,10 @@ export function ProfessionalDashboardModal({
     revenue: 0,
     liveStreams: 0,
     ticketsSold: 0
+  });
+  const [userStats, setUserStats] = useState({
+    eventsAttended: 0,
+    ticketsPurchased: 0
   });
   const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +81,25 @@ export function ProfessionalDashboardModal({
           setStats(statsData);
         } catch (err) {
           console.error("Error loading organizer stats:", err);
+        }
+
+        // Load user specific stats (tickets purchased, events attended)
+        try {
+          const tickets = await getUserTickets(user.id);
+          if (tickets) {
+            const attended = tickets.filter(t => {
+               if (!t.event?.date) return false;
+               const eventDate = new Date(t.event.date);
+               return !isNaN(eventDate.getTime()) && eventDate < new Date();
+            }).length;
+            
+            setUserStats({
+              eventsAttended: attended,
+              ticketsPurchased: tickets.length
+            });
+          }
+        } catch (err) {
+          console.error("Error loading user tickets:", err);
         }
 
         // Load events (for Go Live and Scanner)
@@ -120,168 +147,213 @@ export function ProfessionalDashboardModal({
     setSelectedEventForStream(publishedEvents[0]);
   };
 
+  const profileImage = organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-gray-50 w-full max-w-4xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col shadow-2xl">
-        
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-5 py-3.5 flex items-center justify-between sticky top-0 z-10">
-          <div>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-[#8A2BE2]" />
-              Professional Dashboard
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-500">Analytics and tools for {organizerProfile.organizerName}</p>
+    <div className="fixed inset-0 z-50 flex flex-col bg-gray-50 animate-in fade-in duration-200 overflow-y-auto">
+      {/* Header */}
+      <div className="bg-white px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <BarChart3 className="w-6 h-6 text-gray-900" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border-2 border-white">
+              2
+            </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
+          <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <button className="relative p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell w-6 h-6 text-gray-600"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          </button>
+          
+          <button onClick={onClose} className="rounded-full overflow-hidden w-10 h-10 border border-gray-200">
+             {profileImage ? (
+                <ImageWithFallback
+                  src={profileImage}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <UserAvatar 
+                  name={organizerProfile.organizerName} 
+                  className="w-full h-full" 
+                />
+              )}
           </button>
         </div>
+      </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          
-          {/* Quick Actions Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <button
-              onClick={() => setShowSettings(true)}
-              className="flex flex-col items-center justify-center gap-2.5 bg-white p-3 rounded-xl border border-gray-200 hover:border-purple-300 transition-all group"
-            >
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Settings className="w-5 h-5 text-purple-600" />
+      {/* Content */}
+      <div className="p-6 space-y-8 max-w-7xl mx-auto w-full">
+        
+        {/* Top Cards Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Events Attended */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                <Star className="w-5 h-5 text-gray-900" />
               </div>
-              <span className="font-medium text-gray-700 text-xs sm:text-sm">Settings</span>
-            </button>
-
-            <button
-              onClick={() => {
-                onClose(); // Close dashboard to show create modal
-                onCreateEvent();
-              }}
-              className="flex flex-col items-center justify-center gap-2.5 bg-white p-3 rounded-xl border border-gray-200 hover:border-purple-300 transition-all group"
-            >
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-                <PlusCircle className="w-5 h-5 text-purple-600" />
-              </div>
-              <span className="font-medium text-gray-700 text-xs sm:text-sm">Create Event</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (publishedEvents.length === 0) {
-                  toast.error('No events to scan for');
-                  return;
-                }
-                setShowScanner(true);
-              }}
-              className="flex flex-col items-center justify-center gap-2.5 bg-white p-3 rounded-xl border border-gray-200 hover:border-purple-300 transition-all group"
-            >
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-                <QrCode className="w-5 h-5 text-purple-600" />
-              </div>
-              <span className="font-medium text-gray-700 text-xs sm:text-sm">Scan Tickets</span>
-            </button>
-
-            <button
-              onClick={handleGoLive}
-              className="flex flex-col items-center justify-center gap-2.5 bg-gradient-to-br from-red-500 to-pink-600 p-3 rounded-xl shadow-md hover:shadow-red-500/30 transition-all group relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform" />
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-105 transition-transform">
-                <Radio className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-medium text-white text-xs sm:text-sm">Go Live</span>
-            </button>
-          </div>
-
-          {/* Performance Overview */}
-          <div className="mb-6">
-            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-gray-400" />
-              Performance
-            </h3>
-            
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-              {/* Revenue */}
-              <div className="bg-white p-4 rounded-xl border border-gray-200">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center">
-                    <DollarSign className="w-4 h-4 text-green-600" />
-                  </div>
-                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Revenue</span>
-                </div>
-                <p className="text-xl font-semibold text-gray-900">TSh {formatNumber(stats.revenue)}</p>
-              </div>
-
-              {/* Tickets */}
-              <div className="bg-white p-4 rounded-xl border border-gray-200">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Ticket className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Tickets Sold</span>
-                </div>
-                <p className="text-xl font-semibold text-gray-900">{formatNumber(stats.ticketsSold)}</p>
-              </div>
-
-              {/* Views */}
-              <div className="bg-white p-4 rounded-xl border border-gray-200">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Eye className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Total Views</span>
-                </div>
-                <p className="text-xl font-semibold text-gray-900">{formatNumber(stats.totalViews)}</p>
-              </div>
-
-              {/* Followers */}
-              <div className="bg-white p-4 rounded-xl border border-gray-200">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-7 h-7 bg-pink-100 rounded-full flex items-center justify-center">
-                    <Users className="w-4 h-4 text-pink-600" />
-                  </div>
-                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Followers</span>
-                </div>
-                <p className="text-xl font-semibold text-gray-900">{formatNumber(stats.followers)}</p>
-              </div>
-
-              {/* Events */}
-              <div className="bg-white p-4 rounded-xl border border-gray-200">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-7 h-7 bg-orange-100 rounded-full flex items-center justify-center">
-                    <Calendar className="w-4 h-4 text-orange-600" />
-                  </div>
-                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Events Hosted</span>
-                </div>
-                <p className="text-xl font-semibold text-gray-900">{stats.totalEvents}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Account Status */}
-          <div className="bg-white rounded-xl p-4 border border-gray-200 flex items-start gap-3">
-            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Star className="w-4 h-4 text-purple-600" />
+              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 mb-1">Account Status: Active</h4>
-              <p className="text-xs sm:text-sm text-gray-600 mb-2">
-                Your profile is visible to the public. Complete your profile to reach more people.
-              </p>
-              <button 
-                onClick={() => setShowSettings(true)}
-                className="text-purple-700 text-xs sm:text-sm font-medium flex items-center gap-1 hover:gap-1.5 transition-all"
-              >
-                Edit Profile <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              <p className="text-gray-500 font-medium text-xs mb-1">Events Attended</p>
+              <h3 className="text-xl font-bold text-gray-900">{userStats.eventsAttended}</h3>
             </div>
           </div>
 
+          {/* Events Hosted */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-gray-900" />
+              </div>
+              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
+            </div>
+            <div>
+              <p className="text-gray-500 font-medium text-xs mb-1">Events Hosted</p>
+              <h3 className="text-xl font-bold text-gray-900">{stats.totalEvents}</h3>
+            </div>
+          </div>
+
+          {/* Tickets Purchased */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                <Ticket className="w-5 h-5 text-gray-900" />
+              </div>
+              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
+            </div>
+            <div>
+              <p className="text-gray-500 font-medium text-xs mb-1">Tickets Purchased</p>
+              <h3 className="text-xl font-bold text-gray-900">{userStats.ticketsPurchased}</h3>
+            </div>
+          </div>
+
+          {/* Tickets Sold */}
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                <Ticket className="w-5 h-5 text-gray-900" />
+              </div>
+              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
+            </div>
+            <div>
+              <p className="text-gray-500 font-medium text-xs mb-1">Tickets Sold</p>
+              <h3 className="text-xl font-bold text-gray-900">{stats.ticketsSold}</h3>
+            </div>
+          </div>
         </div>
+
+        {/* Analytics Section */}
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Analytics</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Revenue */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+              <div className="flex justify-between items-start">
+                <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-gray-900" />
+                </div>
+                <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
+              </div>
+              <div>
+                <p className="text-gray-500 font-medium text-xs mb-1">Revenue</p>
+                <h3 className="text-xl font-bold text-gray-900">TSh {formatNumber(stats.revenue)}</h3>
+              </div>
+            </div>
+
+            {/* Followers */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+              <div className="flex justify-between items-start">
+                <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                  <Users className="w-5 h-5 text-gray-900" />
+                </div>
+              </div>
+              <div>
+                <p className="text-gray-500 font-medium text-xs mb-1">Followers</p>
+                <h3 className="text-xl font-bold text-gray-900">{formatNumber(stats.followers)}</h3>
+              </div>
+            </div>
+
+            {/* Total Views */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+              <div className="flex justify-between items-start">
+                <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                  <Eye className="w-5 h-5 text-gray-900" />
+                </div>
+              </div>
+              <div>
+                <p className="text-gray-500 font-medium text-xs mb-1">Total Views</p>
+                <h3 className="text-xl font-bold text-gray-900">{formatNumber(stats.totalViews)}</h3>
+              </div>
+            </div>
+
+            {/* Tickets Sold (Repeated in Analytics per design) */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+              <div className="flex justify-between items-start">
+                <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                  <Eye className="w-5 h-5 text-gray-900" />
+                </div>
+              </div>
+              <div>
+                <p className="text-gray-500 font-medium text-xs mb-1">Tickets Sold</p>
+                <h3 className="text-xl font-bold text-gray-900">{formatNumber(stats.ticketsSold)}</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance Section */}
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Performance</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Peak Views */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+              <div className="flex justify-between items-start">
+                <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white">
+                  <Users className="w-5 h-5" />
+                </div>
+              </div>
+              <div>
+                <p className="text-gray-500 font-medium text-xs mb-1">Peak Views</p>
+                <h3 className="text-xl font-bold text-gray-900">0</h3>
+                <p className="text-gray-400 text-[10px]">Concurrent: 0</p>
+              </div>
+            </div>
+
+            {/* Stream Time */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+              <div className="flex justify-between items-start">
+                <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center text-white">
+                  <Clock className="w-5 h-5" />
+                </div>
+              </div>
+              <div>
+                <p className="text-gray-500 font-medium text-xs mb-1">Stream Time</p>
+                <h3 className="text-xl font-bold text-gray-900">0h 0m</h3>
+                <p className="text-gray-400 text-[10px]">Last 30 days</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Account Info Section */}
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Account Info</h2>
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-4">
+            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center flex-shrink-0">
+              <Star className="w-6 h-6 text-gray-900" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Account Status: Active</h3>
+              <p className="text-gray-500 text-sm">Your profile is visible to the public</p>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Modals */}
