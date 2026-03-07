@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, Play, MapPin, Search, Lock, Unlock, X, CheckCircle2 } from 'lucide-react';
+import { Filter, Play, MapPin, Search, Lock, Unlock, X, CheckCircle2, Globe } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
@@ -39,7 +39,7 @@ const categories = [
 ];
 
 const countries = [
-  { id: 'all', name: 'All Countries', flag: '🌍' },
+  { id: 'all', name: 'All Countries', icon: Globe },
   { id: 'Tanzania', name: 'Tanzania', flag: '🇹🇿' },
   { id: 'Kenya', name: 'Kenya', flag: '🇰🇪' },
   { id: 'United States', name: 'United States', flag: '🇺🇸' },
@@ -484,10 +484,17 @@ export function LiveFeed() {
               {/* Location Filter - LEFT */}
               <button 
                 onClick={() => setShowLocationFilter(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-xl"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
                 title="Filter by location"
               >
-                {countries.find(c => c.id === selectedCountry)?.flag || '🇹🇿'}
+                {(() => {
+                  const country = countries.find(c => c.id === selectedCountry);
+                  if (country?.icon) {
+                    const Icon = country.icon;
+                    return <Icon className="w-5 h-5 text-gray-700" />;
+                  }
+                  return <span className="text-xl">{country?.flag || '🇹🇿'}</span>;
+                })()}
               </button>
 
               {/* Category Filter - RIGHT */}
@@ -716,7 +723,14 @@ export function LiveFeed() {
                           : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                       }`}
                     >
-                      <span className="text-2xl">{country.flag}</span>
+                      {/* @ts-ignore - icon property exists on some items */}
+                      {country.icon ? (
+                         // @ts-ignore
+                        <country.icon className={`w-6 h-6 ${selectedCountry === country.id ? 'text-white' : 'text-gray-700'}`} />
+                      ) : (
+                         // @ts-ignore
+                        <span className="text-2xl">{country.flag}</span>
+                      )}
                       <span>{country.name}</span>
                     </button>
                   ))

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, MessageCircle, Ticket, ShoppingBag, Music, Trophy } from 'lucide-react';
+import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, MessageCircle, Ticket, ShoppingBag, Music, Trophy, Globe } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { PurchasedTicket, Conversation, Message } from '../types';
@@ -18,7 +18,7 @@ import { extractCurrencyFromPrice } from '../utils/currencies';
 import { eventsStore } from '../store/eventStore';
 
 const locations = [
-  { id: 'all', name: 'All Locations', flag: '🌍' },
+  { id: 'all', name: 'All Locations', icon: <Globe className="w-5 h-5" /> },
   { id: 'atlanta', name: 'Atlanta, USA', flag: '🇺🇸' },
   { id: 'dar', name: 'Dar es Salaam, Tanzania', flag: '🇹🇿' },
   { id: 'zanzibar', name: 'Zanzibar, Tanzania', flag: '🇹🇿' },
@@ -661,7 +661,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                           : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-base">{location.flag}</span>
+                      {/* @ts-ignore */}
+                      <span className="text-base">{location.icon || location.flag}</span>
                       <span>{location.name}</span>
                     </button>
                   ))}
