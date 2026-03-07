@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Building2, Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X } from 'lucide-react';
+import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase, getProfile, getOrganizerProfile, upsertOrganizerProfile, uploadImage, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
 
@@ -80,7 +80,7 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (location && !showLocationDropdown && location !== organizerName) { // Simple check to avoid searching when selecting
+      if (location && !showLocationDropdown && location !== organizerName) {
         // Only search if user is actually typing
       }
     }, 500);
@@ -174,132 +174,105 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
   };
  
   return (
-    <div className="bg-slate-50 min-h-screen pb-24">
-      <div className="bg-gradient-to-br from-[#8A2BE2] via-[#9333ea] to-[#7928ca] px-6 py-10 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-900/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
-        
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-inner border border-white/30">
-              <Building2 className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
-            </div>
-            <div className="text-center sm:text-left">
-              <h1 className="text-white text-2xl sm:text-4xl font-black tracking-tight mb-2">Create your organizer profile</h1>
-              <p className="text-purple-100 text-sm sm:text-lg font-medium opacity-90">Provide your details to get started with Eventz</p>
-            </div>
-          </div>
+    <div className="bg-white min-h-screen flex flex-col">
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Creator Profile</h1>
+          <p className="text-xs text-gray-500 font-medium">Setup your public profile</p>
+        </div>
+        <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center text-purple-600 shadow-sm border border-purple-100">
+          <Star className="w-5 h-5 fill-current" />
         </div>
       </div>
 
-      <div className="px-4 -mt-8 max-w-4xl mx-auto">
-        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-purple-100/50 border border-purple-50 p-6 sm:p-10 mb-6">
-          <h2 className="text-gray-900 text-xl font-bold mb-8 flex items-center gap-3">
-            <div className="w-2 h-8 bg-[#8A2BE2] rounded-full"></div>
-            Profile Information
-          </h2>
-
-          <div className="flex flex-col items-center mb-10">
-            <div className="relative group">
-              <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden bg-slate-100 flex items-center justify-center border-4 border-white shadow-lg group-hover:shadow-purple-200 transition-all duration-300">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Organizer" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-12 h-12 text-slate-300" />
-                )}
-              </div>
-              <button
-                onClick={onUploadClick}
-                className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[#8A2BE2] text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all duration-200 border-2 border-white"
-              >
-                <Camera className="w-5 h-5" />
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+      <div className="flex-1 px-6 pt-8 pb-32 max-w-lg mx-auto w-full">
+        {/* Avatar Section - Modern & Minimal */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="relative group cursor-pointer" onClick={onUploadClick}>
+            <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-50 border-4 border-white shadow-xl shadow-purple-100 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-300">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Creator" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-12 h-12 text-gray-300" />
+              )}
             </div>
-            <button
-              onClick={onUploadClick}
-              className="mt-4 text-[#8A2BE2] text-sm font-bold hover:underline"
-            >
-              Update Profile Photo
-            </button>
+            <div className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg border-4 border-white transform transition-transform group-hover:scale-110">
+              <Camera className="w-4 h-4" />
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+          </div>
+          <p className="mt-4 text-sm font-medium text-gray-500">Tap to upload photo</p>
+        </div>
+
+        {/* Form Fields - Mobile Native Look */}
+        <div className="space-y-6">
+          {/* Name Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-900 ml-1">Display Name</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={organizerName}
+                onChange={(e) => setOrganizerName(e.target.value)}
+                placeholder="e.g. The Night Club"
+                className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="mb-2">
-              <label className="block text-gray-700 font-bold mb-2 text-sm ml-1">Organizer Name <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  value={organizerName}
-                  onChange={(e) => setOrganizerName(e.target.value)}
-                  placeholder="e.g., Alex Harrison"
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all font-medium"
-                />
+          {/* Username Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-900 ml-1">Username</label>
+            <div className="relative">
+              <AtSign className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                  setAvailable(null);
+                }}
+                onBlur={checkHandle}
+                placeholder="username"
+                className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                {checking ? (
+                  <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
+                ) : available === true ? (
+                  <Check className="w-5 h-5 text-green-500" />
+                ) : available === false ? (
+                  <X className="w-5 h-5 text-red-500" />
+                ) : null}
               </div>
             </div>
+            {available === false && (
+               <p className="text-xs text-red-500 ml-1 font-medium">Username is already taken</p>
+            )}
+          </div>
 
-            <div className="mb-2">
-              <label className="block text-gray-700 font-bold mb-2 text-sm ml-1">Username <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <AtSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => {
-                    setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''));
-                    setAvailable(null);
-                  }}
-                  onBlur={checkHandle}
-                  placeholder="username"
-                  className="w-full pl-12 pr-24 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all font-medium"
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
-                  {checking ? (
-                    <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
-                  ) : available === true ? (
-                    <div className="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-lg">
-                      <Check className="w-3 h-3 text-green-600" />
-                      <span className="text-green-600 font-bold text-[10px] uppercase tracking-wider">Available</span>
-                    </div>
-                  ) : available === false ? (
-                    <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg">
-                      <X className="w-3 h-3 text-red-600" />
-                      <span className="text-red-600 font-bold text-[10px] uppercase tracking-wider">Taken</span>
-                    </div>
-                  ) : username && (
-                    <button 
-                      onClick={checkHandle}
-                      className="text-[#8A2BE2] text-[10px] font-black uppercase tracking-widest hover:underline"
-                    >
-                      Check
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-2 relative" ref={categoryRef}>
-              <label className="block text-gray-700 font-bold mb-2 text-sm ml-1">Category <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  value={categorySearch}
-                  onChange={(e) => {
-                    setCategorySearch(e.target.value);
-                    setShowCategoryDropdown(true);
-                    if (category && e.target.value !== category) setCategory('');
-                  }}
-                  onFocus={() => setShowCategoryDropdown(true)}
-                  placeholder="Search categories..."
-                  className="w-full pl-12 pr-10 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all font-medium"
-                />
-                <ChevronDown className={`absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
-              </div>
+          {/* Category Dropdown */}
+          <div className="space-y-2" ref={categoryRef}>
+            <label className="text-sm font-semibold text-gray-900 ml-1">Category</label>
+            <div className="relative">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={categorySearch}
+                onChange={(e) => {
+                  setCategorySearch(e.target.value);
+                  setShowCategoryDropdown(true);
+                  if (category && e.target.value !== category) setCategory('');
+                }}
+                onFocus={() => setShowCategoryDropdown(true)}
+                placeholder="Select category"
+                className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+              />
+              <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
               
               {showCategoryDropdown && (
-                <div className="absolute z-20 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
+                <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
                   {filteredCategories.length > 0 ? (
                     filteredCategories.map((c) => (
                       <button
@@ -309,41 +282,42 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                           setCategorySearch(c);
                           setShowCategoryDropdown(false);
                         }}
-                        className={`w-full text-left px-6 py-3 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${category === c ? 'text-[#8A2BE2] font-bold bg-purple-50/50' : 'text-slate-600 font-medium'}`}
+                        className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${category === c ? 'text-purple-600 font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
                       >
                         {c}
                         {category === c && <Check className="w-4 h-4" />}
                       </button>
                     ))
                   ) : (
-                    <div className="px-6 py-4 text-sm text-slate-400 italic">No categories found</div>
+                    <div className="px-5 py-4 text-sm text-gray-400 text-center italic">No categories found</div>
                   )}
                 </div>
               )}
             </div>
+          </div>
 
-            <div className="mb-2 relative" ref={locationRef}>
-              <label className="block text-gray-700 font-bold mb-2 text-sm ml-1">Location <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => {
-                    setLocation(e.target.value);
-                    searchLocations(e.target.value);
-                  }}
-                  onFocus={() => location.length >= 3 && setShowLocationDropdown(true)}
-                  placeholder="City, Country"
-                  className="w-full pl-12 pr-10 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all font-medium"
-                />
-                {loadingLocations && (
-                  <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-600 animate-spin" />
-                )}
-              </div>
+          {/* Location Search */}
+          <div className="space-y-2" ref={locationRef}>
+            <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
+            <div className="relative">
+              <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  searchLocations(e.target.value);
+                }}
+                onFocus={() => location.length >= 3 && setShowLocationDropdown(true)}
+                placeholder="City, Country"
+                className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+              />
+              {loadingLocations && (
+                <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 animate-spin" />
+              )}
               
               {showLocationDropdown && locationSuggestions.length > 0 && (
-                <div className="absolute z-20 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto py-2 animate-in fade-in zoom-in duration-200">
+                <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto py-2 animate-in fade-in zoom-in duration-200">
                   {locationSuggestions.map((loc, idx) => (
                     <button
                       key={idx}
@@ -352,10 +326,10 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
                         setShowLocationDropdown(false);
                         setLocationSuggestions([]);
                       }}
-                      className="w-full text-left px-6 py-3 text-sm text-slate-600 hover:bg-purple-50 transition-colors font-medium border-b border-slate-50 last:border-0"
+                      className="w-full text-left px-5 py-3.5 text-sm text-gray-600 hover:bg-purple-50 transition-colors font-medium border-b border-gray-50 last:border-0"
                     >
                       <div className="flex items-start gap-3">
-                        <MapPin className="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                        <MapPin className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
                         <span className="line-clamp-2">{loc.display_name}</span>
                       </div>
                     </button>
@@ -365,30 +339,30 @@ export function OrganizerProfileSetup({ onComplete }: OrganizerProfileSetupProps
             </div>
           </div>
 
-          <div className="mt-6">
-            <label className="block text-gray-700 font-bold mb-2 text-sm ml-1">Bio</label>
+          {/* Bio */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-900 ml-1">Bio</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell us about yourself..."
+              placeholder="Tell your story..."
               rows={4}
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-3xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all font-medium resize-none"
+              className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
             />
-            <p className="text-slate-400 text-[10px] mt-2 ml-2 font-medium">Briefly describe yourself to the community.</p>
           </div>
         </div>
+      </div>
 
-        <div className="sticky bottom-4 sm:bottom-10 bg-slate-50/80 backdrop-blur-md py-4 px-2 rounded-3xl">
+      {/* Sticky Bottom Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 safe-area-bottom z-40">
+        <div className="max-w-lg mx-auto">
           <button
             onClick={onSubmit}
-            className="w-full bg-[#8A2BE2] text-white py-5 rounded-[2rem] hover:shadow-2xl hover:shadow-purple-500/40 hover:-translate-y-1 active:scale-95 transition-all duration-300 shadow-xl flex items-center justify-center gap-3 group"
+            className="w-full bg-[#8A2BE2] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-purple-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
-            <span className="text-lg font-black tracking-tight">Confirm Profile</span>
-            <Check className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+            <span>Complete Setup</span>
+            <Check className="w-5 h-5" />
           </button>
-          <p className="text-center text-slate-400 text-[10px] font-bold mt-4 uppercase tracking-widest">
-            You can edit this information later in settings
-          </p>
         </div>
       </div>
     </div>
