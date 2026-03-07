@@ -771,29 +771,31 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             </button>
           </div>
         ) : (
-          <div 
-              onClick={onStartOrganizerSetup}
-              className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
-          >
-              <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100 text-purple-600">
-                      <Sparkles className="w-6 h-6" />
-                  </div>
-                  <div>
-                      <h3 className="text-gray-900 font-bold text-sm">
-                          Become an Organizer
-                      </h3>
-                      <p className="text-gray-500 text-xs">
-                          Create events and go live
-                      </p>
-                  </div>
-              </div>
-              <div className="text-gray-400">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-              </div>
-          </div>
+          !isLoading && (
+            <div 
+                onClick={onStartOrganizerSetup}
+                className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100 text-purple-600">
+                        <Sparkles className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 className="text-gray-900 font-bold text-sm">
+                            Become an Organizer
+                        </h3>
+                        <p className="text-gray-500 text-xs">
+                            Create events and go live
+                        </p>
+                    </div>
+                </div>
+                <div className="text-gray-400">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+          )
         )
       ) : (
         <div className="flex gap-3 mb-8">
