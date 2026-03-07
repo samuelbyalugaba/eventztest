@@ -84,8 +84,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   // User Profile Modal State
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'user' | 'organizer'>('user');
-
+  
   const handleShowFollowers = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -126,17 +125,24 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const fileInputRef = useRef<HTMLInputElement>(null);
   const savedEventsSubscriptionRef = useRef<any>(null);
 
-  const isOrganizerView = viewMode === 'organizer' && organizerProfile;
-  const profileImage = isOrganizerView 
-    ? (organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url) 
-    : userProfile?.avatar_url;
-  const displayName = isOrganizerView 
-    ? organizerProfile?.organizerName 
-    : (userProfile?.full_name || 'User');
+  // Unified Profile Logic
+  // We no longer switch between 'user' and 'organizer' view modes.
+  // Instead, we check if the user has an organizer profile.
+  // If they do, we show the organizer features (tabs, badge, etc.) alongside user features.
   
+  const isOrganizer = !!organizerProfile;
+  const profileImage = isOrganizer 
+    ? (organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url || userProfile?.avatar_url) 
+    : userProfile?.avatar_url;
+  const displayName = isOrganizer 
+    ? (organizerProfile?.organizerName || userProfile?.full_name) 
+    : (userProfile?.full_name || 'User');
+  const organizerCategory = organizerProfile?.organizer_type || organizerProfile?.organizerType;
+
+  // We still use setPostAsOrganizer for the post creation toggle
   useEffect(() => {
-    setPostAsOrganizer(!!isOrganizerView);
-  }, [isOrganizerView]);
+    setPostAsOrganizer(isOrganizer);
+  }, [isOrganizer]);
 
   useEffect(() => {
     const handleProfileUpdated = async () => {
@@ -159,11 +165,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   // Load all data
   useEffect(() => {
     // Check local storage for preferred view mode
-    const savedViewMode = localStorage.getItem('profileViewMode') as 'user' | 'organizer' | null;
-    if (savedViewMode) {
-       setViewMode(savedViewMode);
-       setActiveTab('media');
-    }
+    // Unified profile: no more view mode switching
 
     const fetchSavedEvents = async (userId: string) => {
       try {
@@ -196,12 +198,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                 ...orgProfile
               });
               
-              // Only auto-switch if no preference saved or preference is organizer
-              if (!localStorage.getItem('profileViewMode') || localStorage.getItem('profileViewMode') === 'organizer') {
-                 setViewMode('organizer');
-                 setActiveTab('media');
-              }
-              
               // Load stats only if organizer
               const stats = await getOrganizerStats(user.id);
               setOrganizerStats(stats);
@@ -215,13 +211,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                    price: e.price_range || e.price
                 });
                 setPublishedEvents(events.map(mapEvent));
-              }
-            } else {
-              // If no organizer profile exists but view mode was set to organizer (e.g., from localStorage),
-              // revert to personal view to avoid misleading UI labels.
-              if (viewMode === 'organizer') {
-                setViewMode('user');
-                localStorage.setItem('profileViewMode', 'user');
               }
             }
           } catch (err) {
@@ -551,12 +540,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   };
 
   // Derive media from posts
-  const filteredUserPosts = userPosts.filter(p => {
-    if (isOrganizerView) {
-      return !!p.posted_as_organizer;
-    }
-    return !p.posted_as_organizer;
-  });
+  // Show all posts for unified profile, maybe filter differently later if needed
+  const filteredUserPosts = userPosts;
 
   // Group tickets by event
   const groupedTickets = ticketEvents.reduce((acc, ticket) => {
@@ -597,7 +582,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                {displayName || 'Loading...'}
              </h1>
              <p className="text-gray-500 font-medium text-xs flex items-center gap-1">
-               {isOrganizerView ? (organizerProfile?.organizer_type || organizerProfile?.organizerType || 'Organizer') : `@${userProfile?.username || 'user'}`}
+               @{userProfile?.username || 'user'}
              </p>
           </div>
         </div>
@@ -611,39 +596,16 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              {isOrganizerView ? (
-                <>
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setViewMode('user');
-                      setActiveTab('media');
-                      localStorage.setItem('profileViewMode', 'user');
-                      toast.success("Switched to personal profile");
-                    }}
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    Switch to Personal
-                  </DropdownMenuItem>
-                </>
-              ) : (
-                organizerProfile && (
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setViewMode('organizer');
-                      setActiveTab('media');
-                      localStorage.setItem('profileViewMode', 'organizer');
-                      toast.success("Switched to creator profile");
-                    }}
-                  >
-                    <Briefcase className="w-4 h-4 mr-2" />
-                    Switch to Creator
-                  </DropdownMenuItem>
-                )
-              )}
               <DropdownMenuItem onClick={() => setShowWalletModal(true)}>
                 <Wallet className="w-4 h-4 mr-2" />
                 Wallet
               </DropdownMenuItem>
+              {isOrganizer && (
+                 <DropdownMenuItem onClick={() => setShowProfessionalDashboard(true)}>
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Dashboard
+                 </DropdownMenuItem>
+              )}
               <DropdownMenuItem 
                 onClick={() => {
                   setSettingsInitialView('main');
@@ -664,7 +626,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {isOrganizerView && (
+          {isOrganizer && (
             <button
               onClick={() => setShowLiveSetupModal(true)}
               className="p-1.5 text-red-600 hover:bg-red-50 rounded-full transition-colors border border-red-200 bg-white shadow-sm"
@@ -680,27 +642,35 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       <div className="mb-6">
         {isLoading ? (
           <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
-        ) : isOrganizerView ? (
-          <p className="text-gray-600 leading-relaxed text-[15px]">
-            {organizerProfile?.bio || <span className="text-gray-400 italic">No organizer bio yet</span>}
-          </p>
         ) : (
-          <div className="flex items-start justify-between">
-            <p className="text-gray-600 leading-relaxed text-[15px]">
-              {userProfile?.bio ? (
-                userProfile.bio
-              ) : (
-                <span className="text-gray-400 italic">No bio yet. Add your bio in Settings.</span>
+          <div className="flex flex-col gap-2">
+             {isOrganizer && (
+               <div className="text-sm font-medium text-gray-500">
+                 {organizerCategory || 'Event Organizer'}
+               </div>
+             )}
+             
+             {isOrganizer && organizerProfile?.bio && (
+               <p className="text-gray-800 leading-relaxed text-[15px] font-medium">
+                 {organizerProfile.bio}
+               </p>
+             )}
+             
+            <div className="flex items-start justify-between">
+              <p className="text-gray-600 leading-relaxed text-[15px]">
+                {userProfile?.bio || (
+                  !isOrganizer && <span className="text-gray-400 italic">No bio yet. Add your bio in Settings.</span>
+                )}
+              </p>
+              {!userProfile?.bio && !isOrganizer && (
+                <button 
+                  onClick={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
+                  className="ml-4 px-3 py-1.5 text-xs rounded-full bg-purple-50 text-purple-700 font-semibold hover:bg-purple-100 transition-colors"
+                >
+                  Set Bio
+                </button>
               )}
-            </p>
-            {!userProfile?.bio && (
-              <button 
-                onClick={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
-                className="ml-4 px-3 py-1.5 text-xs rounded-full bg-purple-50 text-purple-700 font-semibold hover:bg-purple-100 transition-colors"
-              >
-                Set Bio
-              </button>
-            )}
+            </div>
           </div>
         )}
       </div>
@@ -734,7 +704,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                   {organizerStats ? organizerStats.totalEvents : attendedEvents.length}
               </div>
               <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
-                  {isOrganizerView ? 'Hosted' : 'Attended'}
+                  {isOrganizer ? 'Hosted' : 'Attended'}
               </div>
             </div>
             <div 
@@ -763,8 +733,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         )}
       </div>
 
-      {/* Action Buttons (Organizer) or Switch Banner (User) */}
-      {isOrganizerView ? (
+      {/* Action Buttons */}
+      {isOrganizer ? (
         <div className="flex gap-3 mb-8">
            <button 
              onClick={onCreateEvent}
@@ -783,39 +753,19 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         </div>
       ) : (
         <div 
-            onClick={() => {
-                const newMode = viewMode === 'user' ? 'organizer' : 'user';
-                
-                if (newMode === 'organizer') {
-                    if (organizerProfile) {
-                        setViewMode('organizer');
-                        setActiveTab('media');
-                        localStorage.setItem('profileViewMode', 'organizer');
-                    } else {
-                        onStartOrganizerSetup?.();
-                    }
-                } else {
-                    setViewMode('user');
-                    setActiveTab('events');
-                    localStorage.setItem('profileViewMode', 'user');
-                }
-            }}
+            onClick={onStartOrganizerSetup}
             className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
         >
             <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${viewMode === 'user' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-                    {viewMode === 'user' ? <Sparkles className="w-6 h-6" /> : <User className="w-6 h-6" />}
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100 text-purple-600">
+                    <Sparkles className="w-6 h-6" />
                 </div>
                 <div>
                     <h3 className="text-gray-900 font-bold text-sm">
-                        {viewMode === 'user'
-                          ? (organizerProfile ? 'Switch to creator account' : 'Create a creator account')
-                          : 'Switch to personal account'}
+                        Become an Organizer
                     </h3>
                     <p className="text-gray-500 text-xs">
-                        {viewMode === 'user'
-                          ? (organizerProfile ? 'Start creating events and go live' : 'Set up your creator profile to start')
-                          : 'View your tickets and saved events'}
+                        Create events and go live
                     </p>
                 </div>
             </div>
@@ -827,35 +777,37 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         </div>
       )}
 
-      {/* Tabs - Pill Shaped */}
-      <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6">
-        {isOrganizerView ? (
+      {/* Tabs - Unified */}
+      <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6 overflow-x-auto scrollbar-hide">
+        <button
+          onClick={() => setActiveTab('media')}
+          className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+            activeTab === 'media'
+            ? 'bg-white text-gray-900 shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <LayoutGrid className="w-4 h-4" />
+          Posts
+        </button>
+        
+        <button
+          onClick={() => setActiveTab('tickets')}
+          className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+            activeTab === 'tickets'
+            ? 'bg-white text-gray-900 shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <TicketIcon className="w-4 h-4" />
+          Tickets
+        </button>
+
+        {isOrganizer && (
           <>
             <button
-              onClick={() => setActiveTab('media')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'media'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-              Posts
-            </button>
-            <button
-              onClick={() => setActiveTab('tickets')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'tickets'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <TicketIcon className="w-4 h-4" />
-              Tickets
-            </button>
-            <button
               onClick={() => setActiveTab('upcoming')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
+              className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
                 activeTab === 'upcoming'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
@@ -864,57 +816,20 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               <Calendar className="w-4 h-4" />
               Upcoming
             </button>
-            <button
-              onClick={() => setActiveTab('saved')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'saved'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Bookmark className="w-4 h-4" />
-              Saved
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => setActiveTab('media')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'media'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-              Posts
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('tickets')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'tickets'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <TicketIcon className="w-4 h-4" />
-              Tickets
-            </button>
-    
-            <button
-              onClick={() => setActiveTab('saved')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'saved'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Bookmark className="w-4 h-4" />
-              Saved
-            </button>
           </>
         )}
+
+        <button
+          onClick={() => setActiveTab('saved')}
+          className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+            activeTab === 'saved'
+            ? 'bg-white text-gray-900 shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Bookmark className="w-4 h-4" />
+          Saved
+        </button>
       </div>
 
       {/* Content Area */}
@@ -931,15 +846,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           <>
             {activeTab === 'media' && (
               <div className="space-y-4">
-                {isOrganizerView && (
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-gray-900 flex items-center gap-2">
-                      <LayoutGrid className="w-4 h-4" />
-                      Event Posts
-                    </h3>
-                    <span className="text-gray-500 text-sm">{filteredUserPosts.length}</span>
-                  </div>
-                )}
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-gray-900 flex items-center gap-2">
+                    <LayoutGrid className="w-4 h-4" />
+                    Posts
+                  </h3>
+                  <span className="text-gray-500 text-sm">{filteredUserPosts.length}</span>
+                </div>
                 {filteredUserPosts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
