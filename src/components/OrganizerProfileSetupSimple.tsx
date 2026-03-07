@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Building2, Camera, Check, MapPin, AtSign, Mail, Phone, User, Search, ChevronDown, Loader2, X } from 'lucide-react';
+import { Building2, Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase, getProfile, getOrganizerProfile, upsertOrganizerProfile, uploadImage, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
 

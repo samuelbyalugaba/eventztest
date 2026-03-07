@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut } from 'lucide-react';
+import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { TicketViewer } from './TicketViewer';
@@ -25,13 +25,15 @@ import { handleShare } from '../utils/share';
 import { EventListModal } from './EventListModal';
 
 interface ProfileProps {
-  onLogout: () => Promise<void>;
+  onLogout?: () => Promise<void>;
   onCreateEvent?: () => void;
   onEditEvent?: (event: any) => void;
   onStartOrganizerSetup?: () => void;
+  userId?: string; // Optional: View another user's profile
+  onBack?: () => void; // Optional: Back button handler
 }
 
-export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup }: ProfileProps) {
+export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup, userId, onBack }: ProfileProps) {
   const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events' | 'hosted' | 'upcoming'>('media');
   const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
@@ -67,6 +69,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDetailedPost, setSelectedDetailedPost] = useState<UiPost | null>(null);
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
+  const [isFollowing, setIsFollowing] = useState(false);
   
   // Event List Modal State
   const [showEventListModal, setShowEventListModal] = useState(false);
@@ -85,14 +88,16 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
   
+  const isOwnProfile = !userId || (currentUser && userId === currentUser.id);
+
   const handleShowFollowers = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
     
     setShowFollowersModal(true);
     setIsLoadingFollowList(true);
     try {
-      const followers = await getFollowers(user.id);
+      const followers = await getFollowers(targetUserId);
       setFollowList(followers);
     } catch (err) {
       console.error('Error fetching followers:', err);
@@ -103,13 +108,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   };
 
   const handleShowFollowing = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
     
     setShowFollowingModal(true);
     setIsLoadingFollowList(true);
     try {
-      const following = await getFollowing(user.id);
+      const following = await getFollowing(targetUserId);
       setFollowList(following);
     } catch (err) {
       console.error('Error fetching following:', err);
@@ -126,10 +131,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const savedEventsSubscriptionRef = useRef<any>(null);
 
   // Unified Profile Logic
-  // We no longer switch between 'user' and 'organizer' view modes.
-  // Instead, we check if the user has an organizer profile.
-  // If they do, we show the organizer features (tabs, badge, etc.) alongside user features.
-  
   const isOrganizer = !!organizerProfile;
   const profileImage = isOrganizer 
     ? (organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url || userProfile?.avatar_url) 
@@ -139,7 +140,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     : (userProfile?.full_name || 'User');
   const organizerCategory = organizerProfile?.organizer_type || organizerProfile?.organizerType;
 
-  // We still use setPostAsOrganizer for the post creation toggle
   useEffect(() => {
     setPostAsOrganizer(isOrganizer);
   }, [isOrganizer]);
@@ -149,9 +149,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const profile = await getProfile(user.id);
-        if (profile) {
-          setUserProfile(profile);
+        
+        // Only refresh if viewing own profile
+        if (isOwnProfile) {
+            const profile = await getProfile(user.id);
+            if (profile) {
+              setUserProfile(profile);
+            }
         }
       } catch (e) {
         console.error('Profile refresh failed', e);
@@ -161,15 +165,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdated as EventListener);
     };
-  }, []);
-  // Load all data
-  useEffect(() => {
-    // Check local storage for preferred view mode
-    // Unified profile: no more view mode switching
+  }, [isOwnProfile]);
 
-    const fetchSavedEvents = async (userId: string) => {
+  useEffect(() => {
+    const fetchSavedEvents = async (uid: string) => {
       try {
-        const saved = await getSavedEvents(userId);
+        const saved = await getSavedEvents(uid);
         if (saved) {
            setSavedEvents(saved as unknown as (AppEvent & { isSaved: boolean; hasReminder: boolean })[]);
         }
@@ -182,16 +183,18 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       try {
         setIsLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
+        if (user) setCurrentUser(user);
+
+        const targetUserId = userId || user?.id;
         
-        if (user) {
-          setCurrentUser(user);
+        if (targetUserId) {
           // 1. Profile
-          const profile = await getProfile(user.id);
+          const profile = await getProfile(targetUserId);
           if (profile) setUserProfile(profile);
 
           // 1b. Organizer Profile & Stats
           try {
-            const orgProfile = await getOrganizerProfile(user.id);
+            const orgProfile = await getOrganizerProfile(targetUserId);
             if (orgProfile) {
               setOrganizerProfile({
                 organizerName: orgProfile.organizer_name || profile?.full_name || 'Organizer',
@@ -199,11 +202,11 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               });
               
               // Load stats only if organizer
-              const stats = await getOrganizerStats(user.id);
+              const stats = await getOrganizerStats(targetUserId);
               setOrganizerStats(stats);
 
               // Load created events
-              const events = await getOrganizerEvents(user.id);
+              const events = await getOrganizerEvents(targetUserId);
               if (events) {
                  const mapEvent = (e: any) => ({
                    ...e,
@@ -214,49 +217,50 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               }
             }
           } catch (err) {
-            console.error('Error loading organizer data:', err);
+            // It's okay if not an organizer
+            // console.error('Error loading organizer data:', err);
           }
 
           // Load Follow Stats
           try {
-            const followers = await getFollowersCount(user.id);
-            const following = await getFollowingCount(user.id);
+            const followers = await getFollowersCount(targetUserId);
+            const following = await getFollowingCount(targetUserId);
             setFollowStats({ followers, following });
           } catch (err) {
             console.error('Error loading follow stats:', err);
-            // Default to 0 is already set in state
           }
           
-          // 2. Saved Events (from DB)
-          await fetchSavedEvents(user.id);
+          // 2. Saved Events (from DB) - Only for own profile usually, but fetch anyway
+          if (isOwnProfile) {
+             await fetchSavedEvents(targetUserId);
+             savedEventsSubscriptionRef.current = subscribeToSavedEvents(targetUserId, () => {
+                fetchSavedEvents(targetUserId);
+             });
+          }
 
-          // Subscribe to saved events changes
-          savedEventsSubscriptionRef.current = subscribeToSavedEvents(user.id, () => {
-            fetchSavedEvents(user.id);
-          });
-
-          // 3. Tickets
-          const tickets = await getUserTickets(user.id);
-          if (tickets) {
-            setTicketEvents(tickets);
-            
-            // Derive Attended Events (Past Tickets)
-            const attended = tickets
-              .filter(t => {
-                if (!t.event?.date) return false;
-                const eventDate = new Date(t.event.date);
-                return !isNaN(eventDate.getTime()) && eventDate < new Date();
-              })
-              .map(t => t.event!)
-              .filter(e => !!e);
-            
-            // Deduplicate
-            const uniqueAttended = Array.from(new Map(attended.map(item => [item.id, item])).values());
-            setAttendedEvents(uniqueAttended);
+          // 3. Tickets - Only meaningful for own profile privacy-wise, but logic allows fetching public info if API allows
+          // Assuming getUserTickets is protected by RLS for own tickets only. 
+          // If viewing other profile, tickets likely won't return or return empty unless public.
+          if (isOwnProfile) {
+              const tickets = await getUserTickets(targetUserId);
+              if (tickets) {
+                setTicketEvents(tickets);
+                const attended = tickets
+                  .filter(t => {
+                    if (!t.event?.date) return false;
+                    const eventDate = new Date(t.event.date);
+                    return !isNaN(eventDate.getTime()) && eventDate < new Date();
+                  })
+                  .map(t => t.event!)
+                  .filter(e => !!e);
+                
+                const uniqueAttended = Array.from(new Map(attended.map(item => [item.id, item])).values());
+                setAttendedEvents(uniqueAttended);
+              }
           }
 
           // 4. Posts (for Photos & Videos)
-          const posts = await getPosts({ authorId: user.id });
+          const posts = await getPosts({ authorId: targetUserId });
           if (posts) {
              setUserPosts(posts);
           }
@@ -273,7 +277,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       if (savedEventsSubscriptionRef.current) savedEventsSubscriptionRef.current.unsubscribe?.();
       savedEventsSubscriptionRef.current = null;
     };
-  }, []);
+  }, [userId, isOwnProfile]);
 
   // Clear state when modal opens
   useEffect(() => {
@@ -560,9 +564,16 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {/* Header Section */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
+          {!isOwnProfile && onBack && (
+            <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
+              <ChevronLeft className="w-6 h-6 text-gray-900" />
+            </button>
+          )}
           <div className="relative">
             <div className="w-20 h-20 rounded-full overflow-hidden bg-white ring-1 ring-gray-200">
-              {profileImage ? (
+              {isLoading ? (
+                <div className="w-full h-full bg-gray-200 animate-pulse" />
+              ) : profileImage ? (
                 <ImageWithFallback
                   src={profileImage}
                   alt="Profile"
@@ -578,55 +589,66 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           </div>
           
           <div className="flex-1 min-w-0">
-             <h1 className="text-xl font-semibold text-gray-900 leading-tight">
-               {displayName || 'Loading...'}
-             </h1>
-             <p className="text-gray-500 font-medium text-xs flex items-center gap-1">
-               @{userProfile?.username || 'user'}
-             </p>
+             {isLoading ? (
+               <div className="space-y-2">
+                 <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
+                 <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+               </div>
+             ) : (
+               <>
+                 <h1 className="text-xl font-semibold text-gray-900 leading-tight">
+                   {displayName || 'User'}
+                 </h1>
+                 <p className="text-gray-500 font-medium text-xs flex items-center gap-1">
+                   @{userProfile?.username || 'user'}
+                 </p>
+               </>
+             )}
           </div>
         </div>
 
         {/* Header Actions */}
         <div className="flex flex-col gap-2 items-center absolute top-6 right-6">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-1.5 text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200 bg-white shadow-sm">
-                <Menu className="w-5 h-5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => setShowWalletModal(true)}>
-                <Wallet className="w-4 h-4 mr-2" />
-                Wallet
-              </DropdownMenuItem>
-              {isOrganizer && (
-                 <DropdownMenuItem onClick={() => setShowProfessionalDashboard(true)}>
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Dashboard
-                 </DropdownMenuItem>
-              )}
-              <DropdownMenuItem 
-                onClick={() => {
-                  setSettingsInitialView('main');
-                  setShowSettingsModal(true);
-                }}
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => {
-                  onLogout?.().then(() => toast.success("Logged out"));
-                }}
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isOwnProfile && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-1.5 text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200 bg-white shadow-sm">
+                  <Menu className="w-5 h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setShowWalletModal(true)}>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Wallet
+                </DropdownMenuItem>
+                {isOrganizer && (
+                  <DropdownMenuItem onClick={() => setShowProfessionalDashboard(true)}>
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      Dashboard
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setSettingsInitialView('main');
+                    setShowSettingsModal(true);
+                  }}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => {
+                    onLogout?.().then(() => toast.success("Logged out"));
+                  }}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
-          {isOrganizer && (
+          {isOwnProfile && isOrganizer && (
             <button
               onClick={() => setShowLiveSetupModal(true)}
               className="p-1.5 text-red-600 hover:bg-red-50 rounded-full transition-colors border border-red-200 bg-white shadow-sm"
@@ -730,46 +752,69 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       </div>
 
       {/* Action Buttons */}
-      {isOrganizer ? (
-        <div className="flex gap-3 mb-8">
-           <button 
-             onClick={onCreateEvent}
-             className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
-           >
-             <Plus className="w-4 h-4" />
-             Create Events
-           </button>
-           <button 
-             onClick={() => setShowProfessionalDashboard(true)}
-             className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
-           >
-             <BarChart3 className="w-4 h-4" />
-             See Dashboard
-           </button>
-        </div>
+      {isOwnProfile ? (
+        isOrganizer ? (
+          <div className="flex gap-3 mb-8">
+            <button 
+              onClick={onCreateEvent}
+              className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Create Events
+            </button>
+            <button 
+              onClick={() => setShowProfessionalDashboard(true)}
+              className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+            >
+              <BarChart3 className="w-4 h-4" />
+              See Dashboard
+            </button>
+          </div>
+        ) : (
+          <div 
+              onClick={onStartOrganizerSetup}
+              className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
+          >
+              <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100 text-purple-600">
+                      <Sparkles className="w-6 h-6" />
+                  </div>
+                  <div>
+                      <h3 className="text-gray-900 font-bold text-sm">
+                          Become an Organizer
+                      </h3>
+                      <p className="text-gray-500 text-xs">
+                          Create events and go live
+                      </p>
+                  </div>
+              </div>
+              <div className="text-gray-400">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+              </div>
+          </div>
+        )
       ) : (
-        <div 
-            onClick={onStartOrganizerSetup}
-            className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
-        >
-            <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100 text-purple-600">
-                    <Sparkles className="w-6 h-6" />
-                </div>
-                <div>
-                    <h3 className="text-gray-900 font-bold text-sm">
-                        Become an Organizer
-                    </h3>
-                    <p className="text-gray-500 text-xs">
-                        Create events and go live
-                    </p>
-                </div>
-            </div>
-            <div className="text-gray-400">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-            </div>
+        <div className="flex gap-3 mb-8">
+          <button 
+            className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors"
+            onClick={() => {
+               setIsFollowing(!isFollowing);
+               toast.success(isFollowing ? 'Unfollowed' : 'Followed');
+            }}
+          >
+            {isFollowing ? 'Following' : 'Follow'}
+          </button>
+          <button 
+            className="flex-1 py-3 bg-gray-100 text-gray-900 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
+            onClick={() => {
+              // Handle message
+              toast.info('Message feature coming soon');
+            }}
+          >
+            Message
+          </button>
         </div>
       )}
 
@@ -787,17 +832,19 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           Posts
         </button>
         
-        <button
-          onClick={() => setActiveTab('tickets')}
-          className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
-            activeTab === 'tickets'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <TicketIcon className="w-4 h-4" />
-          Tickets
-        </button>
+        {isOwnProfile && (
+          <button
+            onClick={() => setActiveTab('tickets')}
+            className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+              activeTab === 'tickets'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <TicketIcon className="w-4 h-4" />
+            Tickets
+          </button>
+        )}
 
         {isOrganizer && (
           <>
@@ -815,17 +862,19 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           </>
         )}
 
-        <button
-          onClick={() => setActiveTab('saved')}
-          className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
-            activeTab === 'saved'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <Bookmark className="w-4 h-4" />
-          Saved
-        </button>
+        {isOwnProfile && (
+          <button
+            onClick={() => setActiveTab('saved')}
+            className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+              activeTab === 'saved'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Bookmark className="w-4 h-4" />
+            Saved
+          </button>
+        )}
       </div>
 
       {/* Content Area */}
@@ -842,13 +891,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           <>
             {activeTab === 'media' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-gray-900 flex items-center gap-2">
-                    <LayoutGrid className="w-4 h-4" />
-                    Posts
-                  </h3>
-                  <span className="text-gray-500 text-sm">{filteredUserPosts.length}</span>
-                </div>
                 {filteredUserPosts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
@@ -934,10 +976,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-gray-900">Saved Events</h3>
-                      <span className="text-gray-500 text-sm">{savedEvents.length} saved</span>
-                    </div>
                     {savedEvents.map((event) => (
                       <EventCard
                         key={event.id}
@@ -952,12 +990,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             )}
             {activeTab === 'upcoming' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-gray-900">Upcoming Events</h3>
-                  <span className="text-gray-500 text-sm">
-                    {publishedEvents.filter(e => new Date(e.date) >= new Date()).length} upcoming
-                  </span>
-                </div>
                 {publishedEvents.filter(e => new Date(e.date) >= new Date()).length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
@@ -988,10 +1020,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             )}
             {activeTab === 'tickets' && (
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-gray-900">Tickets</h3>
-                  <span className="text-gray-500 text-sm">{uniqueTicketGroups.length} events</span>
-                </div>
                 {uniqueTicketGroups.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
@@ -1460,8 +1488,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {/* Event List Modal */}
       {showEventListModal && (
         <EventListModal
-          title={isOrganizerView ? "Hosted Events" : "Attended Events"}
-          events={isOrganizerView ? publishedEvents : attendedEvents}
+          title={isOrganizer ? "Hosted Events" : "Attended Events"}
+          events={isOrganizer ? publishedEvents : attendedEvents}
           onClose={() => setShowEventListModal(false)}
           onEventClick={(event) => {
              setSelectedEvent(event);
