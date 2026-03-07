@@ -650,16 +650,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                </div>
              )}
              
-             {isOrganizer && organizerProfile?.bio && (
-               <p className="text-gray-800 leading-relaxed text-[15px] font-medium">
-                 {organizerProfile.bio}
-               </p>
-             )}
-             
             <div className="flex items-start justify-between">
-              <p className="text-gray-600 leading-relaxed text-[15px]">
-                {userProfile?.bio || (
-                  !isOrganizer && <span className="text-gray-400 italic">No bio yet. Add your bio in Settings.</span>
+              <p className={`${(isOrganizer && organizerProfile?.bio) ? 'text-gray-800 font-medium' : 'text-gray-600'} leading-relaxed text-[15px]`}>
+                {(isOrganizer && organizerProfile?.bio) ? organizerProfile.bio : (
+                  userProfile?.bio || (
+                    !isOrganizer && <span className="text-gray-400 italic">No bio yet. Add your bio in Settings.</span>
+                  )
                 )}
               </p>
               {!userProfile?.bio && !isOrganizer && (
