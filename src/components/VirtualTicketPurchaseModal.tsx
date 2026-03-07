@@ -5,6 +5,7 @@ import { supabase } from '../utils/supabase/client';
 import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 import { extractCurrencyFromPrice } from '../utils/currencies';
 import type { Event as ApiEvent } from '../utils/supabase/api';
+import { ntzsApi } from '../utils/ntzs-api';
 
 interface VirtualTicketPurchaseModalProps {
   isOpen: boolean;
@@ -42,36 +43,23 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         }
 
         // Fetch Wallet Balance
-        const { data: txs } = await supabase
-          .from('transactions')
-          .select('amount, currency, provider, status, type')
-          .eq('user_id', user.id)
-          .eq('status', 'success');
-          
-        if (txs) {
-          let balance = 0;
-          txs.forEach((t: any) => {
-             let amount = t.amount || 0;
-             const code = t.currency || 'TZS';
-             if (code !== 'TZS') {
-                const rateMap: Record<string, number> = { USD: 2600, EUR: 2800, GBP: 3200 };
-                const rate = rateMap[code] || 2600;
-                amount = Math.ceil(amount * rate);
-             }
-             
-             if (t.type) {
-                if (['deposit', 'income', 'refund'].includes(t.type)) balance += amount;
-                else if (['payment', 'withdrawal'].includes(t.type)) balance -= amount;
-             } else {
-                if (t.provider === 'wallet' && !t.event) balance += amount;
-                else balance += amount; 
-             }
-          });
-          setWalletBalance(balance);
+        try {
+          // Use nTZS API for real balance
+          const { balanceTzs } = await ntzsApi.getBalance(user.id);
+          setWalletBalance(balanceTzs || 0);
+        } catch (err) {
+          console.error('Failed to fetch wallet balance', err);
+          // Fallback to local calculation if API fails (optional, or just show 0)
+          // For now, keeping local calc as fallback or removing it entirely? 
+          // Removing local calc to avoid confusion. nTZS is the source of truth.
+          setWalletBalance(0);
         }
       }
     };
-    if (isOpen) loadUser();
+    
+    if (isOpen) {
+      loadUser();
+    }
   }, [isOpen]);
 
   const handleTicketSubmit = async () => {

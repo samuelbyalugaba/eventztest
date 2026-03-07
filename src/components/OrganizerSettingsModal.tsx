@@ -34,7 +34,9 @@ import {
   Phone,
   Globe,
   AtSign,
-  Calendar
+  Calendar,
+  Search,
+  ChevronDown
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -92,6 +94,42 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
+
+  const CREATOR_CATEGORIES = [
+    'Art Gallery', 'Artist', 'Bar', 'Band', 'Blogger', 'Book Store', 'Brand',
+    'Business', 'Cafe', 'Charity', 'Church', 'Club', 'Coach', 'Comedy Club',
+    'Community', 'Concert Venue', 'Conference', 'Content Creator', 'Corporate',
+    'DJ', 'Dance Studio', 'Digital Creator', 'Education', 'Entrepreneur',
+    'Event Planner', 'Exhibition', 'Fashion', 'Festival', 'Fitness Trainer',
+    'Government', 'Gym', 'Health/Beauty', 'Hotel', 'Influencer', 'Library',
+    'Lounge', 'Media', 'Mosque', 'Museum', 'Music Venue', 'Musician',
+    'Networking Group', 'Nightclub', 'Non-Profit', 'Organization', 'Park',
+    'Party Planner', 'Performing Arts', 'Personal Blog', 'Photographer',
+    'Podcast', 'Promoter', 'Public Figure', 'Radio Station',
+    'Religious Organization', 'Resort', 'Restaurant', 'Retail', 'School',
+    'Shopping', 'Social Club', 'Speaker', 'Sports Team', 'Startup',
+    'Student Organization', 'Synagogue', 'Tech Community', 'Theater',
+    'University', 'Venue', 'Video Creator', 'Wedding Planner', 'Workshop',
+    'Writer', 'Yoga Studio', 'Youth Organization'
+  ].sort();
+
+  const [categorySearch, setCategorySearch] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredCategories = CREATOR_CATEGORIES.filter(c => 
+    c.toLowerCase().includes(categorySearch.toLowerCase())
+  );
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -165,28 +203,29 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
           if (profile) {
             // Parse organizer type and subtype from organizer profile OR profile (legacy)
+            // Fix: Just take the organizer type as is, since we are moving to single string categories
             let type = organizerProfile?.organizer_type || profile.organizer_type || '';
-            let subType = '';
-            if (type.includes(' - ')) {
-              const parts = type.split(' - ');
-              type = parts[0];
-              subType = parts[1] || '';
-            }
+            // If it has a dash, it might be old format "Type - Subtype", we can keep it or split it.
+            // For now, let's just use it as the initial search value.
+            
+            // Fix: Use profile.username as fallback for organizer name if organizer name is empty
+            const orgName = organizerProfile?.organizer_name || profile.username || '';
 
             setProfileData({
               username: profile.username || '',
-              // STRICT: No fallback to user profile for organizer-specific fields
-              organizerName: organizerProfile?.organizer_name || '', 
+              organizerName: orgName, 
               organizerType: type,
-              venueSubType: subType,
+              venueSubType: '', // Deprecated
               email: organizerProfile?.contact_email || user.email || '',
               phone: organizerProfile?.phone || '',
               location: organizerProfile?.location || '',
               bio: organizerProfile?.bio || '',
               website: organizerProfile?.website || '',
-              avatarUrl: organizerProfile?.organizer_avatar_url || '',
+              avatarUrl: organizerProfile?.organizer_avatar_url || profile.avatar_url || '', // Fallback to user avatar if organizer avatar is missing
               birthdate: profile.birthdate || '',
             });
+
+            setCategorySearch(type);
 
             if (!organizerProfile) {
                // Hint to user that they are creating a new profile
@@ -215,6 +254,8 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       if (!user) return;
 
       // Validation: Check if sub-type is selected for types that require it
+      // REMOVED: No longer needed with simple category selection
+      /*
       const typesRequiringSubType = [
         'Venue', 
         'Artist/Performer', 
@@ -227,6 +268,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         toast.error(`Please select a specific type for ${profileData.organizerType}`);
         return;
       }
+      */
 
       // Check username uniqueness if changed
       // REMOVED: Username updates are disabled in Organizer Settings to prevent syncing with User Profile
@@ -253,9 +295,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         return;
       }
 
-      const finalOrganizerType = profileData.venueSubType
-        ? `${profileData.organizerType} - ${profileData.venueSubType}`
-        : profileData.organizerType;
+      const finalOrganizerType = profileData.organizerType;
 
       // Save organizer profile to separate table
       await upsertOrganizerProfile({
@@ -454,419 +494,52 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                       />
                     </div>
 
-                    {/* Organizer Type - Card Selection */}
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-3">
-                        Organizer Type
-                      </label>
-                      <p className="text-gray-500 text-xs mb-4">Select the category that best describes you</p>
+                    {/* Organizer Type Selection - Dropdown Style */}
+                    <div className="mb-2 relative" ref={categoryRef}>
+                      <label className="block text-gray-700 font-bold mb-2 text-sm ml-1">Category <span className="text-red-500">*</span></label>
+                      <p className="text-gray-500 text-xs mb-3 ml-1">Select the category that best describes you</p>
+                      <div className="relative">
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={categorySearch}
+                          onChange={(e) => {
+                            setCategorySearch(e.target.value);
+                            setShowCategoryDropdown(true);
+                            if (profileData.organizerType && e.target.value !== profileData.organizerType) {
+                              setProfileData(prev => ({ ...prev, organizerType: '' }));
+                            }
+                          }}
+                          onFocus={() => setShowCategoryDropdown(true)}
+                          placeholder="Search categories..."
+                          className="w-full pl-12 pr-10 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent transition-all font-medium"
+                        />
+                        <ChevronDown className={`absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                      </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {[
-                          { name: 'Individual Organizer', icon: User, description: 'Independent event organizer' },
-                          { name: 'Artist/Performer', icon: Mic2, description: 'Musicians, DJs, entertainers' },
-                          { name: 'Venue', icon: Store, description: 'Clubs, Bars, Restaurants' },
-                          { name: 'Organization/Institution', icon: Users, description: 'Non-profits, institutions' },
-                          { name: 'Business/Corporate', icon: Briefcase, description: 'Companies and brands' },
-                          { name: 'Sports Club/Fitness', icon: Trophy, description: 'Gyms and fitness centers' },
-                        ].map((type) => {
-                          const Icon = type.icon;
-                          const isSelected = profileData.organizerType === type.name;
-                          
-                          return (
-                            <button
-                              key={type.name}
-                              type="button"
-                              onClick={() => setProfileData({ ...profileData, organizerType: type.name, venueSubType: '' })}
-                              className={`relative border-2 rounded-xl p-4 text-left transition-all hover:shadow-lg min-h-[92px] ${
-                                isSelected 
-                                  ? 'border-[#8A2BE2] bg-purple-50 shadow-md' 
-                                  : 'border-gray-200 bg-white hover:border-gray-300'
-                              }`}
-                            >
-                              <div className="flex items-start gap-3 h-full">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
-                                  isSelected 
-                                    ? 'bg-[#8A2BE2] shadow-md' 
-                                    : 'bg-gray-100 border border-gray-200'
-                                }`}>
-                                  <Icon className={`w-5 h-5 transition-colors ${
-                                    isSelected ? 'text-white' : 'text-gray-700'
-                                  }`} />
-                                </div>
-                                
-                                <div className="flex-1 min-w-0 pt-0.5">
-                                  <h3 className={`text-gray-900 font-medium mb-1 leading-tight ${
-                                    type.name.length > 18 ? 'text-xs' : 'text-sm'
-                                  }`}>
-                                    {type.name}
-                                  </h3>
-                                  <p className="text-gray-600 text-xs leading-snug">{type.description}</p>
-                                </div>
-                                
-                                {isSelected && (
-                                  <div className="absolute top-3 right-3">
-                                    <div className="w-5 h-5 bg-[#8A2BE2] rounded-full flex items-center justify-center shadow-md">
-                                      <Check className="w-3 h-3 text-white" />
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {showCategoryDropdown && (
+                        <div className="absolute z-20 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
+                          {filteredCategories.length > 0 ? (
+                            filteredCategories.map((c) => (
+                              <button
+                                key={c}
+                                onClick={() => {
+                                  setProfileData(prev => ({ ...prev, organizerType: c }));
+                                  setCategorySearch(c);
+                                  setShowCategoryDropdown(false);
+                                }}
+                                className={`w-full text-left px-6 py-3 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.organizerType === c ? 'text-[#8A2BE2] font-bold bg-purple-50/50' : 'text-slate-600 font-medium'}`}
+                              >
+                                {c}
+                                {profileData.organizerType === c && <Check className="w-4 h-4" />}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-6 py-4 text-sm text-slate-400 italic">No categories found</div>
+                          )}
+                        </div>
+                      )}
                     </div>
-
-                    {/* Venue Sub-Type Selection - Appears when Venue is selected */}
-                    {profileData.organizerType === 'Venue' && (
-                      <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-xl p-5 border-2 border-purple-200">
-                        <div className="mb-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Store className="w-5 h-5 text-[#8A2BE2]" />
-                            <label className="block text-gray-900 text-sm font-medium">
-                              Venue Type <span className="text-red-500">*</span>
-                            </label>
-                          </div>
-                          <p className="text-gray-600 text-xs">What type of venue do you operate?</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {[
-                            { id: 'club', name: 'Club', icon: Music, description: 'Nightclub & dance' },
-                            { id: 'bar', name: 'Bar', icon: Wine, description: 'Bar & pub' },
-                            { id: 'lounge', name: 'Lounge', icon: Coffee, description: 'Lounge & hookah' },
-                            { id: 'restaurant', name: 'Restaurant', icon: UtensilsCrossed, description: 'Dining venue' },
-                          ].map((subType) => {
-                            const Icon = subType.icon;
-                            const isSelected = profileData.venueSubType === subType.name;
-                            
-                            return (
-                              <button
-                                key={subType.id}
-                                type="button"
-                                onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
-                                  isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
-                                }`}
-                              >
-                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
-                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
-                                    isSelected 
-                                      ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
-                                  }`}>
-                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
-                                    }`} />
-                                  </div>
-                                  
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
-                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
-                                    }`}>
-                                      {subType.name}
-                                    </h4>
-                                    
-                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
-                                  </div>
-                                  
-                                  {isSelected && (
-                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
-                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Artist/Performer Sub-Type Selection */}
-                    {profileData.organizerType === 'Artist/Performer' && (
-                      <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-xl p-5 border-2 border-purple-200">
-                        <div className="mb-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Mic2 className="w-5 h-5 text-[#8A2BE2]" />
-                            <label className="block text-gray-900 text-sm font-medium">
-                              Artist Type <span className="text-red-500">*</span>
-                            </label>
-                          </div>
-                          <p className="text-gray-600 text-xs">What type of performer are you?</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {[
-                            { id: 'dj', name: 'DJ', icon: Headphones, description: 'DJ & electronic' },
-                            { id: 'band', name: 'Live Band', icon: Music, description: 'Band & musicians' },
-                            { id: 'solo', name: 'Solo Artist', icon: Mic, description: 'Solo performer' },
-                            { id: 'entertainer', name: 'Entertainer', icon: Radio, description: 'Comedian & MC' },
-                          ].map((subType) => {
-                            const Icon = subType.icon;
-                            const isSelected = profileData.venueSubType === subType.name;
-                            
-                            return (
-                              <button
-                                key={subType.id}
-                                type="button"
-                                onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
-                                  isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
-                                }`}
-                              >
-                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
-                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
-                                    isSelected 
-                                      ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
-                                  }`}>
-                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
-                                    }`} />
-                                  </div>
-                                  
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
-                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
-                                    }`}>
-                                      {subType.name}
-                                    </h4>
-                                    
-                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
-                                  </div>
-                                  
-                                  {isSelected && (
-                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
-                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Organization/Institution Sub-Type Selection */}
-                    {profileData.organizerType === 'Organization/Institution' && (
-                      <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-xl p-5 border-2 border-purple-200">
-                        <div className="mb-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Users className="w-5 h-5 text-[#8A2BE2]" />
-                            <label className="block text-gray-900 text-sm font-medium">
-                              Organization Type <span className="text-red-500">*</span>
-                            </label>
-                          </div>
-                          <p className="text-gray-600 text-xs">What type of organization are you?</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {[
-                            { id: 'nonprofit', name: 'Non-Profit', icon: Heart, description: 'NGO & charity' },
-                            { id: 'education', name: 'Educational', icon: GraduationCap, description: 'University & school' },
-                            { id: 'community', name: 'Community', icon: Users, description: 'Community group' },
-                            { id: 'religious', name: 'Religious', icon: Church, description: 'Religious org' },
-                          ].map((subType) => {
-                            const Icon = subType.icon;
-                            const isSelected = profileData.venueSubType === subType.name;
-                            
-                            return (
-                              <button
-                                key={subType.id}
-                                type="button"
-                                onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
-                                  isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
-                                }`}
-                              >
-                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
-                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
-                                    isSelected 
-                                      ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
-                                  }`}>
-                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
-                                    }`} />
-                                  </div>
-                                  
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
-                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
-                                    }`}>
-                                      {subType.name}
-                                    </h4>
-                                    
-                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
-                                  </div>
-                                  
-                                  {isSelected && (
-                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
-                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Business/Corporate Sub-Type Selection */}
-                    {profileData.organizerType === 'Business/Corporate' && (
-                      <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-xl p-5 border-2 border-purple-200">
-                        <div className="mb-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Briefcase className="w-5 h-5 text-[#8A2BE2]" />
-                            <label className="block text-gray-900 text-sm font-medium">
-                              Business Type <span className="text-red-500">*</span>
-                            </label>
-                          </div>
-                          <p className="text-gray-600 text-xs">What type of business are you?</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {[
-                            { id: 'tech', name: 'Tech Company', icon: Laptop, description: 'Software & tech' },
-                            { id: 'retail', name: 'Retail Brand', icon: ShoppingBag, description: 'Store & retail' },
-                            { id: 'hospitality', name: 'Hospitality', icon: Plane, description: 'Hotel & travel' },
-                            { id: 'entertainment', name: 'Entertainment', icon: Film, description: 'Media & production' },
-                          ].map((subType) => {
-                            const Icon = subType.icon;
-                            const isSelected = profileData.venueSubType === subType.name;
-                            
-                            return (
-                              <button
-                                key={subType.id}
-                                type="button"
-                                onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
-                                  isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
-                                }`}
-                              >
-                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
-                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
-                                    isSelected 
-                                      ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
-                                  }`}>
-                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
-                                    }`} />
-                                  </div>
-                                  
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
-                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
-                                    }`}>
-                                      {subType.name}
-                                    </h4>
-                                    
-                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
-                                  </div>
-                                  
-                                  {isSelected && (
-                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
-                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Sports Club/Fitness Provider Sub-Type Selection */}
-                    {profileData.organizerType === 'Sports Club/Fitness' && (
-                      <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-xl p-5 border-2 border-purple-200">
-                        <div className="mb-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Trophy className="w-5 h-5 text-[#8A2BE2]" />
-                            <label className="block text-gray-900 text-sm font-medium">
-                              Sports/Fitness Type <span className="text-red-500">*</span>
-                            </label>
-                          </div>
-                          <p className="text-gray-600 text-xs">What type of sports/fitness provider are you?</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {[
-                            { id: 'gym', name: 'Gym/Fitness', icon: Dumbbell, description: 'Gym & fitness' },
-                            { id: 'sports', name: 'Sports Club', icon: Trophy, description: 'Sports team' },
-                            { id: 'yoga', name: 'Yoga/Wellness', icon: Activity, description: 'Yoga & wellness' },
-                            { id: 'martial', name: 'Martial Arts', icon: Target, description: 'Fighting & martial' },
-                          ].map((subType) => {
-                            const Icon = subType.icon;
-                            const isSelected = profileData.venueSubType === subType.name;
-                            
-                            return (
-                              <button
-                                key={subType.id}
-                                type="button"
-                                onClick={() => setProfileData({ ...profileData, venueSubType: subType.name })}
-                                className={`group relative border-2 rounded-xl p-3 sm:p-4 transition-all w-full ${
-                                  isSelected 
-                                    ? 'border-[#8A2BE2] bg-white shadow-lg scale-[1.02]' 
-                                    : 'border-white bg-white/80 hover:border-purple-300 hover:shadow-md hover:scale-[1.02]'
-                                }`}
-                              >
-                                <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 text-left sm:text-center w-full">
-                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl flex items-center justify-center sm:mb-2.5 transition-all ${
-                                    isSelected 
-                                      ? 'bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] shadow-md' 
-                                      : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-pink-100'
-                                  }`}>
-                                    <Icon className={`w-6 h-6 sm:w-7 sm:h-7 transition-colors ${
-                                      isSelected ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'
-                                    }`} />
-                                  </div>
-                                  
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className={`text-base sm:text-sm font-semibold mb-0.5 sm:mb-1 ${
-                                      isSelected ? 'text-[#8A2BE2]' : 'text-gray-900 group-hover:text-purple-600'
-                                    }`}>
-                                      {subType.name}
-                                    </h4>
-                                    
-                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{subType.description}</p>
-                                  </div>
-                                  
-                                  {isSelected && (
-                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:top-2 sm:right-2 sm:translate-y-0 sm:translate-x-0">
-                                      <div className="w-6 h-6 bg-gradient-to-br from-[#8A2BE2] to-[#6A1BB2] rounded-full flex items-center justify-center shadow-md">
-                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div>
@@ -955,6 +628,27 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   <button onClick={handleSaveProfile} className="px-5 py-2.5 bg-[#8A2BE2] text-white text-sm rounded-lg hover:bg-[#7825d4]">
                     Save Changes
                   </button>
+                </div>
+
+                <div className="border-t border-gray-200 pt-6 mt-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50/50 rounded-xl p-4 border border-red-100">
+                    <div>
+                      <h5 className="text-gray-900 font-semibold text-sm">Switch to Personal Account</h5>
+                      <p className="text-gray-500 text-xs mt-1 max-w-sm leading-relaxed">
+                        Downgrading removes organizer features. Your events will remain but you won't be able to manage them.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        if (confirm('Are you sure you want to downgrade to a personal account? This will hide your organizer profile.')) {
+                          toast.info('Feature coming soon: Account downgrade process');
+                        }
+                      }}
+                      className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-red-600 text-sm rounded-lg hover:bg-red-50 hover:border-red-200 font-medium transition-all shadow-sm whitespace-nowrap"
+                    >
+                      Downgrade Account
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

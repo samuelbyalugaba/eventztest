@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { extractCurrencyFromPrice, currencies } from '../utils/currencies';
 import { createTransaction, initiateSnippePayment, waitForTransactionCompletion, createTicket } from '../utils/supabase/api';
+import { ntzsApi } from '../utils/ntzs-api';
 
 interface TicketTier {
   name: string;
@@ -68,32 +69,12 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
         }
 
         // Fetch Wallet Balance
-        const { data: txs } = await supabase
-          .from('transactions')
-          .select('amount, currency, provider, status, type')
-          .eq('user_id', user.id)
-          .eq('status', 'success');
-          
-        if (txs) {
-          let balance = 0;
-          txs.forEach((t: any) => {
-             let amount = t.amount || 0;
-             const code = t.currency || 'TZS';
-             if (code !== 'TZS') {
-                const rateMap: Record<string, number> = { USD: 2600, EUR: 2800, GBP: 3200 };
-                const rate = rateMap[code] || 2600;
-                amount = Math.ceil(amount * rate);
-             }
-             
-             if (t.type) {
-                if (['deposit', 'income', 'refund'].includes(t.type)) balance += amount;
-                else if (['payment', 'withdrawal'].includes(t.type)) balance -= amount;
-             } else {
-                if (t.provider === 'wallet' && !t.event) balance += amount;
-                else balance += amount; // Legacy fallback
-             }
-          });
-          setWalletBalance(balance);
+        try {
+          const { balanceTzs } = await ntzsApi.getBalance(user.id);
+          setWalletBalance(balanceTzs || 0);
+        } catch (err) {
+          console.error('Failed to fetch balance', err);
+          setWalletBalance(0);
         }
       }
     };

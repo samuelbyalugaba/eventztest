@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { X, Wallet, CreditCard, CircleDollarSign, Calendar, ArrowDownToLine, Plus, ArrowUpRight } from 'lucide-react';
+import { X, Wallet, CreditCard, CircleDollarSign, Calendar, ArrowDownToLine, Plus, ArrowUpRight, ArrowUpRight as WithdrawIcon, Smartphone } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { currencies, extractCurrencyFromPrice } from '../utils/currencies';
 import { toast } from 'sonner';
 import { createTransaction } from '../utils/supabase/api';
+import { ntzsApi, NtzsUser } from '../utils/ntzs-api';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface WalletModalProps {
 }
 
 type Tx = {
-  id: number;
+  id: string;
   amount: number;
   currency: string;
   provider: string;
@@ -25,130 +26,147 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
   const [txs, setTxs] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeposit, setShowDeposit] = useState(false);
-  const [depositAmount, setDepositAmount] = useState('');
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [phone, setPhone] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const loadTransactions = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('transactions')
-      .select(`
-        id, amount, currency, provider, status, created_at, type,
-        event:events(id, title)
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    if (!error && data) {
-      setTxs(data as any);
-    }
-    setLoading(false);
-  };
+  const [balance, setBalance] = useState(0);
+  const [ntzsUser, setNtzsUser] = useState<NtzsUser | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      loadTransactions();
+      loadWalletData();
     }
   }, [isOpen]);
 
-  const totals = useMemo(() => {
-    // Calculate actual balance: (Deposits + Income) - (Withdrawals + Payments)
-    // Assuming 'amount' is always positive in DB and 'type' determines sign, or provider logic
-    // Based on existing code, it seems to just sum 'success' transactions.
-    // Let's refine this:
-    // If we add 'type' to transactions table, we can distinguish.
-    // If not, we might need to rely on provider. 
-    // For now, let's assume all 'success' transactions add to balance unless they are 'payment' type?
-    // Existing code:
-    /*
-    const totalTZS = success.reduce((sum, t) => {
-      ... return sum + amount
-    }, 0);
-    */
-    // We need to support spending.
-    // Let's assume:
-    // type='deposit' -> +
-    // type='income' (ticket sales) -> +
-    // type='payment' (buying tickets) -> -
-    // type='withdrawal' -> -
-    
-    // Since we don't know if 'type' column exists for sure, we'll try to use it if present in data, 
-    // or infer from provider/context.
-    
-    const success = txs.filter(t => t.status === 'success');
-    let balance = 0;
-    
-    success.forEach(t => {
-      let amount = t.amount || 0;
-      const code = t.currency || 'TZS';
-      
-      // Normalize to TZS for display
-      if (code !== 'TZS') {
-         const rateMap: Record<string, number> = { USD: 2600, EUR: 2800, GBP: 3200 };
-         const rate = rateMap[code] || 2600;
-         amount = Math.ceil(amount * rate);
-      }
-
-      // Logic to determine sign
-      // If t.type exists, use it.
-      if (t.type) {
-        if (['deposit', 'income', 'refund'].includes(t.type)) {
-          balance += amount;
-        } else if (['payment', 'withdrawal'].includes(t.type)) {
-          balance -= amount;
-        }
-      } else {
-        // Fallback inference
-        if (t.provider === 'wallet' && !t.event) {
-             // likely a withdrawal or internal transfer? ambiguous without type
-             // defaulting to positive for backward compat unless it's clearly a spend
-             balance += amount; 
-        } else {
-             balance += amount;
-        }
-      }
-    });
-
-    return { totalTZS: balance, count: success.length };
-  }, [txs]);
-
-  const handleDeposit = async () => {
-    if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
-
-    setIsProcessing(true);
+  const loadWalletData = async () => {
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Create a deposit transaction
-      // In a real app, this would trigger a payment gateway (Stripe/Mobile Money) first.
-      // Here we simulate a successful deposit.
-      await createTransaction({
-        amount: Number(depositAmount),
-        currency: 'TZS',
-        provider: 'Mobile Money', // Simulating external deposit
-        status: 'success',
-        type: 'deposit',
-        user_id: user.id
-      });
+      // 1. Get or Create nTZS User
+      // We use the Supabase User ID as the external ID
+      let nUser: NtzsUser;
+      try {
+        nUser = await ntzsApi.getUser(user.id);
+        // If not found (shouldn't happen if we use create as get), create it
+        if (!nUser) {
+           nUser = await ntzsApi.createUser(user.id, user.email || '');
+        }
+      } catch (err) {
+        console.error('Failed to get nTZS user, creating...', err);
+        nUser = await ntzsApi.createUser(user.id, user.email || '');
+      }
+      setNtzsUser(nUser);
 
-      toast.success('Deposit successful!');
-      setDepositAmount('');
+      // 2. Get Real Balance from nTZS
+      try {
+        const { balanceTzs } = await ntzsApi.getBalance(user.id);
+        setBalance(balanceTzs || 0);
+      } catch (err) {
+        console.error('Failed to fetch balance', err);
+        // Fallback to 0 or local state if needed
+      }
+
+      // 3. Load Transactions (For now, we might still rely on local DB if we sync them, 
+      //    or we should add an endpoint to fetch nTZS history. 
+      //    Let's keep the existing local DB logic for now but maybe we should sync?)
+      //    Ideally, we should fetch from nTZS API if available.
+      //    For this MVP, we will stick to what's in the Supabase 'transactions' table 
+      //    assuming we record them there too upon success.
+      
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select(`
+          id, amount, currency, provider, status, created_at, type,
+          event:events(id, title)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (transactions) {
+        setTxs(transactions as unknown as Tx[]);
+      }
+
+    } catch (error: any) {
+      console.error('Error loading wallet:', error);
+      toast.error(`Failed to load wallet data: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeposit = async () => {
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    if (!phone) {
+        toast.error('Please enter your phone number');
+        return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. Initiate nTZS Deposit
+      const deposit = await ntzsApi.deposit(user.id, Number(amount), phone);
+      
+      // 2. Record intent in local DB (optional but good for UI immediate feedback)
+      // We can assume 'pending' status.
+      toast.info('STK Push sent! Please check your phone to complete payment.');
+      
+      // Ideally, we listen for the webhook or poll for status.
+      // For MVP, we can tell the user to wait.
       setShowDeposit(false);
-      loadTransactions(); // Refresh
-    } catch (error) {
-      console.error('Deposit failed:', error);
-      toast.error('Deposit failed');
+      setAmount('');
+      
+      // Refresh after a delay to see if balance updated (or wait for webhook)
+      setTimeout(loadWalletData, 5000); 
+
+    } catch (error: any) {
+      console.error('Deposit error:', error);
+      toast.error(error.message || 'Deposit failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    if (Number(amount) > balance) {
+        toast.error('Insufficient balance');
+        return;
+    }
+    if (!phone) {
+        toast.error('Please enter your phone number');
+        return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. Initiate nTZS Withdrawal
+      await ntzsApi.withdraw(user.id, Number(amount), phone);
+      
+      toast.success('Withdrawal initiated! Funds will be sent to your M-Pesa.');
+      setShowWithdraw(false);
+      setAmount('');
+      
+      // Refresh balance immediately as funds should be deducted
+      loadWalletData();
+
+    } catch (error: any) {
+      console.error('Withdrawal error:', error);
+      toast.error(error.message || 'Withdrawal failed');
     } finally {
       setIsProcessing(false);
     }
@@ -174,7 +192,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           <div className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-gradient-to-br from-purple-50 to-white">
             <div>
               <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Available Balance</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">TSh {totals.totalTZS.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">TSh {balance.toLocaleString()}</p>
             </div>
             <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
               <Wallet className="w-5 h-5" />
@@ -184,39 +202,104 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           {/* Actions */}
           <div className="grid grid-cols-2 gap-3">
             <button 
-              onClick={() => setShowDeposit(!showDeposit)}
-              className="flex items-center justify-center gap-2 p-3 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 transition-colors"
+              onClick={() => {
+                  setShowDeposit(!showDeposit);
+                  setShowWithdraw(false);
+              }}
+              className={`flex items-center justify-center gap-2 p-3 rounded-xl font-semibold text-sm transition-colors ${
+                  showDeposit ? 'bg-purple-700 text-white' : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
             >
               <Plus className="w-4 h-4" />
               Deposit
             </button>
-            <button className="flex items-center justify-center gap-2 p-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors">
-              <ArrowUpRight className="w-4 h-4" />
+            <button 
+              onClick={() => {
+                  setShowWithdraw(!showWithdraw);
+                  setShowDeposit(false);
+              }}
+              className={`flex items-center justify-center gap-2 p-3 rounded-xl border font-semibold text-sm transition-colors ${
+                  showWithdraw ? 'bg-gray-100 border-gray-300 text-gray-900' : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <WithdrawIcon className="w-4 h-4" />
               Withdraw
             </button>
           </div>
 
           {/* Deposit Form */}
           {showDeposit && (
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 animate-in fade-in slide-in-from-top-2">
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">Top up Wallet</h4>
+            <div className="p-4 bg-purple-50 rounded-xl border border-purple-100 animate-in fade-in slide-in-from-top-2">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">Deposit via M-Pesa</h4>
               <div className="space-y-3">
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Amount (TZS)</label>
                   <input
                     type="number"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
                     placeholder="Enter amount"
                     className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                   />
                 </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Phone Number</label>
+                  <div className="relative">
+                    <Smartphone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="2557XXXXXXXX"
+                        className="w-full pl-9 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                  </div>
+                </div>
                 <button
                   onClick={handleDeposit}
                   disabled={isProcessing}
-                  className="w-full py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+                  className="w-full py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
                 >
                   {isProcessing ? 'Processing...' : 'Confirm Deposit'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Withdraw Form */}
+          {showWithdraw && (
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 animate-in fade-in slide-in-from-top-2">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">Withdraw to Mobile Money</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Amount (TZS)</label>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Phone Number</label>
+                  <div className="relative">
+                    <Smartphone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="2557XXXXXXXX"
+                        className="w-full pl-9 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleWithdraw}
+                  disabled={isProcessing}
+                  className="w-full py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                >
+                  {isProcessing ? 'Processing...' : 'Confirm Withdraw'}
                 </button>
               </div>
             </div>

@@ -9,12 +9,13 @@ import { HighlightViewerModal } from './HighlightViewerModal';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
 import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
-import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2, MoreHorizontal, QrCode } from 'lucide-react';
+import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2, MoreHorizontal, QrCode, X } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile, deletePost, deleteEvent, updateEventStreamingStatus } from '../utils/supabase/api';
+import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile, deletePost, deleteEvent, updateEventStreamingStatus, getUserTickets } from '../utils/supabase/api';
 import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
+import { TicketListModal } from './TicketListModal';
 import { StreamManager } from './StreamManager';
 import { TicketScannerModal } from './TicketScannerModal';
 import {
@@ -61,6 +62,22 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [followersList, setFollowersList] = useState<any[]>([]);
   const [loadingFollowers, setLoadingFollowers] = useState(false);
+
+  // My Tickets State
+  const [showMyTickets, setShowMyTickets] = useState(false);
+  const [myTickets, setMyTickets] = useState<any[]>([]);
+  const [selectedTicketGroup, setSelectedTicketGroup] = useState<any[]>([]);
+  const [showTicketListModal, setShowTicketListModal] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [showTicketViewer, setShowTicketViewer] = useState(false);
+
+  const handleShowMyTickets = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const tickets = await getUserTickets(user.id);
+    if (tickets) setMyTickets(tickets);
+    setShowMyTickets(true);
+  };
 
   const handleShowFollowers = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -403,6 +420,15 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                   >
                     <PlusCircle className="w-4 h-4" />
                     <span className="text-sm font-semibold whitespace-nowrap">Create Event</span>
+                  </button>
+                  <span className="w-px h-5 bg-white/20 hidden md:block" />
+                  <button
+                    onClick={handleShowMyTickets}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/20 transition-colors w-auto"
+                    title="My Tickets"
+                  >
+                    <Ticket className="w-4 h-4" />
+                    <span className="text-sm font-semibold whitespace-nowrap">My Tickets</span>
                   </button>
                   <span className="w-px h-5 bg-white/20 hidden md:block" />
                   <button
@@ -813,6 +839,89 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
       {/* Modals */}
       {showSettings && (
         <OrganizerSettingsModal onClose={() => setShowSettings(false)} />
+      )}
+
+      {/* My Tickets Modal */}
+      {showMyTickets && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShowMyTickets(false)}>
+           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                 <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                   <div className="p-2 bg-purple-100 rounded-lg">
+                     <Ticket className="w-5 h-5 text-purple-600" />
+                   </div>
+                   My Tickets
+                 </h3>
+                 <button onClick={() => setShowMyTickets(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                   <X className="w-5 h-5 text-gray-500" />
+                 </button>
+              </div>
+              <div className="p-6 overflow-y-auto">
+                 {myTickets.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                       <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                          <Ticket className="w-10 h-10 text-gray-300" />
+                       </div>
+                       <h4 className="text-gray-900 font-medium mb-1">No tickets yet</h4>
+                       <p className="text-gray-500 text-sm">Tickets you purchase will appear here</p>
+                    </div>
+                 ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                       {Object.values(myTickets.reduce((acc: any, ticket: any) => {
+                          const eventId = ticket.event_id;
+                          if (!acc[eventId]) acc[eventId] = [];
+                          acc[eventId].push(ticket);
+                          return acc;
+                       }, {})).map((tickets: any) => {
+                          const ticket = tickets[0];
+                          return (
+                            <div
+                              key={ticket.event_id}
+                              onClick={() => {
+                                setSelectedTicketGroup(tickets);
+                                setShowTicketListModal(true);
+                              }}
+                              className="relative aspect-square cursor-pointer group rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100"
+                            >
+                              <ImageWithFallback
+                                src={ticket.event?.image_url}
+                                alt={`Event ${ticket.event?.title}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                              <div className="absolute top-2 left-2 px-2 py-1 bg-black/80 rounded-lg text-white text-xs font-medium backdrop-blur-sm shadow-sm">
+                                {tickets.length} Ticket{tickets.length > 1 ? 's' : ''}
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                                <p className="text-white text-sm line-clamp-1 font-bold">{ticket.event?.title}</p>
+                                <p className="text-white/80 text-xs line-clamp-1">{ticket.event?.date}</p>
+                              </div>
+                            </div>
+                          );
+                       })}
+                    </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Ticket List Modal */}
+      <TicketListModal
+        isOpen={showTicketListModal}
+        onClose={() => setShowTicketListModal(false)}
+        tickets={selectedTicketGroup}
+        onSelectTicket={(ticket) => {
+           setSelectedTicket(ticket);
+           setShowTicketViewer(true);
+        }}
+      />
+
+      {/* Ticket Viewer */}
+      {showTicketViewer && selectedTicket && (
+        <TicketViewer
+          ticket={selectedTicket}
+          onClose={() => setShowTicketViewer(false)}
+        />
       )}
 
       {selectedEventForStream && (

@@ -569,23 +569,21 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               <ChevronLeft className="w-6 h-6 text-gray-900" />
             </button>
           )}
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-white ring-1 ring-gray-200">
-              {isLoading ? (
-                <div className="w-full h-full bg-gray-200 animate-pulse" />
-              ) : profileImage ? (
-                <ImageWithFallback
-                  src={profileImage}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <UserAvatar 
-                  name={displayName} 
-                  className="w-full h-full text-2xl" 
-                />
-              )}
-            </div>
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-white ring-1 ring-gray-200">
+            {isLoading ? (
+              <div className="w-full h-full bg-gray-200 animate-pulse" />
+            ) : profileImage ? (
+              <ImageWithFallback
+                src={profileImage}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <UserAvatar 
+                name={displayName} 
+                className="w-full h-full text-2xl" 
+              />
+            )}
           </div>
           
           <div className="flex-1 min-w-0">
@@ -612,7 +610,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           {isOwnProfile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-1.5 text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200 bg-white shadow-sm">
+                <button className="p-1.5 text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
                   <Menu className="w-5 h-5" />
                 </button>
               </DropdownMenuTrigger>
@@ -719,7 +717,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               onClick={handleShowEventsList}
             >
               <div className="text-xl font-bold text-gray-900 mb-1">
-                  {organizerStats ? organizerStats.totalEvents : attendedEvents.length}
+                  {isOrganizer ? (organizerStats ? organizerStats.totalEvents : 0) : attendedEvents.length}
               </div>
               <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
                   {isOrganizer ? 'Hosted' : 'Attended'}
@@ -730,7 +728,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               onClick={handleShowFollowers}
             >
               <div className="text-xl font-bold text-gray-900 mb-1">
-                  {organizerStats ? organizerStats.followers : followStats.followers}
+                  {followStats.followers}
               </div>
               <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
                   Followers
@@ -824,26 +822,26 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6 overflow-x-auto scrollbar-hide">
         <button
           onClick={() => setActiveTab('media')}
-          className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+          className={`flex-1 min-w-[80px] py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
             activeTab === 'media'
             ? 'bg-white text-gray-900 shadow-sm'
             : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <LayoutGrid className="w-4 h-4" />
+          <LayoutGrid className="w-3.5 h-3.5" />
           Posts
         </button>
         
-        {isOwnProfile && (
+        {isOwnProfile && !isOrganizer && (
           <button
             onClick={() => setActiveTab('tickets')}
-            className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+            className={`flex-1 min-w-[80px] py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
               activeTab === 'tickets'
               ? 'bg-white text-gray-900 shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <TicketIcon className="w-4 h-4" />
+            <TicketIcon className="w-3.5 h-3.5" />
             Tickets
           </button>
         )}
@@ -852,13 +850,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           <>
             <button
               onClick={() => setActiveTab('upcoming')}
-              className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+              className={`flex-1 min-w-[80px] py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
                 activeTab === 'upcoming'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <Calendar className="w-4 h-4" />
+              <Calendar className="w-3.5 h-3.5" />
               Upcoming
             </button>
           </>
@@ -867,13 +865,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         {isOwnProfile && (
           <button
             onClick={() => setActiveTab('saved')}
-            className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+            className={`flex-1 min-w-[80px] py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
               activeTab === 'saved'
               ? 'bg-white text-gray-900 shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Bookmark className="w-4 h-4" />
+            <Bookmark className="w-3.5 h-3.5" />
             Saved
           </button>
         )}

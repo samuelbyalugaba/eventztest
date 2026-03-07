@@ -339,14 +339,22 @@ export function ProfessionalDashboardModal({
         {/* Account Info Section */}
         <div>
           <h2 className="text-lg font-bold text-gray-900 mb-4">Account Info</h2>
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-4">
-            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center flex-shrink-0">
-              <Star className="w-6 h-6 text-gray-900" />
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center flex-shrink-0">
+                <Star className="w-6 h-6 text-gray-900" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Account Status: Active</h3>
+                <p className="text-gray-500 text-sm">Your profile is visible to the public</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Account Status: Active</h3>
-              <p className="text-gray-500 text-sm">Your profile is visible to the public</p>
-            </div>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="w-full sm:w-auto px-4 py-2 bg-gray-100 text-gray-900 font-semibold text-sm rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              Edit Profile
+            </button>
           </div>
         </div>
 
