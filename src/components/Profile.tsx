@@ -1,15 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, MapPin, Calendar, Video, Edit2, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, MoreHorizontal, Clock, Eye, User, Briefcase, LayoutGrid, Radio, Repeat, Menu, Wallet, Layers, LogOut } from 'lucide-react';
+import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
-import { MediaViewer } from './MediaViewer';
 import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, Post as ApiPost, getFollowers, getFollowing, deletePost, getOrganizerProfile, getOrganizerStats, getOrganizerEvents, deleteEvent, toggleLikePost, toggleSavePost } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, Post as ApiPost, getFollowers, getFollowing, deletePost, getOrganizerProfile, getOrganizerStats, getOrganizerEvents, toggleLikePost, toggleSavePost } from '../utils/supabase/api';
 import { WalletModal } from './WalletModal';
 import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
@@ -33,7 +32,7 @@ interface ProfileProps {
 }
 
 export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup }: ProfileProps) {
-  const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events'>('media');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events' | 'hosted' | 'upcoming'>('media');
   const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -43,12 +42,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [postCaption, setPostCaption] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [postType, setPostType] = useState<'photo' | 'video' | null>(null);
-  const [showMediaViewer, setShowMediaViewer] = useState(false);
-  const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
-  const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
-  const [mediaTab, setMediaTab] = useState<'photos' | 'videos'>('photos');
   const [postAsOrganizer, setPostAsOrganizer] = useState(false);
-  const [mediaViewerItems, setMediaViewerItems] = useState<any[]>([]);
   const [showTicketViewer, setShowTicketViewer] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
@@ -175,7 +169,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       try {
         const saved = await getSavedEvents(userId);
         if (saved) {
-           setSavedEvents(saved as unknown as (Event & { isSaved: boolean; hasReminder: boolean })[]);
+           setSavedEvents(saved as unknown as (AppEvent & { isSaved: boolean; hasReminder: boolean })[]);
         }
       } catch (error) {
         console.error('Error fetching saved events:', error);
@@ -564,37 +558,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     return !p.posted_as_organizer;
   });
 
-  // For the Viewer: Flatten all photos
-  const allPhotosForViewer = filteredUserPosts.flatMap(p => 
-    (p.image_urls || []).map((url, idx) => ({
-      id: p.id * 1000 + idx,
-      url,
-      likes: p.likes_count || 0,
-      eventName: p.content,
-      isPost: true,
-      postId: p.id,
-      isLiked: p.is_liked
-    }))
-  );
-
-  // For the Grid: One item per post
-  const photoPosts = filteredUserPosts.filter(p => p.image_urls && p.image_urls.length > 0);
-
-  const videoClips = filteredUserPosts
-    .filter(p => p.video_url)
-    .map(p => ({
-      id: p.id,
-      thumbnail: p.image_urls?.[0],
-      videoUrl: p.video_url!,
-      views: 0,
-      likes: p.likes_count || 0,
-      eventName: p.content,
-      isPost: true,
-      postId: p.id,
-      isLiked: p.is_liked,
-      duration: '0:30'
-    }));
-
   // Group tickets by event
   const groupedTickets = ticketEvents.reduce((acc, ticket) => {
     const eventId = ticket.event_id;
@@ -640,10 +603,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         </div>
 
         {/* Header Actions */}
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-col gap-2 items-center absolute top-6 right-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200">
+              <button className="p-1.5 text-gray-900 hover:bg-gray-100 rounded-full transition-colors border border-gray-200 bg-white shadow-sm">
                 <Menu className="w-5 h-5" />
               </button>
             </DropdownMenuTrigger>
@@ -660,10 +623,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                   >
                     <User className="w-4 h-4 mr-2" />
                     Switch to Personal
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowLiveSetupModal(true)}>
-                    <Radio className="w-4 h-4 mr-2" />
-                    Go Live
                   </DropdownMenuItem>
                 </>
               ) : (
@@ -704,6 +663,16 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {isOrganizerView && (
+            <button
+              onClick={() => setShowLiveSetupModal(true)}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded-full transition-colors border border-red-200 bg-white shadow-sm"
+              title="Go Live"
+            >
+              <Radio className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -859,44 +828,94 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       )}
 
       {/* Tabs - Pill Shaped */}
-      {!isOrganizerView && (
-        <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6">
+      <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6">
+        {isOrganizerView ? (
           <>
             <button
               onClick={() => setActiveTab('media')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
                 activeTab === 'media'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
               }`}
             >
+              <LayoutGrid className="w-4 h-4" />
               Posts
             </button>
-            
             <button
               onClick={() => setActiveTab('tickets')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
                 activeTab === 'tickets'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
               }`}
             >
+              <TicketIcon className="w-4 h-4" />
               Tickets
             </button>
-    
+            <button
+              onClick={() => setActiveTab('upcoming')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
+                activeTab === 'upcoming'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              Upcoming
+            </button>
             <button
               onClick={() => setActiveTab('saved')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
                 activeTab === 'saved'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
               }`}
             >
+              <Bookmark className="w-4 h-4" />
               Saved
             </button>
           </>
-        </div>
-      )}
+        ) : (
+          <>
+            <button
+              onClick={() => setActiveTab('media')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
+                activeTab === 'media'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Posts
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('tickets')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
+                activeTab === 'tickets'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <TicketIcon className="w-4 h-4" />
+              Tickets
+            </button>
+    
+            <button
+              onClick={() => setActiveTab('saved')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
+                activeTab === 'saved'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Bookmark className="w-4 h-4" />
+              Saved
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Content Area */}
       <div>
@@ -1022,44 +1041,90 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                 )}
               </>
             )}
+            {activeTab === 'upcoming' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-gray-900">Upcoming Events</h3>
+                  <span className="text-gray-500 text-sm">
+                    {publishedEvents.filter(e => new Date(e.date) >= new Date()).length} upcoming
+                  </span>
+                </div>
+                {publishedEvents.filter(e => new Date(e.date) >= new Date()).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                      <Calendar className="w-8 h-8 text-gray-300" />
+                    </div>
+                    <p className="text-gray-900 font-medium mb-1">No upcoming events</p>
+                    <p className="text-gray-500 text-sm max-w-xs mx-auto">Create an event to see it here</p>
+                    <button 
+                      onClick={onCreateEvent}
+                      className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-full text-sm font-medium hover:bg-purple-700 transition-colors"
+                    >
+                      Create Event
+                    </button>
+                  </div>
+                ) : (
+                  publishedEvents
+                    .filter(e => new Date(e.date) >= new Date())
+                    .map((event) => (
+                      <EventCard
+                        key={event.id}
+                        event={event}
+                        onClick={(e) => setSelectedEvent(e)}
+                        className="border border-gray-100 hover:shadow-md transition-all"
+                      />
+                    ))
+                )}
+              </div>
+            )}
             {activeTab === 'tickets' && (
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-gray-900">Tickets</h3>
                   <span className="text-gray-500 text-sm">{uniqueTicketGroups.length} events</span>
                 </div>
-                <div className="grid grid-cols-3 gap-1">
-                  {uniqueTicketGroups.map((tickets) => {
-                    const ticket = tickets[0];
-                    return (
-                      <div
-                        key={ticket.event_id}
-                        onClick={() => {
-                          setSelectedEventTickets(tickets);
-                          setShowTicketListModal(true);
-                        }}
-                        className="relative aspect-square cursor-pointer group"
-                      >
-                        <ImageWithFallback
-                          src={ticket.event?.image_url}
-                          alt={`Event ${ticket.event?.title}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
-                          {tickets.length} Ticket{tickets.length > 1 ? 's' : ''}
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
-                          <p className="text-white text-[10px] line-clamp-1 font-medium">{ticket.event?.title}</p>
-                        </div>
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
-                            <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
+                {uniqueTicketGroups.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                      <TicketIcon className="w-8 h-8 text-gray-300" />
+                    </div>
+                    <p className="text-gray-900 font-medium mb-1">No tickets yet</p>
+                    <p className="text-gray-500 text-sm max-w-xs mx-auto mb-4">You haven't purchased any tickets yet. Explore events to get started!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1">
+                    {uniqueTicketGroups.map((tickets) => {
+                      const ticket = tickets[0];
+                      return (
+                        <div
+                          key={ticket.event_id}
+                          onClick={() => {
+                            setSelectedEventTickets(tickets);
+                            setShowTicketListModal(true);
+                          }}
+                          className="relative aspect-square cursor-pointer group"
+                        >
+                          <ImageWithFallback
+                            src={ticket.event?.image_url}
+                            alt={`Event ${ticket.event?.title}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
+                            {tickets.length} Ticket{tickets.length > 1 ? 's' : ''}
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
+                            <p className="text-white text-[10px] line-clamp-1 font-medium">{ticket.event?.title}</p>
+                          </div>
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
+                              <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </>
