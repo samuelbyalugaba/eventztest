@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, ChevronLeft, Tv, Calendar, MapPin, CheckCircle2, Phone, CreditCard, User, Mail, Smartphone, ArrowRight } from 'lucide-react';
+import { X, ChevronLeft, Tv, Calendar, MapPin, CheckCircle2, Phone, CreditCard, User, Mail, Smartphone, ArrowRight, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion, type Event as ApiEvent } from '../utils/supabase/api';
+import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 import { extractCurrencyFromPrice } from '../utils/currencies';
+import type { Event as ApiEvent } from '../utils/supabase/api';
 
 interface VirtualTicketPurchaseModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface VirtualTicketPurchaseModalProps {
 }
 
 const PAYMENT_PROVIDERS = [
+  { id: 'Wallet', name: 'Wallet', color: 'bg-purple-600', short: 'W' },
   { id: 'Airtel', name: 'Airtel', color: 'bg-red-500', short: 'A' },
   { id: 'Tigo', name: 'Tigo', color: 'bg-blue-500', short: 'T' },
   { id: 'Halopesa', name: 'Halo', color: 'bg-orange-500', short: 'H' },
@@ -20,11 +22,12 @@ const PAYMENT_PROVIDERS = [
 
 export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTicketPurchaseModalProps) {
   const [ticketFormData, setTicketFormData] = useState({ name: '', email: '', phone: '' });
-  const [selectedProvider, setSelectedProvider] = useState(PAYMENT_PROVIDERS[0].id);
+  const [selectedProvider, setSelectedProvider] = useState(PAYMENT_PROVIDERS[1].id); // Default to Airtel
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'details' | 'success'>('details');
+  const [walletBalance, setWalletBalance] = useState(0);
 
-  // Pre-fill user data
+  // Pre-fill user data & fetch wallet
   useEffect(() => {
     const loadUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -37,15 +40,50 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
             email: profile.contact_email || user.email || ''
           }));
         }
+
+        // Fetch Wallet Balance
+        const { data: txs } = await supabase
+          .from('transactions')
+          .select('amount, currency, provider, status, type')
+          .eq('user_id', user.id)
+          .eq('status', 'success');
+          
+        if (txs) {
+          let balance = 0;
+          txs.forEach((t: any) => {
+             let amount = t.amount || 0;
+             const code = t.currency || 'TZS';
+             if (code !== 'TZS') {
+                const rateMap: Record<string, number> = { USD: 2600, EUR: 2800, GBP: 3200 };
+                const rate = rateMap[code] || 2600;
+                amount = Math.ceil(amount * rate);
+             }
+             
+             if (t.type) {
+                if (['deposit', 'income', 'refund'].includes(t.type)) balance += amount;
+                else if (['payment', 'withdrawal'].includes(t.type)) balance -= amount;
+             } else {
+                if (t.provider === 'wallet' && !t.event) balance += amount;
+                else balance += amount; 
+             }
+          });
+          setWalletBalance(balance);
+        }
       }
     };
     if (isOpen) loadUser();
   }, [isOpen]);
 
   const handleTicketSubmit = async () => {
-    if (!event || !ticketFormData.name || !ticketFormData.email || !ticketFormData.phone) {
-      toast.error('Please fill in all fields');
+    if (!event || !ticketFormData.name || !ticketFormData.email) {
+      toast.error('Please fill in name and email');
       return;
+    }
+    
+    // Only require phone for mobile money
+    if (selectedProvider !== 'Wallet' && !ticketFormData.phone) {
+        toast.error('Please enter phone number');
+        return;
     }
 
     try {
@@ -63,49 +101,80 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
       const currency = extractCurrencyFromPrice(priceString);
 
       if (price <= 0) {
+        // Free ticket logic
         await finalizeTicket(user.id, 'Free', 0);
         return;
       }
 
-      // 2. Create Pending Transaction
-      const transactionData = {
-        user_id: user.id,
-        event_id: event.id,
-        amount: price,
-        currency: currency,
-        provider: selectedProvider,
-        status: 'pending',
-        metadata: {
-          customer_name: ticketFormData.name,
-          customer_email: ticketFormData.email,
-          customer_phone: ticketFormData.phone,
-          ticket_type: 'Virtual'
-        }
-      };
+      // Check Wallet Balance
+      if (selectedProvider === 'Wallet') {
+         if (walletBalance < price) {
+             toast.error('Insufficient wallet balance');
+             setIsSubmitting(false);
+             return;
+         }
+         
+         // Create instant transaction
+         const transaction = await createTransaction({
+            user_id: user.id,
+            event_id: event.id,
+            amount: price,
+            currency: currency,
+            provider: 'Wallet',
+            status: 'success',
+            type: 'payment',
+            metadata: {
+              customer_name: ticketFormData.name,
+              customer_email: ticketFormData.email,
+              ticket_type: 'Virtual'
+            }
+         });
+         
+         await finalizeTicket(user.id, priceString, transaction.id);
+         
+      } else {
+          // Mobile Money Flow
+          // 2. Create Pending Transaction
+          const transactionData = {
+            user_id: user.id,
+            event_id: event.id,
+            amount: price,
+            currency: currency,
+            provider: selectedProvider,
+            status: 'pending',
+            type: 'payment',
+            metadata: {
+              customer_name: ticketFormData.name,
+              customer_email: ticketFormData.email,
+              customer_phone: ticketFormData.phone,
+              ticket_type: 'Virtual'
+            }
+          };
 
-      const transaction = await createTransaction(transactionData);
-      
-      // 3. Initiate Payment (Snippe)
-      toast.info('Initiating payment request...');
-      await initiateSnippePayment({
-        amount: price,
-        currency: currency,
-        phoneNumber: ticketFormData.phone,
-        provider: selectedProvider,
-        eventId: event.id,
-        userId: user.id,
-        metadata: { 
-          transactionId: transaction.id,
-          customer_name: ticketFormData.name,
-          customer_email: ticketFormData.email
-        }
-      });
+          const transaction = await createTransaction(transactionData);
+          
+          // 3. Initiate Payment (Snippe)
+          toast.info('Initiating payment request...');
+          await initiateSnippePayment({
+            amount: price,
+            currency: currency,
+            phoneNumber: ticketFormData.phone,
+            provider: selectedProvider,
+            eventId: event.id,
+            userId: user.id,
+            metadata: { 
+              transactionId: transaction.id,
+              customer_name: ticketFormData.name,
+              customer_email: ticketFormData.email
+            }
+          });
 
-      toast.info(`Please approve payment on your phone (${ticketFormData.phone})`);
-      const ok = await waitForTransactionCompletion(transaction.id);
-      if (!ok) throw new Error('Payment not confirmed');
-      
-      await finalizeTicket(user.id, priceString, transaction.id);
+          toast.info(`Please approve payment on your phone (${ticketFormData.phone})`);
+          const ok = await waitForTransactionCompletion(transaction.id);
+          if (!ok) throw new Error('Payment not confirmed');
+          
+          await finalizeTicket(user.id, priceString, transaction.id);
+      }
 
     } catch (error: any) {
       console.error('Purchase error:', error);
@@ -143,6 +212,10 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
   };
 
   if (!isOpen) return null;
+  
+  // Calculate price for display
+  const priceString = event.streaming?.virtualPrice || event.price_range || '0';
+  const price = parseFloat(priceString.replace(/[^0-9.]/g, '')) || 0;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -206,26 +279,40 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                             <button
                                 key={provider.id}
                                 onClick={() => setSelectedProvider(provider.id)}
-                                className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all ${
+                                className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all flex flex-col items-center justify-center gap-1 ${
                                     selectedProvider === provider.id
                                     ? 'border-purple-600 bg-purple-50 text-purple-700'
                                     : 'border-gray-200 text-gray-600 hover:border-purple-200'
                                 }`}
                             >
+                                {provider.id === 'Wallet' && <Wallet className="w-3 h-3" />}
                                 {provider.name}
                             </button>
                         ))}
                     </div>
-                    <div className="relative">
-                        <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                        <input
-                            type="tel"
-                            placeholder="255 7XX XXX XXX"
-                            value={ticketFormData.phone}
-                            onChange={(e) => setTicketFormData({ ...ticketFormData, phone: e.target.value })}
-                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
-                        />
-                    </div>
+                    
+                    {selectedProvider === 'Wallet' ? (
+                       <div className={`p-4 rounded-xl border ${walletBalance >= price ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
+                          <div className="flex justify-between items-center mb-1">
+                             <span className="text-sm font-medium text-gray-700">Wallet Balance</span>
+                             <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
+                          </div>
+                          {walletBalance < price && (
+                             <p className="text-xs text-red-600 font-medium">Insufficient balance. Please deposit funds.</p>
+                          )}
+                       </div>
+                    ) : (
+                        <div className="relative">
+                            <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                            <input
+                                type="tel"
+                                placeholder="255 7XX XXX XXX"
+                                value={ticketFormData.phone}
+                                onChange={(e) => setTicketFormData({ ...ticketFormData, phone: e.target.value })}
+                                className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <button

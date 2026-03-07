@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Users, Sparkles, Crown, ArrowRight, Smartphone, CreditCard, ChevronLeft, Ticket, Minus, Plus } from 'lucide-react';
+import { X, Check, Users, Sparkles, Crown, ArrowRight, Smartphone, CreditCard, ChevronLeft, Ticket, Minus, Plus, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { extractCurrencyFromPrice, currencies } from '../utils/currencies';
@@ -38,6 +38,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
   const [paymentPhone, setPaymentPhone] = useState('');
   const [selectedProvider, setSelectedProvider] = useState('Airtel');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   // Normalize tiers (handle single price events)
   const tiers: TicketTier[] = (event.ticketTiers && event.ticketTiers.length > 0) 
@@ -53,7 +54,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
         features: ['General Admission']
       }];
 
-  // Pre-fill user data
+  // Pre-fill user data & fetch wallet balance
   useEffect(() => {
     const loadUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -64,6 +65,35 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             name: profile.full_name || '',
             email: profile.contact_email || user.email || ''
           });
+        }
+
+        // Fetch Wallet Balance
+        const { data: txs } = await supabase
+          .from('transactions')
+          .select('amount, currency, provider, status, type')
+          .eq('user_id', user.id)
+          .eq('status', 'success');
+          
+        if (txs) {
+          let balance = 0;
+          txs.forEach((t: any) => {
+             let amount = t.amount || 0;
+             const code = t.currency || 'TZS';
+             if (code !== 'TZS') {
+                const rateMap: Record<string, number> = { USD: 2600, EUR: 2800, GBP: 3200 };
+                const rate = rateMap[code] || 2600;
+                amount = Math.ceil(amount * rate);
+             }
+             
+             if (t.type) {
+                if (['deposit', 'income', 'refund'].includes(t.type)) balance += amount;
+                else if (['payment', 'withdrawal'].includes(t.type)) balance -= amount;
+             } else {
+                if (t.provider === 'wallet' && !t.event) balance += amount;
+                else balance += amount; // Legacy fallback
+             }
+          });
+          setWalletBalance(balance);
         }
       }
     };
@@ -102,9 +132,19 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
   const currencySymbol = getCurrencySymbol(tiers[0]?.price || '');
 
   const handlePurchase = async () => {
-    if (totalTickets === 0 || !formData.name || !formData.email || !paymentPhone) {
+    if (totalTickets === 0 || !formData.name || !formData.email) {
       toast.error('Please fill in all details');
       return;
+    }
+    
+    if (selectedProvider !== 'Wallet' && !paymentPhone) {
+        toast.error('Please enter phone number');
+        return;
+    }
+    
+    if (selectedProvider === 'Wallet' && walletBalance < totalPrice) {
+        toast.error('Insufficient wallet balance');
+        return;
     }
 
     try {
@@ -121,46 +161,82 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
       const firstTier = tiers.find(t => t.name === firstTierName);
       const currency = firstTier ? extractCurrencyFromPrice(firstTier.price) : 'TZS';
 
-      // 1. Create Transaction
-      const transactionData = {
-        user_id: user.id,
-        event_id: event.id,
-        amount: totalPrice,
-        currency: currency,
-        provider: selectedProvider,
-        status: 'pending',
-        metadata: {
-          customer_name: formData.name,
-          customer_email: formData.email,
-          customer_phone: paymentPhone,
-          selections: JSON.stringify(selections), // Store breakdown
-          total_quantity: totalTickets
-        }
-      };
+      if (selectedProvider === 'Wallet') {
+         // Wallet Payment Flow
+         const transaction = await createTransaction({
+            user_id: user.id,
+            event_id: event.id,
+            amount: totalPrice,
+            currency: currency,
+            provider: 'Wallet',
+            status: 'success', // Instant success
+            type: 'payment',
+            metadata: {
+              customer_name: formData.name,
+              customer_email: formData.email,
+              selections: JSON.stringify(selections),
+              total_quantity: totalTickets
+            }
+         });
+         
+         // Proceed directly to ticket creation
+         await finalizeTicketCreation(user.id, transaction.id);
+         
+      } else {
+          // Mobile Money Flow
+          // 1. Create Transaction
+          const transactionData = {
+            user_id: user.id,
+            event_id: event.id,
+            amount: totalPrice,
+            currency: currency,
+            provider: selectedProvider,
+            status: 'pending',
+            type: 'payment',
+            metadata: {
+              customer_name: formData.name,
+              customer_email: formData.email,
+              customer_phone: paymentPhone,
+              selections: JSON.stringify(selections), // Store breakdown
+              total_quantity: totalTickets
+            }
+          };
 
-      const transaction = await createTransaction(transactionData);
+          const transaction = await createTransaction(transactionData);
 
-      // 2. Initiate Payment
-      toast.info('Sending payment request...');
-      await initiateSnippePayment({
-        amount: totalPrice,
-        currency: currency,
-        phoneNumber: paymentPhone,
-        provider: selectedProvider,
-        eventId: event.id,
-        userId: user.id,
-        metadata: { 
-          transactionId: transaction.id,
-          customer_name: formData.name,
-          customer_email: formData.email
-        }
-      });
+          // 2. Initiate Payment
+          toast.info('Sending payment request...');
+          await initiateSnippePayment({
+            amount: totalPrice,
+            currency: currency,
+            phoneNumber: paymentPhone,
+            provider: selectedProvider,
+            eventId: event.id,
+            userId: user.id,
+            metadata: { 
+              transactionId: transaction.id,
+              customer_name: formData.name,
+              customer_email: formData.email
+            }
+          });
 
-      // 3. Wait for Completion
-      toast.info(`Please approve payment on your phone (${paymentPhone})`);
-      const ok = await waitForTransactionCompletion(transaction.id);
-      if (!ok) throw new Error('Payment not confirmed');
+          // 3. Wait for Completion
+          toast.info(`Please approve payment on your phone (${paymentPhone})`);
+          const ok = await waitForTransactionCompletion(transaction.id);
+          if (!ok) throw new Error('Payment not confirmed');
+          
+          await finalizeTicketCreation(user.id, transaction.id);
+      }
 
+    } catch (error: any) {
+      console.error('Purchase error:', error);
+      toast.error(error.message || 'Payment failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const finalizeTicketCreation = async (userId: string, transactionId: number) => {
       // 4. Create Tickets
       for (const [tierName, qty] of Object.entries(selections)) {
         const tier = tiers.find(t => t.name === tierName);
@@ -170,7 +246,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
           const ticketNumber = `${tierName.substring(0,3).toUpperCase()}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
           const barcode = crypto.randomUUID();
           await createTicket({
-            user_id: user.id,
+            user_id: userId,
             event_id: event.id,
             ticket_number: ticketNumber,
             barcode: barcode,
@@ -180,7 +256,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             customer_email: formData.email,
             ticket_type: tierName,
             status: 'active',
-            transaction_id: transaction.id
+            transaction_id: transactionId
           });
         }
       }
@@ -188,13 +264,6 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
       toast.success('Tickets Purchased Successfully!');
       onSuccess();
       onClose();
-
-    } catch (error: any) {
-      console.error('Purchase error:', error);
-      toast.error(error.message || 'Payment failed');
-    } finally {
-      setIsProcessing(false);
-    }
   };
 
   const getTierIcon = (name: string) => {
@@ -327,30 +396,44 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
               <div className="space-y-3">
                 <h3 className="font-semibold text-gray-900 text-sm">Payment Method</h3>
                 <div className="grid grid-cols-4 gap-2">
-                  {['Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map(p => (
+                  {['Wallet', 'Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map(p => (
                     <button
                       key={p}
                       onClick={() => setSelectedProvider(p)}
-                      className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all ${
+                      className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all flex flex-col items-center justify-center gap-1 ${
                         selectedProvider === p 
                           ? 'border-[#8A2BE2] bg-purple-50 text-purple-700' 
                           : 'border-gray-200 text-gray-600 hover:border-purple-200'
                       }`}
                     >
+                      {p === 'Wallet' && <Wallet className="w-3 h-3" />}
                       {p}
                     </button>
                   ))}
                 </div>
-                <div className="relative">
-                  <Smartphone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                  <input
-                    type="tel"
-                    placeholder="255 7XX XXX XXX"
-                    value={paymentPhone}
-                    onChange={(e) => setPaymentPhone(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
-                  />
-                </div>
+                
+                {selectedProvider === 'Wallet' ? (
+                   <div className={`p-4 rounded-xl border ${walletBalance >= totalPrice ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
+                      <div className="flex justify-between items-center mb-1">
+                         <span className="text-sm font-medium text-gray-700">Wallet Balance</span>
+                         <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
+                      </div>
+                      {walletBalance < totalPrice && (
+                         <p className="text-xs text-red-600 font-medium">Insufficient balance. Please deposit funds.</p>
+                      )}
+                   </div>
+                ) : (
+                    <div className="relative">
+                      <Smartphone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                      <input
+                        type="tel"
+                        placeholder="255 7XX XXX XXX"
+                        value={paymentPhone}
+                        onChange={(e) => setPaymentPhone(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                      />
+                    </div>
+                )}
               </div>
             </div>
           )}
