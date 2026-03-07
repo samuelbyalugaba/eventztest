@@ -1,4 +1,4 @@
-import { Sparkles, Users, Zap, TrendingUp, CheckCircle, ArrowRight, Video, DollarSign, BarChart3, Globe, Shield, Headphones } from 'lucide-react';
+import { Users, Zap, TrendingUp, CheckCircle, ArrowRight, Video, DollarSign, BarChart3, Globe, Shield, Headphones, PenTool, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase/client';
@@ -82,12 +82,12 @@ export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
         <div className="relative z-10 max-w-4xl mx-auto text-center">
           {/* Icon - Smaller */}
           <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl animate-bounce">
-            <Sparkles className="w-8 h-8 text-white" />
+            <Star className="w-8 h-8 text-white" fill="currentColor" />
           </div>
 
           {/* Title - Smaller Font */}
           <h1 className="text-white text-3xl sm:text-4xl mb-4">
-            Become an Organizer
+            Become a Creator
           </h1>
           <p className="text-white/95 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-8">
             Create events, stream live in HD, and reach thousands of people worldwide.
@@ -262,7 +262,7 @@ export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
             onClick={handleBecomeOrganizer}
             className="bg-[#8A2BE2] text-white px-12 py-5 rounded-2xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 mx-auto group text-lg"
           >
-            <Sparkles className="w-6 h-6" />
+            <Star className="w-6 h-6" fill="currentColor" />
             <span>Get Started Now</span>
             <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
           </button>

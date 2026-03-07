@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft } from 'lucide-react';
+import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, PenTool, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { TicketViewer } from './TicketViewer';
@@ -606,7 +606,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         </div>
 
         {/* Header Actions */}
-        <div className="flex flex-col gap-2 items-center absolute top-6 right-6">
+        <div className="flex flex-col gap-2 items-center">
           {isOwnProfile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -776,11 +776,11 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             >
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100 text-purple-600">
-                        <Sparkles className="w-6 h-6" />
+                        <Star className="w-6 h-6" fill="currentColor" />
                     </div>
                     <div>
                         <h3 className="text-gray-900 font-bold text-sm">
-                            Become an Organizer
+                            Become a Creator
                         </h3>
                         <p className="text-gray-500 text-xs">
                             Create events and go live

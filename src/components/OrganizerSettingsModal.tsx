@@ -639,9 +639,32 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                       </p>
                     </div>
                     <button 
-                      onClick={() => {
-                        if (confirm('Are you sure you want to downgrade to a personal account? This will hide your organizer profile.')) {
-                          toast.info('Feature coming soon: Account downgrade process');
+                      onClick={async () => {
+                        if (confirm('Are you sure you want to downgrade to a personal account? This will hide your organizer profile and you will lose access to organizer features.')) {
+                          try {
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (user) {
+                              const { error } = await supabase.rpc('downgrade_to_personal_account');
+
+                              if (error) throw error;
+
+                              toast.success('Account downgraded successfully');
+                              // Force reload to update global state
+                              window.location.reload();
+                            }
+                          } catch (error: any) {
+                            console.error('Error downgrading account:', error);
+                            
+                            // Handle Auth Session Errors
+                            if (error?.message?.includes('Invalid Refresh Token') || error?.message?.includes('Refresh Token Not Found')) {
+                              toast.error('Session expired. Please sign in again.');
+                              await supabase.auth.signOut();
+                              window.location.reload();
+                              return;
+                            }
+
+                            toast.error(`Failed to downgrade account: ${error?.message || 'Unknown error'}`);
+                          }
                         }
                       }}
                       className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-red-600 text-sm rounded-lg hover:bg-red-50 hover:border-red-200 font-medium transition-all shadow-sm whitespace-nowrap"
