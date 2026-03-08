@@ -758,6 +758,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                     onMessage={(user) => handleStartConversationLocal(user)}
                     isFollowed={followingIds.has(post.user.id)}
                     audioUnlocked={audioUnlocked}
+                    onViewPost={() => onViewPost(post)}
                   />
                 </div>
               ))}

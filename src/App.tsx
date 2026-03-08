@@ -23,26 +23,34 @@ import {
   getLiveStreams,
   getMutualFollows,
   subscribeToOnlineUsers,
-  deleteConversation
+  deleteConversation,
+  deletePost,
+  toggleLikePost,
+  toggleSavePost,
+  createPostComment
 } from './utils/supabase/api';
+import { handleShare } from './utils/share';
 import type { Event as AppEvent } from './utils/supabase/api';
 import { Message, Conversation } from './types';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
 
 import { CreatePostModal } from './components/CreatePostModal';
+import { PostDetailPage } from './components/PostDetailPage';
 
-type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile';
+type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile' | 'post';
 type OrganizerView = 'dashboard' | 'createEvent';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('event');
+  const [previousTab, setPreviousTab] = useState<Tab>('event');
   const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set(['event']));
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [hasOrganizerProfile, setHasOrganizerProfile] = useState(false);
   const [organizerView, setOrganizerView] = useState<OrganizerView>('dashboard');
   const [editingEvent, setEditingEvent] = useState<AppEvent | null>(null);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+  const [viewingPost, setViewingPost] = useState<any>(null);
 
   
   // Auth state
@@ -661,6 +669,18 @@ export default function App() {
     // But usually once they click "Become Organizer", they are committed or we can leave it
   };
 
+  const handleViewPost = (post: any) => {
+    setViewingPost(post);
+    setPreviousTab(activeTab);
+    setActiveTab('post');
+    window.scrollTo(0, 0);
+  };
+
+  const handleBackFromPost = () => {
+    setViewingPost(null);
+    setActiveTab(previousTab);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster 
@@ -700,6 +720,7 @@ export default function App() {
               onCreateEvent={() => {
                 handleCreateEvent();
               }}
+              onViewPost={handleViewPost}
             />
           </div>
         )}
@@ -745,8 +766,64 @@ export default function App() {
                 onCreateEvent={handleCreateEvent}
                 onEditEvent={handleEditEvent}
                 onStartOrganizerSetup={handleStartOrganizerSetup}
+                onViewPost={handleViewPost}
               />
             )}
+          </div>
+        )}
+        {activeTab === 'post' && viewingPost && (
+          <div key="tab-post" className="animate-in fade-in slide-in-from-right duration-200">
+            <PostDetailPage
+              post={viewingPost}
+              currentUser={currentUser}
+              onBack={handleBackFromPost}
+              onLike={async (id) => {
+                // We need to update the post in the feed/profile if possible, but for now just handle local state in the page
+                // The page component handles optimistic updates. 
+                // Ideally we'd have a global store.
+                try {
+                  await toggleLikePost(id, currentUser?.id);
+                } catch (e) { console.error(e); }
+              }}
+              onSave={async (id) => {
+                try {
+                  await toggleSavePost(id, currentUser?.id);
+                } catch (e) { console.error(e); }
+              }}
+              onShare={async (post) => {
+                await handleShare({
+                  title: `Check out this post from ${post.user.name}`,
+                  text: post.content.text || 'Check out this amazing post on EVENTZ!',
+                  url: window.location.href,
+                });
+              }}
+              onDelete={async (id) => {
+                try {
+                  await deletePost(id);
+                  toast.success('Post deleted');
+                  handleBackFromPost();
+                } catch (e) {
+                  console.error(e);
+                  toast.error('Failed to delete post');
+                }
+              }}
+              onProfileClick={(user) => {
+                // If clicking profile from post page, maybe open profile modal?
+                // For now, let's just show a toast or implement basic navigation if needed.
+                // Or better yet, we can't easily switch to another tab with params without more state.
+                // Let's just ignore or implement a basic profile view if we had one.
+              }}
+              onComment={async (postId, text) => {
+                if (!currentUser) return;
+                try {
+                  await createPostComment(postId, currentUser.id, text);
+                  toast.success('Comment posted');
+                } catch (e) {
+                  console.error(e);
+                  toast.error('Failed to post comment');
+                }
+              }}
+            />
           </div>
         )}
       </div>

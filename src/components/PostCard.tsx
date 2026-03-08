@@ -17,13 +17,6 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "./ui/carousel";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "./ui/drawer";
 import { Input } from "./ui/input";
 import { getPostComments, createPostComment } from '../utils/supabase/api';
 import { sanitizeText } from '../utils/sanitize';
@@ -39,6 +32,7 @@ interface PostCardProps {
   onFollow?: (userId: string) => Promise<void>;
   onDelete?: (postId: number) => Promise<void>;
   onMessage?: (user: any) => void;
+  onViewPost?: () => void;
   isFollowed?: boolean;
   audioUnlocked?: boolean;
 }
@@ -48,7 +42,7 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onMessage, isFollowed = false, audioUnlocked = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onMessage, onViewPost, isFollowed = false, audioUnlocked = false }: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -348,7 +342,10 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       {/* 2. TEXT CONTENT */}
       {post.content.text && (
         <div className="mb-3 px-1">
-          <p className={`text-gray-800 text-[15px] leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-3'}`}>
+          <p 
+            className={`text-gray-800 text-[15px] leading-relaxed transition-all cursor-pointer ${isExpanded ? '' : 'line-clamp-3'}`}
+            onClick={onViewPost}
+          >
             {post.content.text}
           </p>
           {(post.content.text.length > 100 || post.content.text.split('\n').length > 3) && (
@@ -363,7 +360,10 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       )}
 
       {/* 3. MEDIA CONTENT */}
-      <div className="relative overflow-hidden group rounded-2xl bg-gray-50">
+      <div 
+        className="relative overflow-hidden group rounded-2xl bg-gray-50 cursor-pointer"
+        onClick={onViewPost}
+      >
         {isCarousel ? (
           <div onDoubleClick={handleDoubleTap}>
             <Carousel setApi={setApi} className="w-full">
@@ -520,84 +520,13 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
            <span className={`text-sm font-bold ${isLiked ? 'text-purple-600' : 'text-gray-700'}`}>{likesCount}</span>
         </button>
 
-        <Drawer open={showComments} onOpenChange={(open: boolean) => {
-            setShowComments(open);
-            if (open) loadComments();
-          }}>
-            <DrawerTrigger asChild>
-              <button 
-                className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
-              >
-                <CommentIcon className="w-5 h-5" color="#4b5563" />
-                <span className="text-sm font-bold text-gray-700">{commentsCount}</span>
-              </button>
-            </DrawerTrigger>
-            <DrawerContent className="max-h-[85vh] bg-white/85 backdrop-blur-xl border-t border-white/20 shadow-2xl">
-              <DrawerHeader className="border-b border-white/20 pb-4">
-                <DrawerTitle className="text-center">Comments</DrawerTitle>
-              </DrawerHeader>
-              <div className="p-4 overflow-y-auto flex-1 min-h-[300px]">
-                {loadingComments ? (
-                  <div className="flex justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                ) : comments.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No comments yet. Be the first!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="flex gap-3">
-                        <UserAvatar 
-                          src={comment.user.avatar} 
-                          name={comment.user.name} 
-                          className="w-8 h-8 rounded-full ring-2 ring-white/50"
-                        />
-                        <div className="flex-1">
-                          <div className="bg-white/60 p-3 rounded-2xl rounded-tl-none backdrop-blur-sm border border-white/40 shadow-sm">
-                            <span className="font-semibold text-sm block mb-1">{comment.user.name}</span>
-                            <p className="text-sm text-gray-800 break-words">{comment.text}</p>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 ml-2 text-xs text-gray-500">
-                            <span>{comment.timestamp}</span>
-                            <button className="font-semibold hover:text-purple-600">Reply</button>
-                            <button className="font-semibold hover:text-purple-600">Like</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="p-4 border-t border-white/20 bg-white/30 backdrop-blur-lg">
-                <div className="flex items-center gap-2">
-                  <UserAvatar 
-                    src={currentUser?.user_metadata?.avatar_url} 
-                    name={currentUser?.user_metadata?.full_name || 'Me'} 
-                    className="w-8 h-8 rounded-full ring-2 ring-white/50"
-                  />
-                  <div className="flex-1 relative">
-                    <Input 
-                      placeholder="Add a comment..." 
-                      className="pr-10 rounded-full bg-white/60 border-white/30 focus:bg-white focus:border-purple-200 shadow-inner"
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
-                      maxLength={500}
-                    />
-                    <button 
-                      onClick={handlePostComment}
-                      disabled={!newComment.trim()}
-                      className="absolute right-1 top-1 p-1.5 bg-purple-600 rounded-full text-white disabled:opacity-50 disabled:bg-gray-300 transition-all"
-                    >
-                      <Send className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </DrawerContent>
-          </Drawer>
+        <button 
+          onClick={onViewPost}
+          className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+        >
+          <CommentIcon className="w-5 h-5" color="#4b5563" />
+          <span className="text-sm font-bold text-gray-700">{commentsCount}</span>
+        </button>
 
         <button 
           onClick={() => onShare(post)}

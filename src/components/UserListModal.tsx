@@ -31,7 +31,7 @@ export function UserListModal({ isOpen, onClose, title, users, loading = false, 
         {/* Header */}
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#8A2BE2]">
               <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
             </div>
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>

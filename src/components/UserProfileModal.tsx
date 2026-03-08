@@ -52,9 +52,10 @@ interface UserProfileModalProps {
   onClose: () => void;
   onFollow?: () => void;
   onMessage?: () => void;
+  onViewPost?: (post: any) => void;
 }
 
-export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserProfileModalProps) {
+export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPost }: UserProfileModalProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState<'events' | 'media' | 'posts' | 'upcoming' | 'attended'>('posts');
   const [showAllEvents, setShowAllEvents] = useState(false);
@@ -544,26 +545,36 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
         {/* Tab Content */}
         <div className="pb-20">
             {activeTab === 'posts' && (
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
                     {userPosts.map((post) => (
                         <div 
                           key={post.id} 
                           className="aspect-square bg-gray-100 relative overflow-hidden group cursor-pointer"
-                          onClick={() => setSelectedPost(post)}
+                          onClick={() => {
+                            if (onViewPost) {
+                              onViewPost(post);
+                            } else {
+                              setSelectedPost(post);
+                            }
+                          }}
                         >
-                           {(post.content.images && post.content.images.length > 0) ? (
+                           {post.highlights && post.highlights.length > 0 && post.highlights[0].videoUrl ? (
+                              <video 
+                                src={post.highlights[0].videoUrl} 
+                                className="w-full h-full object-cover"
+                                playsInline
+                                loop
+                                muted
+                              />
+                           ) : (post.content.images && post.content.images.length > 0) ? (
                               <ImageWithFallback
                                 src={post.content.images[0]}
                                 alt=""
                                 className="w-full h-full object-cover"
                               />
-                           ) : post.highlights && post.highlights.length > 0 ? (
-                              <div className="w-full h-full bg-black flex items-center justify-center">
-                                 <Play className="w-8 h-8 text-white/80" />
-                              </div>
                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                 <ImageIcon className="w-6 h-6" />
+                              <div className="w-full h-full flex items-center justify-center bg-gray-50 p-2">
+                                <p className="text-xs text-gray-500 line-clamp-3 text-center">{post.content.text || ''}</p>
                               </div>
                            )}
                            {(post.content.images && post.content.images.length > 1) && (

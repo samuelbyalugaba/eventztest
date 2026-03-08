@@ -31,9 +31,10 @@ interface ProfileProps {
   onStartOrganizerSetup?: () => void;
   userId?: string; // Optional: View another user's profile
   onBack?: () => void; // Optional: Back button handler
+  onViewPost?: (post: any) => void;
 }
 
-export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup, userId, onBack }: ProfileProps) {
+export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup, userId, onBack, onViewPost }: ProfileProps) {
   const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events' | 'hosted' | 'upcoming'>('media');
   const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
@@ -67,7 +68,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
   const [userPosts, setUserPosts] = useState<ApiPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDetailedPost, setSelectedDetailedPost] = useState<UiPost | null>(null);
+  // Removed selectedDetailedPost as we use onViewPost for navigation
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   const [isFollowing, setIsFollowing] = useState(false);
   
@@ -409,9 +410,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     try {
       // Optimistic update
       setUserPosts(prev => prev.filter(p => p.id !== postId));
-      if (selectedDetailedPost?.id === postId) {
-        setSelectedDetailedPost(null);
-      }
 
       await deletePost(postId);
       toast.success('Post deleted');
@@ -438,14 +436,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         return p;
     }));
 
-    if (selectedDetailedPost && selectedDetailedPost.id === postId) {
-        setSelectedDetailedPost(prev => prev ? ({
-            ...prev,
-            isLiked: !prev.isLiked,
-            likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1
-        }) : null);
-    }
-
     if (currentUser) {
         try {
             await toggleLikePost(postId, currentUser.id);
@@ -464,19 +454,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         return p;
     }));
 
-    if (selectedDetailedPost && selectedDetailedPost.id === postId) {
-        setSelectedDetailedPost(prev => prev ? ({
-            ...prev,
-            isSaved: !prev.isSaved
-        }) : null);
-    }
-
     if (currentUser) {
         try {
             await toggleSavePost(postId, currentUser.id);
-            if (!selectedDetailedPost?.isSaved) {
-                toast.success('Saved for later! 📌');
-            }
         } catch (error) {
             console.error('Error saving post:', error);
         }
@@ -540,7 +520,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         views: post.views || 0,
       }] : undefined,
     };
-    setSelectedDetailedPost(uiPost);
+    
+    if (onViewPost) {
+      onViewPost(uiPost);
+    }
   };
 
   // Derive media from posts
@@ -775,7 +758,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                 className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
             >
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#8A2BE2]">
                         <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
                     </div>
                     <div>
@@ -1552,6 +1535,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
              if (showFollowersModal) handleShowFollowers();
              if (showFollowingModal) handleShowFollowing();
           }}
+          onViewPost={onViewPost}
         />
       )}
 
@@ -1629,39 +1613,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             setShowTicketViewer(true);
           }}
         />
-      )}
-
-      {/* Post Detail Modal */}
-      {selectedDetailedPost && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-          onClick={() => setSelectedDetailedPost(null)}
-        >
-          <div 
-            className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl no-scrollbar"
-            onClick={e => e.stopPropagation()}
-          >
-             <PostCard
-                post={selectedDetailedPost}
-                currentUser={currentUser}
-                onLike={handleLike}
-                onSave={handleSave}
-                onShare={handleShareCard}
-                onProfileClick={() => {
-                   setSelectedDetailedPost(null);
-                }}
-                onDelete={(id) => handleDeletePost(id)}
-                isFollowed={false}
-             />
-          </div>
-          
-          <button 
-            onClick={() => setSelectedDetailedPost(null)}
-            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-colors z-50"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
       )}
     </div>
   );

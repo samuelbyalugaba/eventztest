@@ -32,6 +32,7 @@ import {
   Target,
   Mail,
   Phone,
+  MapPin,
   Globe,
   AtSign,
   Calendar,

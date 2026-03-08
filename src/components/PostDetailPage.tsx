@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
-  Star, Send, MessageCircle, Calendar, MapPin, X, Heart, Play
+  Star, Send, MessageCircle, Calendar, MapPin, Heart, Play,
+  ChevronLeft
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -10,10 +11,10 @@ import {
 } from './ui/dropdown-menu';
 import { toast } from 'sonner';
 
-interface PostDetailModalProps {
+interface PostDetailPageProps {
   post: any;
   currentUser: any;
-  onClose: () => void;
+  onBack: () => void;
   onLike: (id: number, e?: React.MouseEvent) => void;
   onSave: (id: number, e?: React.MouseEvent) => void;
   onShare: (post: any, e?: React.MouseEvent) => void;
@@ -22,45 +23,37 @@ interface PostDetailModalProps {
   onComment: (postId: number, text: string) => void;
 }
 
-export function PostDetailModal({ 
+export function PostDetailPage({ 
   post, 
   currentUser, 
-  onClose, 
+  onBack, 
   onLike, 
   onSave, 
   onShare, 
   onDelete, 
   onProfileClick,
   onComment
-}: PostDetailModalProps) {
+}: PostDetailPageProps) {
   const [commentText, setCommentText] = useState('');
-  const [replyingTo, setReplyingTo] = useState<{ name: string } | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handlePostComment = () => {
     if (!commentText.trim()) return;
-    const finalText = replyingTo ? `@${replyingTo.name} ${commentText}` : commentText;
-    onComment(post.id, finalText);
+    onComment(post.id, commentText);
     setCommentText('');
-    setReplyingTo(null);
-  };
-
-  const handleReply = (user: { name: string }) => {
-    setReplyingTo(user);
-    textareaRef.current?.focus();
   };
 
   return (
-    <div className="fixed inset-0 bg-white z-[70] overflow-y-auto animate-in slide-in-from-right duration-300">
-      {/* Unique Detail Header */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-lg border-b border-gray-100">
+    <div className="min-h-screen bg-white pb-20 animate-in fade-in slide-in-from-right duration-200">
+      {/* Detail Header */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-100">
         <div className="px-4 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={onClose}
-              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+              onClick={onBack}
+              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-1 text-gray-900"
             >
-              <ArrowLeft className="w-6 h-6 text-gray-900" />
+              <ChevronLeft className="w-6 h-6" />
+              <span className="font-medium text-lg">Post</span>
             </button>
             <div className="flex items-center gap-2">
               <button
@@ -91,7 +84,7 @@ export function PostDetailModal({
                     <DropdownMenuItem 
                       onClick={() => {
                         onDelete(post.id);
-                        onClose(); // Close modal after deleting
+                        onBack();
                       }} 
                       className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
                     >
@@ -102,7 +95,7 @@ export function PostDetailModal({
                     <DropdownMenuItem 
                       onClick={() => {
                         toast.success('Post reported. We will review it shortly.');
-                        onClose();
+                        onBack();
                       }}
                       className="cursor-pointer"
                     >
@@ -120,7 +113,7 @@ export function PostDetailModal({
         {/* Hero Image/Video with Gradient Overlay */}
         <div className="relative">
           {post.video_url ? (
-            <div className="relative aspect-[9/16] max-h-[70vh] w-full bg-black overflow-hidden rounded-b-3xl">
+            <div className="relative aspect-[9/16] max-h-[70vh] w-full bg-black overflow-hidden">
               <video 
                 src={post.video_url} 
                 className="w-full h-full object-contain"
@@ -131,22 +124,22 @@ export function PostDetailModal({
               />
             </div>
           ) : post.image_urls?.[0] ? (
-            <div className="relative aspect-[4/5] w-full bg-gray-100 overflow-hidden rounded-b-3xl">
+            <div className="relative aspect-[4/5] w-full bg-gray-100 overflow-hidden">
               <ImageWithFallback
                 src={post.image_urls[0]}
                 alt="Post detail"
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
             </div>
           ) : post.content?.image ? (
-            <div className="relative aspect-[4/5] w-full bg-gray-100 overflow-hidden rounded-b-3xl">
+            <div className="relative aspect-[4/5] w-full bg-gray-100 overflow-hidden">
               <ImageWithFallback
                 src={post.content.image}
                 alt="Post detail"
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
             </div>
           ) : null}
         </div>
@@ -214,7 +207,7 @@ export function PostDetailModal({
           )}
 
           {/* Engagement Stats */}
-          <div className="flex items-center gap-6 py-2">
+          <div className="flex items-center gap-6 py-2 border-b border-gray-100 pb-4">
             <div className="flex items-center gap-2">
               <button 
                 onClick={(e) => onLike(post.id, e)}
@@ -236,23 +229,62 @@ export function PostDetailModal({
           </div>
         </div>
 
-        {/* Comments Section - Mobile Native Style */}
-        <div className="flex-1 flex flex-col min-h-0 bg-white">
-          {/* Header */}
-          <div className="px-5 pt-4 pb-2 border-b border-gray-50">
-            <h3 className="text-gray-900 font-bold text-base">
-              Comments ({post.comments?.length || 0})
-            </h3>
+        {/* Comments Section */}
+        <div className="px-5 pb-5">
+          <h3 className="text-gray-900 font-bold text-lg mb-4">
+            Replies ({post.comments?.length || 0})
+          </h3>
+          
+          {/* Add Comment First */}
+          <div className="mb-8">
+            <div className="flex gap-4 items-start">
+              <UserAvatar
+                src={currentUser?.user_metadata?.avatar_url}
+                name={currentUser?.user_metadata?.full_name || "You"}
+                className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100"
+              />
+              <div className="flex-1">
+                <div className="relative group">
+                  <textarea
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Add a comment..."
+                    rows={1}
+                    className="w-full bg-transparent border-b-2 border-gray-200 py-2.5 text-base text-gray-900 placeholder-gray-400 outline-none focus:border-gray-900 transition-colors resize-none overflow-hidden min-h-[44px]"
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = 'auto';
+                      target.style.height = `${target.scrollHeight}px`;
+                    }}
+                  />
+                  <div className="absolute right-0 bottom-2.5 flex items-center gap-2">
+                    <button
+                      onClick={handlePostComment}
+                      disabled={!commentText.trim()}
+                      className={`p-2 rounded-full transition-all ${
+                        commentText.trim()
+                          ? 'text-purple-600 hover:bg-purple-50'
+                          : 'text-gray-300 cursor-not-allowed'
+                      }`}
+                    >
+                      <Send className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Scrollable List */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {/* Comments List */}
+          <div className="space-y-4">
             {!post.comments || post.comments.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <MessageCircle className="w-6 h-6 text-gray-300" />
+                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <MessageCircle className="w-8 h-8 text-gray-400" />
                 </div>
-                <p className="text-gray-400 text-sm">No comments yet</p>
+                <p className="text-gray-500 text-sm">
+                  No replies yet. Be the first to share your thoughts!
+                </p>
               </div>
             ) : (
               post.comments.map((comment: any) => (
@@ -260,73 +292,21 @@ export function PostDetailModal({
                   <UserAvatar
                     src={comment.user.avatar}
                     name={comment.user.name}
-                    className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
+                    className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
                   />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-gray-900 text-xs font-bold">{comment.user.name}</span>
-                      <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
-                    </div>
-                    <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>
-                    <div className="flex items-center gap-4 mt-2">
-                      <button 
-                        onClick={() => handleReply(comment.user)}
-                        className="text-xs text-gray-400 font-medium hover:text-gray-600"
-                      >
-                        Reply
-                      </button>
-                      <button className="text-xs text-gray-400 font-medium hover:text-gray-600">Like</button>
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-gray-900 text-sm font-semibold">{comment.user.name}</span>
+                        <span className="text-gray-400 text-xs">•</span>
+                        <span className="text-gray-500 text-xs">{comment.timestamp}</span>
+                      </div>
+                      <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
                     </div>
                   </div>
                 </div>
               ))
             )}
-          </div>
-
-          {/* Input Area - Fixed at Bottom */}
-          <div className="p-3 border-t border-gray-100 bg-white safe-area-bottom">
-            {replyingTo && (
-              <div className="flex items-center justify-between px-3 py-2 mb-2 bg-gray-50 rounded-lg text-xs">
-                <span className="text-gray-500">Replying to <span className="font-semibold text-gray-900">{replyingTo.name}</span></span>
-                <button 
-                  onClick={() => setReplyingTo(null)}
-                  className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                >
-                  <X className="w-3 h-3 text-gray-500" />
-                </button>
-              </div>
-            )}
-            <div className="flex items-end gap-3 bg-gray-50 rounded-3xl px-4 py-2">
-              <UserAvatar
-                src={currentUser?.user_metadata?.avatar_url}
-                name={currentUser?.user_metadata?.full_name || "You"}
-                className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5"
-              />
-              <textarea
-                ref={textareaRef}
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Add a comment..."
-                rows={1}
-                className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 focus:ring-0 resize-none min-h-[20px] max-h-[80px] py-1.5"
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = 'auto';
-                  target.style.height = `${Math.min(target.scrollHeight, 80)}px`;
-                }}
-              />
-              <button
-                onClick={handlePostComment}
-                disabled={!commentText.trim()}
-                className={`p-1.5 rounded-full transition-all mb-0.5 ${
-                  commentText.trim()
-                    ? 'text-blue-500 hover:bg-blue-50'
-                    : 'text-gray-300 cursor-not-allowed'
-                }`}
-              >
-                <span className="text-xs font-bold">Post</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
