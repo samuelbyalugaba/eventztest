@@ -472,21 +472,46 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   };
 
   const handleOpenPost = (post: ApiPost) => {
-    const isOrganizerPage = !!post.posted_as_organizer && !!post.organizer_profile;
-    const displayName = isOrganizerPage ? (post.organizer_profile!.organizer_name || 'Unknown Organizer') : (post.user?.full_name || post.user?.username || 'Unknown User');
-    const avatarUrl = isOrganizerPage ? post.organizer_profile!.organizer_avatar_url : post.user?.avatar_url;
+    // When opening from own profile (isOwnProfile), we might not have the full nested user/organizer object
+    // if the post object came from a simple query.
+    // Construct the user object carefully.
+
+    let postUser;
+    
+    if (isOwnProfile) {
+        // We know who the user is - it's the current profile being viewed
+        const currentProfileIsOrganizer = !!organizerProfile;
+        
+        postUser = {
+            id: currentUser?.id,
+            name: displayName,
+            username: userProfile?.username || '@user',
+            avatar: profileImage,
+            verified: false, // You might want to store verified status in profile state too
+            isOrganizer: currentProfileIsOrganizer,
+            isOrganizerPage: currentProfileIsOrganizer // If we are on organizer profile, posts are likely organizer posts
+        };
+    } else {
+        // Viewing someone else's profile - post object likely has expanded user/organizer data
+        // OR we can fallback to the profile data we already loaded for this user
+        const isOrganizerPage = !!post.posted_as_organizer && !!post.organizer_profile;
+        const postDisplayName = isOrganizerPage ? (post.organizer_profile!.organizer_name || 'Unknown Organizer') : (post.user?.full_name || post.user?.username || 'Unknown User');
+        const postAvatarUrl = isOrganizerPage ? post.organizer_profile!.organizer_avatar_url : post.user?.avatar_url;
+
+        postUser = {
+            id: isOrganizerPage ? (post.organizer_profile!.id || 'unknown') : (post.user?.id || 'unknown'),
+            name: postDisplayName || displayName, // Fallback to profile display name
+            username: post.user?.username || userProfile?.username || '@unknown',
+            avatar: postAvatarUrl || profileImage, // Fallback to profile image
+            verified: post.user?.verified || false,
+            isOrganizer: post.user?.is_organizer || false,
+            isOrganizerPage: isOrganizerPage
+        };
+    }
 
     const uiPost: UiPost = {
       id: post.id,
-      user: {
-        id: isOrganizerPage ? (post.organizer_profile!.id || 'unknown') : (post.user?.id || 'unknown'),
-        name: displayName || 'Unknown',
-        username: post.user?.username || '@unknown',
-        avatar: avatarUrl || '',
-        verified: post.user?.verified || false,
-        isOrganizer: post.user?.is_organizer || false,
-        isOrganizerPage: isOrganizerPage
-      },
+      user: postUser,
       event: post.event ? {
         id: post.event.id,
         name: post.event.title,
@@ -519,6 +544,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         videoUrl: post.video_url,
         views: post.views || 0,
       }] : undefined,
+      // Pass the video_url directly as well to ensure it's caught
+      video_url: post.video_url
     };
     
     if (onViewPost) {
@@ -914,14 +941,14 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                               className="w-full h-full object-cover"
                             />
                           )}
-                          {!isVideo && isCarousel && (
-                            <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
-                              <Layers className="w-3 h-3" />
-                            </div>
-                          )}
                           {isVideo && (
                             <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
                               <Play className="w-3 h-3" />
+                            </div>
+                          )}
+                          {!isVideo && isCarousel && (
+                            <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
+                              <Layers className="w-3 h-3" />
                             </div>
                           )}
                           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

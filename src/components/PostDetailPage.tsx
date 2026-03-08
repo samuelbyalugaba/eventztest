@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 interface PostDetailPageProps {
   post: any;
   currentUser: any;
+  userProfile?: any; // New prop for full profile data
   onBack: () => void;
   onLike: (id: number, e?: React.MouseEvent) => void;
   onSave: (id: number, e?: React.MouseEvent) => void;
@@ -26,6 +27,7 @@ interface PostDetailPageProps {
 export function PostDetailPage({ 
   post, 
   currentUser, 
+  userProfile,
   onBack, 
   onLike, 
   onSave, 
@@ -239,8 +241,8 @@ export function PostDetailPage({
           <div className="mb-8">
             <div className="flex gap-4 items-start">
               <UserAvatar
-                src={currentUser?.user_metadata?.avatar_url}
-                name={currentUser?.user_metadata?.full_name || "You"}
+                src={userProfile?.avatar_url || currentUser?.user_metadata?.avatar_url}
+                name={userProfile?.full_name || currentUser?.user_metadata?.full_name || "You"}
                 className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100"
               />
               <div className="flex-1">

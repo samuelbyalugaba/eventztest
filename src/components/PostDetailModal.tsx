@@ -1,10 +1,18 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
-  Star, Send, MessageCircle, Calendar, MapPin, X, Heart, Play
+  Star, Send, MessageCircle, Calendar, MapPin, X, Heart, Play, Volume2, VolumeX
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "./ui/carousel";
 import { 
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger 
 } from './ui/dropdown-menu';
@@ -22,7 +30,12 @@ interface PostDetailModalProps {
   onComment: (postId: number, text: string) => void;
 }
 
-export function PostDetailModal({ 
+const isVideo = (url?: string) => {
+  if (!url) return false;
+  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+};
+
+export function PostDetailModal({  
   post, 
   currentUser, 
   onClose, 
@@ -36,6 +49,17 @@ export function PostDetailModal({
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ name: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrent(api.selectedScrollSnap() + 1);
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap() + 1);
+    });
+  }, [api]);
 
   const handlePostComment = () => {
     if (!commentText.trim()) return;
@@ -117,38 +141,140 @@ export function PostDetailModal({
       </div>
 
       <div className="max-w-2xl mx-auto">
-        {/* Hero Image/Video with Gradient Overlay */}
-        <div className="relative">
-          {post.video_url ? (
-            <div className="relative aspect-[9/16] max-h-[70vh] w-full bg-black overflow-hidden rounded-b-3xl">
-              <video 
-                src={post.video_url} 
-                className="w-full h-full object-contain"
-                controls
-                autoPlay
-                loop
-                muted
-              />
-            </div>
-          ) : post.image_urls?.[0] ? (
-            <div className="relative aspect-[4/5] w-full bg-gray-100 overflow-hidden rounded-b-3xl">
-              <ImageWithFallback
-                src={post.image_urls[0]}
-                alt="Post detail"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-            </div>
-          ) : post.content?.image ? (
-            <div className="relative aspect-[4/5] w-full bg-gray-100 overflow-hidden rounded-b-3xl">
-              <ImageWithFallback
-                src={post.content.image}
-                alt="Post detail"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-            </div>
-          ) : null}
+        {/* Media Content (Carousel or Single) */}
+        <div className="relative bg-black rounded-b-3xl overflow-hidden">
+          {(() => {
+            // Determine media items
+            let mediaItems = post.content?.images || post.image_urls || [];
+            
+            // If single image string provided instead of array
+            if (typeof mediaItems === 'string') mediaItems = [mediaItems];
+            
+            // Fallback to single image fields if array is empty
+            if (mediaItems.length === 0) {
+              if (post.content?.image) mediaItems = [post.content.image];
+              else if (post.image) mediaItems = [post.image];
+            }
+
+            // If video_url exists, it takes precedence or is the only item
+            if (post.video_url) {
+              mediaItems = [post.video_url];
+            }
+
+            // Also check highlights array if present
+            if (mediaItems.length === 0 && post.highlights && post.highlights.length > 0) {
+                 const highlight = post.highlights[0];
+                 if (highlight.videoUrl) {
+                    mediaItems = [highlight.videoUrl];
+                 }
+            }
+
+            if (mediaItems.length === 0) return null;
+
+            if (mediaItems.length === 1) {
+              const media = mediaItems[0];
+              const isMediaVideo = isVideo(media) || !!post.video_url;
+
+              return (
+                <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
+                   {isMediaVideo ? (
+                      <>
+                        <video 
+                          src={media} 
+                          className="w-full h-full object-contain max-h-[70vh]"
+                          controls
+                          autoPlay
+                          playsInline
+                          loop
+                          muted={isMuted}
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMuted(!isMuted);
+                          }}
+                          className="absolute bottom-4 right-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                        >
+                          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                        </button>
+                      </>
+                   ) : (
+                      <ImageWithFallback
+                        src={media}
+                        alt="Post detail"
+                        className="w-full h-full object-cover"
+                      />
+                   )}
+                </div>
+              );
+            }
+
+            // Carousel Render
+            return (
+              <Carousel setApi={setApi} className="w-full group">
+                <CarouselContent>
+                  {mediaItems.map((media: string, index: number) => {
+                    const isMediaVideo = isVideo(media);
+                    const isActive = index === (current - 1);
+                    
+                    return (
+                              <CarouselItem key={index} className="pl-0">
+                                 <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
+                                   {isMediaVideo ? (
+                                      <>
+                                        <video 
+                                          src={media} 
+                                          className="w-full h-full object-contain max-h-[70vh]"
+                                          controls
+                                          // Only autoplay if it's the active slide
+                                          autoPlay={isActive}
+                                          playsInline
+                                          loop
+                                          muted={isMuted}
+                                        />
+                                        <button
+                                           onClick={(e) => {
+                                             e.stopPropagation();
+                                             setIsMuted(!isMuted);
+                                           }}
+                                           className="absolute bottom-4 right-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                                        >
+                                           {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                        </button>
+                                      </>
+                                   ) : (
+                                      <ImageWithFallback
+                                        src={media}
+                                        alt={`Slide ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                   )}
+                                 </div>
+                              </CarouselItem>
+                            );
+                  })}
+                </CarouselContent>
+                
+                {/* Navigation */}
+                <div className="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
+                   <CarouselPrevious className="left-4 bg-white/20 hover:bg-white/40 border-none text-white absolute top-1/2 -translate-y-1/2" />
+                   <CarouselNext className="right-4 bg-white/20 hover:bg-white/40 border-none text-white absolute top-1/2 -translate-y-1/2" />
+                </div>
+
+                {/* Indicators */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                  {mediaItems.map((_: any, idx: number) => (
+                    <div 
+                      key={idx}
+                      className={`w-1.5 h-1.5 rounded-full transition-all shadow-sm ${
+                        idx === (current - 1) ? 'bg-white w-4' : 'bg-white/50'
+                      }`} 
+                    />
+                  ))}
+                </div>
+              </Carousel>
+            );
+          })()}
         </div>
 
         {/* User & Post Info */}
@@ -284,7 +410,7 @@ export function PostDetailModal({
           </div>
 
           {/* Input Area - Fixed at Bottom */}
-          <div className="p-3 border-t border-gray-100 bg-white safe-area-bottom">
+          <div className="sticky bottom-0 z-10 p-3 border-t border-gray-100 bg-white safe-area-bottom">
             {replyingTo && (
               <div className="flex items-center justify-between px-3 py-2 mb-2 bg-gray-50 rounded-lg text-xs">
                 <span className="text-gray-500">Replying to <span className="font-semibold text-gray-900">{replyingTo.name}</span></span>

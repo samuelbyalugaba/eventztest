@@ -57,6 +57,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null); // Store full profile data
 
   // Global messaging state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -204,6 +205,7 @@ export default function App() {
           ]);
           
           if (profile) {
+            setUserProfile(profile);
             // Determine if user is an organizer:
             // 1. Check if they have an organizer profile record (primary source of truth)
             // 2. Fallback to is_organizer flag (legacy/backend triggered)
@@ -217,6 +219,8 @@ export default function App() {
         } catch (error) {
           console.error('Error fetching profile:', error);
         }
+      } else {
+        setUserProfile(null);
       }
     };
     fetchProfile();
@@ -776,6 +780,7 @@ export default function App() {
             <PostDetailPage
               post={viewingPost}
               currentUser={currentUser}
+              userProfile={userProfile}
               onBack={handleBackFromPost}
               onLike={async (id) => {
                 // We need to update the post in the feed/profile if possible, but for now just handle local state in the page

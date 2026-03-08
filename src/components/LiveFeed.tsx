@@ -472,48 +472,51 @@ export function LiveFeed() {
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
       {/* Premium Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-5 py-5">
+      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+        <div className="max-w-4xl mx-auto px-5 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-gray-900 text-2xl mb-1">Live Feed</h1>
-              <p className="text-gray-600 text-sm">Watch events live from anywhere</p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
+              </div>
+              <div>
+                <h1 className="text-gray-900 text-xl font-bold leading-tight">Live Feed</h1>
+                {filteredLiveStreams.length > 0 ? (
+                  <p className="text-red-500 text-xs font-medium">{filteredLiveStreams.length} streaming now</p>
+                ) : (
+                  <p className="text-gray-500 text-xs">Watch events live</p>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center gap-2">
-              {/* Location Filter - LEFT */}
+              {/* Location Filter */}
               <button 
                 onClick={() => setShowLocationFilter(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-                title="Filter by location"
+                className="h-10 px-4 flex items-center gap-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
               >
                 {(() => {
                   const country = countries.find(c => c.id === selectedCountry);
                   if (country?.icon) {
                     const Icon = country.icon;
-                    return <Icon className="w-5 h-5 text-gray-700" />;
+                    return <Icon className="w-4 h-4 text-gray-700" />;
                   }
-                  return <span className="text-xl">{country?.flag || '🇹🇿'}</span>;
+                  return <span className="text-lg">{country?.flag || '🇹🇿'}</span>;
                 })()}
+                <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                  {countries.find(c => c.id === selectedCountry)?.name || 'Tanzania'}
+                </span>
               </button>
 
-              {/* Category Filter - RIGHT */}
+              {/* Category Filter */}
               <button 
                 onClick={() => setShowFilters(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
               >
-                <Filter className="w-5 h-5 text-gray-700" />
+                <Filter className="w-4 h-4 text-gray-700" />
               </button>
             </div>
           </div>
-
-          {/* Minimal live indicator */}
-          {filteredLiveStreams.length > 0 && (
-            <div className="flex items-center gap-2 mt-4">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
-              <span className="text-gray-700 text-sm">{filteredLiveStreams.length} live now</span>
-            </div>
-          )}
         </div>
       </div>
 

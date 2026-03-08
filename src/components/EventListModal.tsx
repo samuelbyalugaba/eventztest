@@ -50,9 +50,9 @@ export function EventListModal({ title, events, onClose, onEventClick }: EventLi
         </div>
 
         {/* List */}
-        <div className="overflow-y-auto p-2 space-y-1">
+        <div className="overflow-y-auto p-4 space-y-3">
           {filteredEvents.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-12 text-gray-500">
               <p>No events found</p>
             </div>
           ) : (
@@ -60,10 +60,10 @@ export function EventListModal({ title, events, onClose, onEventClick }: EventLi
               <div 
                 key={event.id}
                 onClick={() => onEventClick(event)}
-                className="flex gap-3 p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors group"
+                className="flex gap-4 p-3 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors group"
               >
                 {/* Thumbnail */}
-                <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-200 shadow-sm">
                   <ImageWithFallback
                     src={event.image_url || (event as any).coverImage}
                     alt={event.title}
@@ -73,14 +73,15 @@ export function EventListModal({ title, events, onClose, onEventClick }: EventLi
 
                 {/* Details */}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <h3 className="text-gray-900 font-medium text-sm line-clamp-1 mb-0.5">
+                  <h3 className="text-gray-900 font-semibold text-base line-clamp-1 mb-1">
                     {event.title}
                   </h3>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>{new Date(event.date).toLocaleDateString()}</span>
-                    </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{new Date(event.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                    <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span className="line-clamp-1">{event.location}</span>
                   </div>
                 </div>
               </div>

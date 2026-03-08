@@ -403,13 +403,6 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                                     {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                                   </button>
                                 </div>
-                                {!isPlaying && (
-                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <div className="w-16 h-16 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
-                                      <Play className="w-8 h-8 text-white fill-white ml-1" />
-                                    </div>
-                                  </div>
-                                )}
                               </>
                             )}
                           </div>
@@ -480,13 +473,6 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                       <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-black/50 text-white backdrop-blur-md">
                         Tap to unmute
                       </span>
-                    </div>
-                  )}
-                  {!isPlaying && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-16 h-16 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center">
-                        <Play className="w-8 h-8 text-white fill-white ml-1" />
-                      </div>
                     </div>
                   )}
                 </div>
