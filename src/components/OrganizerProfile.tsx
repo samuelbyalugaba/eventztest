@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical, ChevronLeft } from 'lucide-react';
+import { X, MapPin, Calendar, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical, ChevronLeft, LayoutGrid } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { VideoPreview } from './VideoPreview';
 import { MediaViewer } from './MediaViewer';
@@ -134,6 +134,8 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   const [paymentPhone, setPaymentPhone] = useState('');
   const [selectedProvider, setSelectedProvider] = useState('Airtel');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
+  const [activeTab, setActiveTab] = useState<'events' | 'posts'>('events');
 
   useEffect(() => {
     if (currentUser) {
@@ -432,78 +434,68 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
       {loading ? (
         <ProfileSkeletonContent onClose={onClose} />
       ) : organizerData ? (
-      <div className="w-full min-h-screen bg-white pb-20">
+      <div className="w-full min-h-screen bg-white pb-20 pt-6 px-6">
         
-        {/* Hero Section with Cover */}
-        <div className="relative h-64 md:h-80 w-full">
-          {organizerData.coverImage ? (
-            <ImageWithFallback
-              src={organizerData.coverImage}
-              alt={organizerData.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-              <span className="text-white text-6xl font-bold opacity-20">{organizerData.name.charAt(0)}</span>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-          
-          {/* Top Actions */}
-          <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
-            <button 
-              onClick={onClose}
-              className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/40 transition-colors border border-white/10"
-            >
-              <ChevronLeft className="w-6 h-6 text-white" />
+        {/* Header Section - Minimal & Professional */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button onClick={onClose} className="p-2 -ml-2 hover:bg-gray-50 rounded-full transition-colors active:scale-95">
+              <ChevronLeft className="w-6 h-6 text-gray-900" />
             </button>
-            <div className="flex gap-2">
-              <button className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/40 transition-colors border border-white/10">
-                <Share2 className="w-5 h-5 text-white" />
-              </button>
+            
+            <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-50 border border-gray-100 shadow-sm">
+              <ImageWithFallback
+                src={organizerData.avatar}
+                alt={organizerData.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            
+            <div className="flex-1 min-w-0">
+               <h1 className="text-lg font-bold text-gray-900 leading-tight flex items-center gap-1.5">
+                 {organizerData.name}
+                 {organizerData.verified && (
+                    <CheckCircle2 className="w-4 h-4 text-[#8A2BE2] fill-white" />
+                 )}
+               </h1>
+               <div className="text-gray-500 font-medium text-xs flex items-center gap-1 mt-0.5">
+                 {organizerData.location && (
+                    <>
+                      <MapPin className="w-3 h-3" />
+                      <span>{organizerData.location}</span>
+                    </>
+                 )}
+               </div>
             </div>
           </div>
 
-          {/* Organizer Info Overlay */}
-          <div className="absolute -bottom-16 left-0 right-0 px-6 flex flex-col items-center">
-             <div className="w-32 h-32 rounded-full p-1 bg-white shadow-xl relative z-10">
-                <div className="w-full h-full rounded-full overflow-hidden relative">
-                  <ImageWithFallback 
-                     src={organizerData.avatar}
-                     alt={organizerData.name}
-                     className="w-full h-full object-cover"
-                  />
-                </div>
-                {organizerData.verified && (
-                  <div className="absolute bottom-1 right-1 bg-white rounded-full p-0.5 shadow-sm">
-                    <CheckCircle2 className="w-6 h-6 text-[#8A2BE2] fill-white" />
-                  </div>
-                )}
-             </div>
+          {/* Header Actions */}
+          <div className="flex items-center">
+             <button className="p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-full transition-colors active:scale-95">
+                <Share2 className="w-5 h-5" />
+             </button>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="pt-20 px-6 max-w-2xl mx-auto">
-          
-          {/* Name & Bio */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{organizerData.name}</h1>
-            {organizerData.location && (
-              <div className="flex items-center justify-center gap-1.5 text-sm text-gray-500 mb-4">
-                <MapPin className="w-4 h-4" />
-                <span>{organizerData.location}</span>
-              </div>
-            )}
+        {/* Bio Section */}
+        <div className="mb-6">
+          <div className="flex flex-col gap-2">
+             <div className="text-sm font-medium text-gray-500">
+               Organizer
+             </div>
+             
+            <p className="text-gray-800 font-medium leading-relaxed text-[15px]">
+              {organizerData.bio}
+            </p>
             
             {/* Follow & Message Buttons */}
-            <div className="flex justify-center gap-3 mb-6">
+            <div className="flex gap-3 mt-4">
               <button
                 onClick={handleFollow}
-                className={`px-8 py-2.5 rounded-full text-sm font-semibold transition-all shadow-sm ${
+                className={`flex-1 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${
                   isFollowing
-                    ? 'bg-white text-gray-900 border border-gray-200 hover:bg-gray-50'
-                    : 'bg-[#8A2BE2] text-white hover:bg-[#7a26c9] hover:shadow-purple-200'
+                    ? 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    : 'bg-[#8A2BE2] text-white hover:bg-[#7a26c9]'
                 }`}
               >
                 {isFollowing ? 'Following' : 'Follow'}
@@ -523,224 +515,201 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                     toast.info("Messaging feature coming soon");
                   }
                 }}
-                className="p-2.5 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex-1 py-3 bg-gray-100 text-gray-900 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
               >
-                <MessageCircle className="w-5 h-5" />
+                Message
               </button>
             </div>
+          </div>
+        </div>
 
-            {/* Stats Row */}
-            <div className="flex justify-center divide-x divide-gray-200 mb-6 border-y border-gray-100 py-4">
-              <div className="px-6 text-center">
-                <div className="text-xl font-bold text-gray-900">{organizerData.totalEvents}</div>
-                <div className="text-xs text-gray-500 uppercase tracking-wide mt-1">Events</div>
+        {/* Stats Row */}
+        <div className="flex items-center justify-between px-4 mb-8">
+            <div className="text-center flex-1 border-r border-gray-100 py-1">
+              <div className="text-xl font-bold text-gray-900 mb-1">
+                  {organizerData.totalEvents}
               </div>
-              <div 
-                className="px-6 text-center cursor-pointer hover:opacity-70 transition-opacity"
-                onClick={handleShowFollowers}
-              >
-                <div className="text-xl font-bold text-gray-900">
+              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                  Events
+              </div>
+            </div>
+            <div 
+              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+              onClick={handleShowFollowers}
+            >
+              <div className="text-xl font-bold text-gray-900 mb-1">
                   {organizerData.followers >= 1000 
                     ? `${(organizerData.followers / 1000).toFixed(1)}k` 
                     : organizerData.followers}
-                </div>
-                <div className="text-xs text-gray-500 uppercase tracking-wide mt-1">Followers</div>
               </div>
-              <div className="px-6 text-center">
-                 <div className="text-xl font-bold text-gray-900">{organizerData.rating}</div>
-                 <div className="text-xs text-gray-500 uppercase tracking-wide mt-1">Rating</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                  Followers
               </div>
             </div>
-
-            <p className="text-gray-600 text-sm leading-relaxed max-w-lg mx-auto">
-              {organizerData.bio}
-            </p>
-          </div>
-
-          {/* Contact - Ultra Minimal Single Line */}
-          {(organizerData.phone || organizerData.whatsapp) && (
-            <div className="mb-6 flex items-center justify-center gap-3 pb-3 border-b border-gray-100">
-              {organizerData.phone && (
-                <a 
-                  href={`tel:${organizerData.phone}`}
-                  className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#8A2BE2] transition-colors"
-                >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>Call</span>
-                </a>
-              )}
-              {organizerData.phone && organizerData.whatsapp && (
-                <div className="w-px h-3 bg-gray-300"></div>
-              )}
-              {organizerData.whatsapp && (
-                <a 
-                  href={`https://wa.me/${organizerData.whatsapp}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-[#25D366] hover:text-[#128C7E] transition-colors"
-                  aria-label="WhatsApp"
-                >
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                  </svg>
-                  <span>WhatsApp</span>
-                </a>
-              )}
+            <div className="text-center flex-1 py-1">
+              <div className="text-xl font-bold text-gray-900 mb-1">
+                  {organizerData.rating}
+              </div>
+              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                  Rating
+              </div>
             </div>
-          )}
+        </div>
 
-          <UserListModal 
-            isOpen={showFollowersModal}
-            onClose={() => setShowFollowersModal(false)}
-            title="Followers"
-            users={followersList}
-            loading={loadingFollowers}
-            onUserSelect={(user) => {
-              setSelectedUser({
-                ...user,
-                type: user.is_organizer ? 'Organizer' : 'Attendee',
-                name: user.full_name || user.username || 'User',
-                avatar: user.avatar_url || '',
-                verified: false
-              });
-              setShowUserProfileModal(true);
-            }}
-          />
-
-          {showUserProfileModal && selectedUser && (
-            <UserProfileModal
-              user={selectedUser}
-              onClose={() => {
-                setShowUserProfileModal(false);
-                setSelectedUser(null);
-              }}
-              onFollow={() => {
-                 if (showFollowersModal) handleShowFollowers();
-              }}
-            />
-          )}
-
-          {/* Event Highlights & Posts - COMBINED INSTAGRAM-STYLE GRID */}
-          <div className="mb-6">
-            <h3 className="text-gray-900 mb-4">Event Highlights & Posts</h3>
-            
-            {/* 3-Column Grid Gallery */}
-            <div className="grid grid-cols-3 gap-2">
-              {combinedGallery.map((item) => (
-                <div 
-                  key={item.uniqueId} 
-                  className="group relative overflow-hidden rounded-lg bg-gray-100 aspect-square cursor-pointer"
-                  onClick={() => {
-                    // Filter by media type first, then find the index within that filtered array
-                    const filteredByType = combinedGallery.filter(g => g.mediaType === item.mediaType);
-                    const indexInFiltered = filteredByType.findIndex(g => g.id === item.id);
-                    setMediaViewerIndex(indexInFiltered);
-                    setMediaViewerType(item.mediaType);
-                    setShowMediaViewer(true);
-                  }}
-                >
-                  {/* Image */}
-                  {item.mediaType === 'video' ? (
-                    <VideoPreview 
-                      src={item.video || ''} 
-                      poster={item.image || item.fallbackSrc}
-                      alt={item.title}
-                      className="w-full h-full"
-                    />
-                  ) : (
-                    <ImageWithFallback
-                      src={item.image}
-                      alt={item.title}
-                      fallbackSrc={item.fallbackSrc}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  )}
-
-                  {/* Video Indicator */}
-                  {item.mediaType === 'video' && (
-                    <div className="absolute top-2 right-2 pointer-events-none z-0">
-                      <div className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-sm">
-                        <Play className="w-3 h-3 text-white fill-white ml-0.5" />
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Tabs - Simplified for Organizer View */}
+        <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6 overflow-x-auto scrollbar-hide">
+          <button 
+            onClick={() => setActiveTab('events')}
+            className={`flex-1 min-w-[80px] py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'events' 
+                ? 'bg-white text-gray-900 shadow-sm' 
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+             <Calendar className="w-3.5 h-3.5" />
+             Events
+          </button>
+          <button 
+            onClick={() => setActiveTab('posts')}
+            className={`flex-1 min-w-[80px] py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'posts' 
+                ? 'bg-white text-gray-900 shadow-sm' 
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+             <LayoutGrid className="w-3.5 h-3.5" />
+             Posts
+          </button>
+        </div>
 
           {/* Upcoming Events */}
-          <div>
-            <h3 className="text-gray-900 mb-4">Upcoming Events</h3>
-            <div className="space-y-2">
-              {organizerData.upcomingEvents.map((event) => (
-                <div 
-                  key={event.id} 
-                  className="grid grid-cols-[64px_1fr_44px] gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer items-center group"
-                  onClick={() => {
-                    setSelectedEvent(event);
-                    setShowTicketModal(true);
-                  }}
-                >
-                  {/* Left: Thumbnail (Fixed 64x64) */}
-                  <ImageWithFallback
-                    src={event.image}
-                    alt={event.title}
-                    className="w-16 h-16 rounded-xl object-cover bg-gray-200 shadow-sm"
-                  />
-                  
-                  {/* Middle: Flexible Text Block */}
-                  <div className="flex flex-col justify-center min-w-0">
-                    <h4 className="text-gray-900 font-medium text-sm leading-snug line-clamp-2 mb-1 group-hover:text-[#8A2BE2] transition-colors">
-                      {event.title}
-                    </h4>
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Calendar className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate">{event.date} • {event.time}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <MapPin className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate">{event.location}</span>
+          {activeTab === 'events' && (
+            <div>
+              <h3 className="text-gray-900 mb-4 font-bold">Upcoming Events</h3>
+              <div className="space-y-2">
+                {organizerData.upcomingEvents.length > 0 ? organizerData.upcomingEvents.map((event) => (
+                  <div 
+                    key={event.id} 
+                    className="grid grid-cols-[64px_1fr_44px] gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer items-center group"
+                    onClick={() => {
+                      setSelectedEvent(event);
+                      setShowTicketModal(true);
+                    }}
+                  >
+                    {/* Left: Thumbnail (Fixed 64x64) */}
+                    <ImageWithFallback
+                      src={event.image}
+                      alt={event.title}
+                      className="w-16 h-16 rounded-xl object-cover bg-gray-200 shadow-sm"
+                    />
+                    
+                    {/* Middle: Flexible Text Block */}
+                    <div className="flex flex-col justify-center min-w-0">
+                      <h4 className="text-gray-900 font-medium text-sm leading-snug line-clamp-2 mb-1 group-hover:text-[#8A2BE2] transition-colors">
+                        {event.title}
+                      </h4>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Calendar className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{event.date} • {event.time}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Right: Fixed Actions (44px) */}
-                  <div className="flex items-center justify-center w-[44px]">
-                    {currentUser && currentUser.id === organizerId ? (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteEvent(event.id);
-                        }}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                        title="Delete Event"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    ) : (
-                      <button 
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                        onClick={(e) => {
-                           e.stopPropagation();
-                           // Future: Open menu
-                        }}
-                      >
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
-                    )}
+                    {/* Right: Fixed Actions (44px) */}
+                    <div className="flex items-center justify-center w-[44px]">
+                      {currentUser && currentUser.id === organizerId ? (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteEvent(event.id);
+                          }}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                          title="Delete Event"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      ) : (
+                        <button 
+                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Future: Open menu
+                          }}
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )) : (
+                  <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-2xl">
+                    No upcoming events found
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
+          {/* Posts / Highlights */}
+          {activeTab === 'posts' && (
+            <div>
+              <div className="grid grid-cols-3 gap-2">
+                {combinedGallery.length > 0 ? combinedGallery.map((item) => (
+                  <div 
+                    key={item.uniqueId} 
+                    className="group relative overflow-hidden rounded-lg bg-gray-100 aspect-square cursor-pointer"
+                    onClick={() => {
+                      // Filter by media type first, then find the index within that filtered array
+                      const filteredByType = combinedGallery.filter(g => g.mediaType === item.mediaType);
+                      const indexInFiltered = filteredByType.findIndex(g => g.id === item.id);
+                      setMediaViewerIndex(indexInFiltered);
+                      setMediaViewerType(item.mediaType);
+                      setShowMediaViewer(true);
+                    }}
+                  >
+                    {/* Image */}
+                    {item.mediaType === 'video' ? (
+                      <VideoPreview 
+                        src={item.video || ''} 
+                        poster={item.image || item.fallbackSrc}
+                        alt={item.title}
+                        className="w-full h-full"
+                      />
+                    ) : (
+                      <ImageWithFallback
+                        src={item.image}
+                        alt={item.title}
+                        fallbackSrc={item.fallbackSrc}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    )}
+
+                    {/* Video Indicator */}
+                    {item.mediaType === 'video' && (
+                      <div className="absolute top-2 right-2 pointer-events-none z-0">
+                        <div className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-sm">
+                          <Play className="w-3 h-3 text-white fill-white ml-0.5" />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
+                  </div>
+                )) : (
+                  <div className="col-span-3 text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-2xl">
+                    No posts yet
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
       ) : null}
     </div>
 
