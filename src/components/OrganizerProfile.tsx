@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical, ChevronLeft, LayoutGrid, Star } from 'lucide-react';
+import { X, MapPin, Calendar, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical, ChevronLeft, LayoutGrid, Star, Layers } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { VideoPreview } from './VideoPreview';
 import { MediaViewer } from './MediaViewer';
@@ -969,6 +969,15 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                       <div className="absolute top-2 right-2 pointer-events-none z-0">
                         <div className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-sm">
                           <Play className="w-3 h-3 text-white fill-white ml-0.5" />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Carousel Indicator */}
+                    {item.mediaType !== 'video' && (item.originalPost?.content?.images?.length || 0) > 1 && (
+                      <div className="absolute top-2 right-2 pointer-events-none z-0">
+                        <div className="w-6 h-6 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-sm">
+                          <Layers className="w-3 h-3 text-white" />
                         </div>
                       </div>
                     )}

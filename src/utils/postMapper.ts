@@ -13,6 +13,7 @@ export const mapPostToViewModel = (p: ApiPost) => {
   const avatarUrl = isOrganizerPage ? p.organizer_profile!.organizer_avatar_url : p.user?.avatar_url;
   return {
     id: p.id,
+    user_id: p.user_id,
     user: {
       id: isOrganizerPage ? (p.organizer_profile!.id || 'unknown') : (p.user?.id || 'unknown'),
       name: displayName || 'Unknown',

@@ -74,6 +74,11 @@ export function PostDetailModal({
     textareaRef.current?.focus();
   };
 
+  const isOwner = currentUser && (
+    String(currentUser.id) === String(post.user?.id) || 
+    String(currentUser.id) === String(post.user_id)
+  );
+
   return (
     <div className="fixed inset-0 bg-white z-[70] overflow-y-auto animate-in slide-in-from-right duration-300">
       {/* Unique Detail Header */}
@@ -111,7 +116,7 @@ export function PostDetailModal({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {currentUser?.id === post.user.id ? (
+                  {isOwner ? (
                     <DropdownMenuItem 
                       onClick={() => {
                         onDelete(post.id);
@@ -156,9 +161,18 @@ export function PostDetailModal({
               else if (post.image) mediaItems = [post.image];
             }
 
-            // If video_url exists, it takes precedence or is the only item
+            // If video_url exists, ensure it's included if not already
             if (post.video_url) {
-              mediaItems = [post.video_url];
+              const videoExists = mediaItems.some((url: string) => url === post.video_url);
+              if (!videoExists) {
+                // If we have other items, prepend video (or handle mixed media logic)
+                // For now, if we have items, we assume they are the carousel. 
+                // If the video is the ONLY thing, we add it.
+                // If we have images AND a video_url that isn't in the images list, 
+                // it implies a mixed post where video might be separate.
+                // Let's prepend it to allow carousel to show it.
+                mediaItems = [post.video_url, ...mediaItems];
+              }
             }
 
             // Also check highlights array if present
@@ -290,15 +304,15 @@ export function PostDetailModal({
               />
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  {post.user.isOrganizer && (
-                    <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
-                  )}
                   <span 
                     className="text-gray-900 font-bold cursor-pointer hover:text-purple-600 transition-colors"
                     onClick={(e) => onProfileClick(post.user, e)}
                   >
                     {post.user.name}
                   </span>
+                  {post.user.isOrganizer && (
+                    <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
+                  )}
                   {post.user.verified && !post.user.isOrganizer && (
                     <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
                       <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">

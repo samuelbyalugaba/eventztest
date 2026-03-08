@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
-  Star, Send, MessageCircle, Calendar, MapPin, Heart, Play,
-  ChevronLeft
+  Star, Send, MessageCircle, Calendar, MapPin, X, Heart, Play, Volume2, VolumeX
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "./ui/carousel";
 import { 
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger 
 } from './ui/dropdown-menu';
@@ -14,7 +21,7 @@ import { toast } from 'sonner';
 interface PostDetailPageProps {
   post: any;
   currentUser: any;
-  userProfile?: any; // New prop for full profile data
+  userProfile?: any; // Kept for compatibility with App.tsx
   onBack: () => void;
   onLike: (id: number, e?: React.MouseEvent) => void;
   onSave: (id: number, e?: React.MouseEvent) => void;
@@ -24,10 +31,14 @@ interface PostDetailPageProps {
   onComment: (postId: number, text: string) => void;
 }
 
-export function PostDetailPage({ 
+const isVideo = (url?: string) => {
+  if (!url) return false;
+  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+};
+
+export function PostDetailPage({  
   post, 
   currentUser, 
-  userProfile,
   onBack, 
   onLike, 
   onSave, 
@@ -37,25 +48,49 @@ export function PostDetailPage({
   onComment
 }: PostDetailPageProps) {
   const [commentText, setCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<{ name: string } | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrent(api.selectedScrollSnap() + 1);
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap() + 1);
+    });
+  }, [api]);
 
   const handlePostComment = () => {
     if (!commentText.trim()) return;
-    onComment(post.id, commentText);
+    const finalText = replyingTo ? `@${replyingTo.name} ${commentText}` : commentText;
+    onComment(post.id, finalText);
     setCommentText('');
+    setReplyingTo(null);
   };
 
+  const handleReply = (user: { name: string }) => {
+    setReplyingTo(user);
+    textareaRef.current?.focus();
+  };
+
+  const isOwner = currentUser && (
+    String(currentUser.id) === String(post.user?.id) || 
+    String(currentUser.id) === String(post.user_id)
+  );
+
   return (
-    <div className="min-h-screen bg-white pb-20 animate-in fade-in slide-in-from-right duration-200">
-      {/* Detail Header */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-100">
+    <div className="fixed inset-0 bg-white z-[70] overflow-y-auto animate-in slide-in-from-right duration-300">
+      {/* Unique Detail Header */}
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-lg border-b border-gray-100">
         <div className="px-4 py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={onBack}
-              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-1 text-gray-900"
+              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
             >
-              <ChevronLeft className="w-6 h-6" />
-              <span className="font-medium text-lg">Post</span>
+              <ArrowLeft className="w-6 h-6 text-gray-900" />
             </button>
             <div className="flex items-center gap-2">
               <button
@@ -82,11 +117,11 @@ export function PostDetailPage({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {currentUser?.id === post.user.id ? (
+                  {isOwner ? (
                     <DropdownMenuItem 
                       onClick={() => {
                         onDelete(post.id);
-                        onBack();
+                        onBack(); // Close modal after deleting
                       }} 
                       className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
                     >
@@ -112,38 +147,149 @@ export function PostDetailPage({
       </div>
 
       <div className="max-w-2xl mx-auto">
-        {/* Hero Image/Video with Gradient Overlay */}
-        <div className="relative">
-          {post.video_url ? (
-            <div className="relative aspect-[9/16] max-h-[70vh] w-full bg-black overflow-hidden">
-              <video 
-                src={post.video_url} 
-                className="w-full h-full object-contain"
-                controls
-                autoPlay
-                loop
-                muted
-              />
-            </div>
-          ) : post.image_urls?.[0] ? (
-            <div className="relative aspect-[4/5] w-full bg-gray-100 overflow-hidden">
-              <ImageWithFallback
-                src={post.image_urls[0]}
-                alt="Post detail"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
-            </div>
-          ) : post.content?.image ? (
-            <div className="relative aspect-[4/5] w-full bg-gray-100 overflow-hidden">
-              <ImageWithFallback
-                src={post.content.image}
-                alt="Post detail"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
-            </div>
-          ) : null}
+        {/* Media Content (Carousel or Single) */}
+        <div className="relative bg-black rounded-b-3xl overflow-hidden">
+          {(() => {
+            // Determine media items
+            let mediaItems = post.content?.images || post.image_urls || [];
+            
+            // If single image string provided instead of array
+            if (typeof mediaItems === 'string') mediaItems = [mediaItems];
+            
+            // Fallback to single image fields if array is empty
+            if (mediaItems.length === 0) {
+              if (post.content?.image) mediaItems = [post.content.image];
+              else if (post.image) mediaItems = [post.image];
+            }
+
+            // If video_url exists, ensure it's included if not already
+            if (post.video_url) {
+              const videoExists = mediaItems.some((url: string) => url === post.video_url);
+              if (!videoExists) {
+                // If we have other items, prepend video (or handle mixed media logic)
+                // For now, if we have items, we assume they are the carousel. 
+                // If the video is the ONLY thing, we add it.
+                // If we have images AND a video_url that isn't in the images list, 
+                // it implies a mixed post where video might be separate.
+                // Let's prepend it to allow carousel to show it.
+                mediaItems = [post.video_url, ...mediaItems];
+              }
+            }
+
+            // Also check highlights array if present
+            if (mediaItems.length === 0 && post.highlights && post.highlights.length > 0) {
+                 const highlight = post.highlights[0];
+                 if (highlight.videoUrl) {
+                    mediaItems = [highlight.videoUrl];
+                 }
+            }
+
+            if (mediaItems.length === 0) return null;
+
+            if (mediaItems.length === 1) {
+              const media = mediaItems[0];
+              const isMediaVideo = isVideo(media) || !!post.video_url;
+
+              return (
+                <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
+                   {isMediaVideo ? (
+                      <>
+                        <video 
+                          src={media} 
+                          className="w-full h-full object-contain max-h-[70vh]"
+                          controls
+                          autoPlay
+                          playsInline
+                          loop
+                          muted={isMuted}
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMuted(!isMuted);
+                          }}
+                          className="absolute bottom-4 right-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                        >
+                          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                        </button>
+                      </>
+                   ) : (
+                      <ImageWithFallback
+                        src={media}
+                        alt="Post detail"
+                        className="w-full h-full object-cover"
+                      />
+                   )}
+                </div>
+              );
+            }
+
+            // Carousel Render
+            return (
+              <Carousel setApi={setApi} className="w-full group">
+                <CarouselContent>
+                  {mediaItems.map((media: string, index: number) => {
+                    const isMediaVideo = isVideo(media);
+                    const isActive = index === (current - 1);
+                    
+                    return (
+                              <CarouselItem key={index} className="pl-0">
+                                 <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
+                                   {isMediaVideo ? (
+                                      <>
+                                        <video 
+                                          src={media} 
+                                          className="w-full h-full object-contain max-h-[70vh]"
+                                          controls
+                                          // Only autoplay if it's the active slide
+                                          autoPlay={isActive}
+                                          playsInline
+                                          loop
+                                          muted={isMuted}
+                                        />
+                                        <button
+                                           onClick={(e) => {
+                                             e.stopPropagation();
+                                             setIsMuted(!isMuted);
+                                           }}
+                                           className="absolute bottom-4 right-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                                        >
+                                           {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                        </button>
+                                      </>
+                                   ) : (
+                                      <ImageWithFallback
+                                        src={media}
+                                        alt={`Slide ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                   )}
+                                 </div>
+                              </CarouselItem>
+                            );
+                  })}
+                </CarouselContent>
+                
+                {/* Navigation */}
+                <div className="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
+                   <CarouselPrevious className="left-4 bg-white/20 hover:bg-white/40 border-none text-white absolute top-1/2 -translate-y-1/2" />
+                   <CarouselNext className="right-4 bg-white/20 hover:bg-white/40 border-none text-white absolute top-1/2 -translate-y-1/2" />
+                </div>
+
+                {/* Indicators */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                  {mediaItems.map((_: any, idx: number) => (
+                    <div 
+                      key={idx}
+                      className={`w-1.5 h-1.5 rounded-full transition-all shadow-sm ${
+                        idx === (current - 1) ? 'bg-white w-4' : 'bg-white/50'
+                      }`} 
+                    />
+                  ))}
+                </div>
+              </Carousel>
+            );
+          })()}
         </div>
 
         {/* User & Post Info */}
@@ -159,15 +305,15 @@ export function PostDetailPage({
               />
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  {post.user.isOrganizer && (
-                    <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
-                  )}
                   <span 
                     className="text-gray-900 font-bold cursor-pointer hover:text-purple-600 transition-colors"
                     onClick={(e) => onProfileClick(post.user, e)}
                   >
                     {post.user.name}
                   </span>
+                  {post.user.isOrganizer && (
+                    <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
+                  )}
                   {post.user.verified && !post.user.isOrganizer && (
                     <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
                       <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
@@ -209,7 +355,7 @@ export function PostDetailPage({
           )}
 
           {/* Engagement Stats */}
-          <div className="flex items-center gap-6 py-2 border-b border-gray-100 pb-4">
+          <div className="flex items-center gap-6 py-2">
             <div className="flex items-center gap-2">
               <button 
                 onClick={(e) => onLike(post.id, e)}
@@ -231,62 +377,23 @@ export function PostDetailPage({
           </div>
         </div>
 
-        {/* Comments Section */}
-        <div className="px-5 pb-5">
-          <h3 className="text-gray-900 font-bold text-lg mb-4">
-            Replies ({post.comments?.length || 0})
-          </h3>
-          
-          {/* Add Comment First */}
-          <div className="mb-8">
-            <div className="flex gap-4 items-start">
-              <UserAvatar
-                src={userProfile?.avatar_url || currentUser?.user_metadata?.avatar_url}
-                name={userProfile?.full_name || currentUser?.user_metadata?.full_name || "You"}
-                className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100"
-              />
-              <div className="flex-1">
-                <div className="relative group">
-                  <textarea
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="Add a comment..."
-                    rows={1}
-                    className="w-full bg-transparent border-b-2 border-gray-200 py-2.5 text-base text-gray-900 placeholder-gray-400 outline-none focus:border-gray-900 transition-colors resize-none overflow-hidden min-h-[44px]"
-                    onInput={(e) => {
-                      const target = e.target as HTMLTextAreaElement;
-                      target.style.height = 'auto';
-                      target.style.height = `${target.scrollHeight}px`;
-                    }}
-                  />
-                  <div className="absolute right-0 bottom-2.5 flex items-center gap-2">
-                    <button
-                      onClick={handlePostComment}
-                      disabled={!commentText.trim()}
-                      className={`p-2 rounded-full transition-all ${
-                        commentText.trim()
-                          ? 'text-purple-600 hover:bg-purple-50'
-                          : 'text-gray-300 cursor-not-allowed'
-                      }`}
-                    >
-                      <Send className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Comments Section - Mobile Native Style */}
+        <div className="flex-1 flex flex-col min-h-0 bg-white">
+          {/* Header */}
+          <div className="px-5 pt-4 pb-2 border-b border-gray-50">
+            <h3 className="text-gray-900 font-bold text-base">
+              Comments ({post.comments?.length || 0})
+            </h3>
           </div>
 
-          {/* Comments List */}
-          <div className="space-y-4">
+          {/* Scrollable List */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
             {!post.comments || post.comments.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                  <MessageCircle className="w-8 h-8 text-gray-400" />
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <MessageCircle className="w-6 h-6 text-gray-300" />
                 </div>
-                <p className="text-gray-500 text-sm">
-                  No replies yet. Be the first to share your thoughts!
-                </p>
+                <p className="text-gray-400 text-sm">No comments yet</p>
               </div>
             ) : (
               post.comments.map((comment: any) => (
@@ -294,21 +401,73 @@ export function PostDetailPage({
                   <UserAvatar
                     src={comment.user.avatar}
                     name={comment.user.name}
-                    className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
                   />
                   <div className="flex-1">
-                    <div className="bg-gray-50 rounded-2xl p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-gray-900 text-sm font-semibold">{comment.user.name}</span>
-                        <span className="text-gray-400 text-xs">•</span>
-                        <span className="text-gray-500 text-xs">{comment.timestamp}</span>
-                      </div>
-                      <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-gray-900 text-xs font-bold">{comment.user.name}</span>
+                      <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
+                    </div>
+                    <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>
+                    <div className="flex items-center gap-4 mt-2">
+                      <button 
+                        onClick={() => handleReply(comment.user)}
+                        className="text-xs text-gray-400 font-medium hover:text-gray-600"
+                      >
+                        Reply
+                      </button>
+                      <button className="text-xs text-gray-400 font-medium hover:text-gray-600">Like</button>
                     </div>
                   </div>
                 </div>
               ))
             )}
+          </div>
+
+          {/* Input Area - Fixed at Bottom */}
+          <div className="sticky bottom-0 z-10 p-3 border-t border-gray-100 bg-white safe-area-bottom">
+            {replyingTo && (
+              <div className="flex items-center justify-between px-3 py-2 mb-2 bg-gray-50 rounded-lg text-xs">
+                <span className="text-gray-500">Replying to <span className="font-semibold text-gray-900">{replyingTo.name}</span></span>
+                <button 
+                  onClick={() => setReplyingTo(null)}
+                  className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                >
+                  <X className="w-3 h-3 text-gray-500" />
+                </button>
+              </div>
+            )}
+            <div className="flex items-end gap-3 bg-gray-50 rounded-3xl px-4 py-2">
+              <UserAvatar
+                src={currentUser?.user_metadata?.avatar_url}
+                name={currentUser?.user_metadata?.full_name || "You"}
+                className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5"
+              />
+              <textarea
+                ref={textareaRef}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Add a comment..."
+                rows={1}
+                className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 focus:ring-0 resize-none min-h-[20px] max-h-[80px] py-1.5"
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = 'auto';
+                  target.style.height = `${Math.min(target.scrollHeight, 80)}px`;
+                }}
+              />
+              <button
+                onClick={handlePostComment}
+                disabled={!commentText.trim()}
+                className={`p-1.5 rounded-full transition-all mb-0.5 ${
+                  commentText.trim()
+                    ? 'text-blue-500 hover:bg-blue-50'
+                    : 'text-gray-300 cursor-not-allowed'
+                }`}
+              >
+                <span className="text-xs font-bold">Post</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

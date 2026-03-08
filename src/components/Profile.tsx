@@ -511,6 +511,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
     const uiPost: UiPost = {
       id: post.id,
+      user_id: post.user_id,
       user: postUser,
       event: post.event ? {
         id: post.event.id,

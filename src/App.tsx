@@ -142,6 +142,7 @@ export default function App() {
           const avatarUrl = isOrganizerPage ? p.organizer_profile?.avatar_url : p.user?.avatar_url;
           return {
             id: p.id,
+            user_id: p.user_id,
             user: {
               id: isOrganizerPage ? (p.organizer_profile?.id || 'unknown') : (p.user?.id || 'unknown'),
               name: displayName || 'Unknown',
