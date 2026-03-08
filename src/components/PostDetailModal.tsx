@@ -115,7 +115,7 @@ export function PostDetailModal({
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="z-[80] bg-white min-w-[150px] shadow-lg rounded-xl p-1 border border-gray-100">
                   {isOwner ? (
                     <DropdownMenuItem 
                       onClick={() => {
@@ -367,12 +367,15 @@ export function PostDetailModal({
               <div className="text-gray-900 font-bold text-sm">{(post.likes_count || post.likes || 0).toLocaleString()}</div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <button 
+              onClick={() => textareaRef.current?.focus()}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
               <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                 <MessageCircle className="w-5 h-5 text-gray-600" />
               </div>
               <div className="text-gray-900 font-bold text-sm">{(post.comments?.length || 0).toLocaleString()}</div>
-            </div>
+            </button>
           </div>
         </div>
 

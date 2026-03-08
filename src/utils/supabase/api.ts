@@ -449,9 +449,9 @@ export const isFollowing = async (followerId: string, followingId: string) => {
     .select('created_at')
     .eq('follower_id', followerId)
     .eq('following_id', followingId)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') throw error;
+  if (error) throw error;
   return !!data;
 };
 
@@ -801,12 +801,22 @@ export const getEventAttendees = async (eventId: number, limit = 5) => {
 
 export const createEvent = async (eventData: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => {
   // Input Validation
-  if (new Date(eventData.date) < new Date(new Date().setHours(0,0,0,0))) {
+  // Ensure date is valid (handle string or Date object)
+  const eventDate = new Date(eventData.date);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  
+  if (isNaN(eventDate.getTime()) || eventDate < today) {
     throw new Error('Event date cannot be in the past');
   }
 
   if (eventData.title.length < 3 || eventData.title.length > 100) {
     throw new Error('Title must be between 3 and 100 characters');
+  }
+
+  // Ensure category is present (default to Entertainment if missing to avoid not-null constraint violation)
+  if (!eventData.category) {
+    (eventData as any).category = 'Entertainment';
   }
 
   if (Array.isArray(eventData.ticket_tiers)) {
@@ -816,6 +826,10 @@ export const createEvent = async (eventData: Omit<Event, 'id' | 'created_at' | '
     });
   }
 
+  // Ensure description is not empty if required, or handle optional fields
+  // Also ensure object keys match database columns exactly
+  // Note: 'status' should be 'published' or 'draft'
+  
   const { data, error } = await supabase
     .from('events')
     .insert(eventData)
@@ -835,6 +849,11 @@ export const updateEvent = async (eventId: number, eventData: Partial<Event>) =>
     if (new Date(eventData.date) < new Date(new Date().setHours(0,0,0,0))) {
       throw new Error('Event date cannot be in the past');
     }
+  }
+
+  // Ensure category is present if it's being updated (though partial updates might not include it, if it IS included but null/empty, we fix it)
+  if ('category' in eventData && !eventData.category) {
+    (eventData as any).category = 'Entertainment';
   }
 
   if (eventData.ticket_tiers && Array.isArray(eventData.ticket_tiers)) {
@@ -1186,7 +1205,7 @@ export const toggleReminder = async (eventId: number, userId: string) => {
     .select('id, is_reminder')
     .eq('event_id', eventId)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     const { error } = await supabase
@@ -2114,38 +2133,42 @@ export const getNotifications = async (userId: string) => {
   }
 
   // 3. Fetch Ticket Sales (For Organizers)
-  const { data: ticketSales } = await supabase
-    .from('tickets')
-    .select(`
-      id,
-      created_at,
-      ticket_type,
-      events!inner(id, title, organizer_id),
-      user:profiles(id, full_name, avatar_url)
-    `)
-    .eq('events.organizer_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(20);
+  try {
+    const { data: ticketSales } = await supabase
+      .from('tickets')
+      .select(`
+        id,
+        created_at,
+        ticket_type,
+        event:events!inner(id, title, organizer_id),
+        user:profiles(id, full_name, avatar_url)
+      `)
+      .eq('events.organizer_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
 
-  if (ticketSales) {
-    ticketSales.forEach((ticket: any) => {
-      // Use profile if available, otherwise fallback to "Guest"
-      const buyerName = ticket.user?.full_name || 'Guest User';
-      const buyerAvatar = ticket.user?.avatar_url || '';
-      
-      notifications.push({
-        id: `sale-${ticket.id}`,
-        type: 'event', // reusing 'event' type for sales
-        user: { 
-          name: buyerName, 
-          avatar: buyerAvatar
-        },
-        content: `bought a ${ticket.ticket_type} ticket for "${ticket.events?.title || 'Event'}"`,
-        time: ticket.created_at,
-        read: new Date(ticket.created_at).getTime() <= lastReadTime,
-        created_at: ticket.created_at
+    if (ticketSales) {
+      ticketSales.forEach((ticket: any) => {
+        // Use profile if available, otherwise fallback to "Guest"
+        const buyerName = ticket.user?.full_name || 'Guest User';
+        const buyerAvatar = ticket.user?.avatar_url || '';
+        
+        notifications.push({
+          id: `sale-${ticket.id}`,
+          type: 'event', // reusing 'event' type for sales
+          user: { 
+            name: buyerName, 
+            avatar: buyerAvatar
+          },
+          content: `bought a ${ticket.ticket_type} ticket for "${ticket.event?.title || 'Event'}"`,
+          time: ticket.created_at,
+          read: new Date(ticket.created_at).getTime() <= lastReadTime,
+          created_at: ticket.created_at
+        });
       });
-    });
+    }
+  } catch (err) {
+    console.warn('Error fetching ticket sales notifications:', err);
   }
 
   // 4. Fetch Event Reminders (Upcoming events for ticket holders)

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, Play, MapPin, Search, Lock, Unlock, X, CheckCircle2, Globe } from 'lucide-react';
+import { Filter, Play, MapPin, Search, Lock, Unlock, X, CheckCircle2, Globe, Flame, Users, Hourglass, Eye, Bell } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
@@ -408,6 +408,14 @@ export function LiveFeed() {
       (selectedCountry === 'all' || stream.country === selectedCountry)
   );
 
+  const liveEvents = filteredLiveStreams.filter(stream => 
+    ['entertainment', 'sports & fitness', 'business & tech', 'religion'].includes(stream.category.toLowerCase()) || stream.isPaid
+  );
+
+  const creatorsLive = filteredLiveStreams.filter(stream => 
+    !(['entertainment', 'sports & fitness', 'business & tech', 'religion'].includes(stream.category.toLowerCase()) || stream.isPaid)
+  );
+
   const filteredUpcomingStreams = upcomingStreams.filter(
     (stream: LiveStream) => 
       (selectedCategory === 'all' || stream.category === selectedCategory) &&
@@ -471,39 +479,33 @@ export function LiveFeed() {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
-      {/* Premium Header */}
-      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
-        <div className="max-w-4xl mx-auto px-5 py-4">
+      {/* Minimal Header */}
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+        <div className="max-w-4xl mx-auto px-5 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-                <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                <div className="absolute inset-0 w-2 h-2 rounded-full bg-red-500 animate-ping opacity-75"></div>
               </div>
-              <div>
-                <h1 className="text-gray-900 text-xl font-bold leading-tight">Live Feed</h1>
-                {filteredLiveStreams.length > 0 ? (
-                  <p className="text-red-500 text-xs font-medium">{filteredLiveStreams.length} streaming now</p>
-                ) : (
-                  <p className="text-gray-500 text-xs">Watch events live</p>
-                )}
-              </div>
+              <h1 className="text-gray-900 text-base font-bold tracking-tight">Live Feed</h1>
             </div>
             
             <div className="flex items-center gap-2">
               {/* Location Filter */}
               <button 
                 onClick={() => setShowLocationFilter(true)}
-                className="h-10 px-4 flex items-center gap-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
+                className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
               >
                 {(() => {
                   const country = countries.find(c => c.id === selectedCountry);
                   if (country?.icon) {
                     const Icon = country.icon;
-                    return <Icon className="w-4 h-4 text-gray-700" />;
+                    return <Icon className="w-3.5 h-3.5 text-gray-700" />;
                   }
-                  return <span className="text-lg">{country?.flag || '🇹🇿'}</span>;
+                  return <span className="text-sm">{country?.flag || '🇹🇿'}</span>;
                 })()}
-                <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                <span className="text-xs font-medium text-gray-700 hidden sm:block">
                   {countries.find(c => c.id === selectedCountry)?.name || 'Tanzania'}
                 </span>
               </button>
@@ -511,113 +513,57 @@ export function LiveFeed() {
               {/* Category Filter */}
               <button 
                 onClick={() => setShowFilters(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
               >
-                <Filter className="w-4 h-4 text-gray-700" />
+                <Filter className="w-3.5 h-3.5 text-gray-700" />
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-5 py-6">
-        {/* Live Now - Premium Cards */}
-        {filteredLiveStreams.length > 0 && (
-          <div className="space-y-5 mb-12">
-            {filteredLiveStreams.map((stream: LiveStream) => (
-              <div
-                key={stream.id}
-                onClick={() => handleStreamClick(stream)}
-                className="relative group cursor-pointer overflow-hidden rounded-3xl shadow-lg hover:shadow-2xl transition-all"
-                style={{ aspectRatio: '16/9' }}
-              >
-                {/* Image */}
-                <ImageWithFallback
-                  src={stream.thumbnail}
-                  alt={stream.title}
-                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
-                />
-                
-                {/* Subtle gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                
-                {/* Minimal Live Indicator - Top Left */}
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500 shadow-lg">
-                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-                    <span className="text-white text-xs tracking-wide">LIVE</span>
-                  </div>
-                </div>
-
-                {/* Quality Badge - Only when relevant */}
-                {stream.quality === '4K' && (
-                  <div className="absolute top-4 right-4">
-                    <div className="px-2 py-1 rounded-lg bg-purple-600 shadow-lg">
-                      <span className="text-white text-xs">4K</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Bottom Info */}
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <div className="flex items-end justify-between">
-                    {/* Left: Title & Viewers */}
-                    <div className="flex-1 pr-4">
-                      <h3 className="text-white text-lg mb-2 leading-tight line-clamp-2">{stream.title}</h3>
-                      <div className="flex items-center gap-3">
-                        <span className="text-white/90 text-sm">{stream.host}</span>
-                        <span className="w-1 h-1 rounded-full bg-white/50"></span>
-                        <span className="text-white/90 text-sm">{stream.viewers?.toLocaleString()} watching</span>
-                      </div>
-                    </div>
-
-                    {/* Right: Minimal Play Button */}
-                    <button className="w-14 h-14 rounded-full bg-white flex items-center justify-center hover:scale-105 transition-all shadow-xl">
-                      <Play className="w-6 h-6 text-purple-600 fill-purple-600 ml-0.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Upcoming - Minimal Cards */}
-        {filteredUpcomingStreams.length > 0 && (
+      <div className="max-w-4xl mx-auto px-5 py-6 space-y-8">
+        
+        {/* Section 1: Live Events (Featured) */}
+        {liveEvents.length > 0 && (
           <div>
-            {/* Hidden as requested */}
-            {/* <div className="flex items-center gap-2 mb-5">
-              <Clock className="w-5 h-5 text-purple-600" />
-              <h2 className="text-gray-900 text-lg">Upcoming</h2>
-            </div> */}
-
-            <div className="space-y-3">
-              {filteredUpcomingStreams.map((stream: LiveStream) => (
+            <div className="flex items-center gap-2 mb-4">
+              <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
+              <h2 className="text-gray-900 text-lg font-bold">Live Events</h2>
+            </div>
+            
+            <div className="flex overflow-x-auto gap-3 pb-4 -mx-5 px-5 scrollbar-hide snap-x">
+              {liveEvents.map((stream: LiveStream) => (
                 <div
-                  key={stream.id}
+                  key={`featured-${stream.id}`}
                   onClick={() => handleStreamClick(stream)}
-                  className="relative overflow-hidden rounded-2xl bg-white hover:shadow-md transition-all cursor-pointer border border-gray-200"
+                  className="relative flex-shrink-0 w-[70vw] sm:w-[320px] snap-center group cursor-pointer overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100"
+                  style={{ aspectRatio: '16/9' }}
                 >
-                  <div className="flex gap-4 p-4">
-                    {/* Thumbnail */}
-                    <div className="relative w-28 h-20 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
-                      <ImageWithFallback
-                        src={stream.thumbnail}
-                        alt={stream.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/20"></div>
-                      {/* Countdown badge */}
-                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-purple-600 shadow-sm">
-                        <span className="text-white text-xs">{formatCountdown(stream.countdown!)}</span>
-                      </div>
+                  <ImageWithFallback
+                    src={stream.thumbnail}
+                    alt={stream.title}
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                  
+                  <div className="absolute top-2 left-2">
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-600/90 backdrop-blur-sm shadow-sm">
+                      <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
+                      <span className="text-white text-[9px] font-bold tracking-wide uppercase">Live</span>
                     </div>
+                  </div>
 
-                    {/* Info */}
-                    <div className="flex-1 flex flex-col justify-between min-w-0">
-                      <div>
-                        <h3 className="text-gray-900 text-sm mb-1 line-clamp-2 leading-snug">{stream.title}</h3>
-                        <p className="text-gray-600 text-xs">{stream.scheduledTime}</p>
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <h3 className="text-white text-sm font-bold mb-0.5 line-clamp-1">{stream.title}</h3>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-gray-300 text-[10px]">
+                        <MapPin className="w-3 h-3" />
+                        <span className="line-clamp-1 max-w-[100px]">{stream.host}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-300 text-[10px]">
+                        <Eye className="w-3 h-3" />
+                        <span>{stream.viewers?.toLocaleString() || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -627,8 +573,99 @@ export function LiveFeed() {
           </div>
         )}
 
+        {/* Section 2: Creators Live (Horizontal Scroll) */}
+        {creatorsLive.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="w-5 h-5 text-purple-600" />
+              <h2 className="text-gray-900 text-lg font-bold">Creators Live</h2>
+            </div>
+            
+            <div className="flex overflow-x-auto gap-3 pb-4 -mx-5 px-5 scrollbar-hide snap-x">
+              {creatorsLive.map((stream: LiveStream) => (
+                <div
+                  key={`creator-${stream.id}`}
+                  onClick={() => handleStreamClick(stream)}
+                  className="relative flex-shrink-0 w-[40vw] sm:w-[180px] snap-center group cursor-pointer overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100"
+                  style={{ aspectRatio: '3/4' }}
+                >
+                  <ImageWithFallback
+                    src={stream.thumbnail}
+                    alt={stream.title}
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                  
+                  <div className="absolute top-2 left-2">
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-600/90 backdrop-blur-sm shadow-sm">
+                      <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
+                      <span className="text-white text-[9px] font-bold tracking-wide uppercase">Live</span>
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <h3 className="text-white text-xs font-bold mb-0.5 line-clamp-2">{stream.title}</h3>
+                    <div className="flex items-center gap-1 text-gray-300 text-[10px]">
+                      <span className="line-clamp-1">{stream.host}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Section 3: Starting Soon - Smaller Cards */}
+        {filteredUpcomingStreams.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Hourglass className="w-4 h-4 text-gray-700" />
+              <h2 className="text-gray-900 text-base font-bold">Starting Soon</h2>
+            </div>
+
+            <div className="space-y-2">
+              {filteredUpcomingStreams.map((stream: LiveStream) => (
+                <div
+                  key={stream.id}
+                  onClick={() => handleStreamClick(stream)}
+                  className="group flex items-center gap-3 p-2 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                >
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                    <ImageWithFallback
+                      src={stream.thumbnail}
+                      alt={stream.title}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Countdown Overlay - Minimal */}
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                       {/* Optional: Add countdown text here if needed, or keep it clean */}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0 py-0.5">
+                    <h3 className="text-gray-900 text-xs font-bold mb-0.5 line-clamp-1">{stream.title}</h3>
+                    <div className="flex items-center gap-1 text-gray-500 text-[10px] mb-1">
+                      <MapPin className="w-3 h-3" />
+                      <span className="line-clamp-1">{stream.location || stream.host}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-purple-600 text-[10px] font-medium bg-purple-50 px-1.5 py-0.5 rounded w-fit">
+                       {/* Assuming scheduledTime is formatted */}
+                       <span>{stream.scheduledTime?.split(' at ')[1] || stream.scheduledTime}</span>
+                    </div>
+                  </div>
+
+                  <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-purple-600">
+                    <Bell className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+
         {/* Empty State */}
-        {filteredLiveStreams.length === 0 && filteredUpcomingStreams.length === 0 && (
+        {liveEvents.length === 0 && creatorsLive.length === 0 && filteredUpcomingStreams.length === 0 && (
           <div className="text-center py-20">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <div className="w-2 h-2 rounded-full bg-purple-600"></div>

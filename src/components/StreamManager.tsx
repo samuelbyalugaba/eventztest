@@ -430,7 +430,12 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             }
             await client.current.setClientRole('host');
             await client.current.join(AGORA_APP_ID, channelName, token, uid);
+            
             if (localAudioTrack && localVideoTrack) {
+              // Ensure tracks are enabled before publishing
+              if (!localAudioTrack.enabled) await localAudioTrack.setEnabled(true);
+              if (!localVideoTrack.enabled) await localVideoTrack.setEnabled(true);
+              
               await client.current.publish([localAudioTrack, localVideoTrack]);
             } else {
               toast.error("Camera/Mic not ready. Check permissions.");

@@ -189,7 +189,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           date: formData.date,
           time: formData.time,
           location: formData.location,
-          category: formData.category,
+          category: formData.category || 'Entertainment', // Ensure category is never null
           subcategory: formData.subcategory,
           image_url: formData.coverImage || '',
           price_range: formData.price,
@@ -354,7 +354,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   const handlePublish = async () => {
     // Basic validation
-    if (!formData.title || !formData.date || !formData.price) {
+    if (!formData.title || !formData.date || !formData.price || !formData.category) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -383,7 +383,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         date: formData.date,
         time: formData.time,
         location: formData.location,
-        category: formData.category,
+        category: formData.category || 'Entertainment', // Ensure category is never null
         subcategory: formData.subcategory,
         image_url: formData.coverImage || '',
         price_range: formData.price,
