@@ -56,7 +56,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
   };
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col h-full animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 bg-white z-[70] flex flex-col h-full animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="px-5 pt-6 pb-2">
         <div className="flex items-center justify-between mb-4">

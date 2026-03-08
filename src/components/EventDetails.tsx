@@ -286,11 +286,22 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       toast.error('Please sign in to start a conversation');
       return;
     }
-    setSelectedUser(null);
-    const conversation = await onStartConversation(user);
-    if (conversation) {
-      setActiveConversation(conversation);
-      setShowMessages(true);
+    
+    const toastId = toast.loading('Opening chat...');
+    try {
+      const conversation = await onStartConversation(user);
+      if (conversation) {
+        // Only close the profile modal AFTER we have the conversation ready
+        setSelectedUser(null);
+        setActiveConversation(conversation);
+        setShowMessages(true);
+        toast.dismiss(toastId);
+      } else {
+        toast.error('Could not start conversation', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      toast.error('Failed to start conversation', { id: toastId });
     }
   };
 
@@ -817,7 +828,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       )}
 
       {showMessages && (
-        <div className="fixed inset-0 bg-black/50 z-50" onClick={() => {
+        <div className="fixed inset-0 bg-black/50 z-[70]" onClick={() => {
           if (!activeConversation) setShowMessages(false);
         }}>
           <div 

@@ -6,15 +6,16 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments } from '../utils/supabase/api';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { PostDetailModal } from './PostDetailModal';
 import { handleShare } from '../utils/share';
-import { formatTimeAgo } from '../utils/format';
+import { mapPostsToViewModel } from '../utils/postMapper';
 import { Conversation } from '../types';
 
 import { ChatList } from './ChatList';
@@ -165,8 +166,30 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   useEffect(() => {
     if (selectedPost) {
       incrementPostView(selectedPost.id);
+      
+      // Fetch full comments when post is selected
+      const fetchComments = async () => {
+        try {
+          const comments = await getPostComments(selectedPost.id);
+          const mappedComments = (comments || []).map((c: any) => ({
+            id: c.id,
+            user: {
+              name: c.user?.full_name || c.user?.username || 'User',
+              avatar: c.user?.avatar_url || ''
+            },
+            text: c.text,
+            timestamp: formatTimeAgo(c.created_at)
+          }));
+          
+          setSelectedPost(prev => prev && prev.id === selectedPost.id ? { ...prev, comments: mappedComments } : prev);
+        } catch (error) {
+          console.error('Error fetching comments:', error);
+        }
+      };
+      
+      fetchComments();
     }
-  }, [selectedPost]);
+  }, [selectedPost?.id]);
 
   useEffect(() => {
     if (playingVideo) {
@@ -180,59 +203,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
   const FEED_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-  const mapPosts = (data: any[]) => {
-    return data.map((p: ApiPost) => {
-      const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
-      const displayName = isOrganizerPage ? (p.organizer_profile!.organizer_name || 'Unknown Organizer') : (p.user?.full_name || p.user?.username || 'Unknown User');
-      // STRICT: No fallback to user avatar for organizers
-      const avatarUrl = isOrganizerPage ? p.organizer_profile!.organizer_avatar_url : p.user?.avatar_url;
-      return {
-        id: p.id,
-        user: {
-          id: isOrganizerPage ? (p.organizer_profile!.id || 'unknown') : (p.user?.id || 'unknown'),
-          name: displayName || 'Unknown',
-          username: p.user?.username || '@unknown',
-          avatar: avatarUrl || '',
-          verified: p.user?.verified || false,
-          isOrganizer: p.user?.is_organizer || false,
-          isOrganizerPage: isOrganizerPage
-        },
-        event: p.event ? {
-          id: p.event.id,
-          name: p.event.title,
-          date: p.event.date,
-          time: p.event.time,
-          location: p.event.location,
-          image: p.event.image_url,
-          price: p.event.price_range,
-        } : undefined,
-        content: {
-          text: p.content,
-          images: p.image_urls,
-          image: p.image_urls?.[0],
-          hashtags: p.hashtags,
-        },
-        timestamp: formatTimeAgo(p.created_at),
-        likes: p.likes_count || 0,
-        comments: [],
-        comments_count: p.comments_count || 0,
-        shares: 0,
-        views: p.views || 0,
-        isLiked: p.is_liked || false,
-        isSaved: p.is_saved || false,
-        isHighlight: !!p.video_url,
-        highlights: p.video_url ? [{
-          id: p.id,
-          thumbnail: (p.image_urls?.find(url => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
-          duration: p.duration || '',
-          title: p.content || 'Video Highlight',
-          videoUrl: p.video_url,
-          views: p.views || 0,
-        }] : undefined,
-        mutualFriends: [],
-      };
-    });
-  };
+  const mapPosts = (data: any[]) => mapPostsToViewModel(data);
 
   const loadPosts = async (useCacheFirst: boolean) => {
     setIsLoading(true);
@@ -607,16 +578,21 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       return;
     }
     
-    // Close post detail if open
-    setSelectedPost(null);
-    
-    // Use the global conversation handler
-    const conversation = await onStartConversation(user);
-    
-    if (conversation) {
-      // Open the conversation
-      setActiveConversation(conversation);
-      setShowMessages(true);
+    const toastId = toast.loading('Opening chat...');
+    try {
+      const conversation = await onStartConversation(user);
+      if (conversation) {
+        // Close post detail if open AFTER we have the conversation ready
+        setSelectedPost(null);
+        setActiveConversation(conversation);
+        setShowMessages(true);
+        toast.dismiss(toastId);
+      } else {
+        toast.error('Could not start conversation', { id: toastId });
+      }
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      toast.error('Failed to start conversation', { id: toastId });
     }
   };
 
@@ -812,284 +788,22 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
         </div>
       </div>
 
-      {/* Post Detail - Unique Bottom Sheet Style */}
+      {/* Post Detail Modal */}
       {selectedPost && (
-        <div className="fixed inset-0 bg-white z-[60] overflow-y-auto pb-20">
-          {/* Unique Detail Header */}
-          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-lg border-b border-gray-100">
-            <div className="px-4 py-4">
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={closePostDetail}
-                  className="flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                  <span>Back</span>
-                </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => sharePost(selectedPost, e)}
-                    className="p-2.5 bg-gray-100 hover:bg-cyan-100 text-gray-700 hover:text-cyan-600 rounded-xl transition-all"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => toggleSave(selectedPost.id, e)}
-                    className={`p-2.5 rounded-xl transition-all ${
-                      selectedPost.isSaved
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-100 hover:bg-purple-100 text-gray-700 hover:text-purple-600'
-                    }`}
-                  >
-                    <Bookmark className={`w-4 h-4 ${selectedPost.isSaved ? 'fill-white' : ''}`} />
-                  </button>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {currentUser?.id === selectedPost.user.id ? (
-                        <DropdownMenuItem 
-                          onClick={() => handleDeletePost(selectedPost.id)} 
-                          className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete Post
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem className="cursor-pointer">
-                          Report Post
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="max-w-2xl mx-auto">
-            {/* Hero Image with Gradient Overlay */}
-            {selectedPost.content.image && (
-              <div className="relative">
-                <ImageWithFallback
-                  src={selectedPost.content.image}
-                  alt="Post detail"
-                  className="w-full aspect-[16/10] object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-              </div>
-            )}
-
-            {/* User & Post Info */}
-            <div className="p-5 space-y-4">
-              {/* User Card */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <UserAvatar
-                    src={selectedPost.user.avatar}
-                    name={selectedPost.user.name}
-                    className="w-14 h-14 rounded-2xl object-cover ring-4 ring-purple-100 cursor-pointer hover:ring-purple-300 transition-all"
-                    onClick={(e) => {
-                      if (e) e.stopPropagation();
-                      handleOpenUserProfile(selectedPost.user, e);
-                    }}
-                  />
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      {selectedPost.user.isOrganizer && (
-                        <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
-                      )}
-                      <span 
-                        className="text-gray-900 font-bold cursor-pointer hover:text-purple-600 transition-colors"
-                        onClick={(e) => handleOpenUserProfile(selectedPost.user, e)}
-                      >
-                        {selectedPost.user.name}
-                      </span>
-                      {selectedPost.user.verified && !selectedPost.user.isOrganizer && (
-                        <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
-                          <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-gray-500 text-sm">{selectedPost.timestamp}</span>
-                  </div>
-                </div>
-                {selectedPost.user.isOrganizer && (
-                  <button className="px-5 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-sm font-medium rounded-xl transition-all">
-                    Follow
-                  </button>
-                )}
-              </div>
-
-              {/* Event Card - If Available */}
-              {selectedPost.event && (
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 border border-purple-100">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-gray-900 font-bold text-lg mb-2">{selectedPost.event.name}</h3>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2 text-gray-700 text-sm">
-                          <Calendar className="w-4 h-4 text-purple-600" />
-                          <span className="font-medium">{selectedPost.event.date}</span>
-                          {selectedPost.event.time && <span className="text-gray-500">• {selectedPost.event.time}</span>}
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-700 text-sm">
-                          <MapPin className="w-4 h-4 text-purple-600" />
-                          <span>{selectedPost.event.location}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {selectedPost.event.price && (
-                      <div className="bg-white px-4 py-2 rounded-xl border border-purple-200">
-                        <div className="text-purple-600 font-bold text-sm">{selectedPost.event.price}</div>
-                      </div>
-                    )}
-                  </div>
-                  <button className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
-                    Get Tickets
-                    <ArrowUpRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* Post Description */}
-              {selectedPost.content.text && (
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-gray-800 leading-relaxed">
-                    {selectedPost.content.text}
-                  </p>
-                </div>
-              )}
-
-              {/* Stats Row */}
-              <div className="flex items-center gap-6 py-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Star className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <div>
-                    <div className="text-gray-900 font-bold text-sm">{selectedPost.likes}</div>
-                    <div className="text-gray-500 text-xs">Reactions</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
-                    <MessageCircle className="w-4 h-4 text-cyan-600" />
-                  </div>
-                  <div>
-                    <div className="text-gray-900 font-bold text-sm">{selectedPost.comments.length}</div>
-                    <div className="text-gray-500 text-xs">Replies</div>
-                  </div>
-                </div>
-                {selectedPost.views && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
-                      <Eye className="w-4 h-4 text-pink-600" />
-                    </div>
-                    <div>
-                      <div className="text-gray-900 font-bold text-sm">{selectedPost.views.toLocaleString()}</div>
-                      <div className="text-gray-500 text-xs">Views</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Button */}
-              <button
-                onClick={(e) => toggleLike(selectedPost.id, e)}
-                className={`w-full py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                  selectedPost.isLiked
-                    ? 'bg-purple-600 text-white hover:bg-purple-700'
-                    : 'bg-gradient-to-r from-gray-100 to-purple-50 text-gray-900 hover:from-purple-600 hover:to-pink-600 hover:text-white border border-gray-200'
-                }`}
-              >
-                <Star className={`w-5 h-5 ${selectedPost.isLiked ? 'fill-white' : ''}`} />
-                {selectedPost.isLiked ? 'Added to Favorites' : 'Add to Favorites'}
-              </button>
-            </div>
-
-            {/* Comments Section */}
-            <div className="px-5 pb-5">
-              <div className="border-t border-gray-100 pt-5">
-                <h3 className="text-gray-900 font-bold text-lg mb-4">
-                  Replies ({selectedPost.comments.length})
-                </h3>
-                
-                {/* Add Comment First */}
-                <div className="mb-5">
-                  <div className="flex gap-3 bg-gradient-to-r from-gray-50 to-purple-50/30 rounded-2xl p-4">
-                    <UserAvatar
-                      src={currentUser?.user_metadata?.avatar_url || "https://i.ibb.co/3559hRDP/G-Profile.jpg"}
-                      name={currentUser?.user_metadata?.full_name || "You"}
-                      className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1">
-                      <textarea
-                        value={commentTexts[selectedPost.id] || ''}
-                        onChange={(e) => setCommentTexts({ ...commentTexts, [selectedPost.id]: e.target.value })}
-                        placeholder="Share your thoughts..."
-                        rows={3}
-                        className="w-full bg-white rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-500 outline-none border border-gray-200 focus:border-purple-300 focus:ring-2 focus:ring-purple-100 resize-none"
-                      />
-                      <button
-                        onClick={() => handlePostComment(selectedPost.id)}
-                        disabled={!commentTexts[selectedPost.id]?.trim()}
-                        className={`mt-3 px-5 py-2.5 rounded-xl font-medium text-sm transition-all flex items-center gap-2 ${
-                          commentTexts[selectedPost.id]?.trim()
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
-                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        }`}
-                      >
-                        <Send className="w-4 h-4" />
-                        Post Reply
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Comments List */}
-                <div className="space-y-4">
-                  {selectedPost.comments.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                        <MessageCircle className="w-8 h-8 text-gray-400" />
-                      </div>
-                      <p className="text-gray-500 text-sm">
-                        No replies yet. Be the first to share your thoughts!
-                      </p>
-                    </div>
-                  ) : (
-                    selectedPost.comments.map((comment) => (
-                      <div key={comment.id} className="flex gap-3">
-                      <UserAvatar
-                        src={comment.user.avatar}
-                        name={comment.user.name}
-                        className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
-                      />
-                        <div className="flex-1">
-                          <div className="bg-gray-50 rounded-2xl p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-gray-900 text-sm font-semibold">{comment.user.name}</span>
-                              <span className="text-gray-400 text-xs">•</span>
-                              <span className="text-gray-500 text-xs">{comment.timestamp}</span>
-                            </div>
-                            <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <PostDetailModal
+          post={selectedPost}
+          currentUser={currentUser}
+          onClose={closePostDetail}
+          onLike={(id, e) => toggleLike(id, e)}
+          onSave={(id, e) => toggleSave(id, e)}
+          onShare={(p, e) => sharePost(p, e)}
+          onDelete={handleDeletePost}
+          onProfileClick={(user, e) => handleOpenUserProfile(user, e)}
+          onComment={(postId, text) => {
+            setCommentTexts({ ...commentTexts, [postId]: text });
+            handlePostComment(postId);
+          }}
+        />
       )}
 
 
@@ -1108,18 +822,27 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
               toast.error('Please sign in to message organizers');
               return;
             }
-            setShowOrganizerProfile(false);
-            setSelectedOrganizer(null);
-            const conv = await onStartConversation({
-              name: organizer.name,
-              avatar: organizer.avatar,
-              verified: organizer.verified,
-              isOrganizer: true,
-              id: organizer.id
-            });
-            if (conv) {
-              setActiveConversation(conv);
-              setShowMessages(true);
+            const toastId = toast.loading('Opening chat...');
+            try {
+              const conv = await onStartConversation({
+                name: organizer.name,
+                avatar: organizer.avatar,
+                verified: organizer.verified,
+                isOrganizer: true,
+                id: organizer.id
+              });
+              if (conv) {
+                setShowOrganizerProfile(false);
+                setSelectedOrganizer(null);
+                setActiveConversation(conv);
+                setShowMessages(true);
+                toast.dismiss(toastId);
+              } else {
+                toast.error('Could not start conversation', { id: toastId });
+              }
+            } catch (error) {
+              console.error('Error starting conversation:', error);
+              toast.error('Failed to start conversation', { id: toastId });
             }
           }}
         />

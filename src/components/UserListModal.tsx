@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Search } from 'lucide-react';
+import { X, Search, Star } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Profile } from '../utils/supabase/api';
 
@@ -30,7 +30,12 @@ export function UserListModal({ isOpen, onClose, title, users, loading = false, 
       >
         {/* Header */}
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100">
+              <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          </div>
           <button 
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -79,7 +84,7 @@ export function UserListModal({ isOpen, onClose, title, users, loading = false, 
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-gray-900 truncate">{user.full_name}</h3>
-                    <p className="text-xs text-gray-500 truncate">@{user.username}</p>
+                    <p className="text-xs text-gray-500 truncate">@{user.username?.replace(/^@/, '')}</p>
                   </div>
                 </div>
               ))}

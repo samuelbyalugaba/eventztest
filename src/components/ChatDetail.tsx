@@ -206,7 +206,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   };
 
   return (
-    <div className="fixed inset-0 h-[100dvh] bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 h-[100dvh] bg-white z-[70] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white z-10 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -234,7 +234,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                 </svg>
               )}
             </div>
-            <p className="text-xs text-gray-500">@{recipient.username} • {isOnline ? 'Active now' : 'Offline'}</p>
+            <p className="text-xs text-gray-500">@{recipient.username?.replace(/^@/, '')} • {isOnline ? 'Active now' : 'Offline'}</p>
           </div>
         </div>
 

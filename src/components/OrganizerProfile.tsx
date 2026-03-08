@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical, ChevronLeft, LayoutGrid } from 'lucide-react';
+import { X, MapPin, Calendar, CheckCircle2, Share2, Play, MessageCircle, Phone, Trash2, CreditCard, Smartphone, ArrowRight, MoreVertical, ChevronLeft, LayoutGrid, Star } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { VideoPreview } from './VideoPreview';
 import { MediaViewer } from './MediaViewer';
 import { PurchasedTicket } from '../types';
 import { ProfileSkeleton, ProfileSkeletonContent } from './skeletons/ProfileSkeleton';
 import { toast } from 'sonner';
-import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
+import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOrganizerStats, getFollowers, getFollowing, getFollowingCount, getOrganizerProfile, toggleFollow, deleteEvent, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 import { extractCurrencyFromPrice } from '../utils/currencies';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { EventDetailModal } from './EventDetailModal';
+import { PostDetailModal } from './PostDetailModal';
+import { toggleLikePost, toggleSavePost, createPostComment, deletePost, getPostComments, incrementPostView } from '../utils/supabase/api';
+import { handleShare } from '../utils/share';
+import { formatTimeAgo } from '../utils/format';
+import { mapPostsToViewModel } from '../utils/postMapper';
 
 const getFallbackImage = (index: number) => {
   const fallbacks = [
@@ -32,6 +37,7 @@ interface OrganizerData {
   location: string;
   totalEvents: number;
   followers: number;
+  following: number;
   verified: boolean;
   rating: number;
   phone?: string;
@@ -83,6 +89,12 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [followersList, setFollowersList] = useState<any[]>([]);
   const [loadingFollowers, setLoadingFollowers] = useState(false);
+
+  // Following Modal State
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [followingList, setFollowingList] = useState<any[]>([]);
+  const [loadingFollowing, setLoadingFollowing] = useState(false);
+
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
@@ -93,23 +105,44 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     try {
       const followers = await getFollowers(organizerId);
       // Map followers to the format expected by UserListModal
-      const mappedFollowers = (followers || []).map((item: any) => {
-        const f = item.follower || item;
-        return {
+      const mappedFollowers = (followers || []).map((f: any) => ({
           id: f.id,
           name: f.full_name || f.username || 'User',
           username: f.username,
           avatar: f.avatar_url,
           isOrganizer: f.is_organizer,
           verified: f.verified
-        };
-      });
+      }));
       setFollowersList(mappedFollowers);
     } catch (err) {
       console.error('Error fetching followers:', err);
       toast.error('Failed to load followers');
     } finally {
       setLoadingFollowers(false);
+    }
+  };
+
+  const handleShowFollowing = async () => {
+    if (!organizerId) return;
+    setShowFollowingModal(true);
+    setLoadingFollowing(true);
+    try {
+      const following = await getFollowing(organizerId);
+      // Map following to the format expected by UserListModal
+      const mappedFollowing = (following || []).map((f: any) => ({
+          id: f.id,
+          name: f.full_name || f.username || 'User',
+          username: f.username,
+          avatar: f.avatar_url,
+          isOrganizer: f.is_organizer,
+          verified: f.verified
+      }));
+      setFollowingList(mappedFollowing);
+    } catch (err) {
+      console.error('Error fetching following:', err);
+      toast.error('Failed to load following list');
+    } finally {
+      setLoadingFollowing(false);
     }
   };
 
@@ -144,6 +177,139 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   const [ticketFormData, setTicketFormData] = useState({ name: '', email: '' });
   const [showEventDetailModal, setShowEventDetailModal] = useState(false);
   const [selectedEventDetail, setSelectedEventDetail] = useState<any>(null);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [allPosts, setAllPosts] = useState<any[]>([]);
+
+  const toggleLike = async (postId: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!currentUser) {
+      toast.error('Please login to like posts');
+      return;
+    }
+
+    try {
+      const isLiked = await toggleLikePost(postId, currentUser.id);
+      
+      // Update local state for allPosts
+      setAllPosts(prev => prev.map(p => 
+        p.id === postId 
+          ? { ...p, isLiked, likes_count: (p.likes_count || 0) + (isLiked ? 1 : -1) } 
+          : p
+      ));
+      
+      // Update selectedPost if it's the one being liked
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost((prev: any) => ({
+          ...prev,
+          isLiked,
+          likes_count: (prev.likes_count || 0) + (isLiked ? 1 : -1)
+        }));
+      }
+
+      if (isLiked) {
+        toast.success('Added to favorites');
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      toast.error('Failed to update like');
+    }
+  };
+
+  const toggleSave = async (postId: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!currentUser) {
+      toast.error('Please login to save posts');
+      return;
+    }
+
+    try {
+      const isSaved = await toggleSavePost(postId, currentUser.id);
+      
+      setAllPosts(prev => prev.map(p => 
+        p.id === postId ? { ...p, isSaved } : p
+      ));
+
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost((prev: any) => ({ ...prev, isSaved }));
+      }
+
+      toast.success(isSaved ? 'Saved to collection' : 'Removed from collection');
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      toast.error('Failed to update save status');
+    }
+  };
+
+  const sharePost = async (post: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    handleShare({
+      title: 'Check out this post on Eventz',
+      text: post.content?.text || post.content || 'Interesting post!',
+      url: window.location.href
+    });
+  };
+
+  const handleDeletePost = async (postId: number) => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+
+    try {
+      await deletePost(postId);
+      setAllPosts(prev => prev.filter(p => p.id !== postId));
+      setSelectedPost(null);
+      toast.success('Post deleted successfully');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+    }
+  };
+
+  const handlePostComment = async (postId: number, text: string) => {
+    if (!currentUser) {
+      toast.error('Please login to comment');
+      return;
+    }
+
+    try {
+      const newComment = await createPostComment(postId, currentUser.id, text);
+      
+      // Fetch latest comments for this post or update manually
+      setAllPosts(prev => prev.map(p => {
+        if (p.id === postId) {
+          const updatedComments = [...(p.comments || []), {
+            id: newComment.id,
+            user: {
+              name: currentUser.user_metadata?.full_name || 'You',
+              avatar: currentUser.user_metadata?.avatar_url || ''
+            },
+            text: text,
+            timestamp: 'Just now'
+          }];
+          return { ...p, comments: updatedComments };
+        }
+        return p;
+      }));
+
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost((prev: any) => ({
+          ...prev,
+          comments: [...(prev.comments || []), {
+            id: newComment.id,
+            user: {
+              name: currentUser.user_metadata?.full_name || 'You',
+              avatar: currentUser.user_metadata?.avatar_url || ''
+            },
+            text: text,
+            timestamp: 'Just now'
+          }]
+        }));
+      }
+
+      toast.success('Comment posted');
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      toast.error('Failed to post comment');
+    }
+  };
   
   // Payment State
   const [paymentPhone, setPaymentPhone] = useState('');
@@ -151,6 +317,33 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
   const [activeTab, setActiveTab] = useState<'events' | 'posts'>('events');
+
+  useEffect(() => {
+    if (selectedPost) {
+      incrementPostView(selectedPost.id);
+      
+      const fetchComments = async () => {
+        try {
+          const comments = await getPostComments(selectedPost.id);
+          const mappedComments = (comments || []).map((c: any) => ({
+            id: c.id,
+            user: {
+              name: c.user?.full_name || c.user?.username || 'User',
+              avatar: c.user?.avatar_url || ''
+            },
+            text: c.text,
+            timestamp: formatTimeAgo(c.created_at)
+          }));
+          
+          setSelectedPost((prev: any) => prev && prev.id === selectedPost.id ? { ...prev, comments: mappedComments } : prev);
+        } catch (error) {
+          console.error('Error fetching comments:', error);
+        }
+      };
+      
+      fetchComments();
+    }
+  }, [selectedPost?.id]);
 
   useEffect(() => {
     if (currentUser) {
@@ -177,16 +370,29 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
           return;
         }
 
-        // Parallel Fetching
-        const [profile, organizerProfile, stats, events, posts] = await Promise.all([
+        // Parallel Fetching with individual error handling to be more resilient
+        const [profileRes, organizerProfileRes, statsRes, eventsRes, postsRes, followingCountRes] = await Promise.allSettled([
           getProfile(organizerId),
           getOrganizerProfile(organizerId),
           getOrganizerStats(organizerId),
           getOrganizerEvents(organizerId),
-          getPosts({ authorId: organizerId })
+          getPosts({ authorId: organizerId }),
+          getFollowingCount(organizerId)
         ]);
 
-        if (!profile) throw new Error('Organizer not found');
+        const profile = profileRes.status === 'fulfilled' ? profileRes.value : null;
+        const organizerProfile = organizerProfileRes.status === 'fulfilled' ? organizerProfileRes.value : null;
+        const stats = statsRes.status === 'fulfilled' ? statsRes.value : { totalEvents: 0, followers: 0, avgRating: 0 };
+        const events = eventsRes.status === 'fulfilled' ? eventsRes.value : [];
+        const posts = postsRes.status === 'fulfilled' ? postsRes.value : [];
+        const followingCount = followingCountRes.status === 'fulfilled' ? followingCountRes.value : 0;
+
+        // Use the mapper to normalize post data
+        setAllPosts(posts ? mapPostsToViewModel(posts) : []);
+
+        if (!profile && !organizerProfile) {
+          throw new Error('Organizer not found');
+        }
 
         const filteredPosts = (posts || []).filter((p: any) => {
           const asOrganizer = !!p.posted_as_organizer;
@@ -195,23 +401,24 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         });
         
         setOrganizerData({
-          id: profile.id,
-          name: organizerProfile?.organizer_name || organizerName || 'Organizer',
-          bio: organizerProfile?.bio || 'No bio available',
+          id: organizerId,
+          name: organizerProfile?.organizer_name || profile?.full_name || organizerName || 'Organizer',
+          bio: organizerProfile?.bio || profile?.bio || 'No bio available',
           coverImage: organizerProfile?.cover_url || '',
-          avatar: organizerProfile?.organizer_avatar_url || '',
-          location: organizerProfile?.location || 'Tanzania',
-          totalEvents: stats.totalEvents,
-          followers: stats.followers,
-          verified: profile.verified || false,
-          rating: stats.avgRating || 0,
+          avatar: organizerProfile?.organizer_avatar_url || profile?.avatar_url || '',
+          location: organizerProfile?.location || profile?.location || 'Tanzania',
+          totalEvents: stats?.totalEvents || 0,
+          followers: stats?.followers || 0,
+          following: followingCount || 0,
+          verified: profile?.verified || false,
+          rating: stats?.avgRating || 0,
           phone: organizerProfile?.phone,
           whatsapp: organizerProfile?.phone, // Assuming phone is whatsapp for now
           highlights: filteredPosts.slice(0, 5).map(p => ({
             id: p.id,
             image: p.image_urls?.[0] || '',
             video: p.video_url,
-            title: p.content.substring(0, 20) + '...',
+            title: p.content ? p.content.substring(0, 20) + '...' : 'Post',
             date: (() => { try { const d = new Date(p.created_at); return isNaN(d.getTime()) ? '' : d.toLocaleDateString(); } catch { return ''; } })(),
             attendees: p.likes_count || 0
           })),
@@ -225,12 +432,12 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                eventName: p.content ? p.content.substring(0, 15) + '...' : 'Event'
              }))
            ),
-          upcomingEvents: events.filter((e: any) => new Date(e.date) >= new Date()).map((e: any) => ({
+          upcomingEvents: (events || []).filter((e: any) => e.date && new Date(e.date) >= new Date()).map((e: any) => ({
             id: e.id,
             title: e.title,
             image: e.image_url,
             date: (() => { try { const d = new Date(e.date); return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); } catch { return ''; } })(),
-            time: e.time.substring(0, 5),
+            time: e.time ? e.time.substring(0, 5) : '',
             location: e.location,
             price: e.price_range,
             attendees: e.attendees || e.interested || 0
@@ -425,22 +632,23 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   if (!organizerData && !loading) return null;
 
   // Combine highlights and photos into a unified gallery for the combined layout
-  // Use photos array as it contains all posts with correct media types
-  const combinedGallery = organizerData ? organizerData.photos.map((p, index) => ({
-      id: p.id, // Use number ID for MediaViewer compatibility
-      uniqueId: `post-${p.id}`, // Unique ID for key
-      image: p.image,
-      video: p.video,
-      title: p.eventName || `${organizerData.name} Gallery`,
-      mediaType: p.mediaType === 'image' ? 'photo' as const : 'video' as const,
-      likes: 0,
-      comments: 0,
-      shares: 0,
+  // Use allPosts directly for more consistent data
+  const combinedGallery = allPosts.length > 0 ? allPosts.map((post, index) => ({
+      id: post.id,
+      uniqueId: `post-${post.id}`,
+      image: post.content.image || post.user.avatar || getFallbackImage(index), // Use mapped properties
+      video: post.highlights?.[0]?.videoUrl, // Use mapped properties
+      title: post.content.text || `${organizerData?.name} Post`,
+      mediaType: post.isHighlight ? 'video' as const : 'photo' as const,
+      likes: post.likes,
+      comments: post.comments_count,
+      shares: post.shares,
       // MediaViewer compatibility
-      url: p.image,
-      thumbnail: p.image,
-      videoUrl: p.video || '',
+      url: post.content.image || getFallbackImage(index),
+      thumbnail: post.content.image || getFallbackImage(index),
+      videoUrl: post.highlights?.[0]?.videoUrl || '',
       fallbackSrc: getFallbackImage(index),
+      originalPost: post
     })) : [];
 
   return (
@@ -475,13 +683,6 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                </h1>
                <div className="text-gray-500 font-medium text-xs flex items-center gap-1 mt-0.5">
                  <span className="text-purple-600 font-semibold text-xs">@{organizerData.name.toLowerCase().replace(/\s+/g, '')}</span>
-                 {organizerData.location && (
-                    <>
-                      <span className="text-gray-300">•</span>
-                      <MapPin className="w-3 h-3" />
-                      <span>{organizerData.location}</span>
-                    </>
-                 )}
                </div>
             </div>
           </div>
@@ -511,6 +712,13 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
               {organizerData.bio}
             </p>
             
+            {organizerData.location && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{organizerData.location}</span>
+              </div>
+            )}
+            
             {/* Follow & Message Buttons */}
             <div className="flex gap-3 mt-4">
               <button
@@ -535,7 +743,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                       avatar: organizerData.avatar,
                       verified: organizerData.verified,
                       isOrganizer: true,
-                      id: organizerData.id
+                      id: organizerId // Pass the correct organizerId here
                     });
                   }
                 }}
@@ -549,12 +757,18 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
 
         {/* Stats Row */}
         <div className="flex items-center justify-between px-4 mb-8">
-            <div className="text-center flex-1 border-r border-gray-100 py-1">
+            <div 
+              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg active:scale-95"
+              onClick={() => {
+                setActiveTab('events');
+                toast.success('Viewing hosted events');
+              }}
+            >
               <div className="text-xl font-bold text-gray-900 mb-1">
                   {organizerData.totalEvents}
               </div>
               <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
-                  Events
+                  Hosted
               </div>
             </div>
             <div 
@@ -570,12 +784,17 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                   Followers
               </div>
             </div>
-            <div className="text-center flex-1 py-1">
+            <div 
+              className="text-center flex-1 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg active:scale-95"
+              onClick={handleShowFollowing}
+            >
               <div className="text-xl font-bold text-gray-900 mb-1">
-                  {organizerData.rating}
+                  {organizerData.following >= 1000 
+                    ? `${(organizerData.following / 1000).toFixed(1)}k` 
+                    : organizerData.following}
               </div>
               <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
-                  Rating
+                  Following
               </div>
             </div>
         </div>
@@ -587,6 +806,20 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
               users={followersList}
               loading={loadingFollowers}
               onClose={() => setShowFollowersModal(false)}
+              onUserSelect={(user: any) => {
+                setSelectedUser(user);
+                setShowUserProfileModal(true);
+              }}
+            />
+          )}
+
+          {showFollowingModal && (
+            <UserListModal
+              title="Following"
+              isOpen={showFollowingModal}
+              users={followingList}
+              loading={loadingFollowing}
+              onClose={() => setShowFollowingModal(false)}
               onUserSelect={(user: any) => {
                 setSelectedUser(user);
                 setShowUserProfileModal(true);
@@ -702,12 +935,16 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                     key={item.uniqueId} 
                     className="group relative overflow-hidden rounded-lg bg-gray-100 aspect-square cursor-pointer"
                     onClick={() => {
-                      // Filter by media type first, then find the index within that filtered array
-                      const filteredByType = combinedGallery.filter(g => g.mediaType === item.mediaType);
-                      const indexInFiltered = filteredByType.findIndex(g => g.id === item.id);
-                      setMediaViewerIndex(indexInFiltered);
-                      setMediaViewerType(item.mediaType);
-                      setShowMediaViewer(true);
+                      if (item.originalPost) {
+                        setSelectedPost(item.originalPost);
+                      } else {
+                        // Fallback to MediaViewer if originalPost is missing
+                        const filteredByType = combinedGallery.filter(g => g.mediaType === item.mediaType);
+                        const indexInFiltered = filteredByType.findIndex(g => g.id === item.id);
+                        setMediaViewerIndex(indexInFiltered);
+                        setMediaViewerType(item.mediaType);
+                        setShowMediaViewer(true);
+                      }
                     }}
                   >
                     {/* Image */}
@@ -814,6 +1051,31 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         initialIndex={mediaViewerIndex}
         onClose={() => setShowMediaViewer(false)}
         type={mediaViewerType}
+      />
+    )}
+
+    {/* Post Detail Modal */}
+    {selectedPost && (
+      <PostDetailModal
+        post={selectedPost}
+        currentUser={currentUser}
+        onClose={() => setSelectedPost(null)}
+        onLike={toggleLike}
+        onSave={toggleSave}
+        onShare={sharePost}
+        onDelete={handleDeletePost}
+        onProfileClick={(user) => {
+          setSelectedUser({
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            avatar: user.avatar,
+            verified: user.verified,
+            isOrganizer: user.isOrganizer
+          });
+          setShowUserProfileModal(true);
+        }}
+        onComment={handlePostComment}
       />
     )}
 

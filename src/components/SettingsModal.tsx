@@ -1,4 +1,4 @@
-import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar } from 'lucide-react';
+import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar, Search, ChevronDown } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique, uploadImage } from '../utils/supabase/api';
@@ -11,6 +11,24 @@ interface SettingsModalProps {
   initialView?: SettingsView;
 }
 
+const CREATOR_CATEGORIES = [
+  'Art Gallery', 'Artist', 'Bar', 'Band', 'Blogger', 'Book Store', 'Brand',
+  'Business', 'Cafe', 'Charity', 'Church', 'Club', 'Coach', 'Comedy Club',
+  'Community', 'Concert Venue', 'Conference', 'Content Creator', 'Corporate',
+  'DJ', 'Dance Studio', 'Digital Creator', 'Education', 'Entrepreneur',
+  'Event Planner', 'Exhibition', 'Fashion', 'Festival', 'Fitness Trainer',
+  'Government', 'Gym', 'Health/Beauty', 'Hotel', 'Influencer', 'Library',
+  'Lounge', 'Media', 'Mosque', 'Museum', 'Music Venue', 'Musician',
+  'Networking Group', 'Nightclub', 'Non-Profit', 'Organization', 'Park',
+  'Party Planner', 'Performing Arts', 'Personal Blog', 'Photographer',
+  'Podcast', 'Promoter', 'Public Figure', 'Radio Station',
+  'Religious Organization', 'Resort', 'Restaurant', 'Retail', 'School',
+  'Shopping', 'Social Club', 'Speaker', 'Sports Team', 'Startup',
+  'Student Organization', 'Synagogue', 'Tech Community', 'Theater',
+  'University', 'Venue', 'Video Creator', 'Wedding Planner', 'Workshop',
+  'Writer', 'Yoga Studio', 'Youth Organization'
+].sort();
+
 export function SettingsModal({ onClose, onLogout, initialView = 'main' }: SettingsModalProps) {
   const [currentView, setCurrentView] = useState<SettingsView>(initialView);
   
@@ -18,6 +36,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
   const [profileData, setProfileData] = useState({
     username: '',
     name: '',
+    organizerType: '',
     email: '',
     phone: '',
     location: '',
@@ -26,7 +45,25 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     avatarUrl: '',
   });
 
+  const [categorySearch, setCategorySearch] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const categoryRef = useRef<HTMLDivElement>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredCategories = CREATOR_CATEGORIES.filter(c => 
+    c.toLowerCase().includes(categorySearch.toLowerCase())
+  );
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -119,6 +156,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
               setProfileData({
                 username: profile.username || '',
                 name: profile.full_name || '',
+                organizerType: profile.organizer_type || '',
                 email: profile.contact_email || user.email || '',
                 phone: profile.phone || '',
                 location: profile.location || '',
@@ -126,6 +164,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                 birthdate: profile.birthdate || '',
                 avatarUrl: profile.avatar_url || '',
               });
+              setCategorySearch(profile.organizer_type || '');
               if (localProfile) localStorage.removeItem('eventz-user-profile');
             }
 
@@ -204,6 +243,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
         await updateProfile(user.id, {
           username: profileData.username,
           full_name: profileData.name,
+          organizer_type: profileData.organizerType,
           contact_email: profileData.email,
           phone: profileData.phone,
           location: profileData.location,
@@ -379,149 +419,191 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
 
           {/* Edit Profile View */}
           {currentView === 'profile' && (
-            <div className="space-y-6">
-              {/* Profile Photo */}
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
-                      {profileData.avatarUrl ? (
-                        <img src={profileData.avatarUrl} alt={profileData.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span>{profileData.name ? profileData.name.charAt(0).toUpperCase() : 'U'}</span>
-                      )}
-                    </div>
-                    <button 
-                      onClick={handleAvatarClick}
-                      className="absolute bottom-0 right-0 w-7 h-7 bg-[#8A2BE2] rounded-full flex items-center justify-center text-white shadow-lg hover:bg-[#7825d4] transition-colors"
-                    >
-                      <Camera className="w-4 h-4" />
-                    </button>
+            <div className="space-y-8 pb-10">
+              {/* Avatar Section - Modern & Minimal (Matching Creator Setup) */}
+              <div className="flex flex-col items-center mb-10">
+                <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-50 border-4 border-white shadow-xl shadow-purple-100 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-300">
+                    {profileData.avatarUrl ? (
+                      <img src={profileData.avatarUrl} alt={profileData.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-12 h-12 text-gray-300" />
+                    )}
                   </div>
-                  <div>
-                    <p className="text-gray-900 font-medium mb-1">{profileData.name}</p>
-                    <button 
-                      onClick={handleAvatarClick}
-                      className="text-[#8A2BE2] text-sm hover:text-[#7825d4] font-medium"
-                    >
-                      Change Photo
-                    </button>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleAvatarChange}
-                      accept="image/*"
-                      className="hidden"
-                    />
+                  <div className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-[#8A2BE2] text-white flex items-center justify-center shadow-lg border-4 border-white transform transition-transform group-hover:scale-110">
+                    <Camera className="w-4 h-4" />
                   </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAvatarChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
                 </div>
+                <p className="mt-4 text-sm font-medium text-gray-500">Tap to upload photo</p>
               </div>
 
-              {/* Profile Fields */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-2">Username</label>
+              {/* Profile Fields - Mobile Native Look (Matching Creator Setup) */}
+              <div className="space-y-6">
+                {/* Username Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Username</label>
                   <div className="relative">
-                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <AtSign className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       value={profileData.username}
                       onChange={(e) => setProfileData({ ...profileData, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent"
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                       placeholder="username"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-2">Full Name</label>
+                {/* Full Name Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Full Name</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       value={profileData.name}
                       onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent"
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                       placeholder="Your name"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-2">Email</label>
+                {/* Category Dropdown */}
+                <div className="space-y-2" ref={categoryRef}>
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Category</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      value={categorySearch}
+                      onChange={(e) => {
+                        setCategorySearch(e.target.value);
+                        setShowCategoryDropdown(true);
+                        if (profileData.organizerType && e.target.value !== profileData.organizerType) {
+                          setProfileData(prev => ({ ...prev, organizerType: '' }));
+                        }
+                      }}
+                      onFocus={() => setShowCategoryDropdown(true)}
+                      placeholder="Select category"
+                      className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                    />
+                    <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                    
+                    {showCategoryDropdown && (
+                      <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
+                        {filteredCategories.length > 0 ? (
+                          filteredCategories.map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => {
+                                setProfileData(prev => ({ ...prev, organizerType: c }));
+                                setCategorySearch(c);
+                                setShowCategoryDropdown(false);
+                              }}
+                              className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.organizerType === c ? 'text-[#8A2BE2] font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
+                            >
+                              {c}
+                              {profileData.organizerType === c && <Check className="w-4 h-4" />}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-5 py-4 text-sm text-gray-400 text-center italic">No categories found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Email Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="email"
                       value={profileData.email}
                       onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent"
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                       placeholder="your.email@example.com"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-2">Phone</label>
+                {/* Phone Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Phone</label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="tel"
                       value={profileData.phone}
                       onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent"
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                       placeholder="+255 712 345 678"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-2">Location</label>
+                {/* Location Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       value={profileData.location}
                       onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent"
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                       placeholder="City, Country"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-2">Date of Birth</label>
+                {/* Date of Birth Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Date of Birth</label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="date"
                       value={profileData.birthdate}
                       onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent"
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-2">Bio</label>
+                {/* Bio Textarea */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Bio</label>
                   <textarea
                     value={profileData.bio}
                     onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent resize-none"
-                    placeholder="Tell us about yourself..."
+                    placeholder="Tell your story..."
+                    rows={4}
+                    className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
                   />
                 </div>
               </div>
 
               {/* Save Button */}
-              <button
-                onClick={handleSaveProfile}
-                className="w-full bg-gradient-to-r from-[#8A2BE2] to-[#6A1BB2] text-white py-3.5 rounded-xl hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2 font-medium"
-              >
-                <Save className="w-5 h-5" />
-                Save Changes
-              </button>
+              <div className="pt-4">
+                <button
+                  onClick={handleSaveProfile}
+                  className="w-full bg-[#8A2BE2] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-purple-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <span>Save Changes</span>
+                  <Save className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           )}
 

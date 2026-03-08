@@ -234,9 +234,21 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               organizerId={event.organizer_id || (event.organizer ? event.organizer.id : '')}
               onClose={() => setShowOrganizerProfile(false)}
               onMessage={async (organizer) => {
-                setShowOrganizerProfile(false);
-                if (onStartConversation) {
-                  await onStartConversation(organizer);
+                const toastId = toast.loading('Opening chat...');
+                try {
+                  if (onStartConversation) {
+                    const conversation = await onStartConversation(organizer);
+                    if (conversation) {
+                      setShowOrganizerProfile(false);
+                      onClose(); // Also close the event detail modal to go to chat
+                      toast.dismiss(toastId);
+                    } else {
+                      toast.error('Could not start conversation', { id: toastId });
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error starting conversation:', error);
+                  toast.error('Failed to start conversation', { id: toastId });
                 }
               }}
               onTicketPurchase={onPurchaseTicket ? () => onPurchaseTicket(event) : undefined}

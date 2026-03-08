@@ -59,6 +59,7 @@ export function ProfessionalDashboardModal({
   const [showSettings, setShowSettings] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [selectedEventForStream, setSelectedEventForStream] = useState<any>(null);
+  const [selectedEventForScanner, setSelectedEventForScanner] = useState<any>(null);
 
   // Helper function to format numbers with k notation
   const formatNumber = (num: number): string => {
@@ -122,6 +123,12 @@ export function ProfessionalDashboardModal({
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (publishedEvents.length > 0 && !selectedEventForScanner) {
+      setSelectedEventForScanner(publishedEvents[0]);
+    }
+  }, [publishedEvents]);
+
   const handleGoLive = () => {
     if (publishedEvents.length === 0) {
       toast.error('No events to stream', {
@@ -154,16 +161,16 @@ export function ProfessionalDashboardModal({
       {/* Header */}
       <div className="bg-white px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <BarChart3 className="w-6 h-6 text-gray-900" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border-2 border-white">
-              2
-            </div>
-          </div>
           <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
         </div>
         
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setShowScanner(true)}
+            className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+          >
+            <QrCode className="w-5 h-5 text-gray-900" />
+          </button>
           <button onClick={onClose} className="rounded-full overflow-hidden w-10 h-10 border border-gray-200">
              {profileImage ? (
                 <ImageWithFallback
@@ -395,8 +402,10 @@ export function ProfessionalDashboardModal({
 
       {showScanner && (
         <TicketScannerModal
-          eventId={publishedEvents[0]?.id || 0} 
-          eventTitle={publishedEvents[0]?.title || 'Event'}
+          eventId={selectedEventForScanner?.id || 0} 
+          eventTitle={selectedEventForScanner?.title || 'Event'}
+          events={publishedEvents}
+          onEventChange={setSelectedEventForScanner}
           onClose={() => setShowScanner(false)}
         />
       )}

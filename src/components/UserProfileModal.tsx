@@ -1,9 +1,40 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { UserAvatar } from './UserAvatar';
+import { PostDetailModal } from './PostDetailModal';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
 import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Video, Play, MessageCircle, ChevronLeft, Image as ImageIcon, LayoutGrid, Layers } from 'lucide-react';
-import { getOrganizerStats, getOrganizerEvents, getPosts, getUserTickets, followUser, unfollowUser, isFollowing as checkIsFollowing, getProfile, getOrganizerProfile, getFollowersCount, getFollowingCount, supabase, type Event, type Post, type Profile, type OrganizerProfile } from '../utils/supabase/api';
+import { 
+  getOrganizerStats, 
+  getOrganizerEvents, 
+  getPosts, 
+  getUserTickets, 
+  followUser, 
+  unfollowUser, 
+  isFollowing as checkIsFollowing, 
+  getProfile, 
+  getOrganizerProfile, 
+  getFollowersCount, 
+  getFollowingCount, 
+  getFollowers, 
+  getFollowing, 
+  supabase, 
+  toggleLikePost,
+  toggleSavePost,
+  createPostComment,
+   deletePost,
+   getPostComments,
+   incrementPostView,
+   type Event, 
+   type Post, 
+   type Profile, 
+   type OrganizerProfile 
+ } from '../utils/supabase/api';
+ import { handleShare } from '../utils/share';
+ import { formatTimeAgo } from '../utils/format';
+import { mapPostsToViewModel } from '../utils/postMapper';
+import { UserListModal } from './UserListModal';
+import { toast } from 'sonner';
 
 interface UserProfile {
   id: string;
@@ -38,6 +69,207 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
   const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Follow List Modal State
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [followList, setFollowList] = useState<any[]>([]);
+  const [isLoadingFollowList, setIsLoadingFollowList] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
+
+  const toggleLike = async (postId: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!currentUser) {
+      toast.error('Please login to like posts');
+      return;
+    }
+
+    try {
+      const isLiked = await toggleLikePost(postId, currentUser.id);
+      
+      setUserPosts(prev => prev.map(p => 
+        p.id === postId 
+          ? { ...p, isLiked, likes_count: (p.likes_count || 0) + (isLiked ? 1 : -1) } 
+          : p
+      ));
+      
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost((prev: any) => ({
+          ...prev,
+          isLiked,
+          likes_count: (prev.likes_count || 0) + (isLiked ? 1 : -1)
+        }));
+      }
+
+      if (isLiked) {
+        toast.success('Added to favorites');
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      toast.error('Failed to update like');
+    }
+  };
+
+  const toggleSave = async (postId: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!currentUser) {
+      toast.error('Please login to save posts');
+      return;
+    }
+
+    try {
+      const isSaved = await toggleSavePost(postId, currentUser.id);
+      
+      setUserPosts(prev => prev.map(p => 
+        p.id === postId ? { ...p, isSaved } : p
+      ));
+
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost((prev: any) => ({ ...prev, isSaved }));
+      }
+
+      toast.success(isSaved ? 'Saved to collection' : 'Removed from collection');
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      toast.error('Failed to update save status');
+    }
+  };
+
+  const sharePost = async (post: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    handleShare({
+      title: 'Check out this post on Eventz',
+      text: post.content?.text || post.content || 'Interesting post!',
+      url: window.location.href
+    });
+  };
+
+  const handleDeletePost = async (postId: number) => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+
+    try {
+      await deletePost(postId);
+      setUserPosts(prev => prev.filter(p => p.id !== postId));
+      setSelectedPost(null);
+      toast.success('Post deleted successfully');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+    }
+  };
+
+  const handlePostComment = async (postId: number, text: string) => {
+    if (!currentUser) {
+      toast.error('Please login to comment');
+      return;
+    }
+
+    try {
+      const newComment = await createPostComment(postId, currentUser.id, text);
+      
+      setUserPosts(prev => prev.map(p => {
+        if (p.id === postId) {
+          const updatedComments = [...(p.comments || []), {
+            id: newComment.id,
+            user: {
+              name: currentUser.user_metadata?.full_name || 'You',
+              avatar: currentUser.user_metadata?.avatar_url || ''
+            },
+            text: text,
+            timestamp: 'Just now'
+          }];
+          return { ...p, comments: updatedComments };
+        }
+        return p;
+      }));
+
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost((prev: any) => ({
+          ...prev,
+          comments: [...(prev.comments || []), {
+            id: newComment.id,
+            user: {
+              name: currentUser.user_metadata?.full_name || 'You',
+              avatar: currentUser.user_metadata?.avatar_url || ''
+            },
+            text: text,
+            timestamp: 'Just now'
+          }]
+        }));
+      }
+
+      toast.success('Comment posted');
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      toast.error('Failed to post comment');
+    }
+  };
+  const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+
+  const handleShowFollowers = async () => {
+    setIsLoadingFollowList(true);
+    setShowFollowersModal(true);
+    try {
+      const followers = await getFollowers(user.id);
+      setFollowList(followers || []);
+    } catch (err) {
+      console.error('Error fetching followers:', err);
+      toast.error('Failed to load followers');
+    } finally {
+      setIsLoadingFollowList(false);
+    }
+  };
+
+  const handleShowFollowing = async () => {
+    setIsLoadingFollowList(true);
+    setShowFollowingModal(true);
+    try {
+      const following = await getFollowing(user.id);
+      setFollowList(following || []);
+    } catch (err) {
+      console.error('Error fetching following:', err);
+      toast.error('Failed to load following');
+    } finally {
+      setIsLoadingFollowList(false);
+    }
+  };
+
+  const handleShowEvents = () => {
+    if (isOrganizerView) {
+      setActiveTab('upcoming');
+    } else {
+      setActiveTab('attended');
+    }
+    toast.success(`Viewing ${isOrganizerView ? 'hosted' : 'attended'} events`);
+  };
+
+  useEffect(() => {
+    if (selectedPost) {
+      incrementPostView(selectedPost.id);
+      
+      const fetchComments = async () => {
+        try {
+          const comments = await getPostComments(selectedPost.id);
+          const mappedComments = (comments || []).map((c: any) => ({
+            id: c.id,
+            user: {
+              name: c.user?.full_name || c.user?.username || 'User',
+              avatar: c.user?.avatar_url || ''
+            },
+            text: c.text,
+            timestamp: formatTimeAgo(c.created_at)
+          }));
+          
+          setSelectedPost((prev: any) => prev && prev.id === selectedPost.id ? { ...prev, comments: mappedComments } : prev);
+        } catch (error) {
+          console.error('Error fetching comments:', error);
+        }
+      };
+      
+      fetchComments();
+    }
+  }, [selectedPost?.id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,7 +317,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
           setFollowStats({ followers: followersCount, following: followingCount });
 
           const postsData = await getPosts({ authorId: user.id });
-          setUserPosts(postsData || []);
+          setUserPosts(postsData ? mapPostsToViewModel(postsData) : []);
         };
 
         loadSecondaryData();
@@ -142,7 +374,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
     bio: isOrganizerView ? (organizerProfile?.bio || organizerProfile?.description || 'No bio available') : (profile?.bio || user.bio),
     location: isOrganizerView ? (organizerProfile?.location || 'Tanzania') : profile?.location,
     verified: isOrganizerView ? false : (profile?.verified ?? user.verified),
-    username: profile?.username || 'user'
+    username: profile?.username?.replace(/^@/, '') || 'user'
   };
 
   if (loading) {
@@ -184,12 +416,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                  <p className="text-gray-500 font-medium text-xs flex items-center gap-1">
                    @{displayData.username}
                  </p>
-                 {displayData.location && (
-                    <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                      <MapPin className="w-3 h-3" />
-                      <span>{displayData.location}</span>
-                    </div>
-                 )}
              </div>
           </div>
 
@@ -202,7 +428,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
 
         {/* Stats Row */}
         <div className="flex items-center justify-between px-4 mb-8">
-            <div className="text-center flex-1 border-r border-gray-100">
+            <div 
+              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg active:scale-95"
+              onClick={handleShowEvents}
+            >
               <div className="text-xl font-bold text-gray-900 mb-1">
                   {isOrganizerView ? (stats?.totalEvents || 0) : attendedEvents.length}
               </div>
@@ -210,7 +439,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                   {isOrganizerView ? 'Hosted' : 'Attended'}
               </div>
             </div>
-            <div className="text-center flex-1 border-r border-gray-100">
+            <div 
+              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg active:scale-95"
+              onClick={handleShowFollowers}
+            >
               <div className="text-xl font-bold text-gray-900 mb-1">
                   {followStats.followers}
               </div>
@@ -218,7 +450,10 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                   Followers
               </div>
             </div>
-            <div className="text-center flex-1">
+            <div 
+              className="text-center flex-1 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg active:scale-95"
+              onClick={handleShowFollowing}
+            >
               <div className="text-xl font-bold text-gray-900 mb-1">
                   {followStats.following}
               </div>
@@ -248,12 +483,20 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
           </button>
         </div>
 
-        {/* Bio */}
-        {displayData.bio && (
+        {/* Bio & Location */}
+        {(displayData.bio || displayData.location) && (
             <div className="mb-6">
-               <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
-                 {displayData.bio}
-               </p>
+               {displayData.bio && (
+                 <p className="text-sm text-gray-600 leading-relaxed line-clamp-3 mb-2">
+                   {displayData.bio}
+                 </p>
+               )}
+               {displayData.location && (
+                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                   <MapPin className="w-3.5 h-3.5" />
+                   <span>{displayData.location}</span>
+                 </div>
+               )}
             </div>
         )}
 
@@ -303,14 +546,18 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
             {activeTab === 'posts' && (
                 <div className="grid grid-cols-3 gap-1">
                     {userPosts.map((post) => (
-                        <div key={post.id} className="aspect-square bg-gray-100 relative overflow-hidden group">
-                           {(post.image_urls && post.image_urls.length > 0) ? (
+                        <div 
+                          key={post.id} 
+                          className="aspect-square bg-gray-100 relative overflow-hidden group cursor-pointer"
+                          onClick={() => setSelectedPost(post)}
+                        >
+                           {(post.content.images && post.content.images.length > 0) ? (
                               <ImageWithFallback
-                                src={post.image_urls[0]}
+                                src={post.content.images[0]}
                                 alt=""
                                 className="w-full h-full object-cover"
                               />
-                           ) : post.video_url ? (
+                           ) : post.highlights && post.highlights.length > 0 ? (
                               <div className="w-full h-full bg-black flex items-center justify-center">
                                  <Play className="w-8 h-8 text-white/80" />
                               </div>
@@ -319,9 +566,14 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                                  <ImageIcon className="w-6 h-6" />
                               </div>
                            )}
-                           {(post.image_urls && post.image_urls.length > 1) && (
+                           {(post.content.images && post.content.images.length > 1) && (
                               <div className="absolute top-2 right-2">
                                  <Layers className="w-4 h-4 text-white drop-shadow-md" />
+                              </div>
+                           )}
+                           {(post.highlights && post.highlights.length > 0) && (
+                              <div className="absolute top-2 right-2">
+                                 <Video className="w-4 h-4 text-white drop-shadow-md" />
                               </div>
                            )}
                         </div>
@@ -396,8 +648,77 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage }: UserPro
                 </div>
             )}
         </div>
-
       </div>
+
+      <UserListModal 
+        isOpen={showFollowersModal}
+        onClose={() => setShowFollowersModal(false)}
+        title="Followers"
+        users={followList}
+        loading={isLoadingFollowList}
+        onUserSelect={(user) => {
+          setSelectedUserForModal({
+            ...user,
+            type: user.is_organizer ? 'Organizer' : 'Attendee',
+            name: user.full_name || user.username || 'User',
+            avatar: user.avatar_url || '',
+            verified: false
+          });
+          setShowUserProfileModal(true);
+        }}
+      />
+
+      <UserListModal 
+        isOpen={showFollowingModal}
+        onClose={() => setShowFollowingModal(false)}
+        title="Following"
+        users={followList}
+        loading={isLoadingFollowList}
+        onUserSelect={(user) => {
+          setSelectedUserForModal({
+            ...user,
+            type: user.is_organizer ? 'Organizer' : 'Attendee',
+            name: user.full_name || user.username || 'User',
+            avatar: user.avatar_url || '',
+            verified: false
+          });
+          setShowUserProfileModal(true);
+        }}
+      />
+
+      {showUserProfileModal && selectedUserForModal && (
+        <UserProfileModal
+          user={selectedUserForModal}
+          onClose={() => {
+            setShowUserProfileModal(false);
+            setSelectedUserForModal(null);
+          }}
+        />
+      )}
+
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          currentUser={currentUser}
+          onClose={() => setSelectedPost(null)}
+          onLike={toggleLike}
+          onSave={toggleSave}
+          onShare={sharePost}
+          onDelete={handleDeletePost}
+          onProfileClick={(user) => {
+            setSelectedUserForModal({
+              id: user.id,
+              name: user.name,
+              username: user.username,
+              avatar: user.avatar,
+              verified: user.verified,
+              isOrganizer: user.isOrganizer
+            });
+            setShowUserProfileModal(true);
+          }}
+          onComment={handlePostComment}
+        />
+      )}
     </div>
   );
 }

@@ -775,8 +775,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                 className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
             >
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100 text-purple-600">
-                        <Star className="w-6 h-6" fill="currentColor" />
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-100">
+                        <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
                     </div>
                     <div>
                         <h3 className="text-gray-900 font-bold text-sm">

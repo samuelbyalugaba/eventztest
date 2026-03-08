@@ -440,85 +440,71 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
             {/* Profile Tab */}
             {activeTab === 'profile' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h4 className="text-gray-900 font-medium mb-6">Profile Photo</h4>
-                  <div className="flex items-center gap-6">
-                    <div className="relative">
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100">
-                        <UserAvatar 
-                          src={profileData.avatarUrl} 
-                          name={profileData.organizerName || 'Organizer'} 
-                          className="w-full h-full" 
-                        />
-                      </div>
-                      <button 
-                        onClick={handleAvatarClick}
-                        className="absolute bottom-0 right-0 w-7 h-7 bg-[#8A2BE2] rounded-full flex items-center justify-center text-white hover:bg-[#7825d4]"
-                      >
-                        <Camera className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm mb-3">Upload a new profile photo</p>
-                      <button 
-                        onClick={handleAvatarClick}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
-                      >
-                        Change Photo
-                      </button>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleAvatarChange}
-                        accept="image/*"
-                        className="hidden"
+              <div className="space-y-8 pb-10">
+                {/* Avatar Section - Modern & Minimal (Matching Creator Setup) */}
+                <div className="flex flex-col items-center mb-10">
+                  <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                    <div className="w-32 h-32 rounded-full overflow-hidden bg-white border-4 border-white shadow-xl shadow-purple-100 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-300">
+                      <UserAvatar 
+                        src={profileData.avatarUrl} 
+                        name={profileData.organizerName || 'Organizer'} 
+                        className="w-full h-full" 
                       />
                     </div>
+                    <div className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-[#8A2BE2] text-white flex items-center justify-center shadow-lg border-4 border-white transform transition-transform group-hover:scale-110">
+                      <Camera className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleAvatarChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
                   </div>
+                  <p className="mt-4 text-sm font-medium text-gray-500">Tap to upload photo</p>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h4 className="text-gray-900 font-medium mb-6">Personal Information</h4>
-                  <div className="space-y-5">
-                    {/* Username Field Removed to prevent sync issues with User Profile */}
-                    
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-2">Organizer Name</label>
+                {/* Form Fields - Mobile Native Look (Matching Creator Setup) */}
+                <div className="space-y-6">
+                  {/* Organizer Name Input */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-900 ml-1">Organizer Name</label>
+                    <div className="relative">
+                      <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="text"
                         value={profileData.organizerName}
                         onChange={(e) => setProfileData({ ...profileData, organizerName: e.target.value })}
-                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
+                        className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
                         placeholder="Your name"
                       />
                     </div>
+                  </div>
 
-                    {/* Organizer Type Selection - Dropdown Style */}
-                    <div className="mb-2 relative" ref={categoryRef}>
-                      <label className="block text-gray-700 font-bold mb-2 text-sm ml-1">Category <span className="text-red-500">*</span></label>
-                      <p className="text-gray-500 text-xs mb-3 ml-1">Select the category that best describes you</p>
-                      <div className="relative">
-                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input
-                          type="text"
-                          value={categorySearch}
-                          onChange={(e) => {
-                            setCategorySearch(e.target.value);
-                            setShowCategoryDropdown(true);
-                            if (profileData.organizerType && e.target.value !== profileData.organizerType) {
-                              setProfileData(prev => ({ ...prev, organizerType: '' }));
-                            }
-                          }}
-                          onFocus={() => setShowCategoryDropdown(true)}
-                          placeholder="Search categories..."
-                          className="w-full pl-12 pr-10 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] focus:border-transparent transition-all font-medium"
-                        />
-                        <ChevronDown className={`absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
-                      </div>
+                  {/* Category Dropdown */}
+                  <div className="space-y-2" ref={categoryRef}>
+                    <label className="text-sm font-semibold text-gray-900 ml-1">Category <span className="text-red-500">*</span></label>
+                    <div className="relative">
+                      <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={categorySearch}
+                        onChange={(e) => {
+                          setCategorySearch(e.target.value);
+                          setShowCategoryDropdown(true);
+                          if (profileData.organizerType && e.target.value !== profileData.organizerType) {
+                            setProfileData(prev => ({ ...prev, organizerType: '' }));
+                          }
+                        }}
+                        onFocus={() => setShowCategoryDropdown(true)}
+                        placeholder="Search categories..."
+                        className="w-full pl-12 pr-12 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                      />
+                      <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
                       
                       {showCategoryDropdown && (
-                        <div className="absolute z-20 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
+                        <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
                           {filteredCategories.length > 0 ? (
                             filteredCategories.map((c) => (
                               <button
@@ -528,113 +514,128 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                                   setCategorySearch(c);
                                   setShowCategoryDropdown(false);
                                 }}
-                                className={`w-full text-left px-6 py-3 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.organizerType === c ? 'text-[#8A2BE2] font-bold bg-purple-50/50' : 'text-slate-600 font-medium'}`}
+                                className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.organizerType === c ? 'text-[#8A2BE2] font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
                               >
                                 {c}
                                 {profileData.organizerType === c && <Check className="w-4 h-4" />}
                               </button>
                             ))
                           ) : (
-                            <div className="px-6 py-4 text-sm text-slate-400 italic">No categories found</div>
+                            <div className="px-5 py-4 text-sm text-gray-400 text-center italic">No categories found</div>
                           )}
                         </div>
                       )}
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
-                        <div className="relative">
-                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="email"
-                            value={profileData.email}
-                            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                            className="w-full pl-10 pr-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
-                            placeholder="email@example.com"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-2">Phone Number</label>
-                        <div className="relative">
-                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="tel"
-                            value={profileData.phone}
-                            onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                            className="w-full pl-10 pr-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
-                            placeholder="+255 XXX XXX XXX"
-                          />
-                        </div>
+                  {/* Email & Phone Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Email</label>
+                      <div className="relative">
+                        <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="email"
+                          value={profileData.email}
+                          onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                          placeholder="email@example.com"
+                        />
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Phone</label>
+                      <div className="relative">
+                        <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="tel"
+                          value={profileData.phone}
+                          onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                          placeholder="+255 XXX XXX XXX"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-2">Location</label>
+                  {/* Location & Website Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                           type="text"
                           value={profileData.location}
                           onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
                           placeholder="City, Country"
                         />
                       </div>
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-2">Website</label>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Website</label>
+                      <div className="relative">
+                        <Globe className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                           type="url"
                           value={profileData.website}
                           onChange={(e) => setProfileData({ ...profileData, website: e.target.value })}
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
                           placeholder="https://yourwebsite.com"
                         />
                       </div>
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-2">Date of Birth</label>
-                      <div className="relative">
-                        <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                          type="date"
-                          value={profileData.birthdate}
-                          onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
-                          className="w-full pl-10 pr-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-2">Bio</label>
-                      <textarea
-                        value={profileData.bio}
-                        onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                        rows={3}
-                        maxLength={500}
-                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2] resize-none"
-                        placeholder="Tell people about yourself..."
+                  {/* Date of Birth Input */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-900 ml-1">Date of Birth</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="date"
+                        value={profileData.birthdate}
+                        onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
+                        className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
                       />
-                      <p className="text-gray-500 text-xs mt-2">{profileData.bio.length}/500</p>
                     </div>
+                  </div>
+
+                  {/* Bio Textarea */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-900 ml-1">Bio</label>
+                    <textarea
+                      value={profileData.bio}
+                      onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                      placeholder="Tell your story..."
+                      rows={4}
+                      maxLength={500}
+                      className="w-full px-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none shadow-sm"
+                    />
+                    <p className="text-gray-500 text-xs mt-2 text-right">{profileData.bio.length}/500</p>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3">
-                  <button onClick={onClose} className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
+                {/* Save Button */}
+                <div className="pt-6 flex justify-end gap-3">
+                  <button onClick={onClose} className="px-8 py-4 border-2 border-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-50 transition-all">
                     Cancel
                   </button>
-                  <button onClick={handleSaveProfile} className="px-5 py-2.5 bg-[#8A2BE2] text-white text-sm rounded-lg hover:bg-[#7825d4]">
-                    Save Changes
+                  <button
+                    onClick={handleSaveProfile}
+                    className="px-10 py-4 bg-[#8A2BE2] text-white rounded-2xl font-bold shadow-lg shadow-purple-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>Save Changes</span>
+                    <Check className="w-5 h-5" />
                   </button>
                 </div>
 
-                <div className="border-t border-gray-200 pt-6 mt-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50/50 rounded-xl p-4 border border-red-100">
+                <div className="border-t border-gray-200 pt-10 mt-10">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 bg-red-50/50 rounded-3xl p-6 border border-red-100">
                     <div>
-                      <h5 className="text-gray-900 font-semibold text-sm">Switch to Personal Account</h5>
-                      <p className="text-gray-500 text-xs mt-1 max-w-sm leading-relaxed">
+                      <h5 className="text-gray-900 font-bold text-lg">Switch to Personal Account</h5>
+                      <p className="text-gray-500 text-sm mt-1 max-w-sm leading-relaxed">
                         Downgrading removes organizer features. Your events will remain but you won't be able to manage them.
                       </p>
                     </div>
@@ -667,7 +668,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           }
                         }
                       }}
-                      className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-red-600 text-sm rounded-lg hover:bg-red-50 hover:border-red-200 font-medium transition-all shadow-sm whitespace-nowrap"
+                      className="w-full sm:w-auto px-6 py-3.5 bg-white border border-gray-200 text-red-600 font-bold rounded-2xl hover:bg-red-50 hover:border-red-200 transition-all shadow-sm whitespace-nowrap"
                     >
                       Downgrade Account
                     </button>

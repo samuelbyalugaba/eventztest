@@ -335,20 +335,6 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
         </div>
 
         <div className="flex items-center gap-1">
-          {onFollow && currentUser && post.user.id !== currentUser.id && !isFollowed && (
-            <button
-              onClick={(e) => {
-                 e.stopPropagation();
-                 onFollow(post.user.id);
-              }}
-              className="px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full transition-colors mr-1"
-            >
-              Follow
-            </button>
-          )}
-
-
-
           <button 
             onClick={handleSave}
             className={`p-2 rounded-full transition-colors active:scale-75 ${isSaved ? 'text-purple-600 bg-purple-50' : 'text-gray-400 hover:bg-gray-50'}`}
