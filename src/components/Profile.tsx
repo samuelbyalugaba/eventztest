@@ -606,12 +606,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         </div>
 
         {/* Header Actions */}
-        <div className="flex flex-col gap-2 items-center">
+        <div className="flex flex-col gap-6 items-center">
           {isOwnProfile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-1.5 text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
-                  <Menu className="w-5 h-5" />
+                <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
+                  <Menu className="w-8 h-8" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
