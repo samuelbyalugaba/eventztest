@@ -10,6 +10,7 @@ import { supabase, createTicket, getProfile, getOrganizerEvents, getPosts, getOr
 import { extractCurrencyFromPrice } from '../utils/currencies';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
+import { EventDetailModal } from './EventDetailModal';
 
 const getFallbackImage = (index: number) => {
   const fallbacks = [
@@ -91,7 +92,19 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
     setLoadingFollowers(true);
     try {
       const followers = await getFollowers(organizerId);
-      setFollowersList(followers);
+      // Map followers to the format expected by UserListModal
+      const mappedFollowers = (followers || []).map((item: any) => {
+        const f = item.follower || item;
+        return {
+          id: f.id,
+          name: f.full_name || f.username || 'User',
+          username: f.username,
+          avatar: f.avatar_url,
+          isOrganizer: f.is_organizer,
+          verified: f.verified
+        };
+      });
+      setFollowersList(mappedFollowers);
     } catch (err) {
       console.error('Error fetching followers:', err);
       toast.error('Failed to load followers');
@@ -129,6 +142,8 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [ticketStep, setTicketStep] = useState<'quantity' | 'details' | 'payment' | 'confirm'>('quantity');
   const [ticketFormData, setTicketFormData] = useState({ name: '', email: '' });
+  const [showEventDetailModal, setShowEventDetailModal] = useState(false);
+  const [selectedEventDetail, setSelectedEventDetail] = useState<any>(null);
   
   // Payment State
   const [paymentPhone, setPaymentPhone] = useState('');
@@ -459,8 +474,10 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                  )}
                </h1>
                <div className="text-gray-500 font-medium text-xs flex items-center gap-1 mt-0.5">
+                 <span className="text-purple-600 font-semibold text-xs">@{organizerData.name.toLowerCase().replace(/\s+/g, '')}</span>
                  {organizerData.location && (
                     <>
+                      <span className="text-gray-300">•</span>
                       <MapPin className="w-3 h-3" />
                       <span>{organizerData.location}</span>
                     </>
@@ -471,7 +488,13 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
 
           {/* Header Actions */}
           <div className="flex items-center">
-             <button className="p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-full transition-colors active:scale-95">
+             <button 
+               onClick={() => {
+                 navigator.clipboard.writeText(window.location.href);
+                 toast.success('Link copied to clipboard');
+               }}
+               className="p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-full transition-colors active:scale-95"
+             >
                 <Share2 className="w-5 h-5" />
              </button>
           </div>
@@ -501,8 +524,11 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                 {isFollowing ? 'Following' : 'Follow'}
               </button>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={() => {
+                  if (!currentUser) {
+                    toast.error('Please login to message organizers');
+                    return;
+                  }
                   if (onMessage) {
                     onMessage({
                       name: organizerData.name,
@@ -511,8 +537,6 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                       isOrganizer: true,
                       id: organizerData.id
                     });
-                  } else {
-                    toast.info("Messaging feature coming soon");
                   }
                 }}
                 className="flex-1 py-3 bg-gray-100 text-gray-900 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
@@ -534,7 +558,7 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
               </div>
             </div>
             <div 
-              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg active:scale-95"
               onClick={handleShowFollowers}
             >
               <div className="text-xl font-bold text-gray-900 mb-1">
@@ -555,6 +579,20 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
               </div>
             </div>
         </div>
+
+          {showFollowersModal && (
+            <UserListModal
+              title="Followers"
+              isOpen={showFollowersModal}
+              users={followersList}
+              loading={loadingFollowers}
+              onClose={() => setShowFollowersModal(false)}
+              onUserSelect={(user: any) => {
+                setSelectedUser(user);
+                setShowUserProfileModal(true);
+              }}
+            />
+          )}
 
         {/* Tabs - Simplified for Organizer View */}
         <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6 overflow-x-auto scrollbar-hide">
@@ -592,8 +630,8 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
                     key={event.id} 
                     className="grid grid-cols-[64px_1fr_44px] gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer items-center group"
                     onClick={() => {
-                      setSelectedEvent(event);
-                      setShowTicketModal(true);
+                      setSelectedEventDetail(event);
+                      setShowEventDetailModal(true);
                     }}
                   >
                     {/* Left: Thumbnail (Fixed 64x64) */}
@@ -722,6 +760,24 @@ export function OrganizerProfile({ organizerName, organizerId, onClose, onTicket
         }}
         onFollow={() => {
           handleShowFollowers();
+        }}
+      />
+    )}
+
+    {/* Event Detail Modal */}
+    {showEventDetailModal && selectedEventDetail && (
+      <EventDetailModal
+        event={selectedEventDetail}
+        onClose={() => {
+          setShowEventDetailModal(false);
+          setSelectedEventDetail(null);
+        }}
+        onBuyTicket={(event) => {
+          setSelectedEvent(event);
+          setShowTicketModal(true);
+        }}
+        onMessage={() => {
+          // Message organizer
         }}
       />
     )}

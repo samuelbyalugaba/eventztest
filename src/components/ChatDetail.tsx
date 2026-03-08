@@ -200,6 +200,11 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
     }
   };
 
+  const handleBlockUser = () => {
+    toast.success('User blocked');
+    setShowMenu(false);
+  };
+
   return (
     <div className="fixed inset-0 h-[100dvh] bg-white z-[60] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
@@ -222,14 +227,14 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
           
           <div>
             <div className="flex items-center gap-1">
-              <h2 className="text-base font-bold text-gray-900">@{recipient.username}</h2>
+              <h2 className="text-base font-bold text-gray-900">{recipient.full_name || recipient.username}</h2>
               {recipient.verified && (
                 <svg className="w-3.5 h-3.5 text-blue-500 fill-current" viewBox="0 0 24 24">
                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
             </div>
-            <p className="text-xs text-gray-500">{recipient.full_name} • {isOnline ? 'Active now' : 'Offline'}</p>
+            <p className="text-xs text-gray-500">@{recipient.username} • {isOnline ? 'Active now' : 'Offline'}</p>
           </div>
         </div>
 
@@ -253,7 +258,10 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 View Profile
               </button>
-              <button className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+              <button 
+                onClick={handleBlockUser}
+                className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 Block User
               </button>
