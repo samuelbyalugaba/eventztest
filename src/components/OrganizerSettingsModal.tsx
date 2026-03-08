@@ -483,6 +483,52 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                     </div>
                   </div>
 
+                  {/* Category Dropdown */}
+                  <div className="space-y-2" ref={categoryRef}>
+                    <label className="text-sm font-semibold text-gray-900 ml-1">Category</label>
+                    <div className="relative">
+                      <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={categorySearch}
+                        onChange={(e) => {
+                          setCategorySearch(e.target.value);
+                          setShowCategoryDropdown(true);
+                          if (profileData.organizerType && e.target.value !== profileData.organizerType) {
+                            setProfileData(prev => ({ ...prev, organizerType: '' }));
+                          }
+                        }}
+                        onFocus={() => setShowCategoryDropdown(true)}
+                        placeholder="Select category"
+                        className="w-full pl-12 pr-12 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                      />
+                      <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                      
+                      {showCategoryDropdown && (
+                        <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
+                          {filteredCategories.length > 0 ? (
+                            filteredCategories.map((c) => (
+                              <button
+                                key={c}
+                                onClick={() => {
+                                  setProfileData(prev => ({ ...prev, organizerType: c }));
+                                  setCategorySearch(c);
+                                  setShowCategoryDropdown(false);
+                                }}
+                                className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.organizerType === c ? 'text-[#8A2BE2] font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
+                              >
+                                {c}
+                                {profileData.organizerType === c && <Check className="w-4 h-4" />}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-5 py-4 text-sm text-gray-400 text-center italic">No categories found</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Email & Phone Row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -514,17 +560,32 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   </div>
 
                   {/* Location & Website Row */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-900 ml-1">Website</label>
-                    <div className="relative">
-                      <Globe className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="url"
-                        value={profileData.website}
-                        onChange={(e) => setProfileData({ ...profileData, website: e.target.value })}
-                        className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
-                        placeholder="https://yourwebsite.com"
-                      />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={profileData.location}
+                          onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                          placeholder="City, Country"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Website</label>
+                      <div className="relative">
+                        <Globe className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="url"
+                          value={profileData.website}
+                          onChange={(e) => setProfileData({ ...profileData, website: e.target.value })}
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                          placeholder="https://yourwebsite.com"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -559,15 +620,17 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
                 {/* Save Button */}
                 <div className="pt-6 flex justify-end gap-3">
-                  <button onClick={onClose} className="px-8 py-4 border-2 border-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-50 transition-all">
+                  <button 
+                    onClick={onClose} 
+                    className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+                  >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveProfile}
-                    className="px-10 py-4 bg-[#8A2BE2] text-white rounded-2xl font-bold shadow-lg shadow-purple-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    className="px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-900 transition-all flex items-center gap-2 shadow-sm active:scale-95"
                   >
                     <span>Save Changes</span>
-                    <Check className="w-5 h-5" />
                   </button>
                 </div>
 

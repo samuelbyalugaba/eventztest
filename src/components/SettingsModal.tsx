@@ -11,24 +11,6 @@ interface SettingsModalProps {
   initialView?: SettingsView;
 }
 
-const CREATOR_CATEGORIES = [
-  'Art Gallery', 'Artist', 'Bar', 'Band', 'Blogger', 'Book Store', 'Brand',
-  'Business', 'Cafe', 'Charity', 'Church', 'Club', 'Coach', 'Comedy Club',
-  'Community', 'Concert Venue', 'Conference', 'Content Creator', 'Corporate',
-  'DJ', 'Dance Studio', 'Digital Creator', 'Education', 'Entrepreneur',
-  'Event Planner', 'Exhibition', 'Fashion', 'Festival', 'Fitness Trainer',
-  'Government', 'Gym', 'Health/Beauty', 'Hotel', 'Influencer', 'Library',
-  'Lounge', 'Media', 'Mosque', 'Museum', 'Music Venue', 'Musician',
-  'Networking Group', 'Nightclub', 'Non-Profit', 'Organization', 'Park',
-  'Party Planner', 'Performing Arts', 'Personal Blog', 'Photographer',
-  'Podcast', 'Promoter', 'Public Figure', 'Radio Station',
-  'Religious Organization', 'Resort', 'Restaurant', 'Retail', 'School',
-  'Shopping', 'Social Club', 'Speaker', 'Sports Team', 'Startup',
-  'Student Organization', 'Synagogue', 'Tech Community', 'Theater',
-  'University', 'Venue', 'Video Creator', 'Wedding Planner', 'Workshop',
-  'Writer', 'Yoga Studio', 'Youth Organization'
-].sort();
-
 export function SettingsModal({ onClose, onLogout, initialView = 'main' }: SettingsModalProps) {
   const [currentView, setCurrentView] = useState<SettingsView>(initialView);
   
@@ -36,34 +18,14 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
   const [profileData, setProfileData] = useState({
     username: '',
     name: '',
-    organizerType: '',
     email: '',
     phone: '',
-    location: '',
     bio: '',
     birthdate: '',
     avatarUrl: '',
   });
 
-  const [categorySearch, setCategorySearch] = useState('');
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const categoryRef = useRef<HTMLDivElement>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
-        setShowCategoryDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const filteredCategories = CREATOR_CATEGORIES.filter(c => 
-    c.toLowerCase().includes(categorySearch.toLowerCase())
-  );
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -156,15 +118,12 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
               setProfileData({
                 username: profile.username || '',
                 name: profile.full_name || '',
-                organizerType: profile.organizer_type || '',
                 email: profile.contact_email || user.email || '',
                 phone: profile.phone || '',
-                location: profile.location || '',
                 bio: profile.bio || '',
                 birthdate: profile.birthdate || '',
                 avatarUrl: profile.avatar_url || '',
               });
-              setCategorySearch(profile.organizer_type || '');
               if (localProfile) localStorage.removeItem('eventz-user-profile');
             }
 
@@ -243,10 +202,8 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
         await updateProfile(user.id, {
           username: profileData.username,
           full_name: profileData.name,
-          organizer_type: profileData.organizerType,
           contact_email: profileData.email,
           phone: profileData.phone,
-          location: profileData.location,
           bio: profileData.bio,
           birthdate: profileData.birthdate,
           avatar_url: profileData.avatarUrl,
@@ -256,7 +213,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
       }
       toast.success('Profile updated successfully! ✅');
       setCurrentView('main');
-      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','contact_email','phone','location','bio','birthdate','avatar_url'] } }));
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','contact_email','phone','bio','birthdate','avatar_url'] } }));
     } catch (error) {
       console.error('Error saving profile:', error);
       const message = (error as any)?.message || (error as any)?.error_description || (error as any)?.details || 'Failed to save profile';
@@ -476,51 +433,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                   </div>
                 </div>
 
-                {/* Category Dropdown */}
-                <div className="space-y-2" ref={categoryRef}>
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Category</label>
-                  <div className="relative">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      value={categorySearch}
-                      onChange={(e) => {
-                        setCategorySearch(e.target.value);
-                        setShowCategoryDropdown(true);
-                        if (profileData.organizerType && e.target.value !== profileData.organizerType) {
-                          setProfileData(prev => ({ ...prev, organizerType: '' }));
-                        }
-                      }}
-                      onFocus={() => setShowCategoryDropdown(true)}
-                      placeholder="Select category"
-                      className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
-                    />
-                    <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
-                    
-                    {showCategoryDropdown && (
-                      <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
-                        {filteredCategories.length > 0 ? (
-                          filteredCategories.map((c) => (
-                            <button
-                              key={c}
-                              onClick={() => {
-                                setProfileData(prev => ({ ...prev, organizerType: c }));
-                                setCategorySearch(c);
-                                setShowCategoryDropdown(false);
-                              }}
-                              className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.organizerType === c ? 'text-[#8A2BE2] font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
-                            >
-                              {c}
-                              {profileData.organizerType === c && <Check className="w-4 h-4" />}
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-5 py-4 text-sm text-gray-400 text-center italic">No categories found</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+
 
                 {/* Email Input */}
                 <div className="space-y-2">
@@ -552,20 +465,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                   </div>
                 </div>
 
-                {/* Location Input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      value={profileData.location}
-                      onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
-                      placeholder="City, Country"
-                    />
-                  </div>
-                </div>
+
 
                 {/* Date of Birth Input */}
                 <div className="space-y-2">
