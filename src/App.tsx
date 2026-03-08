@@ -619,7 +619,8 @@ export default function App() {
 
   const handleStartOrganizerSetup = () => {
     setEditingEvent(null);
-    setIsOrganizer(true);
+    setIsOrganizer(false);
+    setHasOrganizerProfile(false);
     setOrganizerView('dashboard');
     setActiveTab('create');
     setVisitedTabs(prev => new Set(prev).add('create'));
@@ -716,7 +717,10 @@ export default function App() {
                  <AuthScreen onAuthSuccess={handleAuthSuccess} embedded={true} />
                </div>
             ) : !isOrganizer ? (
-              <BecomeOrganizer onComplete={handleBecomeOrganizer} />
+               <OrganizerProfileSetup 
+                onComplete={handleProfileComplete} 
+                onBack={handleBackToProfile}
+              />
             ) : !hasOrganizerProfile ? (
               <OrganizerProfileSetup 
                 onComplete={handleProfileComplete} 

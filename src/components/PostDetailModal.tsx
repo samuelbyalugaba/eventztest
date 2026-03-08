@@ -226,33 +226,41 @@ export function PostDetailModal({
             </h3>
             
             {/* Add Comment First */}
-            <div className="mb-5">
-              <div className="flex gap-3 bg-gradient-to-r from-gray-50 to-purple-50/30 rounded-2xl p-4">
+            <div className="mb-8">
+              <div className="flex gap-4 items-start">
                 <UserAvatar
-                  src={currentUser?.user_metadata?.avatar_url || "https://i.ibb.co/3559hRDP/G-Profile.jpg"}
+                  src={currentUser?.user_metadata?.avatar_url}
                   name={currentUser?.user_metadata?.full_name || "You"}
-                  className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100"
                 />
                 <div className="flex-1">
-                  <textarea
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="Share your thoughts..."
-                    rows={3}
-                    className="w-full bg-white rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-500 outline-none border border-gray-200 focus:border-purple-300 focus:ring-2 focus:ring-purple-100 resize-none"
-                  />
-                  <button
-                    onClick={handlePostComment}
-                    disabled={!commentText.trim()}
-                    className={`mt-3 px-5 py-2.5 rounded-xl font-medium text-sm transition-all flex items-center gap-2 ${
-                      commentText.trim()
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <Send className="w-4 h-4" />
-                    Post Reply
-                  </button>
+                  <div className="relative group">
+                    <textarea
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Add a comment..."
+                      rows={1}
+                      className="w-full bg-transparent border-b-2 border-gray-200 py-2.5 text-base text-gray-900 placeholder-gray-400 outline-none focus:border-gray-900 transition-colors resize-none overflow-hidden min-h-[44px]"
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                        target.style.height = `${target.scrollHeight}px`;
+                      }}
+                    />
+                    <div className="absolute right-0 bottom-2.5 flex items-center gap-2">
+                      <button
+                        onClick={handlePostComment}
+                        disabled={!commentText.trim()}
+                        className={`p-2 rounded-full transition-all ${
+                          commentText.trim()
+                            ? 'text-purple-600 hover:bg-purple-50'
+                            : 'text-gray-300 cursor-not-allowed'
+                        }`}
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
