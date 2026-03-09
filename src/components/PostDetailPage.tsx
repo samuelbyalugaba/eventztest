@@ -116,7 +116,7 @@ export function PostDetailPage({
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="z-[100]">
                   {isOwner ? (
                     <DropdownMenuItem 
                       onClick={() => {

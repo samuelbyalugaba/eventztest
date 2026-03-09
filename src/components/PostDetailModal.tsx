@@ -115,7 +115,7 @@ export function PostDetailModal({
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="z-[80] bg-white min-w-[150px] shadow-lg rounded-xl p-1 border border-gray-100">
+                <DropdownMenuContent align="end" className="z-[100] bg-white min-w-[150px] shadow-lg rounded-xl p-1 border border-gray-100">
                   {isOwner ? (
                     <DropdownMenuItem 
                       onClick={() => {
