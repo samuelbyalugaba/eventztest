@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, MapPin, Search, Lock, Unlock, X, CheckCircle2, Globe, Flame, Users, Hourglass, Eye, Bell } from 'lucide-react';
+import { Filter, MapPin, Search, Lock, Unlock, X, CheckCircle2, Globe, Flame, Users, Hourglass, Eye, Bell, Camera, Smartphone, Clock, Video } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
@@ -519,7 +519,7 @@ export function LiveFeed() {
         {/* Section 1: Live Events (Featured) */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
+            <Video className="w-5 h-5 text-gray-700" />
             <h2 className="text-gray-900 text-lg font-bold">Live Events</h2>
           </div>
           
@@ -573,10 +573,7 @@ export function LiveFeed() {
         <div>
           {/* Header */}
           <div className="flex items-center gap-2 mb-4">
-            <div className="relative">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-              <div className="absolute inset-0 w-2 h-2 rounded-full bg-red-500 animate-ping opacity-75"></div>
-            </div>
+            <Smartphone className="w-5 h-5 text-gray-700" />
             <h2 className="text-gray-900 text-base font-bold">Creators Live</h2>
           </div>
 
@@ -622,7 +619,7 @@ export function LiveFeed() {
         {/* Section 3: Starting Soon - Smaller Cards */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Hourglass className="w-4 h-4 text-gray-700" />
+            <Clock className="w-4 h-4 text-gray-700" />
             <h2 className="text-gray-900 text-base font-bold">Starting Soon</h2>
           </div>
 
