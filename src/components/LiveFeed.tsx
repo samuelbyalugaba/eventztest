@@ -517,13 +517,13 @@ export function LiveFeed() {
       <div className="max-w-4xl mx-auto px-5 py-6 space-y-8">
         
         {/* Section 1: Live Events (Featured) */}
-        {liveEvents.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
-              <h2 className="text-gray-900 text-lg font-bold">Live Events</h2>
-            </div>
-            
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
+            <h2 className="text-gray-900 text-lg font-bold">Live Events</h2>
+          </div>
+          
+          {liveEvents.length > 0 ? (
             <div className="flex overflow-x-auto gap-3 pb-4 -mx-5 px-5 scrollbar-hide snap-x">
               {liveEvents.map((stream: LiveStream) => (
                 <div
@@ -551,7 +551,7 @@ export function LiveFeed() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-gray-300 text-[10px]">
                         <MapPin className="w-3 h-3" />
-                        <span className="line-clamp-1 max-w-[100px]">{stream.host}</span>
+                        <span className="line-clamp-1 max-w-[100px]">{stream.location || stream.host}</span>
                       </div>
                       <div className="flex items-center gap-1 text-gray-300 text-[10px]">
                         <Eye className="w-3 h-3" />
@@ -562,17 +562,25 @@ export function LiveFeed() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-10 bg-white rounded-xl border border-gray-100 border-dashed">
+              <p className="text-gray-500 text-sm">No live events at the moment</p>
+            </div>
+          )}
+        </div>
 
         {/* Section 2: Creators Live (Horizontal Scroll) */}
-        {creatorsLive.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Users className="w-5 h-5 text-purple-600" />
-              <h2 className="text-gray-900 text-lg font-bold">Creators Live</h2>
+        <div>
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="relative">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+              <div className="absolute inset-0 w-2 h-2 rounded-full bg-red-500 animate-ping opacity-75"></div>
             </div>
-            
+            <h2 className="text-gray-900 text-base font-bold">Creators Live</h2>
+          </div>
+
+          {creatorsLive.length > 0 ? (
             <div className="flex overflow-x-auto gap-3 pb-4 -mx-5 px-5 scrollbar-hide snap-x">
               {creatorsLive.map((stream: LiveStream) => (
                 <div
@@ -604,17 +612,21 @@ export function LiveFeed() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-8 bg-white rounded-xl border border-gray-100 border-dashed">
+              <p className="text-gray-500 text-sm">No creators live right now</p>
+            </div>
+          )}
+        </div>
 
         {/* Section 3: Starting Soon - Smaller Cards */}
-        {filteredUpcomingStreams.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Hourglass className="w-4 h-4 text-gray-700" />
-              <h2 className="text-gray-900 text-base font-bold">Starting Soon</h2>
-            </div>
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Hourglass className="w-4 h-4 text-gray-700" />
+            <h2 className="text-gray-900 text-base font-bold">Starting Soon</h2>
+          </div>
 
+          {filteredUpcomingStreams.length > 0 ? (
             <div className="space-y-2">
               {filteredUpcomingStreams.map((stream: LiveStream) => (
                 <div
@@ -652,20 +664,14 @@ export function LiveFeed() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-
-        {/* Empty State */}
-        {liveEvents.length === 0 && creatorsLive.length === 0 && filteredUpcomingStreams.length === 0 && (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <div className="w-2 h-2 rounded-full bg-purple-600"></div>
+          ) : (
+            <div className="text-center py-8 bg-white rounded-xl border border-gray-100 border-dashed">
+              <p className="text-gray-500 text-sm">No upcoming streams scheduled</p>
             </div>
-            <h3 className="text-gray-900 mb-2">No streams available</h3>
-            <p className="text-gray-600 text-sm">Check back soon for live events</p>
-          </div>
-        )}
+          )}
+        </div>
+
+
       </div>
 
       {/* Minimal Filter Modal */}
