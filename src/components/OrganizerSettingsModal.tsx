@@ -8,33 +8,10 @@ import {
   Shield,
   Camera,
   Check,
-  Mic2,
-  Store,
-  Trophy,
-  Wine,
-  Coffee,
-  UtensilsCrossed,
-  Headphones,
-  Mic,
-  Music,
-  Users,
-  Briefcase,
-  Radio,
-  Heart,
-  GraduationCap,
-  Church,
-  Laptop,
-  ShoppingBag,
-  Plane,
-  Film,
-  Dumbbell,
-  Activity,
-  Target,
   Mail,
   Phone,
   MapPin,
   Globe,
-  AtSign,
   Calendar,
   Search,
   ChevronDown
@@ -43,7 +20,7 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { updateProfile, getProfile, checkUsernameUnique, getOrganizerProfile, upsertOrganizerProfile, uploadImage } from '../utils/supabase/api';
+import { updateProfile, getProfile, uploadImage } from '../utils/supabase/api';
 import { isSafeUrl } from '../utils/sanitize';
 
 interface OrganizerSettingsModalProps {
@@ -164,15 +141,13 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       setProfileData({ ...profileData, avatarUrl: publicUrl });
       
       // Auto-save the avatar URL to the database
-      // This ensures the avatar is persisted even if the user forgets to click "Save Changes"
       try {
-        await upsertOrganizerProfile({
-          id: user.id,
-          organizer_avatar_url: publicUrl
+        await updateProfile(user.id, {
+          avatar_url: publicUrl
         });
         toast.success('Profile photo updated successfully');
       } catch (saveError) {
-        console.warn('Auto-save of avatar failed (likely new profile), user must click Save:', saveError);
+        console.warn('Auto-save of avatar failed:', saveError);
         toast.success('Photo uploaded. Please click Save to finish setup.');
       }
     } catch (error: any) {
@@ -190,49 +165,32 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          // Fetch independently to prevent one failure from blocking the other
-          const profilePromise = getProfile(user.id);
-          const organizerProfilePromise = getOrganizerProfile(user.id).catch(err => {
-            console.error('Failed to fetch organizer profile (might be missing table or permissions):', err);
-            return null;
-          });
-
-          const [profile, organizerProfile] = await Promise.all([
-            profilePromise,
-            organizerProfilePromise
-          ]);
+          const profile = await getProfile(user.id);
 
           if (profile) {
-            // Parse organizer type and subtype from organizer profile OR profile (legacy)
-            // Fix: Just take the organizer type as is, since we are moving to single string categories
-            let type = organizerProfile?.organizer_type || profile.organizer_type || '';
-            // If it has a dash, it might be old format "Type - Subtype", we can keep it or split it.
-            // For now, let's just use it as the initial search value.
-            
-            // Fix: Use profile.username as fallback for organizer name if organizer name is empty
-            const orgName = organizerProfile?.organizer_name || profile.username || '';
+            let type = profile.organizer_type || '';
+            const orgName = profile.full_name || profile.username || '';
 
             setProfileData({
               username: profile.username || '',
               organizerName: orgName, 
               organizerType: type,
               venueSubType: '', // Deprecated
-              email: organizerProfile?.contact_email || user.email || '',
-              phone: organizerProfile?.phone || '',
-              location: organizerProfile?.location || '',
-              bio: organizerProfile?.bio || '',
-              website: organizerProfile?.website || '',
-              avatarUrl: organizerProfile?.organizer_avatar_url || profile.avatar_url || '', // Fallback to user avatar if organizer avatar is missing
+              email: profile.contact_email || user.email || '',
+              phone: profile.phone || '',
+              location: profile.location || '',
+              bio: profile.bio || '',
+              website: profile.website || '',
+              avatarUrl: profile.avatar_url || '',
               birthdate: profile.birthdate || '',
             });
 
             setCategorySearch(type);
 
-            if (!organizerProfile) {
-               // Hint to user that they are creating a new profile
-               toast.info('Set up your new Organizer Page details');
+            if (!profile.is_organizer) {
+               // Hint to user that they are setting up a creator account
+               toast.info('Set up your Creator details');
             }
-
 
             if (profile.streaming_settings) setStreamingSettings(profile.streaming_settings);
             if (profile.privacy_settings) setPrivacySettings(profile.privacy_settings);
@@ -298,35 +256,26 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
       const finalOrganizerType = profileData.organizerType;
 
-      // Save organizer profile to separate table
-      await upsertOrganizerProfile({
-        id: user.id,
-        organizer_name: profileData.organizerName,
+      // Save to profiles table
+      await updateProfile(user.id, {
+        full_name: profileData.organizerName,
         organizer_type: finalOrganizerType,
-        organizer_avatar_url: profileData.avatarUrl,
+        avatar_url: profileData.avatarUrl,
         bio: profileData.bio,
         location: profileData.location,
         website: profileData.website,
         contact_email: profileData.email,
         phone: profileData.phone,
+        birthdate: profileData.birthdate,
+        is_organizer: true // Ensure they are marked as organizer
       });
-
-      // REMOVED: Do not update User Profile username from here.
-      // await updateProfile(user.id, {
-      //   username: profileData.username
-      // });
       
       toast.success('Profile updated successfully! ✅');
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      // Show more detailed error message to help debug
-      const errorMessage = error.message || error.error_description || error.details || 'Failed to update profile';
-      
-      if (errorMessage.includes('relation "organizer_profiles" does not exist') || error.code === '42P01') {
-        toast.error('System Error: Organizer database table is missing. Please ask developer to run the setup SQL.');
-      } else {
-        toast.error(`Failed to update profile: ${errorMessage}`);
-      }
+      const errorMessage = error.message || 'Failed to update profile';
+      toast.error(`Failed to update profile: ${errorMessage}`);
     }
   };
 

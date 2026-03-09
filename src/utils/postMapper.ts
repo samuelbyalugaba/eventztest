@@ -1,21 +1,21 @@
-import { Post as ApiPost } from './supabase/api';
+import { ApiPost } from './supabase/api';
 import { formatTimeAgo } from './format';
+import { Post } from '../types';
 
 const isVideo = (url?: string) => {
   if (!url) return false;
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export const mapPostToViewModel = (p: ApiPost) => {
-  const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
-  const displayName = isOrganizerPage ? (p.organizer_profile!.organizer_name || 'Unknown Organizer') : (p.user?.full_name || p.user?.username || 'Unknown User');
-  // STRICT: No fallback to user avatar for organizers
-  const avatarUrl = isOrganizerPage ? p.organizer_profile!.organizer_avatar_url : p.user?.avatar_url;
+export const mapPostToViewModel = (p: ApiPost): Post => {
+  const isOrganizerPage = !!p.posted_as_organizer;
+  const displayName = p.user?.full_name || p.user?.username || 'Unknown User';
+  const avatarUrl = p.user?.avatar_url;
   return {
     id: p.id,
     user_id: p.user_id,
     user: {
-      id: isOrganizerPage ? (p.organizer_profile!.id || 'unknown') : (p.user?.id || 'unknown'),
+      id: p.user?.id || 'unknown',
       name: displayName || 'Unknown',
       username: p.user?.username || '@unknown',
       avatar: avatarUrl || '',
@@ -56,12 +56,9 @@ export const mapPostToViewModel = (p: ApiPost) => {
       views: p.views || 0,
     }] : undefined,
     mutualFriends: [],
-    
-    // Pass raw data for safety if needed
-    raw: p
   };
 };
 
-export const mapPostsToViewModel = (data: any[]) => {
+export const mapPostsToViewModel = (data: ApiPost[]): Post[] => {
     return data.map(mapPostToViewModel);
 };

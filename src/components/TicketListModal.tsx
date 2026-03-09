@@ -3,13 +3,15 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Ticket } from '../utils/supabase/api';
 
 interface TicketListModalProps {
+  isOpen: boolean;
   eventName: string;
   tickets: Ticket[];
   onClose: () => void;
   onSelectTicket: (ticket: Ticket) => void;
 }
 
-export function TicketListModal({ eventName, tickets, onClose, onSelectTicket }: TicketListModalProps) {
+export function TicketListModal({ isOpen, eventName, tickets, onClose, onSelectTicket }: TicketListModalProps) {
+  if (!isOpen) return null;
   // Group tickets by type if needed, but for now simple list is fine
   
   const event = tickets[0]?.event;

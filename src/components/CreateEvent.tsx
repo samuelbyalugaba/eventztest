@@ -63,6 +63,14 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     }
   });
 
+  // Enforce default category if missing
+  useEffect(() => {
+    if (!formData.category) {
+      console.log('Category missing in state, defaulting to Entertainment');
+      setFormData(prev => ({ ...prev, category: 'Entertainment' }));
+    }
+  }, [formData.category]);
+
   const calculatePriceRange = (tiers: TicketTier[], currencyCode: string) => {
     if (tiers.length === 0) return '';
     const prices = tiers.map(t => t.priceNumeric).filter(p => !isNaN(p));
@@ -354,9 +362,15 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   const handlePublish = async () => {
     // Basic validation
-    if (!formData.title || !formData.date || !formData.price || !formData.category) {
-      toast.error('Please fill in all required fields');
+    if (!formData.title || !formData.date || !formData.price) {
+      toast.error('Please fill in all required fields (Title, Date, Price)');
       return;
+    }
+    
+    // Explicitly check category
+    if (!formData.category) {
+       toast.error('Please select a category');
+       return;
     }
 
     // Date validation
@@ -396,6 +410,8 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           virtualPrice: formData.streaming.virtualPrice
         }
       };
+      
+      console.log('Publishing event with data:', eventData);
 
       if (isEditing && savedEventId) {
         // Update existing event

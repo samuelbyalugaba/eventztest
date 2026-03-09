@@ -276,20 +276,13 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
   const currentMedia = videoUrl || post.content.images?.[carouselIndex] || post.content.image;
   const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
 
-  // Determine display profile (User vs Organizer)
-  const displayProfile = post.posted_as_organizer && post.organizer_profile 
-    ? {
-        name: post.organizer_profile.organizer_name || 'Organizer',
-        avatar: post.organizer_profile.organizer_avatar_url,
-        id: post.organizer_profile.id,
-        isOrganizer: true
-      }
-    : {
-        name: post.user.name || post.user.username || 'User',
-        avatar: post.user.avatar,
-        id: post.user.id,
-        isOrganizer: false
-      };
+  // Determine display profile (Unified Identity)
+  const displayProfile = {
+    name: post.user.name || post.user.username || 'User',
+    avatar: post.user.avatar,
+    id: post.user.id,
+    isOrganizer: post.user.isOrganizer || post.user.isOrganizerPage
+  };
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6 hover:shadow-md transition-shadow duration-300 p-4">

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, X, Radio, Tv, Play, Eye, CheckCircle2, Star, Bell, Ticket, ChevronLeft } from 'lucide-react';
-import { OrganizerProfile } from './OrganizerProfile';
+import { UserProfileModal } from './UserProfileModal';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, getOrganizerProfile, getProfile, type Event as ApiEvent } from '../utils/supabase/api';
+import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, getProfile, type Event as ApiEvent } from '../utils/supabase/api';
 import { validateYouTubeUrl, getYouTubeVideoId } from '../utils/sanitize';
 
 export interface EventDetailModalProps {
@@ -55,13 +55,12 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     const fetchOrganizerDetails = async () => {
       if (event.organizer_id) {
         try {
-          const orgProfile = await getOrganizerProfile(event.organizer_id);
-          if (orgProfile && orgProfile.organizer_name) {
-             setOrganizerDisplayName(orgProfile.organizer_name);
+          const profile = await getProfile(event.organizer_id);
+          if (profile && profile.full_name) {
+             setOrganizerDisplayName(profile.full_name);
           }
         } catch (e) {
-          console.error('Error fetching organizer profile:', e);
-          // Keep default or set to fallback if needed
+          console.error('Error fetching profile:', e);
         }
       }
     };
@@ -228,30 +227,30 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           )}
           
           {/* Organizer Profile Modal */}
-          {showOrganizerProfile && (event.organizer || event.organizer_id) && (
-            <OrganizerProfile
-              organizerName={organizerDisplayName}
-              organizerId={event.organizer_id || (event.organizer ? event.organizer.id : '')}
-              onClose={() => setShowOrganizerProfile(false)}
-              onMessage={async (organizer) => {
-                const toastId = toast.loading('Opening chat...');
-                try {
-                  if (onStartConversation) {
-                    const conversation = await onStartConversation(organizer);
-                    if (conversation) {
-                      setShowOrganizerProfile(false);
-                      onClose(); // Also close the event detail modal to go to chat
-                      toast.dismiss(toastId);
-                    } else {
-                      toast.error('Could not start conversation', { id: toastId });
-                    }
-                  }
-                } catch (error) {
-                  console.error('Error starting conversation:', error);
-                  toast.error('Failed to start conversation', { id: toastId });
-                }
+          {showOrganizerProfile && event.organizer_id && (
+            <UserProfileModal
+              user={{
+                id: event.organizer_id,
+                name: organizerDisplayName,
+                type: 'Organizer',
+                avatar: event.organizer?.avatar_url,
+                verified: event.organizer?.verified || false,
+                isOrganizer: true
               }}
-              onTicketPurchase={onPurchaseTicket ? () => onPurchaseTicket(event) : undefined}
+              onClose={() => setShowOrganizerProfile(false)}
+              onFollow={() => {
+                toast.success(`Following ${organizerDisplayName}! 🎉`);
+              }}
+              onMessage={() => {
+                onStartConversation?.({
+                  id: event.organizer_id,
+                  name: organizerDisplayName,
+                  avatar: event.organizer?.avatar_url || '',
+                  verified: event.organizer?.verified || false,
+                  isOrganizer: true
+                });
+                setShowOrganizerProfile(false);
+              }}
             />
           )}
           

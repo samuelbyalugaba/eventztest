@@ -11,7 +11,7 @@ interface EventCardProps {
 export function EventCard({ event, onClick, className = '' }: EventCardProps) {
   // Use passed organizer data if available, otherwise fallback to "Event Organizer"
   // Avoiding internal fetches to prevent N+1 request problem
-  const organizerName = event.organizer?.organizer_details?.organizer_name || 'Event Organizer';
+  const organizerName = event.organizer?.full_name || 'Event Organizer';
 
   const getCategoryColor = (category: string) => {
     switch (category.toLowerCase()) {

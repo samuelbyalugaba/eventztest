@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, Play, MapPin, Search, Lock, Unlock, X, CheckCircle2, Globe, Flame, Users, Hourglass, Eye, Bell } from 'lucide-react';
+import { Filter, MapPin, Search, Lock, Unlock, X, CheckCircle2, Globe, Flame, Users, Hourglass, Eye, Bell } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
@@ -243,37 +243,37 @@ export function LiveFeed() {
     try {
       const live = await getLiveStreams();
       if (live) {
-        const mappedLive = live.map((e: any) => ({
-          ...e,
-          thumbnail: e.image_url,
-          host:
-            e.organizer?.organizer_details?.organizer_name ||
-            e.organizer?.full_name ||
-            e.organizer?.username ||
-            'Event Organizer',
-          organizer_id: e.organizer_id, // Pass organizer_id
-          viewers: e.streaming?.liveViewers || 0,
-          isLive: true,
-          playback_url: e.streaming?.playback_url,
-          country: e.location?.split(',').pop()?.trim() || 'Tanzania' // Try to guess country
+        const mappedLive = await Promise.all(live.map(async (e: any) => {
+          const profile = await getProfile(e.organizer_id);
+          return {
+            ...e,
+            thumbnail: e.image_url,
+            host: profile?.full_name || 'Event Organizer',
+            host_avatar: profile?.avatar_url,
+            organizer_id: e.organizer_id,
+            viewers: e.streaming?.liveViewers || 0,
+            isLive: true,
+            playback_url: e.streaming?.playback_url,
+            country: profile?.location?.split(',').pop()?.trim() || 'Tanzania'
+          };
         }));
         setLiveStreams(mappedLive as unknown as LiveStream[]);
       }
       
       const upcoming = await getUpcomingStreams();
       if (upcoming) {
-        const mappedUpcoming = upcoming.map((e: any) => ({
-          ...e,
-          thumbnail: e.image_url,
-          scheduledTime: `${e.date} at ${e.time}`,
-          host:
-            e.organizer?.organizer_details?.organizer_name ||
-            e.organizer?.full_name ||
-            e.organizer?.username ||
-            'Event Organizer',
-          organizer_id: e.organizer_id,
-          country: e.location?.split(',').pop()?.trim() || 'Tanzania', // Try to guess country
-          countdown: Math.max(0, Math.floor((new Date(`${e.date}T${e.time}`).getTime() - new Date().getTime()) / (1000 * 60)))
+        const mappedUpcoming = await Promise.all(upcoming.map(async (e: any) => {
+          const profile = await getProfile(e.organizer_id);
+          return {
+            ...e,
+            thumbnail: e.image_url,
+            scheduledTime: `${e.date} at ${e.time}`,
+            host: profile?.full_name || 'Event Organizer',
+            host_avatar: profile?.avatar_url,
+            organizer_id: e.organizer_id,
+            country: profile?.location?.split(',').pop()?.trim() || 'Tanzania',
+            countdown: Math.max(0, Math.floor((new Date(`${e.date}T${e.time}`).getTime() - new Date().getTime()) / (1000 * 60)))
+          };
         }));
         setUpcomingStreams(mappedUpcoming as unknown as LiveStream[]);
       }
@@ -374,7 +374,7 @@ export function LiveFeed() {
     const updated = [countryId, ...recentCountries.filter(c => c !== countryId)].slice(0, 3);
     setRecentCountries(updated);
     
-    // Save to Supabase if logged in, otherwise localStorage
+        // Save to Supabase if logged in, otherwise localStorage
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -385,15 +385,15 @@ export function LiveFeed() {
         // Assuming we just have recentCountries for now, replacing `preferences` object is fine.
         // If we add more keys to preferences later, we should fetch first.
         // Fetch current preferences if needed in future
-        // const currentPreferences = profile?.preferences || {};
+        const profile = await getProfile(user.id);
+        const currentPreferences = profile?.preferences || {};
         
-        // Commented out to avoid PGRST204 error (missing preferences column)
-        // await updateProfile(user.id, { 
-        //   preferences: { 
-        //     ...currentPreferences,
-        //     recentCountries: updated 
-        //   } 
-        // });
+        await updateProfile(user.id, { 
+          preferences: { 
+            ...currentPreferences,
+            recentCountries: updated 
+          } 
+        });
       } else {
         localStorage.setItem('eventz-recent-countries', JSON.stringify(updated));
       }
@@ -433,14 +433,6 @@ export function LiveFeed() {
     : filteredCountries;
 
   // Reminder toggling logic can be reintroduced when reminder UI is active
-
-  const formatCountdown = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    return `${days}d`;
-  };
 
   const handleStreamClick = (stream: LiveStream) => {
     // Check if stream is live or upcoming

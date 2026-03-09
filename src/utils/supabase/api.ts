@@ -58,28 +58,7 @@ export type Profile = {
     recentCountries?: string[];
     pwaDismissed?: string;
   };
-  organizer_details?: OrganizerProfile;
-};
-
-export type OrganizerProfile = {
-  id: string;
-  organizer_name: string;
-  organizer_type: string;
-  organizer_avatar_url?: string; // Renamed from avatar_url to prevent confusion
-  cover_url?: string;
-  bio?: string;
-  description?: string;
-  location?: string;
-  website?: string;
-  contact_email?: string;
-  phone?: string;
-  social_links?: {
-    instagram?: string;
-    facebook?: string;
-    twitter?: string;
-  };
-  created_at?: string;
-  updated_at?: string;
+  description?: string; // Long form description for creators
 };
 
 export type Event = {
@@ -159,7 +138,7 @@ export type UserMedia = {
   created_at: string;
 };
 
-export type Post = {
+export type ApiPost = {
   id: number;
   user_id: string;
   content: string;
@@ -170,7 +149,6 @@ export type Post = {
   hashtags: string[];
   created_at: string;
   user?: Profile;
-  organizer_profile?: OrganizerProfile;
   event?: Event;
   likes_count?: number;
   comments_count?: number;
@@ -230,7 +208,9 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
     phone: updates.phone,
     website: updates.website,
     organizer_type: updates.organizer_type,
-    social_links: updates.social_links
+    social_links: updates.social_links,
+    is_organizer: updates.is_organizer,
+    description: updates.description
   };
 
   const { data: data2, error: error2 } = await supabase
@@ -241,7 +221,11 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
 
   if (!error2) return data2;
 
-  if (updates.avatar_url) {
+  // If updates include more than just avatar, don't fallback to avatar-only update
+  // as it would mask the failure of important field updates.
+  const hasOtherUpdates = Object.keys(updates).some(key => key !== 'avatar_url' && key !== 'id');
+  
+  if (!hasOtherUpdates && updates.avatar_url) {
     const { data: data3, error: error3 } = await supabase
       .from('profiles')
       .upsert({ id: userId, avatar_url: updates.avatar_url })
@@ -251,39 +235,6 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
   }
 
   throw error2 || error;
-};
-
-export const getOrganizerProfile = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('organizer_profiles')
-    .select('*')
-    .eq('id', userId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-  
-  if (!data) return null;
-  
-  return { ...data } as OrganizerProfile;
-};
-
-export const upsertOrganizerProfile = async (profile: Partial<OrganizerProfile> & { id: string }) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || user.id !== profile.id) {
-    throw new Error('Unauthorized: You can only update your own organizer profile');
-  }
-
-  const { data, error } = await supabase
-    .from('organizer_profiles')
-    .upsert(profile)
-    .select()
-    .single();
-
-  if (error) throw error;
-  
-  return data as OrganizerProfile;
 };
 
 // --- FOLLOWS ---
@@ -338,6 +289,29 @@ export const checkUsernameUnique = async (username: string, currentUserId?: stri
   const { count, error } = await query;
   if (error) throw error;
   return count === 0;
+};
+
+export const becomeOrganizer = async (details: {
+  full_name: string;
+  username: string;
+  organizer_type: string;
+  location: string;
+  bio: string;
+  avatar_url: string;
+  contact_email?: string;
+}) => {
+  const { data, error } = await supabase.rpc('become_organizer', {
+    p_full_name: details.full_name,
+    p_username: details.username,
+    p_organizer_type: details.organizer_type,
+    p_location: details.location,
+    p_bio: details.bio,
+    p_avatar_url: details.avatar_url,
+    p_contact_email: details.contact_email
+  });
+
+  if (error) throw error;
+  return data;
 };
 
 export const searchProfiles = async (query: string) => {
@@ -553,35 +527,12 @@ export const getEvents = async () => {
   // Calculate attendees from tickets count
   // Prioritize using the 'attendees' column from the events table if it exists and is not null
   // Otherwise fall back to counting tickets (which may be limited by RLS)
-  const events = data.map((event: any) => ({
+  return data.map((event: any) => ({
     ...event,
     attendees: (event.attendees !== undefined && event.attendees !== null) 
       ? event.attendees 
       : (event.tickets?.[0]?.count || 0)
   }));
-
-  // Manually join organizer_profiles to avoid missing FK relationship error
-  const organizerIds = [...new Set(events.map((e: any) => e.organizer_id).filter(Boolean))];
-  
-  if (organizerIds.length > 0) {
-    const { data: orgDetails } = await supabase
-      .from('organizer_profiles')
-      .select('*')
-      .in('id', organizerIds);
-
-    if (orgDetails) {
-      const orgMap = new Map(orgDetails.map((o: any) => [o.id, o]));
-      return events.map((event: any) => ({
-        ...event,
-        organizer: {
-          ...event.organizer,
-          organizer_details: orgMap.get(event.organizer_id)
-        }
-      }));
-    }
-  }
-
-  return events;
 };
 
 export const getOrganizerEvents = async (organizerId: string) => {
@@ -602,25 +553,8 @@ export const getOrganizerEvents = async (organizerId: string) => {
     throw error;
   }
 
-  // Fetch organizer details explicitly
-  let organizerDetails: any = null;
-  try {
-    const { data: orgData } = await supabase
-      .from('organizer_profiles')
-      .select('*')
-      .eq('id', organizerId)
-      .single();
-    organizerDetails = orgData;
-  } catch (e) {
-    console.warn('Could not fetch organizer_profiles manually:', e);
-  }
-  
   return data.map((event: any) => ({
     ...event,
-    organizer: {
-      ...event.organizer,
-      organizer_details: organizerDetails
-    },
     interested: event.saved_events?.[0]?.count || 0,
     shares: event.posts?.[0]?.count || 0,
     attendees: (event.attendees || 0) + (event.tickets?.[0]?.count || 0)
@@ -759,30 +693,6 @@ export const getEventById = async (id: number) => {
   if (error) {
     console.error('Error fetching event by id:', error);
     throw error;
-  }
-
-  // Fetch organizer details explicitly to ensure we have role-specific data (like avatar)
-  if (data.organizer_id) {
-    const { data: orgData } = await supabase
-      .from('organizer_profiles')
-      .select('*')
-      .eq('id', data.organizer_id)
-      .single();
-    
-    if (orgData) {
-      // Map DB field avatar_url to type field organizer_avatar_url if needed
-      // but here we just attach the whole object as organizer_details
-      // The client code expects organizer_details to have organizer_avatar_url (which comes from DB avatar_url column currently? 
-      // Wait, in migration I am renaming or just mapping?
-      // In api.ts I mapped it for getOrganizerProfile.
-      // Here I am attaching raw DB response.
-      // The raw DB response has 'organizer_avatar_url' column (after migration).
-      // So it should be fine.
-      data.organizer = {
-        ...data.organizer,
-        organizer_details: orgData
-      };
-    }
   }
 
   return data;
@@ -1332,28 +1242,6 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
     throw error;
   }
 
-  // Manually fetch organizer profiles for posts made as organizer
-  const organizerUserIds = Array.from(new Set(
-    posts
-      .filter((p: any) => p.posted_as_organizer)
-      .map((p: any) => p.user_id)
-  ));
-
-  let organizerProfilesMap: Record<string, any> = {};
-  
-  if (organizerUserIds.length > 0) {
-    const { data: orgProfiles } = await supabase
-      .from('organizer_profiles')
-      .select('*')
-      .in('id', organizerUserIds);
-      
-    if (orgProfiles) {
-      orgProfiles.forEach((op: any) => {
-        organizerProfilesMap[op.id] = op;
-      });
-    }
-  }
-
   let likedPostIds = new Set<number>();
   let savedPostIds = new Set<number>();
 
@@ -1377,14 +1265,13 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
     }
   }
 
-  return posts.map((p: any) => ({
+  return (posts || []).map((p: any) => ({
     ...p,
-    organizer_profile: organizerProfilesMap[p.user_id] || null,
     likes_count: p.likes?.[0]?.count || 0,
     comments_count: p.comments?.[0]?.count || 0,
     is_liked: likedPostIds.has(p.id),
     is_saved: savedPostIds.has(p.id)
-  }));
+  })) as ApiPost[];
 };
 
 export const deletePost = async (postId: number) => {
@@ -1409,7 +1296,7 @@ export const deletePost = async (postId: number) => {
   }
 };
 
-export const createPost = async (post: Omit<Post, 'id' | 'created_at' | 'user' | 'event' | 'likes_count' | 'comments_count' | 'is_liked'>) => {
+export const createPost = async (post: Omit<ApiPost, 'id' | 'created_at' | 'user' | 'event' | 'likes_count' | 'comments_count' | 'is_liked'>) => {
   // Input Validation
   if (!post.content?.trim() && (!post.image_urls || post.image_urls.length === 0)) {
     throw new Error('Post must contain text or an image');
@@ -1864,16 +1751,6 @@ export const getConversations = async (userId: string) => {
       .eq('conversation_id', conv.id)
       .eq('is_read', false)
       .neq('sender_id', userId);
-
-    // Fetch organizer details if participants are organizers
-    if (conv.participant1 && conv.participant1.is_organizer) {
-       const { data: org1 } = await supabase.from('organizer_profiles').select('*').eq('id', conv.participant1.id).maybeSingle();
-       if (org1) conv.participant1.organizer_details = org1;
-    }
-    if (conv.participant2 && conv.participant2.is_organizer) {
-       const { data: org2 } = await supabase.from('organizer_profiles').select('*').eq('id', conv.participant2.id).maybeSingle();
-       if (org2) conv.participant2.organizer_details = org2;
-    }
 
     return {
       ...conv,

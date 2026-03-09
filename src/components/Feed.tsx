@@ -6,7 +6,9 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, Post as ApiPost, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, ApiPost, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments } from '../utils/supabase/api';
+import { formatTimeAgo } from '../utils/format';
+import { Post, Comment, HighlightClip, Conversation } from '../types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,74 +18,13 @@ import {
 import { PostDetailModal } from './PostDetailModal';
 import { handleShare } from '../utils/share';
 import { mapPostsToViewModel } from '../utils/postMapper';
-import { Conversation } from '../types';
 
 import { ChatList } from './ChatList';
 import { ChatDetail } from './ChatDetail';
 import { UserProfileModal } from './UserProfileModal';
-import { OrganizerProfile } from './OrganizerProfile';
 import { ShareModal } from './ShareModal';
 
-interface Comment {
-  id: number;
-  user: {
-    name: string;
-    avatar: string;
-  };
-  text: string;
-  timestamp: string;
-}
-
-interface HighlightClip {
-  id: number;
-  thumbnail: string;
-  duration: string;
-  title: string;
-  videoUrl?: string;
-  views: number;
-}
-
 type FilterTab = 'all' | 'organizers' | 'trending' | 'following';
-
-interface Post {
-  id: number;
-  user: {
-    id: string;
-    name: string;
-    username: string;
-    avatar: string;
-    verified: boolean;
-    isOrganizer?: boolean;
-    isOrganizerPage?: boolean;
-  };
-  event?: {
-    id: number;
-    name: string;
-    date: string;
-    time?: string;
-    location: string;
-    image: string;
-    price?: string;
-  };
-  content: {
-    text?: string;
-    image?: string;
-    images?: string[]; // For carousel posts with multiple images
-    hashtags?: string[];
-  };
-  timestamp: string;
-  likes: number;
-  comments: Comment[];
-  comments_count?: number;
-  shares: number;
-  views?: number;
-  isLiked: boolean;
-  isSaved: boolean;
-  recommended?: boolean;
-  isHighlight?: boolean;
-  highlights?: HighlightClip[];
-  totalHighlightViews?: number;
-}
 
 interface FeedProps {
   conversations: Conversation[];
@@ -95,6 +36,7 @@ interface FeedProps {
   currentUser?: any;
   isOrganizer?: boolean;
   onCreateEvent?: () => void;
+  onViewPost?: (post: any) => void;
 }
 
 let feedCacheMemory: { posts: any[]; timestamp: number } | null = null;
@@ -104,7 +46,15 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export function Feed({ conversations: globalConversations, onStartConversation, onMarkAsRead, onlineUsers = [], onDeleteConversation, currentUser: propCurrentUser }: FeedProps) {
+export function Feed({ 
+  conversations: globalConversations, 
+  onStartConversation, 
+  onMarkAsRead, 
+  onlineUsers = [], 
+  onDeleteConversation, 
+  currentUser: propCurrentUser,
+  onViewPost 
+}: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -118,9 +68,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
-  const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean } | null>(null);
-  const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
-  const [selectedOrganizer, setSelectedOrganizer] = useState<{ id: string; name: string } | null>(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; type?: string } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
   // const [messageSearch, setMessageSearch] = useState('');
@@ -599,22 +547,15 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
   const handleOpenUserProfile = (user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; isOrganizerPage?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
-    // If this post was made as an Organizer Page, open OrganizerProfile instead
-    if (user.isOrganizerPage) {
-      setSelectedOrganizer({ id: user.id, name: user.name });
-      setShowOrganizerProfile(true);
-      return;
-    }
-
-    // Otherwise open the standard UserProfile modal
+    // Unified profile: open UserProfile modal for both users and organizers
     setSelectedUserProfile({
       id: user.id,
       name: user.name,
       username: user.username,
       avatar: user.avatar,
       verified: user.verified,
-      isOrganizer: user.isOrganizer,
-      type: 'Attendee'
+      isOrganizer: user.isOrganizer || user.isOrganizerPage,
+      type: user.isOrganizerPage || user.isOrganizer ? 'Organizer' : 'Attendee'
     });
   };
 
@@ -758,7 +699,7 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
                     onMessage={(user) => handleStartConversationLocal(user)}
                     isFollowed={followingIds.has(post.user.id)}
                     audioUnlocked={audioUnlocked}
-                    onViewPost={() => onViewPost(post)}
+                    onViewPost={() => onViewPost?.(post)}
                   />
                 </div>
               ))}
@@ -808,46 +749,6 @@ export function Feed({ conversations: globalConversations, onStartConversation, 
       )}
 
 
-
-      {/* Organizer Profile Modal */}
-      {showOrganizerProfile && selectedOrganizer && (
-        <OrganizerProfile
-          organizerName={selectedOrganizer.name}
-          organizerId={selectedOrganizer.id}
-          onClose={() => {
-            setShowOrganizerProfile(false);
-            setSelectedOrganizer(null);
-          }}
-          onMessage={async (organizer) => {
-            if (!currentUser) {
-              toast.error('Please sign in to message organizers');
-              return;
-            }
-            const toastId = toast.loading('Opening chat...');
-            try {
-              const conv = await onStartConversation({
-                name: organizer.name,
-                avatar: organizer.avatar,
-                verified: organizer.verified,
-                isOrganizer: true,
-                id: organizer.id
-              });
-              if (conv) {
-                setShowOrganizerProfile(false);
-                setSelectedOrganizer(null);
-                setActiveConversation(conv);
-                setShowMessages(true);
-                toast.dismiss(toastId);
-              } else {
-                toast.error('Could not start conversation', { id: toastId });
-              }
-            } catch (error) {
-              console.error('Error starting conversation:', error);
-              toast.error('Failed to start conversation', { id: toastId });
-            }
-          }}
-        />
-      )}
 
       {/* Notifications Panel */}
       {showNotifications && (

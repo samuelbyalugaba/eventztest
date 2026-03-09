@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, PenTool, Star } from 'lucide-react';
+import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, Post as ApiPost, getFollowers, getFollowing, deletePost, getOrganizerProfile, getOrganizerStats, getOrganizerEvents, toggleLikePost, toggleSavePost } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents } from '../utils/supabase/api';
 import { WalletModal } from './WalletModal';
 import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
@@ -17,10 +17,8 @@ import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { PostCard } from './PostCard';
 import { Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
-import { handleShare } from '../utils/share';
 
 import { EventListModal } from './EventListModal';
 
@@ -59,7 +57,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   
   // Data states
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [organizerProfile, setOrganizerProfile] = useState<any>(null);
   const [organizerStats, setOrganizerStats] = useState<any>(null);
   const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
   const [showProfessionalDashboard, setShowProfessionalDashboard] = useState(false);
@@ -132,14 +129,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const savedEventsSubscriptionRef = useRef<any>(null);
 
   // Unified Profile Logic
-  const isOrganizer = !!organizerProfile;
-  const profileImage = isOrganizer 
-    ? (organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url || userProfile?.avatar_url) 
-    : userProfile?.avatar_url;
-  const displayName = isOrganizer 
-    ? (organizerProfile?.organizerName || userProfile?.full_name) 
-    : (userProfile?.full_name || 'User');
-  const organizerCategory = organizerProfile?.organizer_type || organizerProfile?.organizerType;
+  const isOrganizer = userProfile?.is_organizer || false;
+  const profileImage = userProfile?.avatar_url;
+  const displayName = userProfile?.full_name || 'User';
+  const organizerCategory = userProfile?.organizer_type;
 
   useEffect(() => {
     setPostAsOrganizer(isOrganizer);
@@ -191,35 +184,28 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         if (targetUserId) {
           // 1. Profile
           const profile = await getProfile(targetUserId);
-          if (profile) setUserProfile(profile);
+          if (profile) {
+            setUserProfile(profile);
+            
+            // 1b. Stats (if organizer)
+            if (profile.is_organizer) {
+              try {
+                const stats = await getOrganizerStats(targetUserId);
+                setOrganizerStats(stats);
 
-          // 1b. Organizer Profile & Stats
-          try {
-            const orgProfile = await getOrganizerProfile(targetUserId);
-            if (orgProfile) {
-              setOrganizerProfile({
-                organizerName: orgProfile.organizer_name || profile?.full_name || 'Organizer',
-                ...orgProfile
-              });
-              
-              // Load stats only if organizer
-              const stats = await getOrganizerStats(targetUserId);
-              setOrganizerStats(stats);
-
-              // Load created events
-              const events = await getOrganizerEvents(targetUserId);
-              if (events) {
-                 const mapEvent = (e: any) => ({
-                   ...e,
-                   coverImage: e.image_url || e.coverImage,
-                   price: e.price_range || e.price
-                });
-                setPublishedEvents(events.map(mapEvent));
+                const events = await getOrganizerEvents(targetUserId);
+                if (events) {
+                  const mapEvent = (e: any) => ({
+                    ...e,
+                    coverImage: e.image_url || e.coverImage,
+                    price: e.price_range || e.price
+                  });
+                  setPublishedEvents(events.map(mapEvent));
+                }
+              } catch (err) {
+                console.error('Error loading organizer stats:', err);
               }
             }
-          } catch (err) {
-            // It's okay if not an organizer
-            // console.error('Error loading organizer data:', err);
           }
 
           // Load Follow Stats
@@ -426,51 +412,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     }
   };
 
-  const handleLike = async (postId: number) => {
-    // Optimistic update
-    setUserPosts(prev => prev.map(p => {
-        if (p.id === postId) {
-            const newIsLiked = !p.is_liked;
-            return { ...p, is_liked: newIsLiked, likes_count: newIsLiked ? (p.likes_count || 0) + 1 : (p.likes_count || 0) - 1 };
-        }
-        return p;
-    }));
-
-    if (currentUser) {
-        try {
-            await toggleLikePost(postId, currentUser.id);
-        } catch (error) {
-            console.error('Error liking post:', error);
-            toast.error('Failed to update like');
-        }
-    }
-  };
-
-  const handleSave = async (postId: number) => {
-     setUserPosts(prev => prev.map(p => {
-        if (p.id === postId) {
-            return { ...p, is_saved: !p.is_saved };
-        }
-        return p;
-    }));
-
-    if (currentUser) {
-        try {
-            await toggleSavePost(postId, currentUser.id);
-        } catch (error) {
-            console.error('Error saving post:', error);
-        }
-    }
-  };
-
-  const handleShareCard = async (post: UiPost) => {
-      await handleShare({
-        title: `Check out this post from ${post.user.name}`,
-        text: post.content.text || 'Check out this amazing post on EVENTZ!',
-        url: window.location.href,
-      });
-  };
-
   const handleOpenPost = (post: ApiPost) => {
     // When opening from own profile (isOwnProfile), we might not have the full nested user/organizer object
     // if the post object came from a simple query.
@@ -480,29 +421,29 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     
     if (isOwnProfile) {
         // We know who the user is - it's the current profile being viewed
-        const currentProfileIsOrganizer = !!organizerProfile;
+        const currentProfileIsOrganizer = userProfile?.is_organizer || false;
         
         postUser = {
             id: currentUser?.id,
             name: displayName,
             username: userProfile?.username || '@user',
-            avatar: profileImage,
-            verified: false, // You might want to store verified status in profile state too
+            avatar: profileImage || '',
+            verified: userProfile?.verified || false,
             isOrganizer: currentProfileIsOrganizer,
             isOrganizerPage: currentProfileIsOrganizer // If we are on organizer profile, posts are likely organizer posts
         };
     } else {
-        // Viewing someone else's profile - post object likely has expanded user/organizer data
+        // Viewing someone else's profile - post object likely has expanded user data
         // OR we can fallback to the profile data we already loaded for this user
-        const isOrganizerPage = !!post.posted_as_organizer && !!post.organizer_profile;
-        const postDisplayName = isOrganizerPage ? (post.organizer_profile!.organizer_name || 'Unknown Organizer') : (post.user?.full_name || post.user?.username || 'Unknown User');
-        const postAvatarUrl = isOrganizerPage ? post.organizer_profile!.organizer_avatar_url : post.user?.avatar_url;
+        const isOrganizerPage = !!post.posted_as_organizer;
+        const postDisplayName = post.user?.full_name || post.user?.username || 'Unknown User';
+        const postAvatarUrl = post.user?.avatar_url;
 
         postUser = {
-            id: isOrganizerPage ? (post.organizer_profile!.id || 'unknown') : (post.user?.id || 'unknown'),
+            id: post.user?.id || 'unknown',
             name: postDisplayName || displayName, // Fallback to profile display name
             username: post.user?.username || userProfile?.username || '@unknown',
-            avatar: postAvatarUrl || profileImage, // Fallback to profile image
+            avatar: postAvatarUrl || profileImage || '', // Fallback to profile image
             verified: post.user?.verified || false,
             isOrganizer: post.user?.is_organizer || false,
             isOrganizerPage: isOrganizerPage
@@ -682,8 +623,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
              )}
              
             <div className="flex items-start justify-between">
-              <p className={`${(isOrganizer && organizerProfile?.bio) ? 'text-gray-800 font-medium' : 'text-gray-600'} leading-relaxed text-[15px]`}>
-                {(isOrganizer && organizerProfile?.bio) ? organizerProfile.bio : (
+              <p className={`${(isOrganizer && userProfile?.bio) ? 'text-gray-800 font-medium' : 'text-gray-600'} leading-relaxed text-[15px]`}>
+                {(isOrganizer && userProfile?.bio) ? userProfile.bio : (
                   userProfile?.bio || (
                     !isOrganizer && <span className="text-gray-400 italic">No bio yet. Add your bio in Settings.</span>
                   )
@@ -1434,7 +1375,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                   </div>
 
                   <div className="flex items-center gap-3">
-            {organizerProfile && (
+            {isOrganizer && (
               <button
                 onClick={() => setPostAsOrganizer(!postAsOrganizer)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
@@ -1446,7 +1387,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                 {postAsOrganizer ? (
                   <>
                     <Briefcase className="w-3.5 h-3.5" />
-                    <span>{organizerProfile.organizerName || 'Organizer'}</span>
+                    <span>{displayName || 'Organizer'}</span>
                   </>
                 ) : (
                   <>
@@ -1567,10 +1508,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         />
       )}
 
-      {showProfessionalDashboard && organizerProfile && (
+      {showProfessionalDashboard && userProfile && (
         <ProfessionalDashboardModal
           onClose={() => setShowProfessionalDashboard(false)}
-          organizerProfile={organizerProfile}
+          organizerProfile={userProfile}
           onCreateEvent={() => {
              setShowProfessionalDashboard(false);
              onCreateEvent?.();
@@ -1586,7 +1527,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {showSettingsModal && (
         <SettingsModal
           onClose={() => setShowSettingsModal(false)}
-          onLogout={onLogout}
+          onLogout={onLogout || (async () => {})}
           initialView={settingsInitialView}
         />
       )}
@@ -1633,6 +1574,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {/* Ticket List Modal */}
       {showTicketListModal && selectedEventTickets.length > 0 && (
         <TicketListModal
+          isOpen={showTicketListModal}
           eventName={selectedEventTickets[0].event?.title || 'Event'}
           tickets={selectedEventTickets}
           onClose={() => setShowTicketListModal(false)}

@@ -154,7 +154,7 @@ export function ProfessionalDashboardModal({
     setSelectedEventForStream(publishedEvents[0]);
   };
 
-  const profileImage = organizerProfile?.cover_url || organizerProfile?.organizer_avatar_url;
+  const profileImage = organizerProfile?.avatar_url;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-gray-50 animate-in fade-in duration-200 overflow-y-auto">
@@ -180,7 +180,7 @@ export function ProfessionalDashboardModal({
                 />
               ) : (
                 <UserAvatar 
-                  name={organizerProfile.organizerName} 
+                  name={organizerProfile.full_name || 'User'} 
                   className="w-full h-full" 
                 />
               )}

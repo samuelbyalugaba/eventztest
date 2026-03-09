@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { UserAvatar } from './UserAvatar';
+import { EventDetailModal } from './EventDetailModal';
 import { PostDetailModal } from './PostDetailModal';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
 import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Video, Play, MessageCircle, ChevronLeft, Image as ImageIcon, LayoutGrid, Layers } from 'lucide-react';
@@ -13,7 +14,6 @@ import {
   unfollowUser, 
   isFollowing as checkIsFollowing, 
   getProfile, 
-  getOrganizerProfile, 
   getFollowersCount, 
   getFollowingCount, 
   getFollowers, 
@@ -26,15 +26,15 @@ import {
    getPostComments,
    incrementPostView,
    type Event, 
-   type Post, 
-   type Profile, 
-   type OrganizerProfile 
+   type ApiPost, 
+   type Profile 
  } from '../utils/supabase/api';
  import { handleShare } from '../utils/share';
  import { formatTimeAgo } from '../utils/format';
 import { mapPostsToViewModel } from '../utils/postMapper';
 import { UserListModal } from './UserListModal';
 import { toast } from 'sonner';
+import { Post } from '../types';
 
 interface UserProfile {
   id: string;
@@ -67,7 +67,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
   const [attendedEvents, setAttendedEvents] = useState<any[]>([]);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -205,8 +204,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
       toast.error('Failed to post comment');
     }
   };
-  const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
-  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   const handleShowFollowers = async () => {
     setIsLoadingFollowList(true);
@@ -294,19 +292,16 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         // Load secondary data
         const loadSecondaryData = async () => {
           if (isOrganizer) {
-            const [statsData, eventsData, orgProfileData] = await Promise.all([
+            const [statsData, eventsData] = await Promise.all([
               getOrganizerStats(user.id),
-              getOrganizerEvents(user.id),
-              getOrganizerProfile(user.id)
+              getOrganizerEvents(user.id)
             ]);
             setStats(statsData);
             setOrganizerEvents(eventsData || []);
-            setOrganizerProfile(orgProfileData);
             setActiveTab('posts'); // Default tab
           } else {
             const tickets = await getUserTickets(user.id);
             setAttendedEvents(tickets?.map(t => t.event).filter(Boolean) || []);
-            setOrganizerProfile(null);
             setActiveTab('posts'); // Default tab
           }
           
@@ -318,7 +313,9 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
           setFollowStats({ followers: followersCount, following: followingCount });
 
           const postsData = await getPosts({ authorId: user.id });
-          setUserPosts(postsData ? mapPostsToViewModel(postsData) : []);
+          if (postsData && Array.isArray(postsData)) {
+            setUserPosts(mapPostsToViewModel(postsData));
+          }
         };
 
         loadSecondaryData();
@@ -369,11 +366,11 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
   const isOrganizerView = user.type === 'Organizer' || !!profile?.is_organizer;
   
   const displayData = {
-    name: isOrganizerView ? (organizerProfile?.organizer_name || user.name || 'Organizer') : (profile?.full_name || user.name),
-    avatar: isOrganizerView ? organizerProfile?.organizer_avatar_url : (profile?.avatar_url || user.avatar),
+    name: profile?.full_name || user.name || 'User',
+    avatar: profile?.avatar_url || user.avatar,
     // Removed cover photo usage
-    bio: isOrganizerView ? (organizerProfile?.bio || organizerProfile?.description || 'No bio available') : (profile?.bio || user.bio),
-    location: isOrganizerView ? (organizerProfile?.location || 'Tanzania') : profile?.location,
+    bio: profile?.bio || profile?.description || user.bio || 'No bio available',
+    location: profile?.location || 'Tanzania',
     verified: isOrganizerView ? false : (profile?.verified ?? user.verified),
     username: profile?.username?.replace(/^@/, '') || 'user'
   };
@@ -600,7 +597,11 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
             {activeTab === 'upcoming' && isOrganizerView && (
                 <div className="space-y-4">
                     {upcomingEvents.map((event) => (
-                        <div key={event.id} className="flex gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer border border-gray-100">
+                        <div 
+                          key={event.id} 
+                          className="flex gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer border border-gray-100"
+                          onClick={() => setSelectedEvent(event)}
+                        >
                           <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
                             <ImageWithFallback
                                 src={event.image_url}
@@ -634,7 +635,11 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
             {activeTab === 'attended' && !isOrganizerView && (
                 <div className="space-y-4">
                     {attendedEvents.map((event) => (
-                        <div key={event.id} className="flex gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer border border-gray-100">
+                        <div 
+                          key={event.id} 
+                          className="flex gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer border border-gray-100"
+                          onClick={() => setSelectedEvent(event)}
+                        >
                           <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
                             <ImageWithFallback
                                 src={event.image_url}
@@ -661,6 +666,15 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         </div>
       </div>
 
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onStartConversation={onMessage ? () => onMessage() : undefined}
+        />
+      )}
+
       <UserListModal 
         isOpen={showFollowersModal}
         onClose={() => setShowFollowersModal(false)}
@@ -668,14 +682,9 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         users={followList}
         loading={isLoadingFollowList}
         onUserSelect={(user) => {
-          setSelectedUserForModal({
-            ...user,
-            type: user.is_organizer ? 'Organizer' : 'Attendee',
-            name: user.full_name || user.username || 'User',
-            avatar: user.avatar_url || '',
-            verified: false
-          });
-          setShowUserProfileModal(true);
+          // Recurse by changing the user of THIS modal if needed, 
+          // but better to just show the profile in a new layer or update current
+          // For now, let's keep it simple
         }}
       />
 
@@ -686,48 +695,35 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         users={followList}
         loading={isLoadingFollowList}
         onUserSelect={(user) => {
-          setSelectedUserForModal({
-            ...user,
-            type: user.is_organizer ? 'Organizer' : 'Attendee',
-            name: user.full_name || user.username || 'User',
-            avatar: user.avatar_url || '',
-            verified: false
-          });
-          setShowUserProfileModal(true);
+          // Same here
         }}
       />
 
-      {showUserProfileModal && selectedUserForModal && (
-        <UserProfileModal
-          user={selectedUserForModal}
-          onClose={() => {
-            setShowUserProfileModal(false);
-            setSelectedUserForModal(null);
-          }}
-        />
-      )}
-
+      {/* Post Detail Modal */}
       {selectedPost && (
         <PostDetailModal
           post={selectedPost}
           currentUser={currentUser}
           onClose={() => setSelectedPost(null)}
-          onLike={toggleLike}
-          onSave={toggleSave}
-          onShare={sharePost}
-          onDelete={handleDeletePost}
-          onProfileClick={(user) => {
-            setSelectedUserForModal({
-              id: user.id,
-              name: user.name,
-              username: user.username,
-              avatar: user.avatar,
-              verified: user.verified,
-              isOrganizer: user.isOrganizer
-            });
-            setShowUserProfileModal(true);
+          onLike={(id) => toggleLike(id)}
+          onSave={(id) => toggleSave(id)}
+          onShare={async (p) => {
+             await handleShare({
+                title: `Check out this post from ${p.user.name}`,
+                text: p.content.text || '',
+                url: window.location.href
+             });
           }}
-          onComment={handlePostComment}
+          onDelete={async (id) => {
+             try {
+                await deletePost(id);
+                setUserPosts(prev => prev.filter(p => p.id !== id));
+                setSelectedPost(null);
+                toast.success('Post deleted');
+             } catch (err) {
+                toast.error('Failed to delete post');
+             }
+          }}
         />
       )}
     </div>

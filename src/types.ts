@@ -61,6 +61,7 @@ export interface HighlightClip {
 
 export interface Post {
   id: number;
+  user_id: string;
   user: {
     id: string;
     name: string;
@@ -93,6 +94,7 @@ export interface Post {
   views?: number;
   isLiked: boolean;
   isSaved: boolean;
+  video_url?: string;
   recommended?: boolean;
   isHighlight?: boolean;
   highlights?: HighlightClip[];

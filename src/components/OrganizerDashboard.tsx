@@ -3,15 +3,15 @@ import { VideoPreview } from './VideoPreview';
 import { UserAvatar } from './UserAvatar';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { EventAnalyticsModal } from './EventAnalyticsModal';
 import { HighlightViewerModal } from './HighlightViewerModal';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
 import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
-import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Share2, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2, MoreHorizontal, QrCode, X } from 'lucide-react';
+import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2, MoreHorizontal, QrCode, X } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, getOrganizerProfile, deletePost, deleteEvent, updateEventStreamingStatus, getUserTickets } from '../utils/supabase/api';
+import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEvents, getFollowers, deleteEvent, updateEventStreamingStatus, getUserTickets } from '../utils/supabase/api';
+import { TicketViewer } from './TicketViewer';
 import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
@@ -106,48 +106,20 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         }
 
         // Load profile
-        // Try to get organizer profile first
         try {
-          const orgProfile = await getOrganizerProfile(user.id);
-          if (orgProfile) {
+          const profile = await getProfile(user.id);
+          if (profile) {
             setOrganizerProfile({
-              organizerName: orgProfile.organizer_name || 'Organizer',
-              organizerType: orgProfile.organizer_type || 'Event Organizer',
-              location: orgProfile.location || 'Location not set',
-              avatar_url: orgProfile.organizer_avatar_url,
-              cover_url: orgProfile.cover_url,
-              ...orgProfile
+              organizerName: profile.full_name || 'Organizer',
+              organizerType: profile.organizer_type || 'Event Organizer',
+              location: profile.location || 'Location not set',
+              avatar_url: profile.avatar_url,
+              cover_url: profile.cover_url,
+              ...profile
             });
-          } else {
-             // Fallback to user profile if no organizer profile
-             // But give it a distinct "Organization" feel as requested
-             const profile = await getProfile(user.id);
-             if (profile) {
-               setOrganizerProfile({
-                 organizerName: profile.full_name || profile.username || 'Your Organization', // Default to user name as requested
-                 organizerType: 'Event Organizer',
-                 location: profile.location || 'Location not set',
-                 avatar_url: profile.avatar_url,
-                 cover_url: profile.cover_url,
-                 ...profile,
-                 isDefault: true // Flag to indicate this is a fallback
-               });
-             }
           }
         } catch (err) {
-           console.error("Error loading organizer profile", err);
-           const profile = await getProfile(user.id);
-           if (profile) {
-             setOrganizerProfile({
-               organizerName: profile.full_name || profile.username || 'Your Organization',
-               organizerType: 'Event Organizer',
-               location: profile.location || 'Location not set',
-               avatar_url: profile.avatar_url,
-               cover_url: profile.cover_url,
-               ...profile,
-               isDefault: true
-             });
-           }
+           console.error("Error loading profile", err);
         }
 
         // Load stats
@@ -183,7 +155,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         try {
           const userPosts = await getPosts({ currentUserId: user.id, authorId: user.id });
           if (userPosts) {
-            setOrganizerPosts(userPosts.map((p: any, index: number) => ({
+            setOrganizerPosts(userPosts.map((p: any) => ({
                id: p.id,
                type: 'post',
                mediaType: p.video_url ? 'video' : (p.image_urls && p.image_urls.length > 0 ? 'image' : 'text'),
@@ -325,24 +297,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
         console.error('Error toggling like:', error);
         toast.error('Failed to update like');
         // Revert on error - re-fetch or revert state
-    }
-  };
-
-  const handleDeletePost = async (postId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) return;
-    
-    try {
-      await deletePost(postId);
-      setOrganizerPosts(organizerPosts.filter(p => p.id !== postId));
-      toast.success('Post deleted successfully');
-    } catch (error: any) {
-      console.error('Error deleting post:', error);
-      if (error?.code === '23503') { // Foreign key violation
-        toast.error('Cannot delete post: It has active comments or interactions.');
-      } else {
-        toast.error(`Failed to delete post: ${error?.message || 'Unknown error'}`);
-      }
     }
   };
 
@@ -548,7 +502,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             
             {/* Instagram-style Grid View */}
             <div className="grid grid-cols-3 md:grid-cols-4 gap-0.5">
-              {highlights.map((highlight, index) => (
+              {highlights.map((highlight) => (
                 <div 
                 key={highlight.id} 
                 className="group relative aspect-square bg-gray-100 overflow-hidden cursor-pointer"
@@ -908,6 +862,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
       {/* Ticket List Modal */}
       <TicketListModal
         isOpen={showTicketListModal}
+        eventName={selectedTicketGroup[0]?.event?.title || 'My Tickets'}
         onClose={() => setShowTicketListModal(false)}
         tickets={selectedTicketGroup}
         onSelectTicket={(ticket) => {

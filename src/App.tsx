@@ -3,7 +3,6 @@ import { EventDetails } from './components/EventDetails';
 import { LiveFeed } from './components/LiveFeed';
 import { Feed } from './components/Feed';
 import { CreateEvent } from './components/CreateEvent';
-import { BecomeOrganizer } from './components/BecomeOrganizer';
 import { OrganizerProfileSetup } from './components/OrganizerProfileSetupSimple';
 import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
@@ -13,7 +12,6 @@ import { supabase } from './utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
   getProfile, 
-  getOrganizerProfile,
   getConversations, 
   getMessages, 
   sendMessage, 
@@ -39,15 +37,11 @@ import { CreatePostModal } from './components/CreatePostModal';
 import { PostDetailPage } from './components/PostDetailPage';
 
 type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile' | 'post';
-type OrganizerView = 'dashboard' | 'createEvent';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('event');
-  const [previousTab, setPreviousTab] = useState<Tab>('event');
-  const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set(['event']));
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [hasOrganizerProfile, setHasOrganizerProfile] = useState(false);
-  const [organizerView, setOrganizerView] = useState<OrganizerView>('dashboard');
   const [editingEvent, setEditingEvent] = useState<AppEvent | null>(null);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [viewingPost, setViewingPost] = useState<any>(null);
@@ -137,14 +131,14 @@ export default function App() {
         const { data: { user } } = await supabase.auth.getUser();
         const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: 0 });
         const mapped = (fresh || []).map((p: any) => {
-          const isOrganizerPage = !!p.posted_as_organizer && !!p.organizer_profile;
-          const displayName = isOrganizerPage ? p.organizer_profile?.organizer_name : (p.user?.full_name || p.user?.username || 'Unknown User');
-          const avatarUrl = isOrganizerPage ? p.organizer_profile?.avatar_url : p.user?.avatar_url;
+          const isOrganizerPage = !!p.posted_as_organizer;
+          const displayName = p.user?.full_name || p.user?.username || 'Unknown User';
+          const avatarUrl = p.user?.avatar_url;
           return {
             id: p.id,
             user_id: p.user_id,
             user: {
-              id: isOrganizerPage ? (p.organizer_profile?.id || 'unknown') : (p.user?.id || 'unknown'),
+              id: p.user?.id || 'unknown',
               name: displayName || 'Unknown',
               username: p.user?.username || '@unknown',
               avatar: avatarUrl || '',
@@ -200,22 +194,16 @@ export default function App() {
     const fetchProfile = async () => {
       if (isAuthenticated && currentUser) {
         try {
-          const [profile, organizerProfile] = await Promise.all([
-            getProfile(currentUser.id),
-            getOrganizerProfile(currentUser.id)
-          ]);
+          const profile = await getProfile(currentUser.id);
           
           if (profile) {
             setUserProfile(profile);
-            // Determine if user is an organizer:
-            // 1. Check if they have an organizer profile record (primary source of truth)
-            // 2. Fallback to is_organizer flag (legacy/backend triggered)
-            const isOrg = !!organizerProfile || profile.is_organizer || false;
+            // Determine if user is an organizer
+            const isOrg = profile.is_organizer || false;
             setIsOrganizer(isOrg);
             
             // Check if they have completed organizer profile setup
-            // If we found an organizer profile, they have definitely completed setup
-            setHasOrganizerProfile(!!organizerProfile || !!profile.organizer_type);
+            setHasOrganizerProfile(isOrg || !!profile.organizer_type);
           }
         } catch (error) {
           console.error('Error fetching profile:', error);
@@ -224,7 +212,12 @@ export default function App() {
         setUserProfile(null);
       }
     };
+
     fetchProfile();
+
+    // Listen for manual profile updates from other components
+    window.addEventListener('profileUpdated', fetchProfile);
+    return () => window.removeEventListener('profileUpdated', fetchProfile);
   }, [isAuthenticated, currentUser]);
 
   // Fetch conversations when authenticated
@@ -251,9 +244,9 @@ export default function App() {
               id: c.id,
               user: {
                 id: otherUser?.id,
-                name: otherUser?.organizer_details?.organizer_name || otherUser?.full_name || 'Unknown User',
+                name: otherUser?.full_name || 'Unknown User',
                 username: otherUser?.username || '',
-                avatar: otherUser?.organizer_details?.organizer_avatar_url || otherUser?.avatar_url,
+                avatar: otherUser?.avatar_url,
                 verified: otherUser?.verified || false,
                 isOrganizer: otherUser?.is_organizer || false,
               },
@@ -614,40 +607,39 @@ export default function App() {
     }
   };
 
-  const handleBecomeOrganizer = () => {
-    setIsOrganizer(true);
-  };
-
   const handleProfileComplete = () => {
+    setIsOrganizer(true);
     setHasOrganizerProfile(true);
-    setOrganizerView('dashboard');
+    setActiveTab('profile'); // Switch to profile tab to see the change
+    
+    // Trigger a profile refresh to ensure everything is in sync
+    window.dispatchEvent(new Event('profileUpdated'));
+    
+    // As a final safety measure, if they are still on this tab, force a small delay then check again
+    setTimeout(() => {
+      window.dispatchEvent(new Event('profileUpdated'));
+    }, 1000);
   };
 
   const handleCreateEvent = () => {
     setEditingEvent(null);
-    setOrganizerView('createEvent');
     setActiveTab('create');
-    setVisitedTabs(prev => new Set(prev).add('create'));
   };
 
   const handleStartOrganizerSetup = () => {
     setEditingEvent(null);
     setIsOrganizer(false);
     setHasOrganizerProfile(false);
-    setOrganizerView('dashboard');
     setActiveTab('create');
-    setVisitedTabs(prev => new Set(prev).add('create'));
   };
 
   const handleEditEvent = (event: AppEvent) => {
     setEditingEvent(event);
-    setOrganizerView('createEvent');
     setActiveTab('create');
   };
 
   const handleBackToDashboard = () => {
     setEditingEvent(null);
-    setOrganizerView('dashboard');
     setActiveTab('profile');
   };
 
@@ -676,14 +668,13 @@ export default function App() {
 
   const handleViewPost = (post: any) => {
     setViewingPost(post);
-    setPreviousTab(activeTab);
     setActiveTab('post');
     window.scrollTo(0, 0);
   };
 
   const handleBackFromPost = () => {
     setViewingPost(null);
-    setActiveTab(previousTab);
+    setActiveTab('feed');
   };
 
   return (
@@ -784,22 +775,23 @@ export default function App() {
               userProfile={userProfile}
               onBack={handleBackFromPost}
               onLike={async (id) => {
-                // We need to update the post in the feed/profile if possible, but for now just handle local state in the page
-                // The page component handles optimistic updates. 
-                // Ideally we'd have a global store.
+                if (!currentUser) return;
                 try {
-                  await toggleLikePost(id, currentUser?.id);
+                  await toggleLikePost(id, currentUser.id);
                 } catch (e) { console.error(e); }
               }}
               onSave={async (id) => {
+                if (!currentUser) return;
                 try {
-                  await toggleSavePost(id, currentUser?.id);
+                  await toggleSavePost(id, currentUser.id);
                 } catch (e) { console.error(e); }
               }}
               onShare={async (post) => {
+                const shareTitle = `Check out this post from ${post?.user?.name || 'a user'}`;
+                const shareText = post?.content?.text || 'Check out this amazing post on EVENTZ!';
                 await handleShare({
-                  title: `Check out this post from ${post.user.name}`,
-                  text: post.content.text || 'Check out this amazing post on EVENTZ!',
+                  title: shareTitle,
+                  text: shareText,
                   url: window.location.href,
                 });
               }}
@@ -813,7 +805,7 @@ export default function App() {
                   toast.error('Failed to delete post');
                 }
               }}
-              onProfileClick={(user) => {
+              onProfileClick={() => {
                 // If clicking profile from post page, maybe open profile modal?
                 // For now, let's just show a toast or implement basic navigation if needed.
                 // Or better yet, we can't easily switch to another tab with params without more state.
@@ -852,11 +844,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-2 sm:px-4">
           <div className="flex justify-around items-center h-16">
             <button
-              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('event'))}
-              onClick={() => {
-                setActiveTab('event');
-                setVisitedTabs(prev => new Set(prev).add('event'));
-              }}
+              onClick={() => setActiveTab('event')}
               className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'event' ? 'text-purple-600' : 'text-gray-500'
               }`}
@@ -865,11 +853,7 @@ export default function App() {
               <span className="text-xs">Events</span>
             </button>
             <button
-              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('feed'))}
-              onClick={() => {
-                setActiveTab('feed');
-                setVisitedTabs(prev => new Set(prev).add('feed'));
-              }}
+              onClick={() => setActiveTab('feed')}
               className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'feed' ? 'text-purple-600' : 'text-gray-500'
               }`}
@@ -878,11 +862,7 @@ export default function App() {
               <span className="text-xs">Feed</span>
             </button>
             <button
-              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('live'))}
-              onClick={() => {
-                setActiveTab('live');
-                setVisitedTabs(prev => new Set(prev).add('live'));
-              }}
+              onClick={() => setActiveTab('live')}
               className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors relative ${
                 activeTab === 'live' ? 'text-purple-600' : 'text-gray-500'
               }`}
@@ -896,11 +876,7 @@ export default function App() {
             </button>
 
             <button
-              onMouseEnter={() => setVisitedTabs(prev => new Set(prev).add('profile'))}
-              onClick={() => {
-                setActiveTab('profile');
-                setVisitedTabs(prev => new Set(prev).add('profile'));
-              }}
+              onClick={() => setActiveTab('profile')}
               className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
                 activeTab === 'profile' ? 'text-purple-600' : 'text-gray-500'
               }`}

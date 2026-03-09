@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, Star, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase, getProfile, getOrganizerProfile, upsertOrganizerProfile, uploadImage, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
+import { supabase, getProfile, uploadImage, updateProfile, checkUsernameUnique, becomeOrganizer } from '../utils/supabase/api';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;
@@ -94,26 +94,18 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const org = await getOrganizerProfile(user.id);
       
       const p = await getProfile(user.id);
       
-      if (org) {
-        setOrganizerName(org.organizer_name || p?.full_name || '');
-        setCategory(org.organizer_type || '');
-        setCategorySearch(org.organizer_type || '');
-        setLocation(org.location || '');
-        setBio(org.bio || '');
-        setAvatarUrl(org.organizer_avatar_url || p?.avatar_url || '');
-      } else if (p) {
-        // Pre-fill from user profile if no organizer profile exists
+      if (p) {
         setOrganizerName(p.full_name || '');
+        setUsername(p.username || '');
+        setCategory(p.organizer_type || '');
+        setCategorySearch(p.organizer_type || '');
+        setLocation(p.location || '');
+        setBio(p.bio || '');
         setAvatarUrl(p.avatar_url || '');
-      }
-
-      if (p?.username) {
-        setUsername(p.username);
-        setAvailable(true);
+        if (p.username) setAvailable(true);
       }
     };
     init();
@@ -162,24 +154,32 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
       return;
     }
     try {
-      await upsertOrganizerProfile({
-        id: user.id,
-        organizer_name: organizerName,
-        organizer_type: category,
-        bio,
-        location,
-        organizer_avatar_url: avatarUrl
-      });
       const ok = await checkUsernameUnique(username, user.id);
       if (!ok) {
         toast.error('Username not available');
         return;
       }
-      await updateProfile(user.id, { username });
-      toast.success('Profile saved');
+
+      // Use RPC to become organizer (bypasses RLS restriction on is_organizer column)
+      await becomeOrganizer({
+        full_name: organizerName,
+        username: username,
+        organizer_type: category,
+        location: location,
+        bio: bio,
+        avatar_url: avatarUrl,
+        contact_email: user.email || undefined
+      });
+
+      toast.success('Your Creator profile is ready! 🎉');
+      
+      // Dispatch event to refresh profile across the app
+      window.dispatchEvent(new Event('profileUpdated'));
+      
       onComplete();
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to save profile');
+    } catch (error: any) {
+      console.error('Error saving profile:', error);
+      toast.error(error?.message || 'Failed to save profile');
     }
   };
  
