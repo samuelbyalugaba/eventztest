@@ -85,6 +85,10 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     profileVisibility: 'public',
     showFollowers: true,
     showStats: true,
+    showEmail: false,
+    showPhone: false,
+    allowMessages: true,
+    showActivity: true,
   });
 
   useEffect(() => {
@@ -162,9 +166,6 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
 
           const storedPrivacy = localStorage.getItem('eventz-privacy');
           if (storedPrivacy) setPrivacy(JSON.parse(storedPrivacy));
-
-          const storedNotifications = localStorage.getItem('eventz-notifications');
-          if (storedNotifications) setNotifications(JSON.parse(storedNotifications));
         }
       } catch (error) {
         console.error('Error loading settings:', error);
