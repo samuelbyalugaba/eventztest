@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { EventDetails } from './components/EventDetails';
 import { LiveFeed } from './components/LiveFeed';
 import { Feed } from './components/Feed';
-import { CreateEvent } from './components/CreateEvent';
-import { OrganizerProfileSetup } from './components/OrganizerProfileSetupSimple';
 import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
+import { CreateEventWrapper } from './components/CreateEventWrapper';
+import { PostDetailWrapper } from './components/PostDetailWrapper';
+import { EventDetailWrapper } from './components/EventDetailWrapper';
 import { Calendar, Radio, User, Rss } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { supabase } from './utils/supabase/client';
@@ -22,30 +24,20 @@ import {
   getMutualFollows,
   subscribeToOnlineUsers,
   deleteConversation,
-  deletePost,
-  toggleLikePost,
-  toggleSavePost,
   createPostComment
 } from './utils/supabase/api';
-import { handleShare } from './utils/share';
-import type { Event as AppEvent } from './utils/supabase/api';
 import { Message, Conversation } from './types';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
 
 import { CreatePostModal } from './components/CreatePostModal';
-import { PostDetailPage } from './components/PostDetailPage';
-
-type Tab = 'event' | 'feed' | 'live' | 'create' | 'profile' | 'post';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('event');
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [hasOrganizerProfile, setHasOrganizerProfile] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<AppEvent | null>(null);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
-  const [viewingPost, setViewingPost] = useState<any>(null);
-
   
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -402,6 +394,7 @@ export default function App() {
       await supabase.auth.signOut();
       setCurrentUser(null);
       setIsAuthenticated(false);
+      navigate('/events');
     } catch (err) {
       console.error('Logout error:', err);
     }
@@ -510,6 +503,7 @@ export default function App() {
                 text: realMessage.text,
                 timestamp: 'Just now',
                 isRead: true,
+                isRead: true,
               },
             };
           }
@@ -609,43 +603,19 @@ export default function App() {
     }
   };
 
-  const handleProfileComplete = () => {
-    setIsOrganizer(true);
-    setHasOrganizerProfile(true);
-    setActiveTab('profile'); // Switch to profile tab to see the change
-    
-    // Trigger a profile refresh to ensure everything is in sync
-    window.dispatchEvent(new Event('profileUpdated'));
-    
-    // As a final safety measure, if they are still on this tab, force a small delay then check again
-    setTimeout(() => {
-      window.dispatchEvent(new Event('profileUpdated'));
-    }, 1000);
-  };
-
   const handleCreateEvent = () => {
-    setEditingEvent(null);
-    setActiveTab('create');
+    navigate('/create');
   };
 
   const handleStartOrganizerSetup = () => {
-    setEditingEvent(null);
     setIsOrganizer(false);
     setHasOrganizerProfile(false);
-    setActiveTab('create');
+    navigate('/create');
   };
 
-  const handleEditEvent = (event: AppEvent) => {
-    setEditingEvent(event);
-    setActiveTab('create');
+  const handleEditEvent = (event: any) => {
+    navigate(`/edit-event/${event.id}`);
   };
-
-  const handleBackToDashboard = () => {
-    setEditingEvent(null);
-    setActiveTab('profile');
-  };
-
-
 
   // Show loading screen while checking auth
   if (isCheckingAuth) {
@@ -659,25 +629,11 @@ export default function App() {
     );
   }
 
-  // ALLOW PUBLIC ACCESS: Removed blocking auth check
-  // if (!isAuthenticated) { ... }
-
-  const handleBackToProfile = () => {
-    setActiveTab('profile');
-    // If they cancel setup, we might want to revert isOrganizer state if it was just set locally
-    // But usually once they click "Become Organizer", they are committed or we can leave it
-  };
-
   const handleViewPost = (post: any) => {
-    setViewingPost(post);
-    setActiveTab('post');
-    window.scrollTo(0, 0);
+    navigate(`/post/${post.id}`, { state: { post } });
   };
 
-  const handleBackFromPost = () => {
-    setViewingPost(null);
-    setActiveTab('feed');
-  };
+  const shouldHideBottomNav = location.pathname.startsWith('/create') || location.pathname.startsWith('/edit-event') || location.pathname.startsWith('/post') || location.pathname.startsWith('/event/');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -695,140 +651,94 @@ export default function App() {
       />
       {/* Main Content */}
       <div className="max-w-7xl mx-auto pb-20">
-        {activeTab === 'event' && (
-          <div key="tab-event" className="animate-in fade-in duration-200">
-            <EventDetails 
-              conversations={conversations} 
-              onStartConversation={handleStartConversation} 
-              onSendMessage={handleSendMessage} 
-            />
-          </div>
-        )}
-        {activeTab === 'feed' && (
-          <div key="tab-feed" className="animate-in fade-in duration-200">
-            <Feed 
-              conversations={conversations} 
-              onStartConversation={handleStartConversation} 
-              onSendMessage={handleSendMessage} 
-              onMarkAsRead={handleMarkAsRead} 
-              onlineUsers={onlineFriends} 
-              onDeleteConversation={handleDeleteConversation} 
-              currentUser={currentUser}
-              isOrganizer={isOrganizer}
-              onCreateEvent={() => {
-                handleCreateEvent();
-              }}
-              onViewPost={handleViewPost}
-            />
-          </div>
-        )}
-        {activeTab === 'live' && (
-          <div key="tab-live" className="animate-in fade-in duration-200">
-            <LiveFeed />
-          </div>
-        )}
-        {activeTab === 'create' && (
-          <div key="tab-create" className="animate-in fade-in duration-200">
-            {!isAuthenticated ? (
-               <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
-                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Amazing Events</h2>
-                 <p className="text-gray-600 mb-6">Sign in to start organizing your own events</p>
-                 <AuthScreen onAuthSuccess={handleAuthSuccess} embedded={true} />
-               </div>
-            ) : !isOrganizer ? (
-               <OrganizerProfileSetup 
-                onComplete={handleProfileComplete} 
-                onBack={handleBackToProfile}
-              />
-            ) : !hasOrganizerProfile ? (
-              <OrganizerProfileSetup 
-                onComplete={handleProfileComplete} 
-                onBack={handleBackToProfile}
-              />
-            ) : (
-              <CreateEvent onBack={handleBackToDashboard} event={editingEvent} />
-            )}
-          </div>
-        )}
-        {activeTab === 'profile' && (
-          <div key="tab-profile" className="animate-in fade-in duration-200">
-            {!isAuthenticated ? (
-               <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
-                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Profile</h2>
-                 <p className="text-gray-600 mb-6">Sign in to view your profile and settings</p>
-                 <AuthScreen onAuthSuccess={handleAuthSuccess} embedded={true} />
-               </div>
-            ) : (
-              <Profile 
-                onLogout={handleLogout} 
-                onCreateEvent={handleCreateEvent}
-                onEditEvent={handleEditEvent}
-                onStartOrganizerSetup={handleStartOrganizerSetup}
-                onViewPost={handleViewPost}
-              />
-            )}
-          </div>
-        )}
-        {activeTab === 'post' && viewingPost && (
-          <div key="tab-post" className="animate-in fade-in slide-in-from-right duration-200">
-            <PostDetailPage
-              post={viewingPost}
-              currentUser={currentUser}
-              userProfile={userProfile}
-              onBack={handleBackFromPost}
-              onLike={async (id) => {
-                if (!currentUser) return;
-                try {
-                  await toggleLikePost(id, currentUser.id);
-                } catch (e) { console.error(e); }
-              }}
-              onSave={async (id) => {
-                if (!currentUser) return;
-                try {
-                  await toggleSavePost(id, currentUser.id);
-                } catch (e) { console.error(e); }
-              }}
-              onShare={async (post) => {
-                const shareTitle = `Check out this post from ${post?.user?.name || 'a user'}`;
-                const shareText = post?.content?.text || 'Check out this amazing post on EVENTZ!';
-                await handleShare({
-                  title: shareTitle,
-                  text: shareText,
-                  url: window.location.href,
-                });
-              }}
-              onDelete={async (id) => {
-                try {
-                  await deletePost(id);
-                  toast.success('Post deleted');
-                  handleBackFromPost();
-                } catch (e) {
-                  console.error(e);
-                  toast.error('Failed to delete post');
-                }
-              }}
-              onProfileClick={() => {
-                // If clicking profile from post page, maybe open profile modal?
-                // For now, let's just show a toast or implement basic navigation if needed.
-                // Or better yet, we can't easily switch to another tab with params without more state.
-                // Let's just ignore or implement a basic profile view if we had one.
-              }}
-              onComment={async (postId, text) => {
-                if (!currentUser) return;
-                try {
-                  await createPostComment(postId, currentUser.id, text);
-                  toast.success('Comment posted');
-                } catch (e) {
-                  console.error(e);
-                  toast.error('Failed to post comment');
-                }
-              }}
-            />
-          </div>
-        )}
+        <Routes>
+          <Route path="/" element={<Navigate to="/events" replace />} />
+          <Route path="/events" element={
+             <div className="animate-in fade-in duration-200">
+               <EventDetails 
+                 conversations={conversations} 
+                 onStartConversation={handleStartConversation} 
+                 onSendMessage={handleSendMessage} 
+               />
+             </div>
+          } />
+          <Route path="/feed" element={
+            <div className="animate-in fade-in duration-200">
+               <Feed 
+                 conversations={conversations} 
+                 onStartConversation={handleStartConversation} 
+                 onSendMessage={handleSendMessage} 
+                 onMarkAsRead={handleMarkAsRead} 
+                 onlineUsers={onlineFriends} 
+                 onDeleteConversation={handleDeleteConversation} 
+                 currentUser={currentUser}
+                 isOrganizer={isOrganizer}
+                 onCreateEvent={handleCreateEvent}
+                 onViewPost={handleViewPost}
+               />
+             </div>
+          } />
+          <Route path="/live" element={
+             <div className="animate-in fade-in duration-200">
+               <LiveFeed />
+             </div>
+          } />
+          <Route path="/create" element={
+             <CreateEventWrapper 
+                 currentUser={currentUser} 
+                 isAuthenticated={isAuthenticated} 
+                 onAuthSuccess={handleAuthSuccess}
+             />
+          } />
+          <Route path="/edit-event/:id" element={
+             <CreateEventWrapper 
+                 currentUser={currentUser} 
+                 isAuthenticated={isAuthenticated} 
+                 onAuthSuccess={handleAuthSuccess}
+             />
+          } />
+          <Route path="/profile" element={
+             <div className="animate-in fade-in duration-200">
+               {!isAuthenticated ? (
+                  <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Profile</h2>
+                    <p className="text-gray-600 mb-6">Sign in to view your profile and settings</p>
+                    <AuthScreen onAuthSuccess={handleAuthSuccess} embedded={true} />
+                  </div>
+               ) : (
+                 <Profile 
+                   onLogout={handleLogout} 
+                   onCreateEvent={handleCreateEvent}
+                   onEditEvent={handleEditEvent}
+                   onStartOrganizerSetup={handleStartOrganizerSetup}
+                   onViewPost={handleViewPost}
+                 />
+               )}
+             </div>
+          } />
+          <Route path="/post/:id" element={
+             <PostDetailWrapper 
+                 currentUser={currentUser}
+                 userProfile={userProfile}
+             />
+          } />
+          <Route path="/event/:id" element={
+             <EventDetailWrapper 
+                 onStartConversation={handleStartConversation}
+                 onPurchaseTicket={(event) => {
+                   // Handle purchase logic or navigation if needed
+                   // For now, the modal handles UI, but wrapper props might need to bridge it.
+                   // Actually, EventDetailModal usually handles purchase flow internally or via props.
+                   // Let's pass simple handlers or just log for now if logic is complex to hoist.
+                   console.log('Purchase ticket for', event);
+                 }}
+                 onPurchaseNormalTicket={(event) => {
+                   console.log('Purchase normal ticket for', event);
+                 }}
+             />
+          } />
+        </Routes>
       </div>
-
-
 
       <CreatePostModal
         isOpen={showCreatePostModal}
@@ -838,57 +748,59 @@ export default function App() {
           window.dispatchEvent(new Event('postsUpdated'));
         }}
         isOrganizer={isOrganizer}
-        organizerName={currentUser?.user_metadata?.full_name} // Fallback, usually fetched inside
+        organizerName={currentUser?.user_metadata?.full_name} 
       />
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4">
-          <div className="flex justify-around items-center h-16">
-            <button
-              onClick={() => setActiveTab('event')}
-              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
-                activeTab === 'event' ? 'text-purple-600' : 'text-gray-500'
-              }`}
-            >
-              <Calendar className="w-6 h-6" />
-              <span className="text-xs">Events</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('feed')}
-              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
-                activeTab === 'feed' ? 'text-purple-600' : 'text-gray-500'
-              }`}
-            >
-              <Rss className="w-6 h-6" />
-              <span className="text-xs">Feed</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('live')}
-              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors relative ${
-                activeTab === 'live' ? 'text-purple-600' : 'text-gray-500'
-              }`}
-            >
-              <Radio className="w-6 h-6" />
-              <span className="text-xs">Live</span>
-              {/* Live indicator dot */}
-              {hasLiveEvents && (
-                <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-              )}
-            </button>
+      {!shouldHideBottomNav && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4">
+            <div className="flex justify-around items-center h-16">
+              <Link
+                to="/events"
+                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
+                  location.pathname === '/events' || location.pathname === '/' ? 'text-purple-600' : 'text-gray-500'
+                }`}
+              >
+                <Calendar className="w-6 h-6" />
+                <span className="text-xs">Events</span>
+              </Link>
+              <Link
+                to="/feed"
+                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
+                  location.pathname === '/feed' ? 'text-purple-600' : 'text-gray-500'
+                }`}
+              >
+                <Rss className="w-6 h-6" />
+                <span className="text-xs">Feed</span>
+              </Link>
+              <Link
+                to="/live"
+                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors relative ${
+                  location.pathname === '/live' ? 'text-purple-600' : 'text-gray-500'
+                }`}
+              >
+                <Radio className="w-6 h-6" />
+                <span className="text-xs">Live</span>
+                {/* Live indicator dot */}
+                {hasLiveEvents && (
+                  <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                )}
+              </Link>
 
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
-                activeTab === 'profile' ? 'text-purple-600' : 'text-gray-500'
-              }`}
-            >
-              <User className="w-6 h-6" />
-              <span className="text-xs">Profile</span>
-            </button>
+              <Link
+                to="/profile"
+                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
+                  location.pathname === '/profile' ? 'text-purple-600' : 'text-gray-500'
+                }`}
+              >
+                <User className="w-6 h-6" />
+                <span className="text-xs">Profile</span>
+              </Link>
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+      )}
     </div>
   );
 }

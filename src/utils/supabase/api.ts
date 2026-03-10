@@ -1278,6 +1278,51 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
   })) as ApiPost[];
 };
 
+export const getPostById = async (postId: number, currentUserId?: string) => {
+  const { data: post, error } = await supabase
+    .from('posts')
+    .select(`
+      *,
+      user:profiles(*),
+      event:events(*),
+      likes:post_likes(count),
+      comments:post_comments(count)
+    `)
+    .eq('id', postId)
+    .single();
+
+  if (error) throw error;
+
+  let isLiked = false;
+  let isSaved = false;
+
+  if (currentUserId) {
+    const { data: like } = await supabase
+      .from('post_likes')
+      .select('post_id')
+      .eq('post_id', postId)
+      .eq('user_id', currentUserId)
+      .maybeSingle();
+    isLiked = !!like;
+
+    const { data: saved } = await supabase
+      .from('saved_posts')
+      .select('post_id')
+      .eq('post_id', postId)
+      .eq('user_id', currentUserId)
+      .maybeSingle();
+    isSaved = !!saved;
+  }
+
+  return {
+    ...post,
+    likes_count: post.likes?.[0]?.count || 0,
+    comments_count: post.comments?.[0]?.count || 0,
+    is_liked: isLiked,
+    is_saved: isSaved
+  };
+};
+
 export const deletePost = async (postId: number) => {
   // 1. Fetch post to get image URLs
   const { data: post } = await supabase

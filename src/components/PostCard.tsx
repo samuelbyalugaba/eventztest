@@ -337,7 +337,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
         <div className="mb-3 px-1">
           <p 
             className={`text-gray-800 text-[15px] leading-relaxed transition-all cursor-pointer ${isExpanded ? '' : 'line-clamp-3'}`}
-            onClick={onViewPost}
+            onClick={(e) => { e.stopPropagation(); onViewPost?.(); }}
           >
             {post.content.text}
           </p>
@@ -355,7 +355,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
       {/* 3. MEDIA CONTENT */}
       <div 
         className="relative overflow-hidden group rounded-2xl bg-gray-50 cursor-pointer"
-        onClick={onViewPost}
+        onClick={(e) => { e.stopPropagation(); onViewPost?.(); }}
       >
         {isCarousel ? (
           <div onDoubleClick={handleDoubleTap}>
@@ -500,7 +500,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
         </button>
 
         <button 
-          onClick={onViewPost}
+          onClick={(e) => { e.stopPropagation(); onViewPost?.(); }}
           className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
         >
           <CommentIcon className="w-5 h-5" color="#4b5563" />

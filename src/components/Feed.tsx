@@ -401,10 +401,13 @@ export function Feed({
   const sharePost = async (post: Post, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
+    // Construct deep link URL
+    const postUrl = `${window.location.origin}/post/${post.id}`;
+    
     const shared = await handleShare({
       title: `Check out this post from ${post.user.name}`,
       text: post.content.text || 'Check out this amazing post on EVENTZ!',
-      url: window.location.href,
+      url: postUrl,
     });
     
     // If native share not available, show custom modal
@@ -412,7 +415,7 @@ export function Feed({
       setShareModalData({
         title: `Post from ${post.user.name}`,
         text: post.content.text || 'Check out this amazing post on EVENTZ!',
-        url: window.location.href,
+        url: postUrl,
       });
       setShowShareModal(true);
     }
@@ -564,6 +567,13 @@ export function Feed({
   const totalToRender = Math.min(filteredPosts.length, renderCount);
 
 
+  const handlePostClick = (post: Post) => {
+    // Navigate to post detail view
+    if (onViewPost) {
+      onViewPost(post);
+    }
+  };
+
   return (
     <>
       {/* Main Feed View */}
@@ -693,7 +703,7 @@ export function Feed({
                     onMessage={(user) => handleStartConversationLocal(user)}
                     isFollowed={followingIds.has(post.user.id)}
                     audioUnlocked={audioUnlocked}
-                    onViewPost={() => onViewPost?.(post)}
+                    onViewPost={() => handlePostClick(post)}
                   />
                 </div>
               ))}

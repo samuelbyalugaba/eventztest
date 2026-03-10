@@ -25,6 +25,8 @@ const locations = [
   { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
 ];
 
+import { useNavigate } from 'react-router-dom';
+
 interface EventDetailsProps {
   conversations: Conversation[];
   onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
@@ -32,6 +34,7 @@ interface EventDetailsProps {
 }
 
 export function EventDetails({ conversations: globalConversations, onStartConversation, onSendMessage }: EventDetailsProps) {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'home' | 'list'>('home');
   
   // Initialize state directly from store
@@ -99,26 +102,35 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
-  const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
-  const [eventPosts, setEventPosts] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (selectedEvent) {
-      incrementEventView(selectedEvent.id);
-      const loadEventPosts = async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            const posts = await getPosts({ currentUserId: user?.id, eventId: selectedEvent.id });
-            setEventPosts(posts || []);
-        } catch (err) {
-            console.error('Error loading event posts:', err);
-        }
-      };
-      loadEventPosts();
-    } else {
-        setEventPosts([]);
-    }
-  }, [selectedEvent]);
+  const handleEventClick = (event: ApiEvent) => {
+    // Navigate to event details route if using router, 
+    // but here we are using a modal.
+    // If we want deep linking support for modal, we can push state to URL.
+    // However, the requirement is "URL-Based Navigation".
+    // So we should probably navigate to /event/:id
+    
+    // But wait, the current architecture uses EventDetailModal within this component.
+    // If we navigate to /event/:id, we need a route for it.
+    // The previous prompt's TODO list said "Investigate EventDetails component to ensure event clicks navigate to /event/:id".
+    
+    // So we should replace setSelectedEvent with navigation.
+    // But we also need to ensure /event/:id renders something.
+    // Currently App.tsx does NOT have a /event/:id route.
+    // I should add that route first or handle it here.
+    
+    // Let's assume we want to keep the modal experience but update the URL?
+    // Or full page navigation?
+    // "Turn the page into URL-Based Navigation" implies full page or at least URL reflects state.
+    
+    // If I just navigate, I need to create the route in App.tsx.
+    // Let's create the route first.
+    
+    // Actually, I can just navigate to /event/:id and let App.tsx handle it.
+    // But App.tsx doesn't have it yet.
+    // I will add the route in App.tsx in the next step.
+    // For now, let's update this handler.
+    navigate(`/event/${event.id}`);
+  };
 
   const [showFilters, setShowFilters] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
@@ -214,6 +226,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     location.name.toLowerCase().includes(locationSearch.toLowerCase())
   );
 
+  const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
+
   // Photos & Videos Viewer Data
   const photosForViewer = [
     ...(selectedEvent?.event_highlights?.filter(h => h.mediaType === 'image').map((highlight, _index) => ({
@@ -221,17 +235,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       url: highlight.image!,
       eventName: selectedEvent?.title || '',
     })) || []),
-    ...eventPosts.filter(p => p.image_urls && p.image_urls.length > 0).flatMap((post) => 
-      post.image_urls.map((url: string, imgIndex: number) => ({
-        id: post.id * 1000 + imgIndex,
-        url: url,
-        likes: post.likes_count || 0,
-        eventName: selectedEvent?.title || '',
-        isPost: true,
-        postId: post.id,
-        isLiked: post.is_liked || false
-      }))
-    )
   ];
 
   const videosForViewer = [
@@ -241,18 +244,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       videoUrl: highlight.video || '',
       eventName: selectedEvent?.title || '',
     })) || []),
-    ...eventPosts.filter(p => p.video_url).map((post, _index) => ({
-      id: 2000 + post.id,
-      thumbnail: post.image_urls?.[0] || '',
-      duration: post.duration || '0:00',
-      views: post.views || 0,
-      likes: post.likes_count || 0,
-      videoUrl: post.video_url,
-      eventName: selectedEvent?.title || '',
-      isPost: true,
-      postId: post.id,
-      isLiked: post.is_liked || false
-    }))
   ];
 
   
@@ -333,7 +324,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               {/* NO SKELETON LOADING - Only render content if available */}
               {featuredEvents.length > 0 ? (
                 featuredEvents.map((event) => (
-                  <div key={event.id} className="flex-[0_0_100%] min-w-0 relative h-[45vh]" onClick={() => setSelectedEvent(event)}>
+                  <div key={event.id} className="flex-[0_0_100%] min-w-0 relative h-[45vh]" onClick={() => handleEventClick(event)}>
                     <ImageWithFallback 
                       src={event.image_url} 
                       alt={event.title}
@@ -430,7 +421,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   <EventCard
                     key={event.id}
                     event={event}
-                    onClick={setSelectedEvent}
+                    onClick={handleEventClick}
                   />
                 ))}
               </div>
@@ -574,7 +565,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 <EventCard
                   key={event.id}
                   event={event}
-                  onClick={setSelectedEvent}
+                  onClick={handleEventClick}
                 />
               ))}
             </div>
@@ -600,7 +591,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                <EventCard
                  key={event.id}
                  event={event}
-                 onClick={setSelectedEvent}
+                 onClick={handleEventClick}
                />
              ))}
            </div>
@@ -722,7 +713,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         <PremiumSearchModal
           onClose={() => setShowSearchModal(false)}
           events={events}
-                    onEventSelect={(event: ApiEvent) => setSelectedEvent(event)}
+                    onEventSelect={(event: ApiEvent) => handleEventClick(event)}
           onPersonSelect={(person) => setSelectedUser(person)}
         />
       )}

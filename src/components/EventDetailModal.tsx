@@ -160,10 +160,13 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
   // Share function - uses native share API or fallback modal
   const handleShareEvent = async () => {
+    // Construct deep link URL
+    const eventUrl = `${window.location.origin}/event/${event.id}`;
+
     const shared = await handleShare({
       title: event.title,
       text: `${event.date} at ${event.location}\nPrice: ${event.price_range}`,
-      url: window.location.href,
+      url: eventUrl,
     });
     
     // If native share not available, show custom modal
@@ -582,7 +585,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
         onClose={() => setShowShareModal(false)}
         title={event.title}
         text={`${event.date} at ${event.location}\nPrice: ${event.price_range}`}
-        url={window.location.href}
+        url={`${window.location.origin}/event/${event.id}`}
       />
     </div>
   );
