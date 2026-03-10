@@ -23,7 +23,25 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
   
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleThumbnailSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setThumbnailFile(file);
+      setThumbnailPreview(URL.createObjectURL(file));
+      
+      // Upload immediately for preview URL usage
+      try {
+        const url = await uploadImage(file, 'event-covers');
+        setImageUrl(url);
+      } catch (error) {
+        console.error('Thumbnail upload failed:', error);
+        toast.error('Failed to upload thumbnail');
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
