@@ -316,110 +316,111 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
       {/* Header Section */}
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
              <button onClick={onClose} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
                <ChevronLeft className="w-6 h-6 text-gray-900" />
              </button>
              
-             <div className="w-16 h-16">
+             <div className="w-10 h-10 flex-shrink-0">
                 {displayData.avatar ? (
                   <ImageWithFallback
                     src={displayData.avatar}
                     alt={displayData.name}
-                    className="w-full h-full object-cover rounded-2xl ring-2 ring-gray-100 cursor-pointer hover:ring-purple-200 transition-all"
+                    className="w-full h-full object-cover rounded-full ring-1 ring-gray-100 cursor-pointer hover:ring-purple-200 transition-all"
                   />
                 ) : (
                   <UserAvatar 
                     name={displayData.name} 
-                    className="w-full h-full text-xl rounded-2xl" 
+                    className="w-full h-full text-sm rounded-full" 
                   />
                 )}
              </div>
 
              <div className="flex-1 min-w-0">
-                 <h1 className="text-xl font-semibold text-gray-900 leading-tight">
+                 <h1 className="text-lg font-bold text-gray-900 leading-tight truncate">
                    {displayData.name}
                  </h1>
-                 <p className="text-gray-500 font-medium text-xs flex items-center gap-1">
+                 <p className="text-gray-500 font-medium text-[10px] flex items-center gap-1">
                    @{displayData.username}
                  </p>
              </div>
           </div>
 
-          <div className="flex flex-col gap-2 items-center">
+          <div className="flex items-center gap-1">
              <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
                 <Share2 className="w-5 h-5" />
              </button>
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div className="flex items-center justify-between px-4 mb-8">
-            <div 
-              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg active:scale-95"
-              onClick={handleShowEvents}
-            >
-              <div className="text-xl font-bold text-gray-900 mb-1">
-                  {isOrganizerView ? (stats?.totalEvents || 0) : attendedEvents.length}
-              </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
-                  {isOrganizerView ? 'Hosted' : 'Attended'}
-              </div>
-            </div>
-            <div 
-              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg active:scale-95"
-              onClick={handleShowFollowers}
-            >
-              <div className="text-xl font-bold text-gray-900 mb-1">
-                  {followStats.followers}
-              </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
-                  Followers
-              </div>
-            </div>
-            <div 
-              className="text-center flex-1 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg active:scale-95"
-              onClick={handleShowFollowing}
-            >
-              <div className="text-xl font-bold text-gray-900 mb-1">
-                  {followStats.following}
-              </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
-                  Following
-              </div>
-            </div>
-        </div>
+        {/* Profile Info Section */}
+        <div className="px-1 mb-6">
+             <div className="flex justify-between items-center mb-6">
+                <div 
+                  className="text-center cursor-pointer active:scale-95 transition-transform flex-1"
+                  onClick={handleShowEvents}
+                >
+                  <div className="text-lg font-bold text-gray-900 leading-none">
+                      {isOrganizerView ? (stats?.totalEvents || 0) : attendedEvents.length}
+                  </div>
+                  <div className="text-[10px] text-gray-500 font-medium mt-1 uppercase tracking-wider">
+                      {isOrganizerView ? 'Hosted' : 'Attended'}
+                  </div>
+                </div>
+                <div 
+                  className="text-center cursor-pointer active:scale-95 transition-transform flex-1"
+                  onClick={handleShowFollowers}
+                >
+                  <div className="text-lg font-bold text-gray-900 leading-none">
+                      {followStats.followers}
+                  </div>
+                  <div className="text-[10px] text-gray-500 font-medium mt-1 uppercase tracking-wider">
+                      Followers
+                  </div>
+                </div>
+                <div 
+                  className="text-center cursor-pointer active:scale-95 transition-transform flex-1"
+                  onClick={handleShowFollowing}
+                >
+                  <div className="text-lg font-bold text-gray-900 leading-none">
+                      {followStats.following}
+                  </div>
+                  <div className="text-[10px] text-gray-500 font-medium mt-1 uppercase tracking-wider">
+                      Following
+                  </div>
+                </div>
+             </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2 mb-6">
-          <button 
-            className={`flex-1 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                isFollowing 
-                ? 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                : 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm'
-            }`}
-            onClick={handleFollow}
-          >
-            {isFollowing ? 'Following' : 'Follow'}
-          </button>
-          <button 
-            className="flex-1 py-2 bg-gray-50 text-gray-900 border border-gray-100 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-all active:scale-95"
-            onClick={onMessage}
-          >
-            Message
-          </button>
+             <div className="flex gap-2">
+                <button 
+                  className={`flex-1 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                      isFollowing 
+                      ? 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                      : 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm'
+                  }`}
+                  onClick={handleFollow}
+                >
+                  {isFollowing ? 'Following' : 'Follow'}
+                </button>
+                <button 
+                  className="flex-1 py-2 bg-gray-50 text-gray-900 border border-gray-100 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-all active:scale-95"
+                  onClick={onMessage}
+                >
+                  Message
+                </button>
+             </div>
         </div>
 
         {/* Bio & Location */}
         {(displayData.bio || displayData.location) && (
-            <div className="mb-6">
+            <div className="mb-6 px-1">
                {displayData.bio && (
-                 <p className="text-sm text-gray-600 leading-relaxed line-clamp-3 mb-2">
+                 <p className="text-sm text-gray-700 leading-relaxed line-clamp-3 mb-2">
                    {displayData.bio}
                  </p>
                )}
                {displayData.location && (
-                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
                    <MapPin className="w-3.5 h-3.5" />
                    <span>{displayData.location}</span>
                  </div>
@@ -428,41 +429,41 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-gray-100">
+        <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setActiveTab('posts')}
-              className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 whitespace-nowrap border-b-2 ${
+              className={`flex-1 min-w-[80px] py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
                 activeTab === 'posts'
-                ? 'border-gray-900 text-gray-900'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <LayoutGrid className="w-4 h-4" />
+              <LayoutGrid className="w-3.5 h-3.5" />
               Posts
             </button>
 
             {isOrganizerView ? (
               <button
                 onClick={() => setActiveTab('upcoming')}
-                className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 whitespace-nowrap border-b-2 ${
+                className={`flex-1 min-w-[80px] py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
                   activeTab === 'upcoming'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-3.5 h-3.5" />
                 Upcoming
               </button>
             ) : (
                <button
                 onClick={() => setActiveTab('attended')}
-                className={`flex-1 min-w-[80px] py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 whitespace-nowrap border-b-2 ${
+                className={`flex-1 min-w-[80px] py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
                   activeTab === 'attended'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-3.5 h-3.5" />
                 Attended
               </button>
             )}
@@ -471,11 +472,11 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         {/* Tab Content */}
         <div className="pb-20">
             {activeTab === 'posts' && (
-                <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
+                <div className="grid grid-cols-3 gap-0.5 animate-in fade-in zoom-in duration-300">
                     {userPosts.map((post) => (
                         <div 
                           key={post.id} 
-                          className="aspect-square bg-gray-100 relative overflow-hidden group cursor-pointer"
+                          className="aspect-[4/5] bg-gray-100 relative overflow-hidden group cursor-pointer"
                           onClick={() => {
                             if (onViewPost) {
                               onViewPost(post);
