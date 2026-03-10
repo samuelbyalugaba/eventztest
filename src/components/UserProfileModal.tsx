@@ -21,7 +21,6 @@ import {
   supabase, 
   toggleLikePost,
   toggleSavePost,
-  createPostComment,
    deletePost,
    getPostComments,
    incrementPostView,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star } from 'lucide-react';
+import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { TicketViewer } from './TicketViewer';
@@ -16,7 +16,7 @@ import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
-import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle } from "./ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
 
@@ -567,57 +567,69 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                   <Menu className="w-8 h-8" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <SheetHeader>
-                  <SheetTitle>Menu</SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col gap-2 mt-6">
+              <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 bg-white border-l border-gray-100">
+                {/* Header with User Info */}
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden ring-1 ring-gray-100">
+                       {profileImage ? (
+                         <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
+                       ) : (
+                         <UserAvatar name={displayName} className="w-full h-full text-sm" />
+                       )}
+                     </div>
+                     <div>
+                       <h3 className="font-bold text-gray-900 text-sm leading-tight">{displayName}</h3>
+                       <p className="text-gray-500 text-xs">@{userProfile?.username || 'user'}</p>
+                     </div>
+                  </div>
+                </div>
+
+                {/* Menu Items */}
+                <div className="py-2">
                   <button 
-                    onClick={() => {
-                      setShowWalletModal(true);
-                      setIsSidebarOpen(false);
-                    }}
-                    className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-xl transition-colors w-full text-left text-gray-700"
+                    onClick={() => { setShowWalletModal(true); setIsSidebarOpen(false); }}
+                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
                   >
-                    <Wallet className="w-5 h-5" />
-                    <span className="font-medium">Wallet</span>
+                    <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
+                      <Wallet className="w-5 h-5 stroke-[1.5]" />
+                      <span className="font-medium text-[15px]">Wallet</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                   </button>
                   
                   {isOrganizer && (
                     <button 
-                      onClick={() => {
-                        setShowProfessionalDashboard(true);
-                        setIsSidebarOpen(false);
-                      }}
-                      className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-xl transition-colors w-full text-left text-gray-700"
+                      onClick={() => { setShowProfessionalDashboard(true); setIsSidebarOpen(false); }}
+                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
                     >
-                      <BarChart3 className="w-5 h-5" />
-                      <span className="font-medium">Professional Dashboard</span>
+                      <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
+                        <BarChart3 className="w-5 h-5 stroke-[1.5]" />
+                        <span className="font-medium text-[15px]">Professional Dashboard</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                     </button>
                   )}
                   
                   <button 
-                    onClick={() => {
-                      setSettingsInitialView('main');
-                      setShowSettingsModal(true);
-                      setIsSidebarOpen(false);
-                    }}
-                    className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-xl transition-colors w-full text-left text-gray-700"
+                    onClick={() => { setSettingsInitialView('main'); setShowSettingsModal(true); setIsSidebarOpen(false); }}
+                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
                   >
-                    <Settings className="w-5 h-5" />
-                    <span className="font-medium">Settings</span>
+                    <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
+                      <Settings className="w-5 h-5 stroke-[1.5]" />
+                      <span className="font-medium text-[15px]">Settings</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                   </button>
                   
-                  <div className="h-px bg-gray-100 my-2" />
+                  <div className="my-2 border-t border-gray-50" />
                   
                   <button 
-                    onClick={() => {
-                      onLogout?.().then(() => toast.success("Logged out"));
-                    }}
-                    className="flex items-center gap-3 p-3 hover:bg-red-50 text-red-600 rounded-xl transition-colors w-full text-left"
+                    onClick={() => { onLogout?.().then(() => toast.success("Logged out")); }}
+                    className="w-full flex items-center gap-3 px-6 py-4 text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    <LogOut className="w-5 h-5" />
-                    <span className="font-medium">Logout</span>
+                    <LogOut className="w-5 h-5 stroke-[1.5]" />
+                    <span className="font-medium text-[15px]">Log out</span>
                   </button>
                 </div>
               </SheetContent>
