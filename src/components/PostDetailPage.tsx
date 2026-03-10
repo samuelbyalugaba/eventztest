@@ -405,7 +405,12 @@ export function PostDetailPage({
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-gray-900 text-xs font-bold">{comment.user.name}</span>
+                      <span className="text-gray-900 text-xs font-bold flex items-center gap-1">
+                        {comment.user.name}
+                        {comment.user.is_organizer && (
+                          <Star className="w-3 h-3 text-purple-600 fill-purple-600" />
+                        )}
+                      </span>
                       <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
                     </div>
                     <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>

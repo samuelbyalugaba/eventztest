@@ -182,7 +182,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
             id: c.id,
             user: {
               name: c.user?.full_name || c.user?.username || 'User',
-              avatar: c.user?.avatar_url || ''
+              avatar: c.user?.avatar_url || '',
+              isOrganizer: c.user?.is_organizer
             },
             text: c.text,
             timestamp: formatTimeAgo(c.created_at)
@@ -336,8 +337,11 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
              </div>
 
              <div className="flex-1 min-w-0">
-                 <h1 className="text-lg font-bold text-gray-900 leading-tight truncate">
+                 <h1 className="text-lg font-bold text-gray-900 leading-tight truncate flex items-center gap-1.5">
                    {displayData.name}
+                   {isOrganizerView && (
+                     <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
+                   )}
                  </h1>
                  <p className="text-gray-500 font-medium text-[10px] flex items-center gap-1">
                    @{displayData.username}

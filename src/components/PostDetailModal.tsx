@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
-  Star, MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX
+  Star, MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX, Flag
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';

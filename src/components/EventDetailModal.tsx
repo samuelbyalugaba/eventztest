@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, Star, Bell, Ticket, ChevronLeft } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles } from 'lucide-react';
 import { UserProfileModal } from './UserProfileModal';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
@@ -209,7 +209,9 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               onClick={() => setShowOrganizerProfile(true)}
               className="absolute top-4 left-16 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg z-20 hover:bg-white transition-all cursor-pointer group"
             >
-              <p className="text-gray-900 text-sm group-hover:text-[#8A2BE2] transition-colors">by {organizerDisplayName}</p>
+              <p className="text-gray-900 text-sm group-hover:text-[#8A2BE2] transition-colors">
+                by {organizerDisplayName}
+              </p>
             </button>
           )}
           
@@ -505,7 +507,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                        <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                        <Sparkles className="w-5 h-5 text-yellow-400" />
                       </div>
                       <div className="text-left">
                         <p className="text-white font-medium">VIP Experience</p>
