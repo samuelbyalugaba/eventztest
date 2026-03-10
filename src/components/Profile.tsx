@@ -750,11 +750,11 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           !isLoading && (
             <div 
                 onClick={onStartOrganizerSetup}
-                className="mb-8 bg-gray-50 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
+                className="mb-8 bg-gray-50 rounded-2xl p-3 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
             >
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#8A2BE2]">
-                        <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#8A2BE2]">
+                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                     </div>
                     <div>
                         <h3 className="text-gray-900 font-bold text-sm">
@@ -766,7 +766,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                     </div>
                 </div>
                 <div className="text-gray-400">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                 </div>
@@ -774,9 +774,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           )
         )
       ) : (
-        <div className="flex gap-3 mb-8">
+        <div className="flex gap-2 mb-6">
           <button 
-            className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors"
+            className={`flex-1 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 ${
+               isFollowing 
+               ? 'bg-gray-100 text-gray-900 hover:bg-gray-200' 
+               : 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm'
+            }`}
             onClick={() => {
                setIsFollowing(!isFollowing);
                toast.success(isFollowing ? 'Unfollowed' : 'Followed');
@@ -785,7 +789,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             {isFollowing ? 'Following' : 'Follow'}
           </button>
           <button 
-            className="flex-1 py-3 bg-gray-100 text-gray-900 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
+            className="flex-1 py-2 bg-gray-50 text-gray-900 border border-gray-100 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-all active:scale-95"
             onClick={() => {
               // Handle message
               toast.info('Message feature coming soon');

@@ -298,7 +298,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
     name: profile?.full_name || user.name || 'User',
     avatar: profile?.avatar_url || user.avatar,
     // Removed cover photo usage
-    bio: profile?.bio || profile?.description || user.bio || 'No bio available',
+    bio: profile?.bio || profile?.description || user.bio,
     location: profile?.location || 'Tanzania',
     verified: isOrganizerView ? false : (profile?.verified ?? user.verified),
     username: profile?.username?.replace(/^@/, '') || 'user'
@@ -321,17 +321,17 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
                <ChevronLeft className="w-6 h-6 text-gray-900" />
              </button>
              
-             <div className="w-20 h-20 rounded-full overflow-hidden bg-white ring-1 ring-gray-200">
+             <div className="w-16 h-16">
                 {displayData.avatar ? (
                   <ImageWithFallback
                     src={displayData.avatar}
                     alt={displayData.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-2xl ring-2 ring-gray-100 cursor-pointer hover:ring-purple-200 transition-all"
                   />
                 ) : (
                   <UserAvatar 
                     name={displayData.name} 
-                    className="w-full h-full text-2xl" 
+                    className="w-full h-full text-xl rounded-2xl" 
                   />
                 )}
              </div>
@@ -391,19 +391,19 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 mb-8">
+        <div className="flex gap-2 mb-6">
           <button 
-            className={`flex-1 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${
+            className={`flex-1 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 ${
                 isFollowing 
                 ? 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                : 'bg-purple-600 text-white hover:bg-purple-700'
+                : 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm'
             }`}
             onClick={handleFollow}
           >
             {isFollowing ? 'Following' : 'Follow'}
           </button>
           <button 
-            className="flex-1 py-3 bg-gray-100 text-gray-900 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
+            className="flex-1 py-2 bg-gray-50 text-gray-900 border border-gray-100 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-all active:scale-95"
             onClick={onMessage}
           >
             Message

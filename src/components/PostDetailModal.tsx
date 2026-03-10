@@ -299,7 +299,7 @@ export function PostDetailModal({
               <UserAvatar
                 src={post.user.avatar}
                 name={post.user.name}
-                className="w-14 h-14 rounded-2xl object-cover ring-4 ring-purple-100 cursor-pointer hover:ring-purple-300 transition-all"
+                className="w-10 h-10 rounded-xl object-cover cursor-pointer hover:opacity-80 transition-all"
                 onClick={(e) => onProfileClick(post.user, e)}
               />
               <div>
