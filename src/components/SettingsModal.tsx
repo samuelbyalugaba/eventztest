@@ -1,7 +1,8 @@
-import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar, Search, ChevronDown } from 'lucide-react';
+import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique, uploadImage } from '../utils/supabase/api';
+import { Sheet, SheetContent, SheetClose } from "./ui/sheet";
 
 type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
 
@@ -13,6 +14,15 @@ interface SettingsModalProps {
 
 export function SettingsModal({ onClose, onLogout, initialView = 'main' }: SettingsModalProps) {
   const [currentView, setCurrentView] = useState<SettingsView>(initialView);
+  const [isOpen, setIsOpen] = useState(true);
+
+  // Helper to handle closing via sheet
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setTimeout(onClose, 300); // Give time for animation
+    }
+  };
   
   // Profile state
   const [profileData, setProfileData] = useState({
@@ -71,22 +81,10 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
 
 
 
-  // Privacy state
   const [privacy, setPrivacy] = useState({
     profileVisibility: 'public',
-    showEmail: false,
-    showPhone: false,
-    allowMessages: true,
-    showActivity: true,
-  });
-
-  // Notification state
-  const [notifications, setNotifications] = useState({
-    ticketSales: true,
-    streamAlerts: true,
-    weeklyReport: false,
-    marketingEmails: false,
-    newFollowers: true,
+    showFollowers: true,
+    showStats: true,
   });
 
   useEffect(() => {
@@ -252,127 +250,107 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     }
   };
 
-  const handleLogout = async () => {
-    onClose();
-    try {
-      await onLogout();
-      toast.success('Logged out successfully! 👋');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Failed to log out. Please try again.');
-    }
-  };
-
-  const menuItems = [
-    {
-      icon: User,
-      label: 'Edit Profile',
-      description: 'Update your personal information',
-      onClick: () => setCurrentView('profile'),
-    },
-
-    {
-      icon: Shield,
-      label: 'Privacy & Security',
-      description: 'Control your privacy settings',
-      onClick: () => setCurrentView('privacy'),
-    },
-    {
-      icon: HelpCircle,
-      label: 'Help & Support',
-      description: 'Get help with your account',
-      onClick: () => setCurrentView('help'),
-    },
-  ];
-
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      onClick={onClose}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-      
-      {/* Modal Content */}
-      <div 
-        className="relative w-full max-w-2xl bg-white rounded-t-3xl shadow-2xl overflow-hidden"
-        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="relative px-6 pt-6 pb-4 border-b border-gray-100">
-          {/* Drag Indicator */}
-          <div className="flex justify-center mb-4">
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {currentView !== 'main' && (
-                <button 
-                  onClick={() => setCurrentView('main')}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-600 rotate-180" />
-                </button>
-              )}
-              <h2 className="text-gray-900 text-xl">
-                {currentView === 'main' && 'Settings'}
-                {currentView === 'profile' && 'Edit Profile'}
-
-                {currentView === 'privacy' && 'Privacy & Security'}
-                {currentView === 'help' && 'Help & Support'}
-              </h2>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="w-[100vw] sm:w-[450px] p-0 overflow-y-auto bg-white border-l border-gray-100">
+        <div className="flex flex-col h-full bg-white">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xl border-b border-gray-100 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {currentView !== 'main' && (
+                  <button 
+                    onClick={() => setCurrentView('main')}
+                    className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <ChevronRight className="w-6 h-6 text-gray-900 rotate-180" />
+                  </button>
+                )}
+                <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+                  {currentView === 'main' ? 'Settings' : 
+                   currentView === 'profile' ? 'Edit Profile' :
+                   currentView === 'privacy' ? 'Privacy' : 'Help & Support'}
+                </h2>
+              </div>
+              <SheetClose className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X className="w-6 h-6 text-gray-900" />
+              </SheetClose>
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-600" />
-            </button>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="px-6 py-6 max-h-[70vh] overflow-y-auto">
-          {/* Main Menu */}
-          {currentView === 'main' && (
-            <>
-              <div className="space-y-2">
-                {menuItems.map((item, index) => (
-                  <button
-                    key={index}
-                    onClick={item.onClick}
-                    className="w-full p-4 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 hover:border-purple-200 transition-all group"
+          <div className="flex-1 p-6">
+            {/* Main Menu View */}
+            {currentView === 'main' && (
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <button 
+                    onClick={() => setCurrentView('profile')}
+                    className="w-full p-4 bg-white border border-gray-100 rounded-2xl hover:border-purple-200 hover:shadow-md transition-all group text-left"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-                        <item.icon className="w-5 h-5 text-gray-600 group-hover:text-purple-600 transition-colors" />
+                      <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <User className="w-6 h-6 text-purple-600" />
                       </div>
-                      <div className="flex-1 text-left">
-                        <p className="text-gray-900 text-sm font-medium">{item.label}</p>
-                        <p className="text-gray-500 text-xs">{item.description}</p>
+                      <div className="flex-1">
+                        <p className="text-gray-900 font-bold text-base">Edit Profile</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Update your personal information</p>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
                     </div>
                   </button>
-                ))}
+
+                  <button 
+                    onClick={() => setCurrentView('privacy')}
+                    className="w-full p-4 bg-white border border-gray-100 rounded-2xl hover:border-purple-200 hover:shadow-md transition-all group text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Shield className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-gray-900 font-bold text-base">Privacy & Security</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Control your privacy settings</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => setCurrentView('help')}
+                    className="w-full p-4 bg-white border border-gray-100 rounded-2xl hover:border-purple-200 hover:shadow-md transition-all group text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <HelpCircle className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-gray-900 font-bold text-base">Help & Support</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Get help with your account</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </button>
+                </div>
+
+                <div className="pt-6 border-t border-gray-100">
+                  <button 
+                    onClick={() => {
+                      onLogout().then(() => {
+                        toast.success("Logged out successfully");
+                        handleOpenChange(false);
+                      });
+                    }}
+                    className="w-full p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl hover:bg-red-100 transition-all flex items-center justify-center gap-2 font-bold active:scale-[0.98]"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span>Log Out</span>
+                  </button>
+                  <p className="text-center text-gray-400 text-xs mt-6 font-medium">
+                    EVENTZ v1.0.0 • Made with ❤️ in Tanzania
+                  </p>
+                </div>
               </div>
-
-              {/* Logout Button */}
-              <button 
-                onClick={handleLogout}
-                className="w-full mt-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-2 group"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-medium">Log Out</span>
-              </button>
-
-              {/* App Version */}
-              <p className="text-center text-gray-400 text-xs mt-6">
-                EVENTZ v1.0.0 • Made with ❤️ in Tanzania
-              </p>
-            </>
-          )}
+            )}
 
           {/* Edit Profile View */}
           {currentView === 'profile' && (
@@ -721,8 +699,9 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
               </div>
             </div>
           )}
+          </div>
         </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

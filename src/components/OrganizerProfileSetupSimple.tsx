@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, Star, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase, getProfile, uploadImage, updateProfile, checkUsernameUnique, becomeOrganizer } from '../utils/supabase/api';
+import { supabase, getProfile, uploadImage, checkUsernameUnique, becomeOrganizer } from '../utils/supabase/api';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;

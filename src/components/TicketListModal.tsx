@@ -1,4 +1,4 @@
-import { X, Ticket as TicketIcon, Calendar, MapPin, ChevronRight, QrCode } from 'lucide-react';
+import { X, Ticket as TicketIcon, Calendar, MapPin, ChevronRight } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Ticket } from '../utils/supabase/api';
 
@@ -64,7 +64,7 @@ export function TicketListModal({ isOpen, eventName, tickets, onClose, onSelectT
 
         {/* Tickets List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {tickets.map((ticket, index) => (
+          {tickets.map((ticket) => (
             <button
               key={ticket.id}
               onClick={() => onSelectTicket(ticket)}

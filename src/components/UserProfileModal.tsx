@@ -4,7 +4,7 @@ import { UserAvatar } from './UserAvatar';
 import { EventDetailModal } from './EventDetailModal';
 import { PostDetailModal } from './PostDetailModal';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
-import { X, MapPin, Calendar, Users, CheckCircle2, Star, Share2, Heart, Video, Play, MessageCircle, ChevronLeft, Image as ImageIcon, LayoutGrid, Layers } from 'lucide-react';
+import { MapPin, Calendar, Share2, Video, LayoutGrid, Layers, ChevronLeft } from 'lucide-react';
 import { 
   getOrganizerStats, 
   getOrganizerEvents, 
@@ -26,7 +26,6 @@ import {
    getPostComments,
    incrementPostView,
    type Event, 
-   type ApiPost, 
    type Profile 
  } from '../utils/supabase/api';
  import { handleShare } from '../utils/share';
@@ -58,7 +57,6 @@ interface UserProfileModalProps {
 export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPost }: UserProfileModalProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState<'events' | 'media' | 'posts' | 'upcoming' | 'attended'>('posts');
-  const [showAllEvents, setShowAllEvents] = useState(false);
 
   // Real data state
   const [stats, setStats] = useState<{ totalEvents: number; followers: number } | null>(null);
@@ -89,7 +87,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
       
       setUserPosts(prev => prev.map(p => 
         p.id === postId 
-          ? { ...p, isLiked, likes_count: (p.likes_count || 0) + (isLiked ? 1 : -1) } 
+          ? { ...p, isLiked, likes: (p.likes || 0) + (isLiked ? 1 : -1) } 
           : p
       ));
       
@@ -97,7 +95,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         setSelectedPost((prev: any) => ({
           ...prev,
           isLiked,
-          likes_count: (prev.likes_count || 0) + (isLiked ? 1 : -1)
+          likes: (prev.likes || 0) + (isLiked ? 1 : -1)
         }));
       }
 
@@ -135,75 +133,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
     }
   };
 
-  const sharePost = async (post: any, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    handleShare({
-      title: 'Check out this post on Eventz',
-      text: post.content?.text || post.content || 'Interesting post!',
-      url: window.location.href
-    });
-  };
-
-  const handleDeletePost = async (postId: number) => {
-    if (!window.confirm('Are you sure you want to delete this post?')) return;
-
-    try {
-      await deletePost(postId);
-      setUserPosts(prev => prev.filter(p => p.id !== postId));
-      setSelectedPost(null);
-      toast.success('Post deleted successfully');
-    } catch (error) {
-      console.error('Error deleting post:', error);
-      toast.error('Failed to delete post');
-    }
-  };
-
-  const handlePostComment = async (postId: number, text: string) => {
-    if (!currentUser) {
-      toast.error('Please login to comment');
-      return;
-    }
-
-    try {
-      const newComment = await createPostComment(postId, currentUser.id, text);
-      
-      setUserPosts(prev => prev.map(p => {
-        if (p.id === postId) {
-          const updatedComments = [...(p.comments || []), {
-            id: newComment.id,
-            user: {
-              name: currentUser.user_metadata?.full_name || 'You',
-              avatar: currentUser.user_metadata?.avatar_url || ''
-            },
-            text: text,
-            timestamp: 'Just now'
-          }];
-          return { ...p, comments: updatedComments };
-        }
-        return p;
-      }));
-
-      if (selectedPost && selectedPost.id === postId) {
-        setSelectedPost((prev: any) => ({
-          ...prev,
-          comments: [...(prev.comments || []), {
-            id: newComment.id,
-            user: {
-              name: currentUser.user_metadata?.full_name || 'You',
-              avatar: currentUser.user_metadata?.avatar_url || ''
-            },
-            text: text,
-            timestamp: 'Just now'
-          }]
-        }));
-      }
-
-      toast.success('Comment posted');
-    } catch (error) {
-      console.error('Error posting comment:', error);
-      toast.error('Failed to post comment');
-    }
-  };
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   const handleShowFollowers = async () => {
@@ -672,6 +601,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onStartConversation={onMessage ? () => onMessage() : undefined}
+          onPurchaseTicket={() => {}}
+          onPurchaseNormalTicket={() => {}}
         />
       )}
 
@@ -681,7 +612,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         title="Followers"
         users={followList}
         loading={isLoadingFollowList}
-        onUserSelect={(user) => {
+        onUserSelect={() => {
           // Recurse by changing the user of THIS modal if needed, 
           // but better to just show the profile in a new layer or update current
           // For now, let's keep it simple
@@ -694,7 +625,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         title="Following"
         users={followList}
         loading={isLoadingFollowList}
-        onUserSelect={(user) => {
+        onUserSelect={() => {
           // Same here
         }}
       />
@@ -724,6 +655,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
                 toast.error('Failed to delete post');
              }
           }}
+          onProfileClick={() => {}}
+          onComment={() => {}}
         />
       )}
     </div>

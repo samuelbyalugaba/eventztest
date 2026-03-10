@@ -16,7 +16,7 @@ import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle } from "./ui/sheet";
 import { Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
 
@@ -49,6 +49,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Ticket List Modal State
   const [showTicketListModal, setShowTicketListModal] = useState(false);
@@ -560,42 +561,67 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         {/* Header Actions */}
         <div className="flex flex-col gap-6 items-center">
           {isOwnProfile && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+              <SheetTrigger asChild>
                 <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
                   <Menu className="w-8 h-8" />
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setShowWalletModal(true)}>
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Wallet
-                </DropdownMenuItem>
-                {isOrganizer && (
-                  <DropdownMenuItem onClick={() => setShowProfessionalDashboard(true)}>
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      Dashboard
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem 
-                  onClick={() => {
-                    setSettingsInitialView('main');
-                    setShowSettingsModal(true);
-                  }}
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => {
-                    onLogout?.().then(() => toast.success("Logged out"));
-                  }}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col gap-2 mt-6">
+                  <button 
+                    onClick={() => {
+                      setShowWalletModal(true);
+                      setIsSidebarOpen(false);
+                    }}
+                    className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-xl transition-colors w-full text-left text-gray-700"
+                  >
+                    <Wallet className="w-5 h-5" />
+                    <span className="font-medium">Wallet</span>
+                  </button>
+                  
+                  {isOrganizer && (
+                    <button 
+                      onClick={() => {
+                        setShowProfessionalDashboard(true);
+                        setIsSidebarOpen(false);
+                      }}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-xl transition-colors w-full text-left text-gray-700"
+                    >
+                      <BarChart3 className="w-5 h-5" />
+                      <span className="font-medium">Professional Dashboard</span>
+                    </button>
+                  )}
+                  
+                  <button 
+                    onClick={() => {
+                      setSettingsInitialView('main');
+                      setShowSettingsModal(true);
+                      setIsSidebarOpen(false);
+                    }}
+                    className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-xl transition-colors w-full text-left text-gray-700"
+                  >
+                    <Settings className="w-5 h-5" />
+                    <span className="font-medium">Settings</span>
+                  </button>
+                  
+                  <div className="h-px bg-gray-100 my-2" />
+                  
+                  <button 
+                    onClick={() => {
+                      onLogout?.().then(() => toast.success("Logged out"));
+                    }}
+                    className="flex items-center gap-3 p-3 hover:bg-red-50 text-red-600 rounded-xl transition-colors w-full text-left"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span className="font-medium">Logout</span>
+                  </button>
+                </div>
+              </SheetContent>
+            </Sheet>
           )}
 
           {isOwnProfile && isOrganizer && (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, X, Radio, Tv, Play, Eye, CheckCircle2, Star, Bell, Ticket, ChevronLeft } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, Star, Bell, Ticket, ChevronLeft } from 'lucide-react';
 import { UserProfileModal } from './UserProfileModal';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
@@ -8,7 +8,7 @@ import { LiveStreamViewer } from './LiveStreamViewer';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { getEventAttendees, getPosts, toggleSaveEvent, incrementEventView, getProfile, type Event as ApiEvent } from '../utils/supabase/api';
+import { getPosts, toggleSaveEvent, incrementEventView, getProfile, type Event as ApiEvent } from '../utils/supabase/api';
 import { validateYouTubeUrl, getYouTubeVideoId } from '../utils/sanitize';
 
 export interface EventDetailModalProps {
@@ -28,7 +28,7 @@ const locations = [
   { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
 ];
 
-export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation, onTierSelect }: EventDetailModalProps) {
+export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation }: EventDetailModalProps) {
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
   
   const isEventPast = (() => {
@@ -41,11 +41,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     }
   })();
 
-  const [organizerDisplayName, setOrganizerDisplayName] = useState(
-    event.organizer?.organizer_details?.organizer_name || 
-    'Event Organizer'
-  );
-  const [recentAttendees, setRecentAttendees] = useState<any[]>([]);
+  const [organizerDisplayName, setOrganizerDisplayName] = useState(event.organizer?.full_name || 'Event Organizer');
   const [eventPosts, setEventPosts] = useState<any[]>([]);
 
   useEffect(() => {
@@ -66,16 +62,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     };
     fetchOrganizerDetails();
 
-    const fetchAttendees = async () => {
-      try {
-        const attendees = await getEventAttendees(event.id);
-        setRecentAttendees(attendees || []);
-      } catch (error) {
-        console.error('Error fetching attendees:', error);
-      }
-    };
-    fetchAttendees();
-
     const loadEventPosts = async () => {
       try {
           const { data: { user } } = await supabase.auth.getUser();
@@ -86,7 +72,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       }
     };
     loadEventPosts();
-  }, [event.id]);
+  }, [event.id, event.organizer_id]);
 
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -199,7 +185,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               viewers: event.streaming.liveViewers,
               host: organizerDisplayName,
               quality: event.streaming.quality || 'HD',
-              playback_url: event.streaming.playback_url
+              playback_url: event.streaming.playback_url,
+              organizer_id: event.organizer_id || event.organizer?.id || 'unknown'
             }}
             onClose={() => setShowLiveStream(false)}
           />
@@ -233,9 +220,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 id: event.organizer_id,
                 name: organizerDisplayName,
                 type: 'Organizer',
-                avatar: event.organizer?.avatar_url,
-                verified: event.organizer?.verified || false,
-                isOrganizer: true
+                avatar: event.organizer?.avatar_url || '',
+                verified: event.organizer?.verified || false
               }}
               onClose={() => setShowOrganizerProfile(false)}
               onFollow={() => {
@@ -243,8 +229,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               }}
               onMessage={() => {
                 onStartConversation?.({
-                  id: event.organizer_id,
                   name: organizerDisplayName,
+                  username: event.organizer?.username,
                   avatar: event.organizer?.avatar_url || '',
                   verified: event.organizer?.verified || false,
                   isOrganizer: true

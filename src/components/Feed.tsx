@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { PostCard } from './PostCard';
 import { PostSkeleton } from './PostSkeleton';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, MessageCircle, Share2, Bookmark, X, Send, Eye, ArrowLeft, Calendar, Users as UsersIcon, Star, ArrowUpRight, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2, MoreHorizontal } from 'lucide-react';
+import { MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, ApiPost, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments } from '../utils/supabase/api';
 import { formatTimeAgo } from '../utils/format';
 import { Post, Comment, HighlightClip, Conversation } from '../types';
 import {
@@ -41,10 +40,10 @@ interface FeedProps {
 
 let feedCacheMemory: { posts: any[]; timestamp: number } | null = null;
 
-const isVideo = (url?: string) => {
-  if (!url) return false;
-  return /\.(mp4|webm|ogg|mov)$/i.test(url);
-};
+// const isVideo = (url?: string) => {
+//   if (!url) return false;
+//   return /\.(mp4|webm|ogg|mov)$/i.test(url);
+// };
 
 export function Feed({ 
   conversations: globalConversations, 
@@ -81,15 +80,10 @@ export function Feed({
   const [showControls, setShowControls] = useState(true);
   const [lastVideoTap, setLastVideoTap] = useState<number>(0);
   const [rewindAnimation, setRewindAnimation] = useState<{ show: boolean; direction: 'left' | 'right' } | null>(null);
-  const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
   // const [showChatMenu, setShowChatMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [renderCount, setRenderCount] = useState(20);
-  const [viewportHeight, setViewportHeight] = useState<number>(typeof window !== 'undefined' ? window.innerHeight : 800);
-  const [scrollTop, setScrollTop] = useState<number>(0);
-  const estimatedItemHeight = 560;
-  const overscan = 3;
 
   useEffect(() => {
     const unlockAudio = () => {

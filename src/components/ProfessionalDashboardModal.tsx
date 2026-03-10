@@ -1,27 +1,18 @@
 import { useState, useEffect } from 'react';
 import { 
-  X, 
-  BarChart3, 
   DollarSign, 
   Ticket, 
   Eye, 
   Users, 
-  Settings, 
-  PlusCircle, 
   QrCode, 
-  Radio, 
   Star,
-  ArrowRight,
-  TrendingUp,
   Calendar,
   Clock,
-  Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerStats, getOrganizerEvents, updateEventStreamingStatus, getUserTickets } from '../utils/supabase/api';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
-import { CreatePostModal } from './CreatePostModal';
 import { StreamManager } from './StreamManager';
 import { TicketScannerModal } from './TicketScannerModal';
 import { UserAvatar } from './UserAvatar';
@@ -37,8 +28,6 @@ interface ProfessionalDashboardModalProps {
 export function ProfessionalDashboardModal({ 
   onClose, 
   organizerProfile, 
-  onCreateEvent, 
-  onEditEvent 
 }: ProfessionalDashboardModalProps) {
   const [stats, setStats] = useState({
     totalEvents: 0,
@@ -53,7 +42,6 @@ export function ProfessionalDashboardModal({
     ticketsPurchased: 0
   });
   const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   
   // Modal States
   const [showSettings, setShowSettings] = useState(false);
@@ -72,7 +60,6 @@ export function ProfessionalDashboardModal({
   useEffect(() => {
     const loadData = async () => {
       try {
-        setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
@@ -103,25 +90,18 @@ export function ProfessionalDashboardModal({
           console.error("Error loading user tickets:", err);
         }
 
-        // Load events (for Go Live and Scanner)
-        try {
-          const userEvents = await getOrganizerEvents(user.id);
-          if (userEvents) {
-            const published = userEvents.filter((e: any) => e.status === 'published' || !e.status);
-            setPublishedEvents(published);
-          }
-        } catch (err) {
-          console.error("Error loading organizer events:", err);
+        // Load events
+        const events = await getOrganizerEvents(user.id);
+        if (events) {
+          setPublishedEvents(events.filter(e => e.status === 'published'));
         }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
     loadData();
-  }, []);
+  }, [organizerProfile.id]);
 
   useEffect(() => {
     if (publishedEvents.length > 0 && !selectedEventForScanner) {
@@ -129,29 +109,18 @@ export function ProfessionalDashboardModal({
     }
   }, [publishedEvents]);
 
-  const handleGoLive = () => {
-    if (publishedEvents.length === 0) {
-      toast.error('No events to stream', {
-        description: 'Please create and publish an event first.'
+  const handleStopStream = async (eventId: number) => {
+    try {
+      await updateEventStreamingStatus(eventId, {
+        isLive: false,
+        liveViewers: 0
       });
-      return;
+      toast.success('Stream ended');
+      setSelectedEventForStream(null);
+    } catch (error) {
+      console.error('Error stopping stream:', error);
+      toast.error('Failed to stop stream');
     }
-
-    // Try to find a "Live" event first, then today's, then most recent
-    const liveEvent = publishedEvents.find(e => e.streaming?.isLive);
-    if (liveEvent) {
-      setSelectedEventForStream(liveEvent);
-      return;
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-    const todaysEvent = publishedEvents.find(e => e.date === today);
-    if (todaysEvent) {
-      setSelectedEventForStream(todaysEvent);
-      return;
-    }
-
-    setSelectedEventForStream(publishedEvents[0]);
   };
 
   const profileImage = organizerProfile?.avatar_url;
