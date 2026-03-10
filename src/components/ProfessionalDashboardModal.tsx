@@ -163,7 +163,7 @@ export function ProfessionalDashboardModal({
         {/* Top Cards Grid */}
         <div className="grid grid-cols-2 gap-4">
           {/* Events Attended */}
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32 hover:bg-gray-50 transition-colors cursor-pointer active:scale-95 duration-200">
             <div className="flex justify-between items-start">
               <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
                 <Star className="w-5 h-5 text-gray-900" />
@@ -177,7 +177,7 @@ export function ProfessionalDashboardModal({
           </div>
 
           {/* Events Hosted */}
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32 hover:bg-gray-50 transition-colors cursor-pointer active:scale-95 duration-200">
             <div className="flex justify-between items-start">
               <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-gray-900" />
@@ -191,7 +191,7 @@ export function ProfessionalDashboardModal({
           </div>
 
           {/* Tickets Purchased */}
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32 hover:bg-gray-50 transition-colors cursor-pointer active:scale-95 duration-200">
             <div className="flex justify-between items-start">
               <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
                 <Ticket className="w-5 h-5 text-gray-900" />
@@ -205,7 +205,7 @@ export function ProfessionalDashboardModal({
           </div>
 
           {/* Tickets Sold */}
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32">
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32 hover:bg-gray-50 transition-colors cursor-pointer active:scale-95 duration-200">
             <div className="flex justify-between items-start">
               <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
                 <Ticket className="w-5 h-5 text-gray-900" />

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { X, Radio, Calendar, MapPin, Tv, ChevronRight } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { X, Radio, Calendar, MapPin, Tv, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getOrganizerEvents, updateEventStreamingStatus } from '../utils/supabase/api';
+import { getOrganizerEvents, updateEventStreamingStatus, uploadImage } from '../utils/supabase/api';
 import { StreamManager } from './StreamManager';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 
@@ -20,6 +20,10 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -66,6 +70,8 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
           location: 'Virtual',
           organizer_id: user.id,
           status: 'published',
+          category,
+          image_url: imageUrl,
           streaming,
         })
         .select('*')
@@ -120,6 +126,36 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
 
             {tab === 'instant' && (
               <div className="px-4 py-4 space-y-4">
+                {/* Thumbnail Upload */}
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative w-full aspect-video bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden group"
+                >
+                  {thumbnailPreview ? (
+                    <>
+                      <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-white font-medium text-sm">Change Thumbnail</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-2">
+                        <ImageIcon className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 text-sm font-medium">Add Cover Image</p>
+                      <p className="text-gray-400 text-xs">Recommended 16:9</p>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleThumbnailSelect}
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm text-gray-700 mb-1">Title</label>
                   <input

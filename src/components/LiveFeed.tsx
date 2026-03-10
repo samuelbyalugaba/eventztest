@@ -262,18 +262,33 @@ export function LiveFeed() {
       
       const upcoming = await getUpcomingStreams();
       if (upcoming) {
-        const mappedUpcoming = await Promise.all(upcoming.map(async (e: any) => {
-          const profile = await getProfile(e.organizer_id);
-          return {
-            ...e,
-            thumbnail: e.image_url,
-            scheduledTime: `${e.date} at ${e.time}`,
-            host: profile?.full_name || 'Event Organizer',
-            host_avatar: profile?.avatar_url,
-            organizer_id: e.organizer_id,
-            country: profile?.location?.split(',').pop()?.trim() || 'Tanzania',
-            countdown: Math.max(0, Math.floor((new Date(`${e.date}T${e.time}`).getTime() - new Date().getTime()) / (1000 * 60)))
-          };
+        // Filter out instant live events (those created with "Go Live Now" usually have specific titles or metadata, 
+        // but checking if they are NOT live is the main thing. However, instant events are typically
+        // meant to be live immediately. If an instant event is not live, it might be ended or not started.
+        // We should only show scheduled events here.
+        // For now, let's filter out events that look like "Instant Live" or "Live Stream" if they are not live,
+        // or rely on the category/description if we added that metadata.
+        // But the user specifically said "this was just a livestream not an event".
+        // Usually "Instant Live" events are created with status='published' and isLive=false initially?
+        // No, createInstantEvent sets isLive=false but then immediately opens StreamManager which sets isLive=true.
+        // If it was ended, isLive=false.
+        // If we want to hide "Instant Live" type events from "Starting Soon" (which implies scheduled events),
+        // we can filter by description !== 'Instant live stream' which we set in LiveSetupModal.
+        
+        const mappedUpcoming = await Promise.all(upcoming
+          .filter((e: any) => e.description !== 'Instant live stream') // Filter out instant streams
+          .map(async (e: any) => {
+            const profile = await getProfile(e.organizer_id);
+            return {
+              ...e,
+              thumbnail: e.image_url,
+              scheduledTime: `${e.date} at ${e.time}`,
+              host: profile?.full_name || 'Event Organizer',
+              host_avatar: profile?.avatar_url,
+              organizer_id: e.organizer_id,
+              country: profile?.location?.split(',').pop()?.trim() || 'Tanzania',
+              countdown: Math.max(0, Math.floor((new Date(`${e.date}T${e.time}`).getTime() - new Date().getTime()) / (1000 * 60)))
+            };
         }));
         setUpcomingStreams(mappedUpcoming as unknown as LiveStream[]);
       }

@@ -2,7 +2,7 @@ import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin,
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique, uploadImage } from '../utils/supabase/api';
-import { Sheet, SheetContent, SheetClose } from "./ui/sheet";
+import { Sheet, SheetContent, SheetClose, SheetTitle, SheetDescription } from "./ui/sheet";
 
 type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
 
@@ -254,6 +254,10 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="w-[100vw] sm:w-[450px] p-0 overflow-y-auto bg-white border-l border-gray-100">
+        <SheetTitle className="sr-only">Settings</SheetTitle>
+        <SheetDescription className="sr-only">
+          Manage your profile, privacy settings, and view help options.
+        </SheetDescription>
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
           <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xl border-b border-gray-100 px-6 py-4">

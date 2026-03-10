@@ -16,7 +16,7 @@ import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
-import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "./ui/sheet";
 import { Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
 
@@ -568,6 +568,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 bg-white border-l border-gray-100">
+                <SheetTitle className="sr-only">Menu</SheetTitle>
+                <SheetDescription className="sr-only">
+                  Navigation menu for wallet, dashboard, settings, and logout.
+                </SheetDescription>
                 {/* Header with User Info */}
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex items-center gap-3">
@@ -684,7 +688,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       
 
       {/* Stats Row */}
-      <div className="flex items-center justify-between px-4 mb-8">
+      <div className="flex items-center justify-between px-6 mb-6">
         {isLoading ? (
           <div className="flex w-full justify-between">
             <div className="flex-1 px-2">
@@ -703,35 +707,35 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         ) : (
           <>
             <div 
-              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+              className="text-center flex-1 cursor-pointer active:scale-95 transition-transform"
               onClick={handleShowEventsList}
             >
-              <div className="text-xl font-bold text-gray-900 mb-1">
+              <div className="text-lg font-bold text-gray-900 leading-none mb-1">
                   {isOrganizer ? (organizerStats ? organizerStats.totalEvents : 0) : attendedEvents.length}
               </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+              <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
                   {isOrganizer ? 'Hosted' : 'Attended'}
               </div>
             </div>
             <div 
-              className="text-center flex-1 border-r border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+              className="text-center flex-1 cursor-pointer active:scale-95 transition-transform border-l border-gray-100"
               onClick={handleShowFollowers}
             >
-              <div className="text-xl font-bold text-gray-900 mb-1">
+              <div className="text-lg font-bold text-gray-900 leading-none mb-1">
                   {followStats.followers}
               </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+              <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
                   Followers
               </div>
             </div>
             <div 
-              className="text-center flex-1 cursor-pointer hover:bg-gray-50 transition-colors py-1 rounded-lg"
+              className="text-center flex-1 cursor-pointer active:scale-95 transition-transform border-l border-gray-100"
               onClick={handleShowFollowing}
             >
-              <div className="text-xl font-bold text-gray-900 mb-1">
+              <div className="text-lg font-bold text-gray-900 leading-none mb-1">
                   {followStats.following}
               </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+              <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
                   Following
               </div>
             </div>
@@ -742,20 +746,20 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {/* Action Buttons */}
       {isOwnProfile ? (
         isOrganizer ? (
-          <div className="flex gap-3 mb-8">
+          <div className="flex gap-3 mb-6 px-1">
             <button 
               onClick={onCreateEvent}
-              className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+              className="flex-1 py-2.5 bg-[#8A2BE2] text-white rounded-xl font-medium text-xs flex items-center justify-center gap-2 hover:bg-[#7a26c9] transition-all active:scale-95 shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              Create Events
+              Create Event
             </button>
             <button 
               onClick={() => setShowProfessionalDashboard(true)}
-              className="flex-1 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+              className="flex-1 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl font-medium text-xs flex items-center justify-center gap-2 hover:bg-gray-50 transition-all active:scale-95"
             >
               <BarChart3 className="w-4 h-4" />
-              See Dashboard
+              Dashboard
             </button>
           </div>
         ) : (
