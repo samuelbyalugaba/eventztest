@@ -520,6 +520,10 @@ export const getEvents = async () => {
     .order('date', { ascending: true });
 
   if (error) {
+    if (error.name === 'AbortError') {
+      console.log('Event fetch aborted');
+      return []; // Return empty array on abort
+    }
     console.error('Error fetching events:', error);
     throw error;
   }

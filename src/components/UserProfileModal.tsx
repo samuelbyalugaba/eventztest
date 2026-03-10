@@ -4,7 +4,7 @@ import { UserAvatar } from './UserAvatar';
 import { EventDetailModal } from './EventDetailModal';
 import { PostDetailModal } from './PostDetailModal';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
-import { MapPin, Calendar, Share2, Video, LayoutGrid, Layers, ChevronLeft } from 'lucide-react';
+import { MapPin, Calendar, Share2, Video, LayoutGrid, Layers, ChevronLeft, Star } from 'lucide-react';
 import { 
   getOrganizerStats, 
   getOrganizerEvents, 

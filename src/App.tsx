@@ -191,7 +191,7 @@ export default function App() {
   }, []);
   // Fetch user profile to determine organizer status
   useEffect(() => {
-    const fetchProfile = async () => {
+        const fetchProfile = async () => {
       if (isAuthenticated && currentUser) {
         try {
           const profile = await getProfile(currentUser.id);
@@ -222,7 +222,7 @@ export default function App() {
 
   // Fetch conversations when authenticated
   useEffect(() => {
-    const fetchConversations = async () => {
+        const fetchConversations = async () => {
       if (isAuthenticated && currentUser) {
         try {
           const apiConvs = await getConversations(currentUser.id);
@@ -274,6 +274,8 @@ export default function App() {
 
   // Check for live events
   useEffect(() => {
+        if (!isAuthenticated) return;
+
     const checkLiveEvents = async () => {
       try {
         const streams = await getLiveStreams();
@@ -363,7 +365,7 @@ export default function App() {
 
     let channel: any;
 
-    const setupPresence = async () => {
+        const setupPresence = async () => {
       try {
         // 1. Get mutual friends
         const friends = await getMutualFollows(currentUser.id);

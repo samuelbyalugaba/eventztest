@@ -17,7 +17,7 @@ export interface EventDetailModalProps {
   onPurchaseTicket: (event: ApiEvent) => void;
   onPurchaseNormalTicket: (event: ApiEvent) => void;
   onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => void;
-  onTierSelect?: (event: ApiEvent) => void;
+    onTierSelect?: (event: ApiEvent, tierName: string) => void;
 }
 
 const locations = [
@@ -403,7 +403,11 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               </h3>
               <div className="space-y-2">
                 {event.ticket_tiers.map((tier, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
+                  <div 
+                    key={index} 
+                    onClick={() => onTierSelect && onTierSelect(event, tier.name)}
+                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
                           <Ticket className="w-4 h-4" />

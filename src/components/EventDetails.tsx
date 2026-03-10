@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, CreditCard, MessageCircle, Ticket, ShoppingBag, Music, Trophy, Globe } from 'lucide-react';
+import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, MessageCircle, Ticket, Music, Trophy, Globe } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
-import { PurchasedTicket, Conversation, Message } from '../types';
+import { Conversation } from '../types';
 import { PremiumSearchModal } from './PremiumSearchModal';
 import { UserProfileModal } from './UserProfileModal';
 import { MediaViewer } from './MediaViewer';
-import { ShareModal } from './ShareModal';
+
 import { EventDetailModal } from './EventDetailModal';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { SimplifiedTicketModal } from './SimplifiedTicketModal';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getSavedEvents, createTicket, getPosts, type Event as ApiEvent, incrementEventView, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
-import { extractCurrencyFromPrice } from '../utils/currencies';
+import { getEvents, getSavedEvents, getPosts, type Event as ApiEvent, incrementEventView } from '../utils/supabase/api';
+
 import { eventsStore } from '../store/eventStore';
 
 const locations = [
@@ -44,7 +44,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     const unsubscribe = eventsStore.subscribe(() => {
       setEvents(eventsStore.getEvents());
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   // Fetch data logic
@@ -78,7 +78,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         }));
         
         eventsStore.setEvents(eventsWithSaved as ApiEvent[]);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          console.log('Fetch aborted');
+          return;
+        }
         console.error('Error fetching events:', error);
       } finally {
         setIsFetching(false);
@@ -119,7 +123,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [showFilters, setShowFilters] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [showTicketModal, setShowTicketModal] = useState(false);
-  const [ticketFormData, setTicketFormData] = useState({ name: '', email: '' });
   const [eventToPurchase, setEventToPurchase] = useState<ApiEvent | null>(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -205,22 +208,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       .slice(0, 5);
   }, [events]);
 
-  const featuredOrganizers = React.useMemo(() => {
-    if (events.length === 0) return [];
-    const organizers = new Map();
-    events.forEach(e => {
-      const org = e.organizer?.organizer_details || e.organizer;
-      if (org && !organizers.has(org.id)) {
-        organizers.set(org.id, {
-          id: org.id,
-          name: (org as any).organizer_name || (org as any).full_name,
-          avatar: (org as any).organizer_avatar_url || (org as any).avatar_url,
-          verified: (org as any).verified
-        });
-      }
-    });
-    return Array.from(organizers.values()).slice(0, 8);
-  }, [events]);
+  
 
   const filteredLocations = locations.filter(location => 
     location.name.toLowerCase().includes(locationSearch.toLowerCase())
@@ -267,18 +255,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     }))
   ];
 
-  const handleOrganizerClick = async (org: any) => {
-    setSelectedUser({
-      id: org.id,
-      name: org.name,
-      username: org.name.toLowerCase().replace(/\s/g, ''),
-      avatar: org.avatar,
-      verified: org.verified,
-      is_organizer: true,
-      followers: 1200, 
-      type: 'Organizer'
-    });
-  };
+  
 
   const handleStartConversationLocal = async (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -318,7 +295,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const handlePurchaseTicket = (event: ApiEvent) => {
     setEventToPurchase(event);
     setShowTicketModal(true);
-    setTicketFormData({ name: '', email: '' });
     if (selectedEvent) setSelectedEvent(null);
   };
 
@@ -328,7 +304,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     if (selectedEvent) setSelectedEvent(null);
   };
 
-  const handleTierSelection = (event: ApiEvent, tierName: string) => {
+  const handleTierSelection = (event: ApiEvent) => {
     setEventToPurchase(event);
     setShowPurchaseModal(true);
     if (selectedEvent) setSelectedEvent(null);
@@ -746,7 +722,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         <PremiumSearchModal
           onClose={() => setShowSearchModal(false)}
           events={events}
-          onEventSelect={(event) => setSelectedEvent(event)}
+                    onEventSelect={(event: ApiEvent) => setSelectedEvent(event)}
           onPersonSelect={(person) => setSelectedUser(person)}
         />
       )}
@@ -758,7 +734,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             name: selectedUser.full_name || selectedUser.name,
             type: selectedUser.is_organizer ? 'Organizer' : (selectedUser.type || 'Attendee'),
             followers: organizerStats?.followers?.toString() || selectedUser.followers || '0',
-            following: '1.2k',
             eventsHosted: selectedUser.is_organizer ? (organizerStats?.totalEvents || 0) : undefined,
             eventsAttended: !selectedUser.is_organizer ? 156 : undefined,
             avatar: selectedUser.avatar_url || selectedUser.avatar,
