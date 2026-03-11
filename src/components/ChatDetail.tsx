@@ -3,6 +3,7 @@ import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2 
 import { UserAvatar } from './UserAvatar';
 import { Message, Profile, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage, deleteMessage } from '../utils/supabase/api';
 import { toast } from 'sonner';
+import { useVisualViewport } from '../utils/useVisualViewport';
 
 interface ChatDetailProps {
   conversationId: number;
@@ -19,6 +20,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   const [showMenu, setShowMenu] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const { offsetTop, offsetBottom } = useVisualViewport();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -208,7 +210,10 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   return (
     <div className="fixed inset-0 h-[100dvh] bg-white z-[70] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white z-10 flex-shrink-0">
+      <div
+        className="fixed left-0 right-0 h-14 px-4 border-b border-gray-100 flex items-center justify-between bg-white z-20"
+        style={{ top: offsetTop }}
+      >
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6 text-gray-900" />
@@ -271,7 +276,10 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
+      <div
+        className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4"
+        style={{ paddingTop: 56 + offsetTop, paddingBottom: 76 + offsetBottom }}
+      >
         <div className="space-y-4">
           {messages.map((msg, index) => {
             const isMe = msg.sender_id === currentUser.id;
@@ -338,7 +346,10 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
       </div>
 
       {/* Input Area */}
-      <div className="p-3 bg-white border-t border-gray-100 sticky bottom-0">
+      <div
+        className="fixed left-0 right-0 p-3 bg-white border-t border-gray-100 z-20"
+        style={{ bottom: offsetBottom }}
+      >
         <input 
           type="file" 
           ref={fileInputRef} 

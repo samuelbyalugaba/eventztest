@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { UserAvatar } from './UserAvatar';
 import { PostCard } from './PostCard';
 import { PostSkeleton } from './PostSkeleton';
-import { Calendar, Camera, Search, MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
+import { Calendar, Camera, Search, MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments, getProfile, getMessages, toggleLikeComment, updatePostCaption } from '../utils/supabase/api';
 import { formatTimeAgo } from '../utils/format';
-import { Post, Comment, HighlightClip, Conversation } from '../types';
+import { Post, HighlightClip, Conversation } from '../types';
 import { PostDetailModal } from './PostDetailModal';
 import { handleShare } from '../utils/share';
 import { mapPostsToViewModel } from '../utils/postMapper';
@@ -250,27 +250,6 @@ export function Feed({
 
   // Sync activeConversation with global conversations updates and mark as read
   useEffect(() => {
-    const fetchConversationMessages = async (convId: number) => {
-      try {
-        const msgs = await getMessages(convId);
-        const formattedMsgs = msgs.map((m: any) => ({
-          id: m.id,
-          senderId: m.sender_id === currentUser?.id ? 0 : parseInt(m.sender_id) || 1,
-          text: m.content,
-          timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          read: m.is_read
-        }));
-
-        // We need to update the global conversations in App.tsx state too, 
-        // but for now let's just update the local activeConversation state
-        // and ideally we'd have a way to sync this back or just manage it here.
-        // Actually, since Feed is a child of App, and App manages conversations,
-        // we should probably have a function in App to load messages for a conv.
-      } catch (e) {
-        console.error('Error loading messages for conversation:', e);
-      }
-    };
-
     if (activeConversation) {
       const updatedConv = globalConversations?.find(c => c.id === activeConversation.id);
       

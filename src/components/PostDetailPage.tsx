@@ -17,6 +17,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger 
 } from './ui/dropdown-menu';
 import { toast } from 'sonner';
+import { useVisualViewport } from '../utils/useVisualViewport';
 
 interface PostDetailPageProps {
   post: any;
@@ -61,6 +62,7 @@ export function PostDetailPage({
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState('');
   const [isSavingCaption, setIsSavingCaption] = useState(false);
+  const { offsetTop, offsetBottom } = useVisualViewport();
 
   useEffect(() => {
     if (!api) return;
@@ -91,11 +93,17 @@ export function PostDetailPage({
   const currentCaption = post?.content?.text ?? post?.content ?? '';
 
   return (
-    <div className="fixed inset-0 bg-white z-[70] overflow-y-auto animate-in slide-in-from-right duration-300">
+    <div
+      className="fixed inset-0 bg-white z-[70] overflow-y-auto animate-in slide-in-from-right duration-300"
+      style={{ paddingTop: 64 + offsetTop, paddingBottom: 96 + offsetBottom }}
+    >
       {/* Unique Detail Header */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-lg border-b border-gray-100">
-        <div className="px-4 py-4">
-          <div className="flex items-center justify-between">
+      <div
+        className="fixed left-0 right-0 z-20 bg-white/95 backdrop-blur-lg border-b border-gray-100"
+        style={{ top: offsetTop }}
+      >
+        <div className="px-4 h-16 flex items-center">
+          <div className="flex items-center justify-between w-full">
             <button
               onClick={onBack}
               className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -565,50 +573,55 @@ export function PostDetailPage({
             )}
           </div>
 
-          {/* Input Area - Fixed at Bottom */}
-          <div className="sticky bottom-0 z-10 p-3 border-t border-gray-100 bg-white safe-area-bottom">
-            {replyingTo && (
-              <div className="flex items-center justify-between px-3 py-2 mb-2 bg-gray-50 rounded-lg text-xs">
-                <span className="text-gray-500">Replying to <span className="font-semibold text-gray-900">{replyingTo.name}</span></span>
-                <button 
-                  onClick={() => setReplyingTo(null)}
-                  className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                >
-                  <X className="w-3 h-3 text-gray-500" />
-                </button>
-              </div>
-            )}
-            <div className="flex items-end gap-3 bg-gray-50 rounded-3xl px-4 py-2">
-              <UserAvatar
-                src={currentUser?.user_metadata?.avatar_url || userProfile?.avatar_url}
-                name={userProfile?.full_name || currentUser?.user_metadata?.full_name || userProfile?.username || "User"}
-                className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5"
-              />
-              <textarea
-                ref={textareaRef}
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Add a comment..."
-                rows={1}
-                className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 focus:ring-0 resize-none min-h-[20px] max-h-[80px] py-1.5"
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = 'auto';
-                  target.style.height = `${Math.min(target.scrollHeight, 80)}px`;
-                }}
-              />
-              <button
-                onClick={handlePostComment}
-                disabled={!commentText.trim()}
-                className={`p-1.5 rounded-full transition-all mb-0.5 ${
-                  commentText.trim()
-                    ? 'text-blue-500 hover:bg-blue-50'
-                    : 'text-gray-300 cursor-not-allowed'
-                }`}
+        </div>
+      </div>
+
+      <div
+        className="fixed left-0 right-0 z-20 border-t border-gray-100 bg-white"
+        style={{ bottom: offsetBottom }}
+      >
+        <div className="max-w-2xl mx-auto p-3">
+          {replyingTo && (
+            <div className="flex items-center justify-between px-3 py-2 mb-2 bg-gray-50 rounded-lg text-xs">
+              <span className="text-gray-500">Replying to <span className="font-semibold text-gray-900">{replyingTo.name}</span></span>
+              <button 
+                onClick={() => setReplyingTo(null)}
+                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
               >
-                <span className="text-xs font-bold">Post</span>
+                <X className="w-3 h-3 text-gray-500" />
               </button>
             </div>
+          )}
+          <div className="flex items-end gap-3 bg-gray-50 rounded-3xl px-4 py-2">
+            <UserAvatar
+              src={currentUser?.user_metadata?.avatar_url || userProfile?.avatar_url}
+              name={userProfile?.full_name || currentUser?.user_metadata?.full_name || userProfile?.username || "User"}
+              className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5"
+            />
+            <textarea
+              ref={textareaRef}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Add a comment..."
+              rows={1}
+              className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 focus:ring-0 resize-none min-h-[20px] max-h-[80px] py-1.5"
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = `${Math.min(target.scrollHeight, 80)}px`;
+              }}
+            />
+            <button
+              onClick={handlePostComment}
+              disabled={!commentText.trim()}
+              className={`p-1.5 rounded-full transition-all mb-0.5 ${
+                commentText.trim()
+                  ? 'text-blue-500 hover:bg-blue-50'
+                  : 'text-gray-300 cursor-not-allowed'
+              }`}
+            >
+              <span className="text-xs font-bold">Post</span>
+            </button>
           </div>
         </div>
       </div>

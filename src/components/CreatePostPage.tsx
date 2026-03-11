@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Image as ImageIcon, Loader2, MapPin, Smile, Calendar } from 'lucide-react';
+import { X, Image as ImageIcon, Loader2, MapPin, Smile, Calendar, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createPost, uploadImage, getProfile } from '../utils/supabase/api';
@@ -19,6 +19,13 @@ export default function CreatePostPage() {
   const mediaRef = useRef<MediaItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [locationTag, setLocationTag] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [locationDraft, setLocationDraft] = useState('');
+  const [scheduleDraft, setScheduleDraft] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -64,6 +71,25 @@ export default function CreatePostPage() {
   }, []);
 
   const hasSingleVideoPost = media.length === 1 && media[0]?.kind === 'video';
+
+  const emojis = ['😀','😁','😂','🥹','😍','😘','😎','🤝','🙏','🔥','🎉','✨','💯','📍','🎵','🎬','🏆','⭐','❤️','💜','👍','👏'];
+
+  const insertAtCursor = (text: string) => {
+    const el = textareaRef.current;
+    if (!el) {
+      setContent(prev => prev + text);
+      return;
+    }
+    const start = el.selectionStart ?? content.length;
+    const end = el.selectionEnd ?? content.length;
+    const next = content.slice(0, start) + text + content.slice(end);
+    setContent(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const nextPos = start + text.length;
+      el.setSelectionRange(nextPos, nextPos);
+    });
+  };
 
   const dataUrlToFile = async (dataUrl: string, filename: string) => {
     const res = await fetch(dataUrl);
@@ -196,6 +222,11 @@ export default function CreatePostPage() {
         return;
       }
 
+      const extraLines: string[] = [];
+      if (locationTag.trim()) extraLines.push(`📍 ${locationTag.trim()}`);
+      if (scheduledAt.trim()) extraLines.push(`🗓️ ${scheduledAt.trim()}`);
+      const finalContent = [content.trim(), ...extraLines].filter(Boolean).join('\n\n');
+
       let mediaUrls: string[] = [];
 
       if (media.length > 0) {
@@ -220,7 +251,7 @@ export default function CreatePostPage() {
 
         await createPost({
           user_id: user.id,
-          content: content,
+          content: finalContent,
           image_urls: coverUrl ? [coverUrl] : [],
           video_url: videoUrl,
           hashtags: [],
@@ -229,7 +260,7 @@ export default function CreatePostPage() {
       } else {
         await createPost({
           user_id: user.id,
-          content: content,
+          content: finalContent,
           image_urls: mediaUrls,
           hashtags: [],
           posted_as_organizer: false
@@ -250,12 +281,13 @@ export default function CreatePostPage() {
   const isButtonDisabled = isSubmitting || (!content.trim() && media.length === 0);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col animate-in slide-in-from-bottom duration-300 z-[100] fixed inset-0">
+    <div className="min-h-screen bg-white flex flex-col z-[100] fixed inset-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 h-14 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+      <div className="flex items-center justify-between px-4 h-14 sticky top-0 bg-white z-10 border-b border-gray-100">
         <button 
           onClick={() => navigate(-1)}
           className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+          type="button"
         >
           <X className="w-6 h-6 text-gray-900" />
         </button>
@@ -268,6 +300,7 @@ export default function CreatePostPage() {
               ? 'bg-purple-300 text-white cursor-not-allowed' 
               : 'bg-[#8A2BE2] text-white hover:bg-[#7B27CC] active:scale-95 shadow-md shadow-purple-200'
           }`}
+          type="button"
         >
           {isSubmitting ? (
             <div className="flex items-center gap-2">
@@ -281,15 +314,16 @@ export default function CreatePostPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-2">
-        <div className="flex gap-3">
-          <UserAvatar 
-            src={userProfile?.avatar_url} 
-            name={userProfile?.full_name} 
-            className="w-10 h-10 rounded-full flex-shrink-0"
-          />
-          
-          <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex gap-4">
+            <UserAvatar 
+              src={userProfile?.avatar_url} 
+              name={userProfile?.full_name} 
+              className="w-10 h-10 rounded-full flex-shrink-0"
+            />
+            
+            <div className="flex-1 flex flex-col min-w-0">
             <textarea
               ref={textareaRef}
               value={content}
@@ -300,11 +334,40 @@ export default function CreatePostPage() {
                 e.target.style.height = `${e.target.scrollHeight}px`;
               }}
               placeholder="What's happening?"
-              className="w-full text-xl text-gray-900 placeholder-gray-500 border-none focus:ring-0 p-0 mt-2 resize-none min-h-[120px]"
+              className="w-full text-[17px] leading-relaxed text-gray-900 placeholder-gray-500 border-none focus:ring-0 p-0 mt-1 resize-none min-h-[140px]"
             />
 
+            {(locationTag.trim() || scheduledAt.trim()) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {locationTag.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setLocationTag('')}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 text-gray-800 text-xs font-bold hover:bg-gray-200 transition-colors"
+                    title="Remove location"
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span className="max-w-[220px] truncate">{locationTag.trim()}</span>
+                    <X className="w-3.5 h-3.5 opacity-70" />
+                  </button>
+                )}
+                {scheduledAt.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setScheduledAt('')}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 text-gray-800 text-xs font-bold hover:bg-gray-200 transition-colors"
+                    title="Remove schedule"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span className="max-w-[220px] truncate">{scheduledAt.trim()}</span>
+                    <X className="w-3.5 h-3.5 opacity-70" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {hasSingleVideoPost && (
-              <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-3">
+              <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-bold text-gray-900">Thumbnail</div>
                   <button
@@ -382,6 +445,7 @@ export default function CreatePostPage() {
                       <button
                         onClick={() => removeFile(index)}
                         className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full hover:bg-black/80 transition-colors backdrop-blur-sm"
+                        type="button"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -393,26 +457,78 @@ export default function CreatePostPage() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Bottom Tools */}
-      <div className="border-t border-gray-100 px-4 py-3 flex items-center justify-between sticky bottom-0 bg-white">
-        <div className="flex items-center gap-1">
+      <div className="border-t border-gray-100 px-4 py-3 sticky bottom-0 bg-white">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+        <div className="flex items-center gap-1 relative">
           <button
             onClick={() => fileInputRef.current?.click()}
             className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
             title="Media"
+            type="button"
           >
             <ImageIcon className="w-5 h-5" />
           </button>
-          <button className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors" title="Emoji">
+          <button
+            className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
+            title="Emoji"
+            type="button"
+            onClick={() => {
+              setShowEmojiPicker(v => !v);
+              setShowLocationModal(false);
+              setShowScheduleModal(false);
+            }}
+          >
             <Smile className="w-5 h-5" />
           </button>
-          <button className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors" title="Location">
+          <button
+            className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
+            title="Location"
+            type="button"
+            onClick={() => {
+              setLocationDraft(locationTag);
+              setShowLocationModal(true);
+              setShowEmojiPicker(false);
+              setShowScheduleModal(false);
+            }}
+          >
             <MapPin className="w-5 h-5" />
           </button>
-          <button className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors" title="Schedule">
+          <button
+            className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
+            title="Schedule"
+            type="button"
+            onClick={() => {
+              setScheduleDraft(scheduledAt);
+              setShowScheduleModal(true);
+              setShowEmojiPicker(false);
+              setShowLocationModal(false);
+            }}
+          >
             <Calendar className="w-5 h-5" />
           </button>
+
+          {showEmojiPicker && (
+            <div className="absolute bottom-12 left-0 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl p-2 z-20">
+              <div className="grid grid-cols-8 gap-1">
+                {emojis.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    className="h-8 w-8 rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    onClick={() => {
+                      insertAtCursor(e);
+                      setShowEmojiPicker(false);
+                    }}
+                  >
+                    <span className="text-base">{e}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <input
@@ -425,14 +541,102 @@ export default function CreatePostPage() {
         />
 
         <div className="flex items-center gap-4">
-           {/* Character count circle or indicator could go here */}
-           <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${
-             content.length > 280 ? 'border-red-500 text-red-500' : 'border-purple-200 text-purple-400'
-           }`}>
-             {280 - content.length}
-           </div>
+          <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${
+            content.length > 280 ? 'border-red-500 text-red-500' : 'border-gray-200 text-gray-500'
+          }`}>
+            {280 - content.length}
+          </div>
         </div>
       </div>
+      </div>
+
+      {showLocationModal && (
+        <div className="fixed inset-0 z-[120] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setShowLocationModal(false)}>
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="text-gray-900 font-bold">Add location</div>
+              <button
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                onClick={() => setShowLocationModal(false)}
+                type="button"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4">
+              <input
+                value={locationDraft}
+                onChange={(e) => setLocationDraft(e.target.value)}
+                placeholder="e.g. Dar es Salaam"
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              />
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition-colors"
+                  onClick={() => setShowLocationModal(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 transition-colors"
+                  onClick={() => {
+                    setLocationTag(locationDraft.trim());
+                    setShowLocationModal(false);
+                  }}
+                  type="button"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showScheduleModal && (
+        <div className="fixed inset-0 z-[120] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setShowScheduleModal(false)}>
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="text-gray-900 font-bold">Add schedule</div>
+              <button
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                onClick={() => setShowScheduleModal(false)}
+                type="button"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4">
+              <input
+                value={scheduleDraft}
+                onChange={(e) => setScheduleDraft(e.target.value)}
+                placeholder="e.g. 2026-03-11 20:00"
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              />
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition-colors"
+                  onClick={() => setShowScheduleModal(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 transition-colors"
+                  onClick={() => {
+                    setScheduledAt(scheduleDraft.trim());
+                    setShowScheduleModal(false);
+                  }}
+                  type="button"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

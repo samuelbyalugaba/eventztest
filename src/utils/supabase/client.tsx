@@ -2,14 +2,19 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('Missing Supabase environment variables. Please check your .env file or Vercel project settings.');
 }
 
 export const isSupabaseConfigured = () => {
-  return supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co';
+  return (
+    !!supabaseUrl &&
+    !!supabaseKey &&
+    supabaseUrl !== 'https://placeholder.supabase.co' &&
+    supabaseKey !== 'placeholder'
+  );
 };
 
 // Create a singleton Supabase client

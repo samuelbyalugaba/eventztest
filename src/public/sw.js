@@ -1,5 +1,5 @@
-const CACHE_NAME = 'eventz-v1';
-const RUNTIME_CACHE = 'eventz-runtime';
+const CACHE_NAME = 'eventz-v2';
+const RUNTIME_CACHE = 'eventz-runtime-v2';
 
 // Assets to cache on install
 const STATIC_CACHE_URLS = [
@@ -62,6 +62,22 @@ self.addEventListener('fetch', (event) => {
   // Bypass API and Edge Functions calls to avoid caching/interference
   if (event.request.url.includes('/api/') || event.request.url.includes('/functions/v1/')) {
     event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Navigation requests: network-first so users get fresh builds (important on iOS PWAs)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseToCache = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((r) => r || caches.match('/')))
+    );
     return;
   }
 
