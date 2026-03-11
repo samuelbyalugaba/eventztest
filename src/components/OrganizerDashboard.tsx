@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { VideoPreview } from './VideoPreview';
 import { UserAvatar } from './UserAvatar';
@@ -6,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { EventAnalyticsModal } from './EventAnalyticsModal';
 import { HighlightViewerModal } from './HighlightViewerModal';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
-import { CreatePostModal } from './CreatePostModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { Settings, MapPin, Radio, BarChart3, Star, PlusCircle, Play, Heart, MessageCircle, DollarSign, Ticket, Eye, Users, Clock, Calendar, Edit, Trash2, MoreHorizontal, QrCode, X } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
@@ -31,6 +31,7 @@ interface OrganizerDashboardProps {
 }
 
 export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDashboardProps) {
+  const navigate = useNavigate();
   const [organizerProfile, setOrganizerProfile] = useState<any>({});
   const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
   const [draftEvents, setDraftEvents] = useState<any[]>([]);
@@ -41,7 +42,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
   const [organizerPosts, setOrganizerPosts] = useState<any[]>([]);
-  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'published' | 'drafts'>('published');
   
@@ -324,17 +324,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
     <>
       {/* Settings Button - Portal removed */}
       
-      {/* Create Post Modal */}
-      <CreatePostModal
-        isOpen={showCreatePostModal}
-        onClose={() => setShowCreatePostModal(false)}
-        onPostCreated={() => {
-          window.dispatchEvent(new Event('eventsUpdated'));
-        }}
-        isOrganizer={true}
-        organizerName={organizerProfile.organizerName}
-      />
-
       <div className="bg-gray-50 min-h-screen pb-24">
         {/* Professional Header - Solid Purple */}
         <div className="bg-[#8A2BE2] px-6 py-12 shadow-sm border-b border-gray-200">
@@ -491,7 +480,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-gray-900 text-xl">Event Highlights & Posts</h2>
                 <button 
-                  onClick={() => setShowCreatePostModal(true)}
+                  onClick={() => navigate('/compose/post')}
                   className="text-[#8A2BE2] hover:text-[#7825d4] text-sm flex items-center gap-1.5"
                 >
                   <PlusCircle className="w-4 h-4" />

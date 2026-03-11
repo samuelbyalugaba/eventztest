@@ -8,6 +8,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { CreateEventWrapper } from './components/CreateEventWrapper';
 import { PostDetailWrapper } from './components/PostDetailWrapper';
 import { EventDetailWrapper } from './components/EventDetailWrapper';
+import CreatePostPage from './components/CreatePostPage';
 import { Calendar, Radio, User, Rss } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { supabase } from './utils/supabase/client';
@@ -29,13 +30,10 @@ import { Message, Conversation } from './types';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
 
-import { CreatePostModal } from './components/CreatePostModal';
-
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOrganizer, setIsOrganizer] = useState(false);
-  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -729,19 +727,11 @@ export default function App() {
           <Route path="/event/:id" element={
              <EventDetailWrapper onStartConversation={handleStartConversation} />
           } />
+          <Route path="/compose/post" element={
+             <CreatePostPage />
+          } />
         </Routes>
       </div>
-
-      <CreatePostModal
-        isOpen={showCreatePostModal}
-        onClose={() => setShowCreatePostModal(false)}
-        onPostCreated={() => {
-          // Optionally refresh feed
-          window.dispatchEvent(new Event('postsUpdated'));
-        }}
-        isOrganizer={isOrganizer}
-        organizerName={currentUser?.user_metadata?.full_name} 
-      />
 
       {/* Bottom Navigation */}
       {!shouldHideBottomNav && (

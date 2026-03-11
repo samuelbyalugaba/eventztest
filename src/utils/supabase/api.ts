@@ -1379,8 +1379,11 @@ export const deletePost = async (postId: number) => {
 
 export const createPost = async (post: Omit<ApiPost, 'id' | 'created_at' | 'user' | 'event' | 'likes_count' | 'comments_count' | 'is_liked'>) => {
   // Input Validation
-  if (!post.content?.trim() && (!post.image_urls || post.image_urls.length === 0)) {
-    throw new Error('Post must contain text or an image');
+  const hasText = !!post.content?.trim();
+  const hasImages = !!(post.image_urls && post.image_urls.length > 0);
+  const hasVideo = !!post.video_url;
+  if (!hasText && !hasImages && !hasVideo) {
+    throw new Error('Post must contain text or media');
   }
 
   if (post.content && post.content.length > 2000) {
@@ -1398,6 +1401,19 @@ export const createPost = async (post: Omit<ApiPost, 'id' | 'created_at' | 'user
 
   if (error) throw error;
   return data;
+};
+
+export const updatePostCaption = async (postId: number, userId: string, caption: string) => {
+  const { data, error } = await supabase
+    .from('posts')
+    .update({ content: caption.trim() })
+    .eq('id', postId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as ApiPost;
 };
 
 export const toggleLikePost = async (postId: number, userId: string) => {
@@ -2241,4 +2257,3 @@ export const getTrending = async () => {
     people: profilesRes.data || []
   };
 };
-

@@ -27,6 +27,7 @@ interface PostDetailModalProps {
   onSave: (id: number, e?: React.MouseEvent) => void;
   onShare: (post: any, e?: React.MouseEvent) => void;
   onDelete: (id: number) => void;
+  onEditCaption?: (id: number, caption: string) => Promise<void> | void;
   onProfileClick: (user: any, e?: React.MouseEvent) => void;
   onComment: (postId: number, text: string, parentId?: number) => void;
   onLikeComment?: (commentId: number) => void;
@@ -46,6 +47,7 @@ export function PostDetailModal({
   onSave, 
   onShare, 
   onDelete, 
+  onEditCaption,
   onProfileClick,
   onComment,
   onLikeComment
@@ -56,6 +58,9 @@ export function PostDetailModal({
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [isEditingCaption, setIsEditingCaption] = useState(false);
+  const [captionDraft, setCaptionDraft] = useState('');
+  const [isSavingCaption, setIsSavingCaption] = useState(false);
 
   useEffect(() => {
     if (!api) return;
@@ -82,6 +87,8 @@ export function PostDetailModal({
     String(currentUser.id) === String(post.user?.id) || 
     String(currentUser.id) === String(post.user_id)
   );
+
+  const currentCaption = post?.content?.text ?? post?.content ?? '';
 
   return (
     <div className="fixed inset-0 bg-white z-[70] overflow-y-auto animate-in slide-in-from-right duration-300">
@@ -121,7 +128,17 @@ export function PostDetailModal({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="z-[100] bg-white min-w-[150px] shadow-lg rounded-xl p-1 border border-gray-100">
                   {isOwner ? (
-                    <DropdownMenuItem 
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setCaptionDraft(currentCaption || '');
+                          setIsEditingCaption(true);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        Edit caption
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
                       onClick={() => {
                         onDelete(post.id);
                         onClose(); // Close modal after deleting
@@ -130,7 +147,8 @@ export function PostDetailModal({
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
                       Delete Post
-                    </DropdownMenuItem>
+                      </DropdownMenuItem>
+                    </>
                   ) : (
                     <DropdownMenuItem 
                       onClick={() => {
@@ -148,6 +166,63 @@ export function PostDetailModal({
           </div>
         </div>
       </div>
+
+      {isEditingCaption && (
+        <div className="fixed inset-0 z-[120] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => !isSavingCaption && setIsEditingCaption(false)}>
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="text-gray-900 font-bold">Edit caption</div>
+              <button
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                onClick={() => !isSavingCaption && setIsEditingCaption(false)}
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4">
+              <textarea
+                value={captionDraft}
+                onChange={(e) => setCaptionDraft(e.target.value)}
+                className="w-full min-h-[140px] p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                disabled={isSavingCaption}
+              />
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition-colors"
+                  onClick={() => !isSavingCaption && setIsEditingCaption(false)}
+                  disabled={isSavingCaption}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={`px-4 py-2 rounded-xl font-bold text-white transition-colors ${isSavingCaption ? 'bg-purple-300' : 'bg-purple-600 hover:bg-purple-700'}`}
+                  onClick={async () => {
+                    if (!onEditCaption) return;
+                    if (!captionDraft.trim()) {
+                      toast.error('Caption cannot be empty');
+                      return;
+                    }
+                    try {
+                      setIsSavingCaption(true);
+                      await onEditCaption(post.id, captionDraft);
+                      toast.success('Caption updated');
+                      setIsEditingCaption(false);
+                    } catch (e) {
+                      console.error(e);
+                      toast.error('Failed to update caption');
+                    } finally {
+                      setIsSavingCaption(false);
+                    }
+                  }}
+                  disabled={isSavingCaption}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto">
         {/* Media Content (Carousel or Single) */}

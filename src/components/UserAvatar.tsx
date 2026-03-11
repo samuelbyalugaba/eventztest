@@ -2,24 +2,25 @@ import { useState, useMemo } from 'react';
 
 interface UserAvatarProps {
   src?: string | null;
-  name: string;
+  name?: string | null;
   className?: string;
   onClick?: (e?: React.MouseEvent) => void;
 }
 
 export function UserAvatar({ src, name, className = '', onClick }: UserAvatarProps) {
   const [imageError, setImageError] = useState(false);
+  const safeName = name || '';
 
   const initials = useMemo(() => {
-    if (!name) return '?';
-    return name
+    if (!safeName) return '?';
+    return safeName
       .split(' ')
       .filter(part => part.length > 0)
       .map(part => part[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  }, [name]);
+  }, [safeName]);
 
   const bgColor = useMemo(() => {
     const colors = [
@@ -28,11 +29,11 @@ export function UserAvatar({ src, name, className = '', onClick }: UserAvatarPro
       'bg-orange-500', 'bg-cyan-500'
     ];
     let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < safeName.length; i++) {
+      hash = safeName.charCodeAt(i) + ((hash << 5) - hash);
     }
     return colors[Math.abs(hash) % colors.length];
-  }, [name]);
+  }, [safeName]);
 
   if (!src || imageError) {
     const hasRoundedClass = className.includes('rounded-');
@@ -51,7 +52,7 @@ export function UserAvatar({ src, name, className = '', onClick }: UserAvatarPro
   return (
     <img 
       src={src} 
-      alt={name} 
+      alt={safeName || 'User'} 
       className={`${hasRoundedClass ? '' : 'rounded-full'} object-cover ${className}`}
       onError={() => setImageError(true)}
       onClick={onClick}

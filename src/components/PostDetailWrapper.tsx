@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { PostDetailPage } from './PostDetailPage';
-import { getPostById, toggleLikePost, toggleSavePost, deletePost, createPostComment } from '../utils/supabase/api';
+import { getPostById, toggleLikePost, toggleSavePost, deletePost, createPostComment, toggleLikeComment, updatePostCaption } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
 import { toast } from 'sonner';
 import { formatTimeAgo } from '../utils/format';
@@ -178,6 +178,25 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
     } catch (e) { console.error(e); }
   };
 
+  const handleEditCaption = async (postId: number, caption: string) => {
+    if (!currentUser) {
+      toast.error('Please sign in');
+      return;
+    }
+    const updated = await updatePostCaption(postId, currentUser.id, caption);
+    setPost((prev: any) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      if (next.content && typeof next.content === 'object') {
+        next.content = { ...next.content, text: updated.content };
+      } else {
+        next.content = updated.content;
+      }
+      return next;
+    });
+    window.dispatchEvent(new Event('postsUpdated'));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -221,6 +240,7 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
           }));
         } catch (e) { console.error(e); }
       }}
+      onEditCaption={handleEditCaption}
       onShare={async (post) => {
         const shareTitle = `Check out this post from ${post?.user?.name || 'a user'}`;
         const shareText = post?.content?.text || 'Check out this amazing post on EVENTZ!';

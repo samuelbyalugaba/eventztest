@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserAvatar } from './UserAvatar';
 import { PostCard } from './PostCard';
 import { PostSkeleton } from './PostSkeleton';
-import { Calendar, Search, MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
+import { Calendar, Camera, Search, MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments, getProfile } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments, getProfile, getMessages, toggleLikeComment, updatePostCaption } from '../utils/supabase/api';
 import { formatTimeAgo } from '../utils/format';
 import { Post, Comment, HighlightClip, Conversation } from '../types';
 import { PostDetailModal } from './PostDetailModal';
@@ -48,6 +49,7 @@ export function Feed({
   currentUser: propCurrentUser,
   onViewPost 
 }: FeedProps) {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -274,7 +276,7 @@ export function Feed({
       
       if (updatedConv) {
         // If we don't have messages yet, fetch them
-        if (updatedConv.messages.length === 0 && updatedConv.lastMessage.text !== 'Start a conversation...') {
+        if ((updatedConv.messages?.length || 0) === 0 && updatedConv.lastMessage?.text !== 'Start a conversation...') {
            // We'll fetch them and update the local activeConversation
            const loadMsgs = async () => {
              try {
@@ -305,7 +307,7 @@ export function Feed({
 
   // Fetch comments for selected post
   useEffect(() => {
-    if (selectedPost && (!selectedPost.comments || selectedPost.comments.length === 0) && selectedPost.comments_count > 0) {
+    if (selectedPost && (!selectedPost.comments || selectedPost.comments.length === 0) && (selectedPost.comments_count || 0) > 0) {
       const fetchComments = async () => {
         try {
           const { data: commentsData } = await supabase
@@ -609,6 +611,41 @@ export function Feed({
     }
   };
 
+  const handleEditCaption = async (postId: number, caption: string) => {
+    if (!currentUser) {
+      toast.error('Please sign in');
+      return;
+    }
+    try {
+      const updated = await updatePostCaption(postId, currentUser.id, caption);
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p;
+        return {
+          ...p,
+          content: {
+            ...(p.content || {}),
+            text: updated.content,
+          }
+        } as any;
+      }));
+      setSelectedPost(prev => {
+        if (!prev || prev.id !== postId) return prev;
+        return {
+          ...prev,
+          content: {
+            ...(prev.content || {}),
+            text: updated.content,
+          }
+        } as any;
+      });
+      window.dispatchEvent(new Event('postsUpdated'));
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to update caption');
+      throw e;
+    }
+  };
+
   const handleStartConversationLocal = async (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
@@ -853,6 +890,7 @@ export function Feed({
           onSave={(id, e) => toggleSave(id, e)}
           onShare={(p, e) => sharePost(p, e)}
           onDelete={handleDeletePost}
+          onEditCaption={handleEditCaption}
           onProfileClick={(user, e) => handleOpenUserProfile(user, e)}
           onComment={(postId, text, parentId) => handlePostComment(postId, text, parentId)}
           onLikeComment={handleLikeComment}
@@ -1499,6 +1537,15 @@ export function Feed({
         />
       )}
       {/* Notifications Modal */}
+       
+       {/* Floating Action Button - Share Post */}
+      <button
+        onClick={() => navigate('/compose/post')}
+        className="fixed bottom-24 right-6 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
+        title="Share a post"
+      >
+        <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
+      </button>
     </>
   );
 }

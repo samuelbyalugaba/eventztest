@@ -24,6 +24,7 @@ import {
    deletePost,
    getPostComments,
    incrementPostView,
+   updatePostCaption,
    type Event, 
    type Profile 
  } from '../utils/supabase/api';
@@ -73,6 +74,17 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
   const [followList, setFollowList] = useState<any[]>([]);
   const [isLoadingFollowList, setIsLoadingFollowList] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any>(null);
+
+  const handleEditCaption = async (postId: number, caption: string) => {
+    if (!currentUser) {
+      toast.error('Please login');
+      return;
+    }
+    const updated = await updatePostCaption(postId, currentUser.id, caption);
+    setUserPosts(prev => prev.map(p => (p.id === postId ? { ...p, content: { ...(p.content || {}), text: updated.content } } : p)));
+    setSelectedPost((prev: any) => (prev && prev.id === postId ? { ...prev, content: { ...(prev.content || {}), text: updated.content } } : prev));
+    window.dispatchEvent(new Event('postsUpdated'));
+  };
 
   const toggleLike = async (postId: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -642,6 +654,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
           onClose={() => setSelectedPost(null)}
           onLike={(id) => toggleLike(id)}
           onSave={(id) => toggleSave(id)}
+          onEditCaption={handleEditCaption}
           onShare={async (p) => {
              await handleShare({
                 title: `Check out this post from ${p.user.name}`,

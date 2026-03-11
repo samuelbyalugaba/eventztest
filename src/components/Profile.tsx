@@ -2,14 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, Calendar, Video, Bookmark, X, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star, ChevronRight } from 'lucide-react';
+import { Settings, Calendar, Video, Bookmark, X, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star, ChevronRight, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, createPost, uploadImage, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents } from '../utils/supabase/api';
 import { WalletModal } from './WalletModal';
 import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
@@ -22,6 +22,19 @@ import { Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
 
 import { EventListModal } from './EventListModal';
+
+type TicketViewerTicket = {
+  id: number;
+  name: string;
+  date: string;
+  time: string;
+  location: string;
+  image: string;
+  category: string;
+  ticketType: string;
+  price: string;
+  qrCode: string;
+};
 
 interface ProfileProps {
   onLogout?: () => Promise<void>;
@@ -43,14 +56,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
-  // const [showOrganizerOnboarding, setShowOrganizerOnboarding] = useState(false);
-  const [showSharePostModal, setShowSharePostModal] = useState(false);
-  const [postCaption, setPostCaption] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [postType, setPostType] = useState<'photo' | 'video' | null>(null);
-  const [postAsOrganizer, setPostAsOrganizer] = useState(false);
   const [showTicketViewer, setShowTicketViewer] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<TicketViewerTicket | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
@@ -71,7 +78,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
   const [userPosts, setUserPosts] = useState<ApiPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // Removed selectedDetailedPost as we use onViewPost for navigation
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   const [isFollowing, setIsFollowing] = useState(false);
   
@@ -93,6 +99,18 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
   
   const isOwnProfile = !userId || (currentUser && userId === currentUser.id);
+
+  const handleLogout = async () => {
+    try {
+      if (onLogout) {
+        await onLogout();
+      } else {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.error('Logout failed', e);
+    }
+  };
 
   const handleShowFollowers = async () => {
     const targetUserId = userId || currentUser?.id;
@@ -128,10 +146,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     }
   };
   
-  // Upload states
-  const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const savedEventsSubscriptionRef = useRef<any>(null);
 
   // Unified Profile Logic
@@ -141,16 +155,11 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const organizerCategory = userProfile?.organizer_type;
 
   useEffect(() => {
-    setPostAsOrganizer(isOrganizer);
-  }, [isOrganizer]);
-
-  useEffect(() => {
     const handleProfileUpdated = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         
-        // Only refresh if viewing own profile
         if (isOwnProfile) {
             const profile = await getProfile(user.id);
             if (profile) {
@@ -188,12 +197,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         const targetUserId = userId || user?.id;
         
         if (targetUserId) {
-          // 1. Profile
           const profile = await getProfile(targetUserId);
           if (profile) {
             setUserProfile(profile);
             
-            // 1b. Stats (if organizer)
             if (profile.is_organizer) {
               try {
                 const stats = await getOrganizerStats(targetUserId);
@@ -214,7 +221,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             }
           }
 
-          // Load Follow Stats
           try {
             const followers = await getFollowersCount(targetUserId);
             const following = await getFollowingCount(targetUserId);
@@ -223,7 +229,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             console.error('Error loading follow stats:', err);
           }
           
-          // 2. Saved Events (from DB) - Only for own profile usually, but fetch anyway
           if (isOwnProfile) {
              await fetchSavedEvents(targetUserId);
              savedEventsSubscriptionRef.current = subscribeToSavedEvents(targetUserId, () => {
@@ -231,9 +236,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
              });
           }
 
-          // 3. Tickets - Only meaningful for own profile privacy-wise, but logic allows fetching public info if API allows
-          // Assuming getUserTickets is protected by RLS for own tickets only. 
-          // If viewing other profile, tickets likely won't return or return empty unless public.
           if (isOwnProfile) {
               const tickets = await getUserTickets(targetUserId);
               if (tickets) {
@@ -252,7 +254,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               }
           }
 
-          // 4. Posts (for Photos & Videos)
           const posts = await getPosts({ authorId: targetUserId });
           if (posts) {
              setUserPosts(posts);
@@ -272,144 +273,19 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     };
   }, [userId, isOwnProfile]);
 
-  // Clear state when modal opens
-  useEffect(() => {
-    if (showSharePostModal) {
-      setSelectedFiles([]);
-      setFilesToUpload([]);
-      setPostCaption('');
-      // Reset file input if it exists
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  }, [showSharePostModal]);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
-      
-      // Validate file type based on postType
-      const validFiles = files.filter(file => {
-        if (postType === 'photo' && !file.type.startsWith('image/')) {
-          toast.error(`Skipped ${file.name}: Not an image`);
-          return false;
-        }
-        if (postType === 'video' && !file.type.startsWith('video/')) {
-          toast.error(`Skipped ${file.name}: Not a video`);
-          return false;
-        }
-        return true;
-      });
-
-      if (validFiles.length === 0) return;
-
-      if (postType === 'video') {
-        if (validFiles.length > 1) {
-          toast.info("Only one video can be uploaded at a time.");
-        }
-        const file = validFiles[0];
-        setFilesToUpload([file]);
-        const url = URL.createObjectURL(file);
-        setSelectedFiles([url]);
-      } else {
-        setFilesToUpload(prev => [...prev, ...validFiles]);
-        const urls = validFiles.map(file => URL.createObjectURL(file));
-        setSelectedFiles(prev => [...prev, ...urls]);
-      }
-    }
-    // Reset input so the same file can be selected again if needed
-    e.target.value = '';
-  };
-
-  const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    setFilesToUpload(prev => prev.filter((_, i) => i !== index));
-    
-    // If all files removed, go back to type selection
-    if (selectedFiles.length === 1) {
-      setPostType(null);
-    }
-  };
-
-  const handleSharePost = async () => {
-    if (filesToUpload.length === 0) {
-      toast.error('Please select a file to upload');
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error('You must be logged in to post');
-        return;
-      }
-
-      // 1. Upload files
-      const uploadedUrls: string[] = [];
-      for (const file of filesToUpload) {
-        // Use 'posts' bucket - api.ts handles fallback to 'events' if needed
-        const publicUrl = await uploadImage(file, 'posts');
-        if (publicUrl) uploadedUrls.push(publicUrl);
-      }
-
-      if (uploadedUrls.length === 0) {
-        throw new Error('Failed to upload files');
-      }
-
-      // 2. Create post
-      await createPost({
-        content: postCaption,
-        image_urls: postType === 'photo' ? uploadedUrls : [],
-        video_url: postType === 'video' ? uploadedUrls[0] : undefined,
-        hashtags: [],
-        user_id: user.id,
-        posted_as_organizer: postAsOrganizer
-      });
-
-      toast.success('Post shared successfully! 🎉', {
-        description: 'Your event moment has been shared with your followers',
-      });
-
-      // Cleanup
-      setShowSharePostModal(false);
-      setPostType(null);
-      setSelectedFiles([]);
-      setFilesToUpload([]);
-      setPostCaption('');
-      
-      // Refresh posts
-      const updatedPosts = await getPosts({ authorId: user.id });
-      if (updatedPosts) {
-         setUserPosts(updatedPosts);
-      }
-
-    } catch (error) {
-      console.error('Error sharing post:', error);
-      toast.error('Failed to share post');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleDeletePost = async (postId: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
     if (!window.confirm("Are you sure you want to delete this post?")) return;
 
     try {
-      // Optimistic update
       setUserPosts(prev => prev.filter(p => p.id !== postId));
-
       await deletePost(postId);
       toast.success('Post deleted');
     } catch (error) {
       console.error('Error deleting post:', error);
       toast.error('Failed to delete post');
       
-      // Revert/Reload
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const posts = await getPosts({ authorId: user.id });
@@ -419,16 +295,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   };
 
   const handleOpenPost = (post: ApiPost) => {
-    // When opening from own profile (isOwnProfile), we might not have the full nested user/organizer object
-    // if the post object came from a simple query.
-    // Construct the user object carefully.
-
     let postUser;
     
     if (isOwnProfile) {
-        // We know who the user is - it's the current profile being viewed
         const currentProfileIsOrganizer = userProfile?.is_organizer || false;
-        
         postUser = {
             id: currentUser?.id,
             name: displayName,
@@ -436,20 +306,18 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             avatar: profileImage || '',
             verified: userProfile?.verified || false,
             isOrganizer: currentProfileIsOrganizer,
-            isOrganizerPage: currentProfileIsOrganizer // If we are on organizer profile, posts are likely organizer posts
+            isOrganizerPage: currentProfileIsOrganizer
         };
     } else {
-        // Viewing someone else's profile - post object likely has expanded user data
-        // OR we can fallback to the profile data we already loaded for this user
         const isOrganizerPage = !!post.posted_as_organizer;
         const postDisplayName = post.user?.full_name || post.user?.username || 'Unknown User';
         const postAvatarUrl = post.user?.avatar_url;
 
         postUser = {
             id: post.user?.id || 'unknown',
-            name: postDisplayName || displayName, // Fallback to profile display name
+            name: postDisplayName || displayName,
             username: post.user?.username || userProfile?.username || '@unknown',
-            avatar: postAvatarUrl || profileImage || '', // Fallback to profile image
+            avatar: postAvatarUrl || profileImage || '',
             verified: post.user?.verified || false,
             isOrganizer: post.user?.is_organizer || false,
             isOrganizerPage: isOrganizerPage
@@ -492,7 +360,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         videoUrl: post.video_url,
         views: post.views || 0,
       }] : undefined,
-      // Pass the video_url directly as well to ensure it's caught
       video_url: post.video_url
     };
     
@@ -501,11 +368,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     }
   };
 
-  // Derive media from posts
-  // Show all posts for unified profile, maybe filter differently later if needed
   const filteredUserPosts = userPosts;
 
-  // Group tickets by event
   const groupedTickets = ticketEvents.reduce((acc, ticket) => {
     const eventId = ticket.event_id;
     if (!acc[eventId]) {
@@ -577,7 +441,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                 <SheetDescription className="sr-only">
                   Navigation menu for wallet, dashboard, settings, and logout.
                 </SheetDescription>
-                {/* Header with User Info */}
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                      <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden ring-1 ring-gray-100">
@@ -594,7 +457,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                   </div>
                 </div>
 
-                {/* Menu Items */}
                 <div className="py-2">
                   <button 
                     onClick={() => { setShowWalletModal(true); setIsSidebarOpen(false); }}
@@ -700,8 +562,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           </div>
         )}
       </div>
-
-      
 
       {/* Stats Row */}
       <div className="flex items-center justify-between px-6 mb-6">
@@ -823,7 +683,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           <button 
             className="flex-1 py-2 bg-gray-50 text-gray-900 border border-gray-100 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-all active:scale-95"
             onClick={() => {
-              // Handle message
               toast.info('Message feature coming soon');
             }}
           >
@@ -916,8 +775,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                 ) : (
                   <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
                     {filteredUserPosts.map((post) => {
-                      const isVideo = !!post.video_url;
                       const firstImage = post.image_urls?.[0];
+                      const isMediaVideo = (url?: string) => !!url && /\.(mp4|webm|ogg|mov)$/i.test(url);
+                      const videoSrc = post.video_url || (isMediaVideo(firstImage) ? firstImage : undefined);
+                      const isVideo = !!videoSrc;
                       const isCarousel = (post.image_urls?.length || 0) > 1;
                       return (
                         <div
@@ -927,7 +788,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                         >
                           {isVideo ? (
                             <video
-                              src={post.video_url!}
+                              src={videoSrc!}
+                              poster={post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : undefined}
                               className="w-full h-full object-cover"
                               muted
                               playsInline
@@ -1081,517 +943,23 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         )}
       </div>
 
-      {/* Saved Events Modal - Keep existing modal for alternate access */}
-      {showSavedEventsModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-end justify-center"
-          onClick={() => setShowSavedEventsModal(false)}
-        >
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
-            style={{ animation: 'fadeIn 0.3s ease-out' }}
-          ></div>
-          
-          {/* Modal Content */}
-          <div 
-            className="relative w-full max-w-7xl bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden"
-            style={{ animation: 'slideUp 0.4s cubic-bezier(0.32, 0.72, 0, 1)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="relative px-6 pt-6 pb-4 border-b border-gray-100 bg-gradient-to-br from-purple-50 via-white to-pink-50">
-              {/* Drag Indicator */}
-              <div className="flex justify-center mb-3">
-                <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
-                    <Bookmark className="w-6 h-6 text-white fill-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-gray-900">Saved Events</h2>
-                    <p className="text-gray-600 text-sm">
-                      {savedEvents.length} {savedEvents.length === 1 ? 'event' : 'events'} saved
-                    </p>
-                  </div>
-                </div>
-                
-                <button 
-                  onClick={() => setShowSavedEventsModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X className="w-6 h-6 text-gray-600" />
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              {savedEvents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 px-6">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                    <Bookmark className="w-8 h-8 text-gray-300" />
-                  </div>
-                  <h3 className="text-gray-900 mb-3 text-center">Your Event Collection Awaits</h3>
-                  <p className="text-gray-600 text-center max-w-md leading-relaxed">
-                    Discover amazing events and tap the bookmark icon to save them here. Build your perfect event collection!
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {savedEvents.map((event, index) => (
-                    <div 
-                      key={event.id} 
-                      className="group cursor-pointer"
-                      style={{ animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both` }}
-                    >
-                      <div className="relative w-full h-56 rounded-2xl overflow-hidden mb-3 shadow-md hover:shadow-xl transition-all duration-300">
-                        <ImageWithFallback
-                          src={event.image_url}
-                          alt={event.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                        
-                        {/* Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                        
-                        {/* Saved Badge - Animated */}
-                        <div className="absolute top-4 right-4 w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                          <Bookmark className="w-5 h-5 text-purple-600 fill-purple-600" />
-                        </div>
-                        
-                        {/* Event Info */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <p className="text-white mb-1 line-clamp-2 leading-snug">{event.title}</p>
-                          <div className="flex items-center gap-2 text-white/90 text-xs">
-                            <Calendar className="w-3.5 h-3.5" />
-                            <span>{event.date}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <style dangerouslySetInnerHTML={{__html: `
-            @keyframes fadeIn {
-              from { opacity: 0; }
-              to { opacity: 1; }
-            }
-            
-            @keyframes slideUp {
-              from {
-                transform: translateY(100%);
-                opacity: 0;
-              }
-              to {
-                transform: translateY(0);
-                opacity: 1;
-              }
-            }
-            
-            @keyframes fadeInUp {
-              from {
-                opacity: 0;
-                transform: translateY(20px);
-              }
-              to {
-                opacity: 1;
-                transform: translateY(0);
-              }
-            }
-          `}} />
-        </div>
-      )}
-
-      {/* Event Detail Modal */}
-      {selectedEvent && (
-        <EventDetailModal
-          event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onPurchaseTicket={() => {
-             toast.info("Please go to Events page to purchase tickets");
-          }}
-          onPurchaseNormalTicket={() => {
-             toast.info("Please go to Events page to purchase tickets");
-          }}
-        />
-      )}
-
-      
-
       {/* Floating Action Button - Share Post */}
       <button
-        onClick={() => setShowSharePostModal(true)}
+        onClick={() => navigate('/compose/post')}
         className="fixed bottom-24 right-6 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
         title="Share a post"
       >
         <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
       </button>
 
-      {/* Share Post Modal */}
-      {showSharePostModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={() => {
-            if (!isUploading) {
-              setShowSharePostModal(false);
-              setPostType(null);
-              setSelectedFiles([]);
-              setFilesToUpload([]);
-              setPostCaption('');
-            }
-          }}
-        >
-          <div 
-            className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Hidden File Input */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              multiple={postType === 'photo'}
-              accept={postType === 'photo' ? 'image/*' : 'video/*'}
-              onChange={handleFileSelect}
-            />
-
-            {/* Header */}
-            <div className="relative px-6 py-5 border-b border-gray-200 bg-purple-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-[#8A2BE2] rounded-2xl flex items-center justify-center shadow-lg">
-                    <Camera className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-gray-900 text-xl">Share a Post</h2>
-                    <p className="text-gray-600 text-sm">Share your event moments</p>
-                  </div>
-                </div>
-                
-                <button 
-                  onClick={() => {
-                    if (!isUploading) {
-                      setShowSharePostModal(false);
-                      setPostType(null);
-                      setSelectedFiles([]);
-                      setFilesToUpload([]);
-                      setPostCaption('');
-                    }
-                  }}
-                  className="p-2 hover:bg-white/80 rounded-full transition-colors"
-                  disabled={isUploading}
-                >
-                  <X className="w-6 h-6 text-gray-600" />
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6">
-              {!postType ? (
-                /* Media Type Selection */
-                <div className="space-y-4">
-                  <p className="text-gray-700 text-center mb-6">What would you like to share?</p>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Photo Button */}
-                    <button
-                      onClick={() => {
-                        setPostType('photo');
-                        setTimeout(() => {
-                          fileInputRef.current?.click();
-                        }, 0);
-                      }}
-                      className="group relative overflow-hidden rounded-2xl p-8 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 transition-all hover:shadow-lg hover:scale-105 active:scale-95"
-                    >
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                          <ImageIcon className="w-8 h-8 text-white" />
-                        </div>
-                        <div className="text-center">
-                          <h3 className="text-gray-900 mb-1">Photos</h3>
-                          <p className="text-gray-600 text-sm">Share event photos</p>
-                        </div>
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/0 to-purple-600/5 group-hover:from-purple-600/5 group-hover:to-purple-600/10 transition-all"></div>
-                    </button>
-
-                    {/* Video Button */}
-                    <button
-                      onClick={() => {
-                        setPostType('video');
-                        setTimeout(() => {
-                          fileInputRef.current?.click();
-                        }, 0);
-                      }}
-                      className="group relative overflow-hidden rounded-2xl p-8 bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 transition-all hover:shadow-lg hover:scale-105 active:scale-95"
-                    >
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 bg-pink-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                          <Play className="w-8 h-8 text-white fill-white" />
-                        </div>
-                        <div className="text-center">
-                          <h3 className="text-gray-900 mb-1">Videos</h3>
-                          <p className="text-gray-600 text-sm">Share event clips</p>
-                        </div>
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-br from-pink-600/0 to-pink-600/5 group-hover:from-pink-600/5 group-hover:to-pink-600/10 transition-all"></div>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Post Creation Form */
-                <div className="space-y-5">
-                  {/* Preview Area */}
-                  {selectedFiles.length > 0 && (
-                    <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-100 shadow-lg group">
-                      {postType === 'video' ? (
-                          <div className="relative w-full h-full">
-                             <video src={selectedFiles[0]} className="w-full h-full object-cover" />
-                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl">
-                                  <Play className="w-8 h-8 text-purple-600 fill-purple-600 ml-1" />
-                                </div>
-                             </div>
-                          </div>
-                      ) : (
-                          <div className="flex overflow-x-auto snap-x snap-mandatory w-full h-full scrollbar-hide">
-                             {selectedFiles.map((url, idx) => (
-                                <div key={idx} className="flex-shrink-0 w-full h-full snap-center relative group/slide">
-                                   <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
-                                   <button 
-                                      onClick={() => removeFile(idx)}
-                                      className="absolute top-3 right-3 p-1.5 bg-black/50 backdrop-blur-sm hover:bg-red-500/80 rounded-full text-white transition-all opacity-0 group-hover/slide:opacity-100 z-10"
-                                      title="Remove image"
-                                   >
-                                      <X className="w-4 h-4" />
-                                   </button>
-                                </div>
-                             ))}
-                          </div>
-                      )}
-
-                      {/* Add Button for Photos */}
-                      {postType === 'photo' && (
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="absolute bottom-4 right-4 p-3 bg-white/90 backdrop-blur-sm shadow-lg rounded-full text-purple-600 hover:bg-white hover:scale-105 active:scale-95 transition-all z-20"
-                          title="Add more photos"
-                        >
-                          <Plus className="w-5 h-5" />
-                        </button>
-                      )}
-
-                      {/* Carousel Indicators */}
-                      {selectedFiles.length > 1 && (
-                         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                           {selectedFiles.map((_, idx) => (
-                             <div key={idx} className="w-1.5 h-1.5 rounded-full bg-white/50 backdrop-blur-sm shadow-sm" />
-                           ))}
-                         </div>
-                      )}
-
-                      {/* Type Badge */}
-                      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg z-20">
-                        <div className="flex items-center gap-2">
-                          {postType === 'photo' ? (
-                            <ImageIcon className="w-4 h-4 text-purple-600" />
-                          ) : (
-                            <Video className="w-4 h-4 text-pink-600" />
-                          )}
-                          <span className="text-sm capitalize text-gray-900">{postType}</span>
-                           {selectedFiles.length > 1 && (
-                             <span className="text-xs text-gray-500 border-l border-gray-300 pl-2 ml-1">
-                               {selectedFiles.length} items
-                             </span>
-                           )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Caption Input */}
-                  <div className="space-y-2">
-                    <label className="text-gray-700 text-sm flex items-center gap-2">
-                      <Smile className="w-4 h-4 text-purple-600" />
-                      Add a caption
-                    </label>
-                    <textarea
-                      value={postCaption}
-                      onChange={(e) => setPostCaption(e.target.value)}
-                      placeholder="Share your experience... #EVENTZ"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-purple-600 transition-all resize-none"
-                      rows={3}
-                    />
-                    <p className="text-gray-500 text-xs">{postCaption.length}/500 characters</p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-            {isOrganizer && (
-              <button
-                onClick={() => setPostAsOrganizer(!postAsOrganizer)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  postAsOrganizer 
-                    ? 'bg-purple-100 text-purple-700 border border-purple-200' 
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                {postAsOrganizer ? (
-                  <>
-                    <Briefcase className="w-3.5 h-3.5" />
-                    <span>{displayName || 'Organizer'}</span>
-                  </>
-                ) : (
-                  <>
-                    <User className="w-3.5 h-3.5" />
-                    <span>Myself</span>
-                  </>
-                )}
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                        if (!isUploading) {
-                          setPostType(null);
-                          setSelectedFiles([]);
-                          setFilesToUpload([]);
-                          setPostCaption('');
-                        }
-                      }}
-                      className="flex-1 px-6 py-3.5 rounded-xl border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={isUploading}
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={handleSharePost}
-                      disabled={isUploading}
-                      className="flex-1 bg-[#8A2BE2] text-white px-6 py-3.5 rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:scale-100 disabled:active:scale-100 disabled:cursor-wait"
-                    >
-                      {isUploading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Posting...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-5 h-5" />
-                          Share Post
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Event List Modal */}
-      {showEventListModal && (
-        <EventListModal
-          title={isOrganizer ? "Hosted Events" : "Attended Events"}
-          events={isOrganizer ? publishedEvents : attendedEvents}
-          onClose={() => setShowEventListModal(false)}
-          onEventClick={(event) => {
-             setSelectedEvent(event);
-             // Don't close the list modal to allow going back? 
-             // Or close it? Usually clicking an item opens details on top.
-             // If EventDetailModal opens on top, we can keep this open or close it.
-             // Let's keep it open so back navigation works if implemented, or just close it.
-             // Standard behavior: Close list, open detail.
-             // But if detail is a modal, it stacks.
-             // Let's stack it.
-          }}
-        />
-      )}
-
-      {/* Modals for Followers/Following/User Profile */}
-      <UserListModal 
-        isOpen={showFollowersModal}
-        onClose={() => setShowFollowersModal(false)}
-        title="Followers"
-        users={followList}
-        loading={isLoadingFollowList}
-        onUserSelect={(user) => {
-          setSelectedUserForModal({
-            ...user,
-            type: user.is_organizer ? 'Organizer' : 'Attendee',
-            name: user.full_name || user.username || 'User',
-            avatar: user.avatar_url || '',
-            verified: false
-          });
-          setShowUserProfileModal(true);
-        }}
-      />
-
-      <UserListModal 
-        isOpen={showFollowingModal}
-        onClose={() => setShowFollowingModal(false)}
-        title="Following"
-        users={followList}
-        loading={isLoadingFollowList}
-        onUserSelect={(user) => {
-          setSelectedUserForModal({
-            ...user,
-            type: user.is_organizer ? 'Organizer' : 'Attendee',
-            name: user.full_name || user.username || 'User',
-            avatar: user.avatar_url || '',
-            verified: false
-          });
-          setShowUserProfileModal(true);
-        }}
-      />
-
-      {showUserProfileModal && selectedUserForModal && (
-        <UserProfileModal
-          user={selectedUserForModal}
-          onClose={() => {
-            setShowUserProfileModal(false);
-            setSelectedUserForModal(null);
-          }}
-          onFollow={() => {
-             if (showFollowersModal) handleShowFollowers();
-             if (showFollowingModal) handleShowFollowing();
-          }}
-          onViewPost={onViewPost}
-        />
-      )}
-
-      {showProfessionalDashboard && userProfile && (
-        <ProfessionalDashboardModal
-          onClose={() => setShowProfessionalDashboard(false)}
-          organizerProfile={userProfile}
-          onCreateEvent={() => {
-             setShowProfessionalDashboard(false);
-             onCreateEvent?.();
-          }}
-          onEditEvent={(event) => {
-             setShowProfessionalDashboard(false);
-             onEditEvent?.(event);
-          }}
-        />
-      )}
-
       {/* Settings Modal */}
       {showSettingsModal && (
         <SettingsModal
           onClose={() => setShowSettingsModal(false)}
-          onLogout={onLogout || (async () => {})}
+          onLogout={handleLogout}
           initialView={settingsInitialView}
         />
       )}
-
 
       {/* Wallet Modal */}
       {showWalletModal && (
@@ -1609,41 +977,122 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         />
       )}
 
-      {/* Ticket Viewer */}
-      {showTicketViewer && selectedTicket && (
-        <TicketViewer
-          ticket={{
-            id: selectedTicket.id,
-            name: selectedTicket.event?.title || 'Unknown Event',
-            date: selectedTicket.event?.date || '',
-            time: selectedTicket.event?.time || '',
-            location: selectedTicket.event?.location || '',
-            image: selectedTicket.event?.image_url || '',
-            category: selectedTicket.event?.category || '',
-            ticketType: selectedTicket.ticket_type,
-            price: selectedTicket.price,
-            qrCode: selectedTicket.ticket_number || selectedTicket.qr_code || '',
-          }}
-          onClose={() => {
-            setShowTicketViewer(false);
-            setSelectedTicket(null);
-          }}
-        />
-      )}
-
       {/* Ticket List Modal */}
-      {showTicketListModal && selectedEventTickets.length > 0 && (
+      {showTicketListModal && (
         <TicketListModal
           isOpen={showTicketListModal}
-          eventName={selectedEventTickets[0].event?.title || 'Event'}
-          tickets={selectedEventTickets}
+          eventName={selectedEventTickets[0]?.event?.title || 'My Tickets'}
           onClose={() => setShowTicketListModal(false)}
+          tickets={selectedEventTickets}
           onSelectTicket={(ticket) => {
-            setSelectedTicket(ticket);
+            const mapped: TicketViewerTicket = {
+              id: ticket.id,
+              name: ticket.event?.title || 'Event',
+              date: ticket.event?.date || '',
+              time: ticket.event?.time || '',
+              location: ticket.event?.location || '',
+              image: ticket.event?.image_url || '',
+              category: (ticket.event as any)?.category || '',
+              ticketType: ticket.ticket_type || '',
+              price: ticket.price || '',
+              qrCode: ticket.qr_code || ticket.barcode || ticket.ticket_number || String(ticket.id),
+            };
+            setSelectedTicket(mapped);
             setShowTicketViewer(true);
           }}
         />
       )}
+
+      {/* Ticket Viewer */}
+      {showTicketViewer && selectedTicket && (
+        <TicketViewer
+          ticket={selectedTicket}
+          onClose={() => setShowTicketViewer(false)}
+        />
+      )}
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onPurchaseTicket={() => {
+             toast.info("Please go to Events page to purchase tickets");
+          }}
+          onPurchaseNormalTicket={() => {
+             toast.info("Please go to Events page to purchase tickets");
+          }}
+        />
+      )}
+
+      {/* Event List Modal */}
+      {showEventListModal && (
+        <EventListModal
+          title={isOrganizer ? "Hosted Events" : "Attended Events"}
+          events={isOrganizer ? (publishedEvents as any) : attendedEvents}
+          onClose={() => setShowEventListModal(false)}
+          onEventClick={(event) => {
+            setSelectedEvent(event);
+            setShowEventListModal(false);
+          }}
+        />
+      )}
+
+      {/* Follower/Following Modals */}
+      {showFollowersModal && (
+        <UserListModal
+          isOpen={showFollowersModal}
+          onClose={() => setShowFollowersModal(false)}
+          title="Followers"
+          users={followList}
+          loading={isLoadingFollowList}
+          onUserSelect={(user) => {
+            setSelectedUserForModal(user);
+            setShowUserProfileModal(true);
+          }}
+        />
+      )}
+
+      {showFollowingModal && (
+        <UserListModal
+          isOpen={showFollowingModal}
+          onClose={() => setShowFollowingModal(false)}
+          title="Following"
+          users={followList}
+          loading={isLoadingFollowList}
+          onUserSelect={(user) => {
+            setSelectedUserForModal(user);
+            setShowUserProfileModal(true);
+          }}
+        />
+      )}
+
+      {/* User Profile Modal */}
+      {showUserProfileModal && selectedUserForModal && (
+        <UserProfileModal
+          user={{
+            id: selectedUserForModal.id,
+            name: selectedUserForModal.full_name || selectedUserForModal.username || 'User',
+            type: selectedUserForModal.is_organizer ? 'Organizer' : 'Attendee',
+            avatar: selectedUserForModal.avatar_url || '',
+            verified: !!selectedUserForModal.verified,
+            isOrganizer: !!selectedUserForModal.is_organizer,
+            username: selectedUserForModal.username || '',
+          } as any}
+          onClose={() => setShowUserProfileModal(false)}
+        />
+      )}
+      
+      {/* Professional Dashboard Modal */}
+      {showProfessionalDashboard && (
+        <ProfessionalDashboardModal
+          onClose={() => setShowProfessionalDashboard(false)}
+          organizerProfile={userProfile}
+          onCreateEvent={onCreateEvent || (() => {})}
+          onEditEvent={onEditEvent}
+        />
+      )}
+
     </div>
   );
 }
