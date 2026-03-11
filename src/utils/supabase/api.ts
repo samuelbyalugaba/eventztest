@@ -173,17 +173,43 @@ export const getProfile = async (userId: string) => {
 };
 
 export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
+  const sanitizedUpdates: Partial<Profile> = { ...updates };
+  const removedPrivilegedKeys: (keyof Profile)[] = [];
+  for (const k of ['is_organizer', 'verified'] as (keyof Profile)[]) {
+    if (k in sanitizedUpdates) {
+      delete (sanitizedUpdates as any)[k];
+      removedPrivilegedKeys.push(k);
+    }
+  }
+
+  if ('organizer_type' in sanitizedUpdates) {
+    try {
+      const currentProfile = await getProfile(userId);
+      if (!currentProfile?.is_organizer) {
+        delete (sanitizedUpdates as any).organizer_type;
+        removedPrivilegedKeys.push('organizer_type');
+      }
+    } catch {
+      delete (sanitizedUpdates as any).organizer_type;
+      removedPrivilegedKeys.push('organizer_type');
+    }
+  }
+
+  if (removedPrivilegedKeys.length > 0 && Object.keys(sanitizedUpdates).length === 0) {
+    throw new Error('Unauthorized: You cannot update privileged profile fields directly.');
+  }
+
   // Input Validation
-  if (updates.username && updates.username.length < 3) {
+  if (sanitizedUpdates.username && sanitizedUpdates.username.length < 3) {
     throw new Error('Username must be at least 3 characters');
   }
   
-  if (updates.full_name && updates.full_name.length > 50) {
+  if (sanitizedUpdates.full_name && sanitizedUpdates.full_name.length > 50) {
     throw new Error('Name cannot exceed 50 characters');
   }
 
-  if (updates.birthdate) {
-    const birthDate = new Date(updates.birthdate);
+  if (sanitizedUpdates.birthdate) {
+    const birthDate = new Date(sanitizedUpdates.birthdate);
     const today = new Date();
     if (birthDate > today) {
       throw new Error('Birthdate cannot be in the future');
@@ -192,25 +218,23 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
 
   const { data, error } = await supabase
     .from('profiles')
-    .upsert({ ...updates, id: userId })
+    .upsert({ ...sanitizedUpdates, id: userId })
     .select()
     .single();
 
   if (!error) return data;
 
   const baseFields: Partial<Profile> = {
-    username: updates.username,
-    full_name: updates.full_name,
-    avatar_url: updates.avatar_url,
-    bio: updates.bio,
-    location: updates.location,
-    contact_email: updates.contact_email,
-    phone: updates.phone,
-    website: updates.website,
-    organizer_type: updates.organizer_type,
-    social_links: updates.social_links,
-    is_organizer: updates.is_organizer,
-    description: updates.description
+    username: sanitizedUpdates.username,
+    full_name: sanitizedUpdates.full_name,
+    avatar_url: sanitizedUpdates.avatar_url,
+    bio: sanitizedUpdates.bio,
+    location: sanitizedUpdates.location,
+    contact_email: sanitizedUpdates.contact_email,
+    phone: sanitizedUpdates.phone,
+    website: sanitizedUpdates.website,
+    social_links: sanitizedUpdates.social_links,
+    description: sanitizedUpdates.description
   };
 
   const { data: data2, error: error2 } = await supabase
@@ -223,12 +247,12 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
 
   // If updates include more than just avatar, don't fallback to avatar-only update
   // as it would mask the failure of important field updates.
-  const hasOtherUpdates = Object.keys(updates).some(key => key !== 'avatar_url' && key !== 'id');
+  const hasOtherUpdates = Object.keys(sanitizedUpdates).some(key => key !== 'avatar_url' && key !== 'id');
   
-  if (!hasOtherUpdates && updates.avatar_url) {
+  if (!hasOtherUpdates && sanitizedUpdates.avatar_url) {
     const { data: data3, error: error3 } = await supabase
       .from('profiles')
-      .upsert({ id: userId, avatar_url: updates.avatar_url })
+      .upsert({ id: userId, avatar_url: sanitizedUpdates.avatar_url })
       .select()
       .single();
     if (!error3) return data3;

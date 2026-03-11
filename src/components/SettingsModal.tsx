@@ -268,10 +268,16 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
           }
         }
 
+        const nextEmail = (profileData.email || '').trim();
+        if (nextEmail && nextEmail !== user.email) {
+          const { error: authUpdateError } = await supabase.auth.updateUser({ email: nextEmail });
+          if (authUpdateError) throw authUpdateError;
+          toast.info('Email change requested. Please check your inbox to confirm.');
+        }
+
         await updateProfile(user.id, {
           username: profileData.username,
           full_name: profileData.name,
-          contact_email: profileData.email,
           phone: profileData.phone,
           bio: profileData.bio,
           birthdate: profileData.birthdate,
@@ -283,7 +289,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
       }
       toast.success('Profile updated successfully! ✅');
       setCurrentView('main');
-      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','contact_email','phone','bio','birthdate','avatar_url', ...(isCreatorProfile ? ['location','organizer_type'] : [])] } }));
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','phone','bio','birthdate','avatar_url', ...(isCreatorProfile ? ['location','organizer_type'] : [])] } }));
     } catch (error) {
       console.error('Error saving profile:', error);
       const message = (error as any)?.message || (error as any)?.error_description || (error as any)?.details || 'Failed to save profile';

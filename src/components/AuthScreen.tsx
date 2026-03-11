@@ -87,7 +87,21 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
         if (error) throw error;
 
         if (data.session && data.user) {
-          const userName = data.user.user_metadata?.name || 'User';
+          let userName = data.user.user_metadata?.name || data.user.email || 'User';
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, username')
+              .eq('id', data.user.id)
+              .single();
+
+            const displayFromProfile =
+              profile?.full_name ||
+              (profile?.username ? `@${String(profile.username).replace(/^@/, '')}` : null);
+
+            if (displayFromProfile) userName = displayFromProfile;
+          } catch {}
+
           toast.success('Welcome back!', { description: `Signed in as ${userName}` });
           onAuthSuccess(data.session.access_token, data.user);
         }
