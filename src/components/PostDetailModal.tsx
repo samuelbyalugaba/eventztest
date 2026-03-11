@@ -58,7 +58,7 @@ export function PostDetailModal({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState('');
   const [isSavingCaption, setIsSavingCaption] = useState(false);
@@ -281,7 +281,7 @@ export function PostDetailModal({
                    {isMediaVideo ? (
                       <>
                         <video 
-                          src={media} 
+                          src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
                           className="w-full h-full object-contain max-h-[70vh]"
                           controls
                           autoPlay
@@ -324,7 +324,7 @@ export function PostDetailModal({
                                    {isMediaVideo ? (
                                       <>
                                         <video 
-                                          src={media} 
+                                          src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
                                           className="w-full h-full object-contain max-h-[70vh]"
                                           controls
                                           // Only autoplay if it's the active slide

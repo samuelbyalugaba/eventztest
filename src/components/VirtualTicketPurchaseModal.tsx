@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ChevronLeft, Tv, Calendar, MapPin, CheckCircle2, Phone, CreditCard, User, Mail, Smartphone, ArrowRight, Wallet } from 'lucide-react';
+import { X, Tv, CheckCircle2, User, Mail, Smartphone, ArrowRight, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
@@ -110,8 +110,8 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
             currency: currency,
             provider: 'Wallet',
             status: 'success',
-            type: 'payment',
             metadata: {
+              type: 'payment',
               customer_name: ticketFormData.name,
               customer_email: ticketFormData.email,
               ticket_type: 'Virtual'
@@ -130,8 +130,8 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
             currency: currency,
             provider: selectedProvider,
             status: 'pending',
-            type: 'payment',
             metadata: {
+              type: 'payment',
               customer_name: ticketFormData.name,
               customer_email: ticketFormData.email,
               customer_phone: ticketFormData.phone,

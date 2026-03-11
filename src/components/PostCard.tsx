@@ -312,7 +312,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                             {isVideoLoading && isActive && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                             <video
                               ref={isActive ? videoRef : null}
-                              src={media}
+                              src={`${media}${media.includes('#') ? '' : '#t=0.1'}`}
                               poster={videoPoster}
                               className="w-full h-full object-cover"
                               loop
@@ -385,7 +385,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                   {isVideoLoading && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                   <video
                     ref={videoRef}
-                    src={currentMedia}
+                    src={`${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}`}
                     poster={videoPoster}
                     className="w-full h-auto max-h-[600px]"
                     loop

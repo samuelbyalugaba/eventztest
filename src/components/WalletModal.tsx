@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { X, Wallet, CreditCard, CircleDollarSign, Calendar, ArrowDownToLine, Plus, ArrowUpRight, ArrowUpRight as WithdrawIcon, Smartphone } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Wallet, ArrowDownToLine, Plus, ArrowUpRight, ArrowUpRight as WithdrawIcon, Smartphone } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
-import { currencies, extractCurrencyFromPrice } from '../utils/currencies';
 import { toast } from 'sonner';
-import { createTransaction } from '../utils/supabase/api';
 import { ntzsApi, NtzsUser } from '../utils/ntzs-api';
 
 interface WalletModalProps {
@@ -19,7 +17,7 @@ type Tx = {
   status: string;
   created_at: string;
   event?: { id: number; title: string } | null;
-  type?: 'payment' | 'deposit' | 'withdrawal' | 'refund';
+  metadata?: any;
 };
 
 export function WalletModal({ isOpen, onClose }: WalletModalProps) {
@@ -31,7 +29,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
   const [phone, setPhone] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [balance, setBalance] = useState(0);
-  const [ntzsUser, setNtzsUser] = useState<NtzsUser | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -58,7 +55,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         console.error('Failed to get nTZS user, creating...', err);
         nUser = await ntzsApi.createUser(user.id, user.email || '');
       }
-      setNtzsUser(nUser);
 
       // 2. Get Real Balance from nTZS
       try {
@@ -79,7 +75,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       const { data: transactions } = await supabase
         .from('transactions')
         .select(`
-          id, amount, currency, provider, status, created_at, type,
+          id, amount, currency, provider, status, created_at, metadata,
           event:events(id, title)
         `)
         .eq('user_id', user.id)
@@ -113,7 +109,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       if (!user) return;
 
       // 1. Initiate nTZS Deposit
-      const deposit = await ntzsApi.deposit(user.id, Number(amount), phone);
+      await ntzsApi.deposit(user.id, Number(amount), phone);
       
       // 2. Record intent in local DB (optional but good for UI immediate feedback)
       // We can assume 'pending' status.
@@ -173,6 +169,13 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
   };
 
   if (!isOpen) return null;
+
+  const getTxKind = (t: Tx) => {
+    const metaType = t.metadata?.type;
+    if (typeof metaType === 'string' && metaType.trim()) return metaType.trim();
+    if (t.event) return 'payment';
+    return 'payment';
+  };
 
   return (
     <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
@@ -316,29 +319,36 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                 {txs.map((t) => (
                   <div key={t.id} className="p-3 rounded-xl border border-gray-200 flex items-center justify-between hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        t.type === 'deposit' || t.type === 'income' ? 'bg-green-100 text-green-600' : 
-                        t.type === 'payment' || t.type === 'withdrawal' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {t.type === 'deposit' || t.type === 'income' ? <ArrowDownToLine className="w-4 h-4" /> : 
-                         t.type === 'payment' || t.type === 'withdrawal' ? <ArrowUpRight className="w-4 h-4" /> : <CircleDollarSign className="w-4 h-4" />}
-                      </div>
+                      {(() => {
+                        const kind = getTxKind(t);
+                        const isOut = kind === 'payment' || kind === 'withdrawal';
+                        return (
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            isOut ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                          }`}>
+                            {isOut ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownToLine className="w-4 h-4" />}
+                          </div>
+                        );
+                      })()}
                       <div>
                         <p className="text-sm text-gray-900 font-medium capitalize">
-                          {t.type || 'Transaction'}
+                          {getTxKind(t) || 'Transaction'}
                         </p>
                         <p className="text-xs text-gray-500">
                           {new Date(t.created_at).toLocaleDateString()} • {t.provider}
                         </p>
                       </div>
                     </div>
-                    <span className={`text-sm font-semibold ${
-                      t.type === 'deposit' || t.type === 'income' ? 'text-green-600' : 
-                      t.type === 'payment' || t.type === 'withdrawal' ? 'text-gray-900' : 'text-gray-900'
-                    }`}>
-                      {t.type === 'payment' || t.type === 'withdrawal' ? '-' : '+'}
-                      {t.currency || 'TZS'} {t.amount.toLocaleString()}
-                    </span>
+                    {(() => {
+                      const kind = getTxKind(t);
+                      const isOut = kind === 'payment' || kind === 'withdrawal';
+                      return (
+                        <span className={`text-sm font-semibold ${isOut ? 'text-gray-900' : 'text-green-600'}`}>
+                          {isOut ? '-' : '+'}
+                          {t.currency || 'TZS'} {t.amount.toLocaleString()}
+                        </span>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>

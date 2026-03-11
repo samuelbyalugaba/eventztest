@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Check, Users, Sparkles, Crown, ArrowRight, Smartphone, CreditCard, ChevronLeft, Ticket, Minus, Plus, Wallet } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Sparkles, Crown, ArrowRight, Smartphone, CreditCard, Ticket, Minus, Plus, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { extractCurrencyFromPrice, currencies } from '../utils/currencies';
@@ -151,8 +151,8 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             currency: currency,
             provider: 'Wallet',
             status: 'success', // Instant success
-            type: 'payment',
             metadata: {
+              type: 'payment',
               customer_name: formData.name,
               customer_email: formData.email,
               selections: JSON.stringify(selections),
@@ -173,8 +173,8 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             currency: currency,
             provider: selectedProvider,
             status: 'pending',
-            type: 'payment',
             metadata: {
+              type: 'payment',
               customer_name: formData.name,
               customer_email: formData.email,
               customer_phone: paymentPhone,

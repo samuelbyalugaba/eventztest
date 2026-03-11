@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, Calendar, Video, Bookmark, X, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star, ChevronRight, Send } from 'lucide-react';
+import { Settings, Calendar, Bookmark, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Heart, Plus, Trash, BarChart3, User, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { TicketViewer } from './TicketViewer';
@@ -50,10 +50,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const { userId: userIdParam } = useParams<{ userId: string }>();
   const userId = userIdProp || userIdParam;
   const navigate = useNavigate();
-  const location = useLocation();
   const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events' | 'hosted' | 'upcoming'>('media');
   const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
-  const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
   const [showTicketViewer, setShowTicketViewer] = useState(false);
@@ -788,12 +786,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                         >
                           {isVideo ? (
                             <video
-                              src={videoSrc!}
+                              src={`${videoSrc!}${videoSrc!.includes('#') ? '' : '#t=0.1'}`}
                               poster={post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : undefined}
                               className="w-full h-full object-cover"
                               muted
                               playsInline
                               loop
+                              preload="metadata"
                               onMouseOver={(e) => e.currentTarget.play()}
                               onMouseOut={(e) => {
                                 e.currentTarget.pause();

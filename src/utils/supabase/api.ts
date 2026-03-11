@@ -851,10 +851,10 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
   // Validate file type
   const allowedTypes = [
     'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-    'video/mp4', 'video/webm', 'video/quicktime'
+    'video/mp4', 'video/webm'
   ];
   if (!allowedTypes.includes(file.type)) {
-    throw new Error('Invalid file type. Only JPEG, PNG, WebP, GIF, MP4, WebM, and MOV are allowed.');
+    throw new Error('Invalid file type. Only JPEG, PNG, WebP, GIF, MP4, and WebM are allowed.');
   }
 
   // Validate file size (100MB limit for videos, 10MB for images)
@@ -865,7 +865,10 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
     throw new Error(`File size too large. Maximum size is ${isVideo ? '100MB' : '10MB'}.`);
   }
 
-  const fileExt = file.name.split('.').pop();
+  const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+  if (isVideo && fileExt === 'mov') {
+    throw new Error('MOV videos are not supported. Please upload MP4 (H.264) or WebM.');
+  }
   const fileName = `${crypto.randomUUID()}_${Date.now()}.${fileExt}`;
   const filePath = path ? `${path}/${fileName}` : fileName;
 
@@ -984,11 +987,19 @@ export const createTransaction = async (transactionData: {
   currency: string;
   provider: string;
   status: string;
+  type?: string;
   metadata?: any;
 }) => {
+  const { type, metadata, ...rest } = transactionData as any;
+  const nextMetadata =
+    type && (!metadata || typeof metadata !== 'object' || Array.isArray(metadata) || metadata.type == null)
+      ? { ...(metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? metadata : {}), type }
+      : metadata;
+
+  const insertData = { ...rest, ...(nextMetadata !== undefined ? { metadata: nextMetadata } : {}) };
   const { data, error } = await supabase
     .from('transactions')
-    .insert([transactionData])
+    .insert([insertData])
     .select()
     .single();
 
