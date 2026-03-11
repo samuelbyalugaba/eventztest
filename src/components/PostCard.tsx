@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Post, Comment } from '../types';
+import { Post } from '../types';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { CommentIcon } from './icons/CommentIcon';
 import { 
   MessageSquare, Share2, Bookmark, 
-  Play, Volume2, VolumeX, 
-  Send, ThumbsUp,
-  Star, MessageCircle
+  Volume2, VolumeX, 
+  ThumbsUp,
+  Star
 } from 'lucide-react';
 import {
   Carousel,
@@ -17,23 +17,15 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "./ui/carousel";
-import { Input } from "./ui/input";
-import { getPostComments, createPostComment } from '../utils/supabase/api';
-import { sanitizeText } from '../utils/sanitize';
-import { toast } from 'sonner';
 
 interface PostCardProps {
   post: Post;
-  currentUser: any;
   onLike: (postId: number) => Promise<void>;
   onSave: (postId: number) => Promise<void>;
   onShare: (post: Post) => Promise<void>;
   onProfileClick: (user: Post['user']) => void;
-  onFollow?: (userId: string) => Promise<void>;
-  onDelete?: (postId: number) => Promise<void>;
   onMessage?: (user: any) => void;
   onViewPost?: () => void;
-  isFollowed?: boolean;
   audioUnlocked?: boolean;
 }
 
@@ -42,7 +34,7 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(url);
 };
 
-export const PostCard = React.memo(function PostCard({ post, currentUser, onLike, onSave, onShare, onProfileClick, onFollow, onMessage, onViewPost, isFollowed = false, audioUnlocked = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onShare, onProfileClick, onMessage, onViewPost, audioUnlocked = false }: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -53,11 +45,7 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
   const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [comments, setComments] = useState<Comment[]>(post.comments || []);
-  const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
-  const [newComment, setNewComment] = useState('');
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [showComments, setShowComments] = useState(false);
+  const commentsCount = post.comments_count || 0;
   const [isVideoLoading, setIsVideoLoading] = useState(true);
 
   // Haptic feedback helper
@@ -218,59 +206,6 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
     }
   };
 
-  const loadComments = async () => {
-    if (loadingComments) return;
-    setLoadingComments(true);
-    try {
-      const data = await getPostComments(post.id);
-      if (data) {
-        setComments(data.map((c: any) => ({
-          id: c.id,
-          user: {
-            name: c.user?.full_name || c.user?.username || 'Unknown',
-            avatar: c.user?.avatar_url || '',
-          },
-          text: c.text,
-          timestamp: new Date(c.created_at).toLocaleDateString(),
-        })));
-      }
-    } catch (error) {
-      console.error('Error loading comments:', error);
-    } finally {
-      setLoadingComments(false);
-    }
-  };
-
-  const handlePostComment = async () => {
-    if (!newComment.trim() || !currentUser) return;
-    
-    const sanitizedComment = sanitizeText(newComment.trim());
-    if (!sanitizedComment) {
-      toast.error('Invalid comment content');
-      return;
-    }
-
-    try {
-      const commentData = await createPostComment(post.id, currentUser.id, sanitizedComment);
-      const addedComment: Comment = {
-        id: commentData.id,
-        user: {
-          name: commentData.user?.full_name || commentData.user?.username || 'Unknown',
-          avatar: commentData.user?.avatar_url,
-        },
-        text: commentData.text,
-        timestamp: 'Just now',
-      };
-      
-      setComments([...comments, addedComment]);
-      setCommentsCount(prev => prev + 1);
-      setNewComment('');
-      toast.success('Comment posted!');
-    } catch (error) {
-      toast.error('Failed to post comment');
-    }
-  };
-
   const isCarousel = (post.content.images?.length ?? 0) > 1;
   const videoUrl = post.isHighlight && post.highlights?.[0]?.videoUrl;
   const currentMedia = videoUrl || post.content.images?.[carouselIndex] || post.content.image;
@@ -294,13 +229,13 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
             src={displayProfile.avatar} 
             name={displayProfile.name} 
             className="w-10 h-10 ring-2 ring-purple-50 cursor-pointer"
-            onClick={() => onProfileClick(post.user)}
+            onClick={() => onProfileClick(displayProfile as any)}
           />
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <span 
                 className="text-gray-900 font-bold text-sm cursor-pointer hover:text-purple-600 transition-colors"
-                onClick={() => onProfileClick(post.user)}
+                onClick={() => onProfileClick(displayProfile as any)}
               >
                 {displayProfile.name}
               </span>
@@ -406,6 +341,10 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                             className="w-full h-full object-cover"
                             fallbackType="image"
                             loading={index === 0 ? "eager" : "lazy"}
+                            width={600}
+                            height={600}
+                            quality={80}
+                            resize="cover"
                           />
                         )}
                       </div>
@@ -476,6 +415,8 @@ export const PostCard = React.memo(function PostCard({ post, currentUser, onLike
                   className="w-full h-auto object-cover max-h-[600px]"
                   fallbackType="image"
                   loading="lazy"
+                  width={800}
+                  quality={85}
                 />
              )}
           </div>

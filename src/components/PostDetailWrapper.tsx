@@ -5,6 +5,7 @@ import { getPostById, toggleLikePost, toggleSavePost, deletePost, createPostComm
 import { handleShare } from '../utils/share';
 import { toast } from 'sonner';
 import { formatTimeAgo } from '../utils/format';
+import { supabase } from '../utils/supabase/client';
 
 interface PostDetailWrapperProps {
   currentUser: any;
@@ -21,10 +22,6 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
   useEffect(() => {
     const fetchPost = async () => {
       if (!id) return;
-      if (post && String(post.id) === id) {
-        setLoading(false);
-        return;
-      }
       
       try {
         setLoading(true);
@@ -69,35 +66,7 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
             },
             timestamp: formatTimeAgo(fetchedPost.created_at),
             likes: fetchedPost.likes_count || 0,
-            comments: [], // Comments are fetched separately in PostDetailPage usually, or we need to fetch them? 
-                          // Wait, PostDetailPage displays comments from post.comments array. 
-                          // getPostById returns comments count but not full comments array unless we join differently.
-                          // But getPostById uses: comments:post_comments(count)
-                          // PostDetailPage tries to map post.comments.
-                          // The original getPosts also only returned count. 
-                          // Ah, PostDetailPage handles comments? 
-                          // Let's check PostDetailPage again. 
-                          // It maps `post.comments`.
-                          // But `getPosts` returns `comments:post_comments(count)`.
-                          // So `post.comments` would be `[{count: 5}]`.
-                          // This implies `PostDetailPage` might be broken for comments list unless `post.comments` is populated elsewhere.
-                          // Wait, looking at `PostDetailPage.tsx`:
-                          // It says: `post.comments.map((comment: any) => ...)`
-                          // This means `post.comments` MUST be an array of comment objects.
-                          // But `getPosts` only fetches count.
-                          // Where are comments fetched?
-                          // In `App.tsx`, `prefetchFeed` maps comments to `[]`.
-                          // So by default comments are empty.
-                          // `PostDetailPage` doesn't fetch comments itself?
-                          // Let's re-read `PostDetailPage.tsx`.
-                          // It renders `post.comments.map(...)`.
-                          // It does NOT have a `useEffect` to fetch comments.
-                          // This means comments were missing in the feed view?
-                          // Yes, `prefetchFeed` sets `comments: []`.
-                          // So currently comments are not shown?
-                          // Or maybe `PostDetailPage` was expecting them to be passed.
-                          // But `App.tsx` didn't fetch them.
-                          // Maybe I should fetch comments here in Wrapper.
+            comments: [] as any[],
             comments_count: fetchedPost.comments_count || 0,
             shares: 0,
             views: fetchedPost.views || 0,
@@ -116,38 +85,98 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
         };
         
         // Fetch comments for this post
-        const { data: commentsData } = await import('../utils/supabase/api').then(m => m.supabase
-            .from('post_comments')
-            .select('*, user:profiles(*)')
-            .eq('post_id', fetchedPost.id)
-            .order('created_at', { ascending: true })
-        );
+        const { data: commentsData } = await supabase
+          .from('post_comments')
+          .select('*, user:profiles(*)')
+          .eq('post_id', fetchedPost.id)
+          .order('created_at', { ascending: true });
         
         if (commentsData) {
              formattedPost.comments = commentsData.map((c: any) => ({
                  id: c.id,
-                 text: c.text,
-                 timestamp: formatTimeAgo(c.created_at),
                  user: {
-                     name: c.user?.full_name || 'User',
-                     avatar: c.user?.avatar_url || '',
-                     is_organizer: c.user?.is_organizer || false
-                 }
+                   name: c.user?.full_name || c.user?.username || 'User',
+                   avatar: c.user?.avatar_url || '',
+                   is_organizer: c.user?.is_organizer || false
+                 },
+                 text: c.text,
+                 timestamp: formatTimeAgo(c.created_at)
              }));
         }
 
         setPost(formattedPost);
       } catch (error) {
-        console.error('Error fetching post:', error);
-        toast.error('Failed to load post');
-        navigate('/feed');
+        console.error('Error fetching post detail:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchPost();
-  }, [id, currentUser]);
+  }, [id, currentUser?.id]);
+
+  const handleComment = async (postId: number, text: string, parentId?: number) => {
+    if (!currentUser) {
+      toast.error('Please sign in to comment');
+      return;
+    }
+
+    try {
+      const newCommentData = await createPostComment(postId, currentUser.id, text, parentId);
+      
+      // Use userProfile for the most up-to-date name/avatar, fallback to metadata
+      const displayName = userProfile?.full_name || currentUser.user_metadata?.full_name || userProfile?.username || 'User';
+      const displayAvatar = userProfile?.avatar_url || currentUser.user_metadata?.avatar_url || '';
+
+      const newComment = {
+        id: newCommentData.id,
+        user: {
+          name: displayName,
+          avatar: displayAvatar,
+          is_organizer: userProfile?.is_organizer || false
+        },
+        text: newCommentData.text,
+        timestamp: 'Just now',
+        parent_id: newCommentData.parent_id,
+        likes_count: 0,
+        is_liked: false
+      };
+
+      setPost((prev: any) => prev ? {
+        ...prev,
+        comments: [...(prev.comments || []), newComment],
+        comments_count: (prev.comments_count || 0) + 1
+      } : null);
+
+      toast.success('Comment posted');
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      toast.error('Failed to post comment');
+    }
+  };
+
+  const handleLikeComment = async (commentId: number) => {
+    if (!currentUser) return;
+    try {
+      const isLiked = await toggleLikeComment(commentId, currentUser.id);
+      setPost((prev: any) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          comments: (prev.comments || []).map((c: any) => {
+            if (c.id === commentId) {
+              return {
+                ...c,
+                is_liked: isLiked,
+                likes_count: isLiked ? (c.likes_count || 0) + 1 : Math.max(0, (c.likes_count || 0) - 1)
+              };
+            }
+            return c;
+          })
+        };
+      });
+    } catch (e) { console.error(e); }
+  };
 
   if (loading) {
     return (
@@ -198,7 +227,7 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
         await handleShare({
           title: shareTitle,
           text: shareText,
-          url: window.location.href,
+          url: `${window.location.origin}/post/${post?.id}`,
         });
       }}
       onDelete={async (id) => {
@@ -212,37 +241,14 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
         }
       }}
       onProfileClick={(user) => {
-        // Navigate to profile (placeholder for now, or implement profile route)
-        navigate('/profile'); 
-      }}
-      onComment={async (postId, text) => {
-        if (!currentUser) return;
-        try {
-          const newComment = await createPostComment(postId, currentUser.id, text);
-          toast.success('Comment posted');
-          
-          // Add comment to state
-          const formattedComment = {
-             id: newComment.id,
-             text: newComment.text,
-             timestamp: 'Just now',
-             user: {
-                 name: currentUser.user_metadata?.full_name || 'You',
-                 avatar: currentUser.user_metadata?.avatar_url || '',
-                 is_organizer: false // approximate
-             }
-          };
-          
-          setPost((prev: any) => ({
-             ...prev,
-             comments: [...(prev.comments || []), formattedComment],
-             comments_count: (prev.comments_count || 0) + 1
-          }));
-        } catch (e) {
-          console.error(e);
-          toast.error('Failed to post comment');
+        if (user && user.id) {
+          navigate(`/profile/${user.id}`);
+        } else {
+          toast.error('Could not find user profile');
         }
       }}
+      onComment={handleComment}
+      onLikeComment={handleLikeComment}
     />
   );
 }

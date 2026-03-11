@@ -21,13 +21,15 @@ import { toast } from 'sonner';
 interface PostDetailModalProps {
   post: any;
   currentUser: any;
+  currentUserProfile?: any;
   onClose: () => void;
   onLike: (id: number, e?: React.MouseEvent) => void;
   onSave: (id: number, e?: React.MouseEvent) => void;
   onShare: (post: any, e?: React.MouseEvent) => void;
   onDelete: (id: number) => void;
   onProfileClick: (user: any, e?: React.MouseEvent) => void;
-  onComment: (postId: number, text: string) => void;
+  onComment: (postId: number, text: string, parentId?: number) => void;
+  onLikeComment?: (commentId: number) => void;
 }
 
 const isVideo = (url?: string) => {
@@ -38,16 +40,18 @@ const isVideo = (url?: string) => {
 export function PostDetailModal({  
   post, 
   currentUser, 
+  currentUserProfile,
   onClose, 
   onLike, 
   onSave, 
   onShare, 
   onDelete, 
   onProfileClick,
-  onComment
+  onComment,
+  onLikeComment
 }: PostDetailModalProps) {
   const [commentText, setCommentText] = useState('');
-  const [replyingTo, setReplyingTo] = useState<{ name: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: number, name: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
@@ -64,13 +68,13 @@ export function PostDetailModal({
   const handlePostComment = () => {
     if (!commentText.trim()) return;
     const finalText = replyingTo ? `@${replyingTo.name} ${commentText}` : commentText;
-    onComment(post.id, finalText);
+    onComment(post.id, finalText, replyingTo?.id);
     setCommentText('');
     setReplyingTo(null);
   };
 
-  const handleReply = (user: { name: string }) => {
-    setReplyingTo(user);
+  const handleReply = (comment: any) => {
+    setReplyingTo({ id: comment.id, name: comment.user.name });
     textareaRef.current?.focus();
   };
 
@@ -374,7 +378,7 @@ export function PostDetailModal({
               <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                 <MessageCircle className="w-5 h-5 text-gray-600" />
               </div>
-              <div className="text-gray-900 font-bold text-sm">{(post.comments?.length || 0).toLocaleString()}</div>
+              <div className="text-gray-900 font-bold text-sm">{(post.comments_count || post.comments?.length || 0).toLocaleString()}</div>
             </button>
           </div>
         </div>
@@ -384,7 +388,7 @@ export function PostDetailModal({
           {/* Header */}
           <div className="px-5 pt-4 pb-2 border-b border-gray-50">
             <h3 className="text-gray-900 font-bold text-base">
-              Comments ({post.comments?.length || 0})
+              Comments ({(post.comments_count || post.comments?.length || 0).toLocaleString()})
             </h3>
           </div>
 
@@ -398,31 +402,87 @@ export function PostDetailModal({
                 <p className="text-gray-400 text-sm">No comments yet</p>
               </div>
             ) : (
-              post.comments.map((comment: any) => (
-                <div key={comment.id} className="flex gap-3">
-                  <UserAvatar
-                    src={comment.user.avatar}
-                    name={comment.user.name}
-                    className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-gray-900 text-xs font-bold">{comment.user.name}</span>
-                      <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
+              (() => {
+                // Group comments by parent_id
+                const parentComments = post.comments.filter((c: any) => !c.parent_id);
+                const replies = post.comments.filter((c: any) => c.parent_id);
+
+                return parentComments.map((comment: any) => (
+                  <div key={comment.id} className="space-y-4">
+                    {/* Parent Comment */}
+                    <div className="flex gap-3">
+                      <UserAvatar
+                        src={comment.user.avatar}
+                        name={comment.user.name}
+                        className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-gray-900 text-xs font-bold flex items-center gap-1">
+                            {comment.user.name}
+                            {comment.user.is_organizer && (
+                              <Star className="w-3 h-3 text-purple-600 fill-purple-600" />
+                            )}
+                          </span>
+                          <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
+                        </div>
+                        <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <button 
+                            onClick={() => handleReply(comment)}
+                            className="text-xs text-gray-400 font-medium hover:text-gray-600"
+                          >
+                            Reply
+                          </button>
+                          <button 
+                            onClick={() => onLikeComment?.(comment.id)}
+                            className={`text-xs font-medium hover:text-gray-600 ${comment.is_liked ? 'text-pink-600' : 'text-gray-400'}`}
+                          >
+                            Like {comment.likes_count > 0 && `(${comment.likes_count})`}
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>
-                    <div className="flex items-center gap-4 mt-2">
-                      <button 
-                        onClick={() => handleReply(comment.user)}
-                        className="text-xs text-gray-400 font-medium hover:text-gray-600"
-                      >
-                        Reply
-                      </button>
-                      <button className="text-xs text-gray-400 font-medium hover:text-gray-600">Like</button>
-                    </div>
+
+                    {/* Replies */}
+                    {replies.filter((r: any) => r.parent_id === comment.id).map((reply: any) => (
+                      <div key={reply.id} className="flex gap-3 ml-11">
+                        <UserAvatar
+                          src={reply.user.avatar}
+                          name={reply.user.name}
+                          className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-gray-900 text-[11px] font-bold flex items-center gap-1">
+                              {reply.user.name}
+                              {reply.user.is_organizer && (
+                                <Star className="w-2.5 h-2.5 text-purple-600 fill-purple-600" />
+                              )}
+                            </span>
+                            <span className="text-gray-400 text-[9px]">{reply.timestamp}</span>
+                          </div>
+                          <p className="text-gray-700 text-xs leading-snug">{reply.text}</p>
+                          <div className="flex items-center gap-4 mt-2">
+                            <button 
+                              onClick={() => handleReply(comment)} // Reply to parent for simple threading
+                              className="text-[10px] text-gray-400 font-medium hover:text-gray-600"
+                            >
+                              Reply
+                            </button>
+                            <button 
+                              onClick={() => onLikeComment?.(reply.id)}
+                              className={`text-[10px] font-medium hover:text-gray-600 ${reply.is_liked ? 'text-pink-600' : 'text-gray-400'}`}
+                            >
+                              Like {reply.likes_count > 0 && `(${reply.likes_count})`}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))
+                ));
+              })()
             )}
           </div>
 
@@ -441,8 +501,8 @@ export function PostDetailModal({
             )}
             <div className="flex items-end gap-3 bg-gray-50 rounded-3xl px-4 py-2">
               <UserAvatar
-                src={currentUser?.user_metadata?.avatar_url}
-                name={currentUser?.user_metadata?.full_name || "You"}
+                src={currentUserProfile?.avatar_url || currentUser?.user_metadata?.avatar_url}
+                name={currentUserProfile?.full_name || currentUser?.user_metadata?.full_name || currentUserProfile?.username || "User"}
                 className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5"
               />
               <textarea

@@ -28,7 +28,8 @@ interface PostDetailPageProps {
   onShare: (post: any, e?: React.MouseEvent) => void;
   onDelete: (id: number) => void;
   onProfileClick: (user: any, e?: React.MouseEvent) => void;
-  onComment: (postId: number, text: string) => void;
+  onComment: (postId: number, text: string, parentId?: number) => void;
+  onLikeComment?: (commentId: number) => void;
 }
 
 const isVideo = (url?: string) => {
@@ -39,16 +40,18 @@ const isVideo = (url?: string) => {
 export function PostDetailPage({  
   post, 
   currentUser, 
+  userProfile,
   onBack, 
   onLike, 
   onSave, 
   onShare, 
   onDelete, 
   onProfileClick,
-  onComment
+  onComment,
+  onLikeComment
 }: PostDetailPageProps) {
   const [commentText, setCommentText] = useState('');
-  const [replyingTo, setReplyingTo] = useState<{ name: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: number, name: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
@@ -65,13 +68,13 @@ export function PostDetailPage({
   const handlePostComment = () => {
     if (!commentText.trim()) return;
     const finalText = replyingTo ? `@${replyingTo.name} ${commentText}` : commentText;
-    onComment(post.id, finalText);
+    onComment(post.id, finalText, replyingTo?.id);
     setCommentText('');
     setReplyingTo(null);
   };
 
-  const handleReply = (user: { name: string }) => {
-    setReplyingTo(user);
+  const handleReply = (comment: any) => {
+    setReplyingTo({ id: comment.id, name: comment.user.name });
     textareaRef.current?.focus();
   };
 
@@ -300,7 +303,7 @@ export function PostDetailPage({
               <UserAvatar
                 src={post.user.avatar}
                 name={post.user.name}
-                className="w-14 h-14 rounded-2xl object-cover ring-4 ring-purple-100 cursor-pointer hover:ring-purple-300 transition-all"
+                className="w-14 h-14 rounded-2xl object-cover cursor-pointer"
                 onClick={(e) => onProfileClick(post.user, e)}
               />
               <div>
@@ -396,36 +399,87 @@ export function PostDetailPage({
                 <p className="text-gray-400 text-sm">No comments yet</p>
               </div>
             ) : (
-              post.comments.map((comment: any) => (
-                <div key={comment.id} className="flex gap-3">
-                  <UserAvatar
-                    src={comment.user.avatar}
-                    name={comment.user.name}
-                    className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-gray-900 text-xs font-bold flex items-center gap-1">
-                        {comment.user.name}
-                        {comment.user.is_organizer && (
-                          <Star className="w-3 h-3 text-purple-600 fill-purple-600" />
-                        )}
-                      </span>
-                      <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
+              (() => {
+                // Group comments by parent_id
+                const parentComments = post.comments.filter((c: any) => !c.parent_id);
+                const replies = post.comments.filter((c: any) => c.parent_id);
+
+                return parentComments.map((comment: any) => (
+                  <div key={comment.id} className="space-y-4">
+                    {/* Parent Comment */}
+                    <div className="flex gap-3">
+                      <UserAvatar
+                        src={comment.user.avatar}
+                        name={comment.user.name}
+                        className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-gray-900 text-xs font-bold flex items-center gap-1">
+                            {comment.user.name}
+                            {comment.user.is_organizer && (
+                              <Star className="w-3 h-3 text-purple-600 fill-purple-600" />
+                            )}
+                          </span>
+                          <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
+                        </div>
+                        <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <button 
+                            onClick={() => handleReply(comment)}
+                            className="text-xs text-gray-400 font-medium hover:text-gray-600"
+                          >
+                            Reply
+                          </button>
+                          <button 
+                            onClick={() => onLikeComment?.(comment.id)}
+                            className={`text-xs font-medium hover:text-gray-600 ${comment.is_liked ? 'text-pink-600' : 'text-gray-400'}`}
+                          >
+                            Like {comment.likes_count > 0 && `(${comment.likes_count})`}
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>
-                    <div className="flex items-center gap-4 mt-2">
-                      <button 
-                        onClick={() => handleReply(comment.user)}
-                        className="text-xs text-gray-400 font-medium hover:text-gray-600"
-                      >
-                        Reply
-                      </button>
-                      <button className="text-xs text-gray-400 font-medium hover:text-gray-600">Like</button>
-                    </div>
+
+                    {/* Replies */}
+                    {replies.filter((r: any) => r.parent_id === comment.id).map((reply: any) => (
+                      <div key={reply.id} className="flex gap-3 ml-11">
+                        <UserAvatar
+                          src={reply.user.avatar}
+                          name={reply.user.name}
+                          className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-gray-900 text-[11px] font-bold flex items-center gap-1">
+                              {reply.user.name}
+                              {reply.user.is_organizer && (
+                                <Star className="w-2.5 h-2.5 text-purple-600 fill-purple-600" />
+                              )}
+                            </span>
+                            <span className="text-gray-400 text-[9px]">{reply.timestamp}</span>
+                          </div>
+                          <p className="text-gray-700 text-xs leading-snug">{reply.text}</p>
+                          <div className="flex items-center gap-4 mt-2">
+                            <button 
+                              onClick={() => handleReply(comment)} // Reply to parent for simple threading
+                              className="text-[10px] text-gray-400 font-medium hover:text-gray-600"
+                            >
+                              Reply
+                            </button>
+                            <button 
+                              onClick={() => onLikeComment?.(reply.id)}
+                              className={`text-[10px] font-medium hover:text-gray-600 ${reply.is_liked ? 'text-pink-600' : 'text-gray-400'}`}
+                            >
+                              Like {reply.likes_count > 0 && `(${reply.likes_count})`}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))
+                ));
+              })()
             )}
           </div>
 
@@ -444,8 +498,8 @@ export function PostDetailPage({
             )}
             <div className="flex items-end gap-3 bg-gray-50 rounded-3xl px-4 py-2">
               <UserAvatar
-                src={currentUser?.user_metadata?.avatar_url}
-                name={currentUser?.user_metadata?.full_name || "You"}
+                src={currentUser?.user_metadata?.avatar_url || userProfile?.avatar_url}
+                name={userProfile?.full_name || currentUser?.user_metadata?.full_name || userProfile?.username || "User"}
                 className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5"
               />
               <textarea

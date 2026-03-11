@@ -17,7 +17,7 @@ export interface EventDetailModalProps {
   onPurchaseTicket: (event: ApiEvent) => void;
   onPurchaseNormalTicket: (event: ApiEvent) => void;
   onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => void;
-    onTierSelect?: (event: ApiEvent, tierName: string) => void;
+  onTierSelect?: (event: ApiEvent, tierName: string) => void;
 }
 
 const locations = [
@@ -28,7 +28,7 @@ const locations = [
   { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
 ];
 
-export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation }: EventDetailModalProps) {
+export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation, onTierSelect }: EventDetailModalProps) {
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
   
   const isEventPast = (() => {

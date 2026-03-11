@@ -3,24 +3,22 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { EventDetailModal } from './EventDetailModal';
 import { getEventById } from '../utils/supabase/api';
 import { toast } from 'sonner';
+import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
+import { SimplifiedTicketModal } from './SimplifiedTicketModal';
 
 interface EventDetailWrapperProps {
   onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => void;
-  onPurchaseTicket: (event: any) => void;
-  onPurchaseNormalTicket: (event: any) => void;
-  onTierSelect?: (event: any, tierName: string) => void;
 }
 
 export function EventDetailWrapper({ 
-  onStartConversation, 
-  onPurchaseTicket, 
-  onPurchaseNormalTicket,
-  onTierSelect
+  onStartConversation
 }: EventDetailWrapperProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -58,19 +56,47 @@ export function EventDetailWrapper({
   if (!event) return null;
 
   return (
-    <EventDetailModal
-      event={event}
-      onClose={() => {
-        if (window.history.length > 2) {
+    <>
+      <EventDetailModal
+        event={event}
+        onClose={() => {
+          if (window.history.length > 2) {
             navigate(-1);
-        } else {
+          } else {
             navigate('/events');
-        }
-      }}
-      onPurchaseTicket={onPurchaseTicket}
-      onPurchaseNormalTicket={onPurchaseNormalTicket}
-      onStartConversation={onStartConversation}
-      onTierSelect={onTierSelect}
-    />
+          }
+        }}
+        onPurchaseTicket={() => setShowTicketModal(true)}
+        onPurchaseNormalTicket={() => setShowPurchaseModal(true)}
+        onStartConversation={onStartConversation}
+        onTierSelect={() => setShowPurchaseModal(true)}
+      />
+
+      {showPurchaseModal && (
+        <SimplifiedTicketModal
+          event={{
+            id: event.id,
+            title: event.title,
+            date: event.date,
+            location: event.location,
+            ticketTiers: event.ticket_tiers,
+            price_range: event.price_range,
+            image_url: event.image_url,
+          }}
+          onClose={() => setShowPurchaseModal(false)}
+          onSuccess={() => {
+            window.dispatchEvent(new Event('savedEventsUpdated'));
+          }}
+        />
+      )}
+
+      {showTicketModal && (
+        <VirtualTicketPurchaseModal
+          isOpen={showTicketModal}
+          onClose={() => setShowTicketModal(false)}
+          event={event}
+        />
+      )}
+    </>
   );
 }

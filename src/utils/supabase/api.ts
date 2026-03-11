@@ -1046,27 +1046,59 @@ export const initiateSnippePayment = async (params: {
   return data;
 };
 
-export const waitForTransactionCompletion = async (transactionId: number, timeoutMs = 60000, intervalMs = 3000) => {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    const { data, error } = await supabase
+export const waitForTransactionCompletion = async (transactionId: number, timeoutMs = 60000) => {
+  return new Promise<boolean>((resolve) => {
+    // 1. First check current status (it might already be done)
+    supabase
       .from('transactions')
       .select('status')
       .eq('id', transactionId)
-      .single();
+      .single()
+      .then(({ data, error }) => {
+        if (!error && data) {
+          if (data.status === 'completed' || data.status === 'success') {
+            resolve(true);
+            return;
+          }
+          if (data.status === 'failed' || data.status === 'cancelled') {
+            resolve(false);
+            return;
+          }
+        }
+      });
 
-    if (!error && data) {
-      if (data.status === 'completed' || data.status === 'success') {
-        return true;
-      }
-      if (data.status === 'failed' || data.status === 'cancelled') {
-        console.warn(`Transaction ${transactionId} failed or cancelled`);
-        return false;
-      }
-    }
-    await new Promise(r => setTimeout(r, intervalMs));
-  }
-  return false;
+    // 2. Set up real-time subscription
+    const channel = supabase
+      .channel(`transaction-status-${transactionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'transactions',
+          filter: `id=eq.${transactionId}`
+        },
+        (payload) => {
+          const status = payload.new.status;
+          if (status === 'completed' || status === 'success') {
+            supabase.removeChannel(channel);
+            clearTimeout(timeout);
+            resolve(true);
+          } else if (status === 'failed' || status === 'cancelled') {
+            supabase.removeChannel(channel);
+            clearTimeout(timeout);
+            resolve(false);
+          }
+        }
+      )
+      .subscribe();
+
+    // 3. Set timeout fallback
+    const timeout = setTimeout(() => {
+      supabase.removeChannel(channel);
+      resolve(false);
+    }, timeoutMs);
+  });
 };
 
 // --- SAVED EVENTS ---
@@ -1411,7 +1443,8 @@ export const getPostComments = async (postId: number) => {
     .from('post_comments')
     .select(`
       *,
-      user:profiles(*)
+      user:profiles(*),
+      likes:comment_likes(count)
     `)
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
@@ -1420,7 +1453,7 @@ export const getPostComments = async (postId: number) => {
   return data;
 };
 
-export const createPostComment = async (postId: number, userId: string, text: string) => {
+export const createPostComment = async (postId: number, userId: string, text: string, parentId?: number) => {
   // Input Validation
   const trimmedText = text.trim();
   if (!trimmedText) {
@@ -1433,7 +1466,12 @@ export const createPostComment = async (postId: number, userId: string, text: st
 
   const { data, error } = await supabase
     .from('post_comments')
-    .insert({ post_id: postId, user_id: userId, text: trimmedText })
+    .insert({ 
+      post_id: postId, 
+      user_id: userId, 
+      text: trimmedText,
+      parent_id: parentId 
+    })
     .select(`
       *,
       user:profiles(*)
@@ -1443,6 +1481,31 @@ export const createPostComment = async (postId: number, userId: string, text: st
   if (error) throw error;
 
   return data;
+};
+
+export const toggleLikeComment = async (commentId: number, userId: string) => {
+  const { data: existing } = await supabase
+    .from('comment_likes')
+    .select('user_id')
+    .eq('comment_id', commentId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from('comment_likes')
+      .delete()
+      .eq('comment_id', commentId)
+      .eq('user_id', userId);
+    if (error) throw error;
+    return false;
+  } else {
+    const { error } = await supabase
+      .from('comment_likes')
+      .insert({ comment_id: commentId, user_id: userId });
+    if (error) throw error;
+    return true;
+  }
 };
 
 export const getLiveStreams = async () => {

@@ -1,4 +1,4 @@
-import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar } from 'lucide-react';
+import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar, Search, ChevronDown, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique, uploadImage } from '../utils/supabase/api';
@@ -33,7 +33,60 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     bio: '',
     birthdate: '',
     avatarUrl: '',
+    location: '',
+    category: '',
   });
+
+  const [isCreatorProfile, setIsCreatorProfile] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const categoryRef = useRef<HTMLDivElement>(null);
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const locationRef = useRef<HTMLDivElement>(null);
+
+  const CREATOR_CATEGORIES = [
+    'Art Gallery', 'Artist', 'Bar', 'Band', 'Blogger', 'Book Store', 'Brand',
+    'Business', 'Cafe', 'Charity', 'Church', 'Club', 'Coach', 'Comedy Club',
+    'Community', 'Concert Venue', 'Conference', 'Content Creator', 'Corporate',
+    'DJ', 'Dance Studio', 'Digital Creator', 'Education', 'Entrepreneur',
+    'Event Planner', 'Exhibition', 'Fashion', 'Festival', 'Fitness Trainer',
+    'Government', 'Gym', 'Health/Beauty', 'Hotel', 'Influencer', 'Library',
+    'Lounge', 'Media', 'Mosque', 'Museum', 'Music Venue', 'Musician',
+    'Networking Group', 'Nightclub', 'Non-Profit', 'Organization', 'Park',
+    'Party Planner', 'Performing Arts', 'Personal Blog', 'Photographer',
+    'Podcast', 'Promoter', 'Public Figure', 'Radio Station',
+    'Religious Organization', 'Resort', 'Restaurant', 'Retail', 'School',
+    'Shopping', 'Social Club', 'Speaker', 'Sports Team', 'Startup',
+    'Student Organization', 'Synagogue', 'Tech Community', 'Theater',
+    'University', 'Venue', 'Video Creator', 'Wedding Planner', 'Workshop',
+    'Writer', 'Yoga Studio', 'Youth Organization'
+  ].sort();
+
+  const filteredCategories = CREATOR_CATEGORIES.filter(c =>
+    c.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+
+  const searchLocations = async (query: string) => {
+    if (query.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+    setLoadingLocations(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      setLocationSuggestions(data);
+      setShowLocationDropdown(true);
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+      toast.error('Failed to load location suggestions');
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,6 +151,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
         if (user) {
           const profile = await getProfile(user.id);
           if (profile) {
+            setIsCreatorProfile(!!profile.is_organizer);
             // Profile Data Migration
             const localProfile = localStorage.getItem('eventz-user-profile');
             let profileUpdates: any = {};
@@ -125,7 +179,10 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                 bio: profile.bio || '',
                 birthdate: profile.birthdate || '',
                 avatarUrl: profile.avatar_url || '',
+                location: profile.location || '',
+                category: profile.organizer_type || '',
               });
+              setCategorySearch(profile.organizer_type || '');
               if (localProfile) localStorage.removeItem('eventz-user-profile');
             }
 
@@ -184,6 +241,19 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     };
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+      if (locationRef.current && !locationRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleSaveProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -206,13 +276,14 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
           bio: profileData.bio,
           birthdate: profileData.birthdate,
           avatar_url: profileData.avatarUrl,
+          ...(isCreatorProfile ? { location: profileData.location, organizer_type: profileData.category } : {}),
         });
       } else {
         localStorage.setItem('eventz-user-profile', JSON.stringify(profileData));
       }
       toast.success('Profile updated successfully! ✅');
       setCurrentView('main');
-      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','contact_email','phone','bio','birthdate','avatar_url'] } }));
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','contact_email','phone','bio','birthdate','avatar_url', ...(isCreatorProfile ? ['location','organizer_type'] : [])] } }));
     } catch (error) {
       console.error('Error saving profile:', error);
       const message = (error as any)?.message || (error as any)?.error_description || (error as any)?.details || 'Failed to save profile';
@@ -475,6 +546,97 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                     className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
                   />
                 </div>
+
+                {isCreatorProfile && (
+                  <>
+                    <div className="space-y-2" ref={categoryRef}>
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Category</label>
+                      <div className="relative">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={categorySearch}
+                          onChange={(e) => {
+                            setCategorySearch(e.target.value);
+                            setShowCategoryDropdown(true);
+                            if (profileData.category && e.target.value !== profileData.category) {
+                              setProfileData(prev => ({ ...prev, category: '' }));
+                            }
+                          }}
+                          onFocus={() => setShowCategoryDropdown(true)}
+                          placeholder="Select category"
+                          className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                        />
+                        <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+
+                        {showCategoryDropdown && (
+                          <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
+                            {filteredCategories.length > 0 ? (
+                              filteredCategories.map((c) => (
+                                <button
+                                  key={c}
+                                  onClick={() => {
+                                    setProfileData(prev => ({ ...prev, category: c }));
+                                    setCategorySearch(c);
+                                    setShowCategoryDropdown(false);
+                                  }}
+                                  className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.category === c ? 'text-purple-600 font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
+                                >
+                                  {c}
+                                  {profileData.category === c && <Check className="w-4 h-4" />}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-5 py-4 text-sm text-gray-400 text-center italic">No categories found</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2" ref={locationRef}>
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={profileData.location}
+                          onChange={(e) => {
+                            setProfileData({ ...profileData, location: e.target.value });
+                            searchLocations(e.target.value);
+                          }}
+                          onFocus={() => profileData.location.length >= 3 && setShowLocationDropdown(true)}
+                          placeholder="City, Country"
+                          className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                        />
+                        {loadingLocations && (
+                          <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 animate-spin" />
+                        )}
+
+                        {showLocationDropdown && locationSuggestions.length > 0 && (
+                          <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto py-2 animate-in fade-in zoom-in duration-200">
+                            {locationSuggestions.map((loc, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  setProfileData(prev => ({ ...prev, location: loc.display_name }));
+                                  setShowLocationDropdown(false);
+                                  setLocationSuggestions([]);
+                                }}
+                                className="w-full text-left px-5 py-3.5 text-sm text-gray-600 hover:bg-purple-50 transition-colors font-medium border-b border-gray-50 last:border-0"
+                              >
+                                <div className="flex items-start gap-3">
+                                  <MapPin className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
+                                  <span className="line-clamp-2">{loc.display_name}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Save Button */}

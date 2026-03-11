@@ -38,185 +38,185 @@ const categories = [
   { id: 'sports & fitness', name: 'Sports' },
 ];
 
-const countries = [
-  { id: 'all', name: 'All Countries', icon: Globe },
-  { id: 'Tanzania', name: 'Tanzania', flag: '🇹🇿' },
-  { id: 'Kenya', name: 'Kenya', flag: '🇰🇪' },
-  { id: 'United States', name: 'United States', flag: '🇺🇸' },
-  { id: 'United Kingdom', name: 'United Kingdom', flag: '🇬🇧' },
-  { id: 'Canada', name: 'Canada', flag: '🇨🇦' },
-  { id: 'Australia', name: 'Australia', flag: '🇦🇺' },
-  { id: 'Germany', name: 'Germany', flag: '🇩🇪' },
-  { id: 'France', name: 'France', flag: '🇫🇷' },
-  { id: 'Italy', name: 'Italy', flag: '🇮🇹' },
-  { id: 'Spain', name: 'Spain', flag: '🇪🇸' },
-  { id: 'Netherlands', name: 'Netherlands', flag: '🇳🇱' },
-  { id: 'Belgium', name: 'Belgium', flag: '🇧🇪' },
-  { id: 'Switzerland', name: 'Switzerland', flag: '🇨🇭' },
-  { id: 'Austria', name: 'Austria', flag: '🇦🇹' },
-  { id: 'Sweden', name: 'Sweden', flag: '🇸🇪' },
-  { id: 'Norway', name: 'Norway', flag: '🇳🇴' },
-  { id: 'Denmark', name: 'Denmark', flag: '🇩🇰' },
-  { id: 'Finland', name: 'Finland', flag: '🇫🇮' },
-  { id: 'Poland', name: 'Poland', flag: '🇵🇱' },
-  { id: 'Portugal', name: 'Portugal', flag: '🇵🇹' },
-  { id: 'Greece', name: 'Greece', flag: '🇬🇷' },
-  { id: 'Czech Republic', name: 'Czech Republic', flag: '🇨🇿' },
-  { id: 'Ireland', name: 'Ireland', flag: '🇮🇪' },
-  { id: 'Japan', name: 'Japan', flag: '🇯🇵' },
-  { id: 'South Korea', name: 'South Korea', flag: '🇰🇷' },
-  { id: 'China', name: 'China', flag: '🇨🇳' },
-  { id: 'India', name: 'India', flag: '🇮🇳' },
+const locations = [
+  { id: 'all', name: 'All Cities', icon: Globe },
+  { id: 'Dar es Salaam', name: 'Dar es Salaam', flag: '🇹🇿' },
+  { id: 'Nairobi', name: 'Nairobi', flag: '🇰🇪' },
+  { id: 'New York', name: 'New York', flag: '🇺🇸' },
+  { id: 'London', name: 'London', flag: '🇬🇧' },
+  { id: 'Toronto', name: 'Toronto', flag: '🇨🇦' },
+  { id: 'Sydney', name: 'Sydney', flag: '🇦🇺' },
+  { id: 'Berlin', name: 'Berlin', flag: '🇩🇪' },
+  { id: 'Paris', name: 'Paris', flag: '🇫🇷' },
+  { id: 'Rome', name: 'Rome', flag: '🇮🇹' },
+  { id: 'Madrid', name: 'Madrid', flag: '🇪🇸' },
+  { id: 'Amsterdam', name: 'Amsterdam', flag: '🇳🇱' },
+  { id: 'Brussels', name: 'Brussels', flag: '🇧🇪' },
+  { id: 'Zurich', name: 'Zurich', flag: '🇨🇭' },
+  { id: 'Vienna', name: 'Vienna', flag: '🇦🇹' },
+  { id: 'Stockholm', name: 'Stockholm', flag: '🇸🇪' },
+  { id: 'Oslo', name: 'Oslo', flag: '🇳🇴' },
+  { id: 'Copenhagen', name: 'Copenhagen', flag: '🇩🇰' },
+  { id: 'Helsinki', name: 'Helsinki', flag: '🇫🇮' },
+  { id: 'Warsaw', name: 'Warsaw', flag: '🇵🇱' },
+  { id: 'Lisbon', name: 'Lisbon', flag: '🇵🇹' },
+  { id: 'Athens', name: 'Athens', flag: '🇬🇷' },
+  { id: 'Prague', name: 'Prague', flag: '🇨🇿' },
+  { id: 'Dublin', name: 'Dublin', flag: '🇮🇪' },
+  { id: 'Tokyo', name: 'Tokyo', flag: '🇯🇵' },
+  { id: 'Seoul', name: 'Seoul', flag: '🇰🇷' },
+  { id: 'Beijing', name: 'Beijing', flag: '🇨🇳' },
+  { id: 'Mumbai', name: 'Mumbai', flag: '🇮🇳' },
   { id: 'Singapore', name: 'Singapore', flag: '🇸🇬' },
-  { id: 'Thailand', name: 'Thailand', flag: '🇹🇭' },
-  { id: 'Malaysia', name: 'Malaysia', flag: '🇲🇾' },
-  { id: 'Indonesia', name: 'Indonesia', flag: '🇮🇩' },
-  { id: 'Philippines', name: 'Philippines', flag: '🇵🇭' },
-  { id: 'Vietnam', name: 'Vietnam', flag: '🇻🇳' },
-  { id: 'United Arab Emirates', name: 'United Arab Emirates', flag: '🇦🇪' },
-  { id: 'Saudi Arabia', name: 'Saudi Arabia', flag: '🇸🇦' },
-  { id: 'Qatar', name: 'Qatar', flag: '🇶🇦' },
-  { id: 'Israel', name: 'Israel', flag: '🇮🇱' },
-  { id: 'Turkey', name: 'Turkey', flag: '🇹🇷' },
-  { id: 'Brazil', name: 'Brazil', flag: '🇧🇷' },
-  { id: 'Argentina', name: 'Argentina', flag: '🇦🇷' },
-  { id: 'Mexico', name: 'Mexico', flag: '🇲🇽' },
-  { id: 'Colombia', name: 'Colombia', flag: '🇨🇴' },
-  { id: 'Chile', name: 'Chile', flag: '🇨🇱' },
-  { id: 'Peru', name: 'Peru', flag: '🇵🇪' },
-  { id: 'South Africa', name: 'South Africa', flag: '🇿🇦' },
-  { id: 'Nigeria', name: 'Nigeria', flag: '🇳🇬' },
-  { id: 'Egypt', name: 'Egypt', flag: '🇪🇬' },
-  { id: 'Morocco', name: 'Morocco', flag: '🇲🇦' },
-  { id: 'Ghana', name: 'Ghana', flag: '🇬🇭' },
-  { id: 'Ethiopia', name: 'Ethiopia', flag: '🇪🇹' },
-  { id: 'Uganda', name: 'Uganda', flag: '🇺🇬' },
-  { id: 'Rwanda', name: 'Rwanda', flag: '🇷🇼' },
-  { id: 'Zambia', name: 'Zambia', flag: '🇿🇲' },
-  { id: 'Zimbabwe', name: 'Zimbabwe', flag: '🇿🇼' },
-  { id: 'Botswana', name: 'Botswana', flag: '🇧🇼' },
-  { id: 'Namibia', name: 'Namibia', flag: '🇳🇦' },
-  { id: 'Mozambique', name: 'Mozambique', flag: '🇲🇿' },
-  { id: 'Angola', name: 'Angola', flag: '🇦🇴' },
-  { id: 'Senegal', name: 'Senegal', flag: '🇸🇳' },
-  { id: 'Ivory Coast', name: 'Ivory Coast', flag: '🇨🇮' },
-  { id: 'Cameroon', name: 'Cameroon', flag: '🇨🇲' },
-  { id: 'Algeria', name: 'Algeria', flag: '🇩🇿' },
-  { id: 'Tunisia', name: 'Tunisia', flag: '🇹🇳' },
-  { id: 'Libya', name: 'Libya', flag: '🇱🇾' },
-  { id: 'Sudan', name: 'Sudan', flag: '🇸🇩' },
-  { id: 'New Zealand', name: 'New Zealand', flag: '🇳🇿' },
-  { id: 'Russia', name: 'Russia', flag: '🇷🇺' },
-  { id: 'Ukraine', name: 'Ukraine', flag: '🇺🇦' },
-  { id: 'Hungary', name: 'Hungary', flag: '🇭🇺' },
-  { id: 'Romania', name: 'Romania', flag: '🇷🇴' },
-  { id: 'Bulgaria', name: 'Bulgaria', flag: '🇧🇬' },
-  { id: 'Croatia', name: 'Croatia', flag: '🇭🇷' },
-  { id: 'Serbia', name: 'Serbia', flag: '🇷🇸' },
-  { id: 'Slovenia', name: 'Slovenia', flag: '🇸🇮' },
-  { id: 'Slovakia', name: 'Slovakia', flag: '🇸🇰' },
-  { id: 'Lithuania', name: 'Lithuania', flag: '🇱🇹' },
-  { id: 'Latvia', name: 'Latvia', flag: '🇱🇻' },
-  { id: 'Estonia', name: 'Estonia', flag: '🇪🇪' },
-  { id: 'Iceland', name: 'Iceland', flag: '🇮🇸' },
+  { id: 'Bangkok', name: 'Bangkok', flag: '🇹🇭' },
+  { id: 'Kuala Lumpur', name: 'Kuala Lumpur', flag: '🇲🇾' },
+  { id: 'Jakarta', name: 'Jakarta', flag: '🇮🇩' },
+  { id: 'Manila', name: 'Manila', flag: '🇵🇭' },
+  { id: 'Hanoi', name: 'Hanoi', flag: '🇻🇳' },
+  { id: 'Dubai', name: 'Dubai', flag: '🇦🇪' },
+  { id: 'Riyadh', name: 'Riyadh', flag: '🇸🇦' },
+  { id: 'Doha', name: 'Doha', flag: '🇶🇦' },
+  { id: 'Jerusalem', name: 'Jerusalem', flag: '🇮🇱' },
+  { id: 'Istanbul', name: 'Istanbul', flag: '🇹🇷' },
+  { id: 'Rio de Janeiro', name: 'Rio de Janeiro', flag: '🇧🇷' },
+  { id: 'Buenos Aires', name: 'Buenos Aires', flag: '🇦🇷' },
+  { id: 'Mexico City', name: 'Mexico City', flag: '🇲🇽' },
+  { id: 'Bogota', name: 'Bogota', flag: '🇨🇴' },
+  { id: 'Santiago', name: 'Santiago', flag: '🇨🇱' },
+  { id: 'Lima', name: 'Lima', flag: '🇵🇪' },
+  { id: 'Cape Town', name: 'Cape Town', flag: '🇿🇦' },
+  { id: 'Lagos', name: 'Lagos', flag: '🇳🇬' },
+  { id: 'Cairo', name: 'Cairo', flag: '🇪🇬' },
+  { id: 'Casablanca', name: 'Casablanca', flag: '🇲🇦' },
+  { id: 'Accra', name: 'Accra', flag: '🇬🇭' },
+  { id: 'Addis Ababa', name: 'Addis Ababa', flag: '🇪🇹' },
+  { id: 'Kampala', name: 'Kampala', flag: '🇺🇬' },
+  { id: 'Kigali', name: 'Kigali', flag: '🇷🇼' },
+  { id: 'Lusaka', name: 'Lusaka', flag: '🇿🇲' },
+  { id: 'Harare', name: 'Harare', flag: '🇿🇼' },
+  { id: 'Gaborone', name: 'Gaborone', flag: '🇧🇼' },
+  { id: 'Windhoek', name: 'Windhoek', flag: '🇳🇦' },
+  { id: 'Maputo', name: 'Maputo', flag: '🇲🇿' },
+  { id: 'Luanda', name: 'Luanda', flag: '🇦🇴' },
+  { id: 'Dakar', name: 'Dakar', flag: '🇸🇳' },
+  { id: 'Abidjan', name: 'Abidjan', flag: '🇨🇮' },
+  { id: 'Yaounde', name: 'Yaounde', flag: '🇨🇲' },
+  { id: 'Algiers', name: 'Algiers', flag: '🇩🇿' },
+  { id: 'Tunis', name: 'Tunis', flag: '🇹🇳' },
+  { id: 'Tripoli', name: 'Tripoli', flag: '🇱🇾' },
+  { id: 'Khartoum', name: 'Khartoum', flag: '🇸🇩' },
+  { id: 'Wellington', name: 'Wellington', flag: '🇳🇿' },
+  { id: 'Moscow', name: 'Moscow', flag: '🇷🇺' },
+  { id: 'Kyiv', name: 'Kyiv', flag: '🇺🇦' },
+  { id: 'Budapest', name: 'Budapest', flag: '🇭🇺' },
+  { id: 'Bucharest', name: 'Bucharest', flag: '🇷🇴' },
+  { id: 'Sofia', name: 'Sofia', flag: '🇧🇬' },
+  { id: 'Zagreb', name: 'Zagreb', flag: '🇭🇷' },
+  { id: 'Belgrade', name: 'Belgrade', flag: '🇷🇸' },
+  { id: 'Ljubljana', name: 'Ljubljana', flag: '🇸🇮' },
+  { id: 'Bratislava', name: 'Bratislava', flag: '🇸🇰' },
+  { id: 'Vilnius', name: 'Vilnius', flag: '🇱🇹' },
+  { id: 'Riga', name: 'Riga', flag: '🇱🇻' },
+  { id: 'Tallinn', name: 'Tallinn', flag: '🇪🇪' },
+  { id: 'Reykjavik', name: 'Reykjavik', flag: '🇮🇸' },
   { id: 'Luxembourg', name: 'Luxembourg', flag: '🇱🇺' },
-  { id: 'Malta', name: 'Malta', flag: '🇲🇹' },
-  { id: 'Cyprus', name: 'Cyprus', flag: '🇨🇾' },
-  { id: 'Pakistan', name: 'Pakistan', flag: '🇵🇰' },
-  { id: 'Bangladesh', name: 'Bangladesh', flag: '🇧🇩' },
-  { id: 'Sri Lanka', name: 'Sri Lanka', flag: '🇱🇰' },
-  { id: 'Nepal', name: 'Nepal', flag: '🇳🇵' },
-  { id: 'Myanmar', name: 'Myanmar', flag: '🇲🇲' },
-  { id: 'Cambodia', name: 'Cambodia', flag: '🇰🇭' },
-  { id: 'Laos', name: 'Laos', flag: '🇱🇦' },
-  { id: 'Mongolia', name: 'Mongolia', flag: '🇲🇳' },
-  { id: 'Kazakhstan', name: 'Kazakhstan', flag: '🇰🇿' },
-  { id: 'Uzbekistan', name: 'Uzbekistan', flag: '🇺🇿' },
+  { id: 'Valletta', name: 'Valletta', flag: '🇲🇹' },
+  { id: 'Nicosia', name: 'Nicosia', flag: '🇨🇾' },
+  { id: 'Islamabad', name: 'Islamabad', flag: '🇵🇰' },
+  { id: 'Dhaka', name: 'Dhaka', flag: '🇧🇩' },
+  { id: 'Colombo', name: 'Colombo', flag: '🇱🇰' },
+  { id: 'Kathmandu', name: 'Kathmandu', flag: '🇳🇵' },
+  { id: 'Naypyidaw', name: 'Naypyidaw', flag: '🇲🇲' },
+  { id: 'Phnom Penh', name: 'Phnom Penh', flag: '🇰🇭' },
+  { id: 'Vientiane', name: 'Vientiane', flag: '🇱🇦' },
+  { id: 'Ulaanbaatar', name: 'Ulaanbaatar', flag: '🇲🇳' },
+  { id: 'Nur-Sultan', name: 'Nur-Sultan', flag: '🇰🇿' },
+  { id: 'Tashkent', name: 'Tashkent', flag: '🇺🇿' },
   { id: 'Hong Kong', name: 'Hong Kong', flag: '🇭🇰' },
-  { id: 'Taiwan', name: 'Taiwan', flag: '🇹🇼' },
+  { id: 'Taipei', name: 'Taipei', flag: '🇹🇼' },
   { id: 'Macau', name: 'Macau', flag: '🇲🇴' },
-  { id: 'Lebanon', name: 'Lebanon', flag: '🇱🇧' },
-  { id: 'Jordan', name: 'Jordan', flag: '🇯🇴' },
-  { id: 'Kuwait', name: 'Kuwait', flag: '🇰🇼' },
-  { id: 'Bahrain', name: 'Bahrain', flag: '🇧🇭' },
-  { id: 'Oman', name: 'Oman', flag: '🇴🇲' },
-  { id: 'Yemen', name: 'Yemen', flag: '🇾🇪' },
-  { id: 'Iraq', name: 'Iraq', flag: '🇮🇶' },
-  { id: 'Iran', name: 'Iran', flag: '🇮🇷' },
-  { id: 'Afghanistan', name: 'Afghanistan', flag: '🇦🇫' },
-  { id: 'Azerbaijan', name: 'Azerbaijan', flag: '🇦🇿' },
-  { id: 'Georgia', name: 'Georgia', flag: '🇬🇪' },
-  { id: 'Armenia', name: 'Armenia', flag: '🇦🇲' },
-  { id: 'Costa Rica', name: 'Costa Rica', flag: '🇨🇷' },
-  { id: 'Panama', name: 'Panama', flag: '🇵🇦' },
-  { id: 'Ecuador', name: 'Ecuador', flag: '🇪🇨' },
-  { id: 'Bolivia', name: 'Bolivia', flag: '🇧🇴' },
-  { id: 'Paraguay', name: 'Paraguay', flag: '🇵🇾' },
-  { id: 'Uruguay', name: 'Uruguay', flag: '🇺🇾' },
-  { id: 'Venezuela', name: 'Venezuela', flag: '🇻🇪' },
-  { id: 'Cuba', name: 'Cuba', flag: '🇨🇺' },
-  { id: 'Dominican Republic', name: 'Dominican Republic', flag: '🇩🇴' },
-  { id: 'Jamaica', name: 'Jamaica', flag: '🇯🇲' },
-  { id: 'Trinidad and Tobago', name: 'Trinidad and Tobago', flag: '🇹🇹' },
-  { id: 'Barbados', name: 'Barbados', flag: '🇧🇧' },
-  { id: 'Bahamas', name: 'Bahamas', flag: '🇧' },
-  { id: 'Fiji', name: 'Fiji', flag: '🇫🇯' },
-  { id: 'Papua New Guinea', name: 'Papua New Guinea', flag: '🇵🇬' },
-  { id: 'Maldives', name: 'Maldives', flag: '🇲🇻' },
-  { id: 'Seychelles', name: 'Seychelles', flag: '🇸🇨' },
-  { id: 'Mauritius', name: 'Mauritius', flag: '🇲🇺' },
-  { id: 'Madagascar', name: 'Madagascar', flag: '🇲🇬' },
-  { id: 'Brunei', name: 'Brunei', flag: '🇧🇳' },
-  { id: 'North Macedonia', name: 'North Macedonia', flag: '🇲🇰' },
-  { id: 'Bosnia and Herzegovina', name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
-  { id: 'Albania', name: 'Albania', flag: '🇦🇱' },
-  { id: 'Montenegro', name: 'Montenegro', flag: '🇲🇪' },
-  { id: 'Kosovo', name: 'Kosovo', flag: '🇽🇰' },
-  { id: 'Moldova', name: 'Moldova', flag: '🇲🇩' },
-  { id: 'Belarus', name: 'Belarus', flag: '🇧🇾' },
-  { id: 'Guatemala', name: 'Guatemala', flag: '🇬🇹' },
-  { id: 'Honduras', name: 'Honduras', flag: '🇭🇳' },
-  { id: 'El Salvador', name: 'El Salvador', flag: '🇸🇻' },
-  { id: 'Nicaragua', name: 'Nicaragua', flag: '🇳🇮' },
-  { id: 'Belize', name: 'Belize', flag: '🇧🇿' },
-  { id: 'Haiti', name: 'Haiti', flag: '🇭🇹' },
-  { id: 'Guyana', name: 'Guyana', flag: '🇬🇾' },
-  { id: 'Suriname', name: 'Suriname', flag: '🇸🇷' },
-  { id: 'French Guiana', name: 'French Guiana', flag: '🇬🇫' },
-  { id: 'Benin', name: 'Benin', flag: '🇧🇯' },
-  { id: 'Burkina Faso', name: 'Burkina Faso', flag: '🇧🇫' },
-  { id: 'Cape Verde', name: 'Cape Verde', flag: '🇨🇻' },
-  { id: 'Chad', name: 'Chad', flag: '🇹🇩' },
-  { id: 'Comoros', name: 'Comoros', flag: '🇰🇲' },
-  { id: 'Congo', name: 'Congo', flag: '🇨🇬' },
-  { id: 'DR Congo', name: 'DR Congo', flag: '🇨🇩' },
+  { id: 'Beirut', name: 'Beirut', flag: '🇱🇧' },
+  { id: 'Amman', name: 'Amman', flag: '🇯🇴' },
+  { id: 'Kuwait City', name: 'Kuwait City', flag: '🇰🇼' },
+  { id: 'Manama', name: 'Manama', flag: '🇧🇭' },
+  { id: 'Muscat', name: 'Muscat', flag: '🇴🇲' },
+  { id: "Sana'a", name: "Sana'a", flag: '🇾🇪' },
+  { id: 'Baghdad', name: 'Baghdad', flag: '🇮🇶' },
+  { id: 'Tehran', name: 'Tehran', flag: '🇮🇷' },
+  { id: 'Kabul', name: 'Kabul', flag: '🇦🇫' },
+  { id: 'Baku', name: 'Baku', flag: '🇦🇿' },
+  { id: 'Tbilisi', name: 'Tbilisi', flag: '🇬🇪' },
+  { id: 'Yerevan', name: 'Yerevan', flag: '🇦🇲' },
+  { id: 'San Jose', name: 'San Jose', flag: '🇨🇷' },
+  { id: 'Panama City', name: 'Panama City', flag: '🇵🇦' },
+  { id: 'Quito', name: 'Quito', flag: '🇪🇨' },
+  { id: 'La Paz', name: 'La Paz', flag: '🇧🇴' },
+  { id: 'Asuncion', name: 'Asuncion', flag: '🇵🇾' },
+  { id: 'Montevideo', name: 'Montevideo', flag: '🇺🇾' },
+  { id: 'Caracas', name: 'Caracas', flag: '🇻🇪' },
+  { id: 'Havana', name: 'Havana', flag: '🇨🇺' },
+  { id: 'Santo Domingo', name: 'Santo Domingo', flag: '🇩🇴' },
+  { id: 'Kingston', name: 'Kingston', flag: '🇯🇲' },
+  { id: 'Port of Spain', name: 'Port of Spain', flag: '🇹🇹' },
+  { id: 'Bridgetown', name: 'Bridgetown', flag: '🇧🇧' },
+  { id: 'Nassau', name: 'Nassau', flag: '🇧' },
+  { id: 'Suva', name: 'Suva', flag: '🇫🇯' },
+  { id: 'Port Moresby', name: 'Port Moresby', flag: '🇵🇬' },
+  { id: 'Male', name: 'Male', flag: '🇲🇻' },
+  { id: 'Victoria', name: 'Victoria', flag: '🇸🇨' },
+  { id: 'Port Louis', name: 'Port Louis', flag: '🇲🇺' },
+  { id: 'Antananarivo', name: 'Antananarivo', flag: '🇲🇬' },
+  { id: 'Bandar Seri Begawan', name: 'Bandar Seri Begawan', flag: '🇧🇳' },
+  { id: 'Skopje', name: 'Skopje', flag: '🇲🇰' },
+  { id: 'Sarajevo', name: 'Sarajevo', flag: '🇧🇦' },
+  { id: 'Tirana', name: 'Tirana', flag: '🇦🇱' },
+  { id: 'Podgorica', name: 'Podgorica', flag: '🇲🇪' },
+  { id: 'Pristina', name: 'Pristina', flag: '🇽🇰' },
+  { id: 'Chisinau', name: 'Chisinau', flag: '🇲🇩' },
+  { id: 'Minsk', name: 'Minsk', flag: '🇧🇾' },
+  { id: 'Guatemala City', name: 'Guatemala City', flag: '🇬🇹' },
+  { id: 'Tegucigalpa', name: 'Tegucigalpa', flag: '🇭🇳' },
+  { id: 'San Salvador', name: 'San Salvador', flag: '🇸🇻' },
+  { id: 'Managua', name: 'Managua', flag: '🇳🇮' },
+  { id: 'Belmopan', name: 'Belmopan', flag: '🇧🇿' },
+  { id: 'Port-au-Prince', name: 'Port-au-Prince', flag: '🇭🇹' },
+  { id: 'Georgetown', name: 'Georgetown', flag: '🇬🇾' },
+  { id: 'Paramaribo', name: 'Paramaribo', flag: '🇸🇷' },
+  { id: 'Cayenne', name: 'Cayenne', flag: '🇬🇫' },
+  { id: 'Porto-Novo', name: 'Porto-Novo', flag: '🇧🇯' },
+  { id: 'Ouagadougou', name: 'Ouagadougou', flag: '🇧🇫' },
+  { id: 'Praia', name: 'Praia', flag: '🇨🇻' },
+  { id: "N'Djamena", name: "N'Djamena", flag: '🇹🇩' },
+  { id: 'Moroni', name: 'Moroni', flag: '🇰🇲' },
+  { id: 'Brazzaville', name: 'Brazzaville', flag: '🇨🇬' },
+  { id: 'Kinshasa', name: 'Kinshasa', flag: '🇨🇩' },
   { id: 'Djibouti', name: 'Djibouti', flag: '🇩' },
-  { id: 'Equatorial Guinea', name: 'Equatorial Guinea', flag: '🇬🇶' },
-  { id: 'Eritrea', name: 'Eritrea', flag: '🇪🇷' },
-  { id: 'Gabon', name: 'Gabon', flag: '🇬🇦' },
-  { id: 'Gambia', name: 'Gambia', flag: '🇬🇲' },
-  { id: 'Guinea', name: 'Guinea', flag: '🇬🇳' },
-  { id: 'Guinea-Bissau', name: 'Guinea-Bissau', flag: '🇬🇼' },
-  { id: 'Lesotho', name: 'Lesotho', flag: '🇱🇸' },
-  { id: 'Liberia', name: 'Liberia', flag: '🇱🇷' },
-  { id: 'Malawi', name: 'Malawi', flag: '🇲🇼' },
-  { id: 'Mali', name: 'Mali', flag: '🇲🇱' },
-  { id: 'Mauritania', name: 'Mauritania', flag: '🇲🇷' },
-  { id: 'Niger', name: 'Niger', flag: '🇳🇪' },
-  { id: 'Reunion', name: 'Reunion', flag: '🇷🇪' },
-  { id: 'Sao Tome and Principe', name: 'Sao Tome and Principe', flag: '🇸🇹' },
-  { id: 'Sierra Leone', name: 'Sierra Leone', flag: '🇸🇱' },
-  { id: 'Somalia', name: 'Somalia', flag: '🇸🇴' },
-  { id: 'South Sudan', name: 'South Sudan', flag: '🇸🇸' },
-  { id: 'Eswatini', name: 'Eswatini', flag: '🇸🇿' },
-  { id: 'Togo', name: 'Togo', flag: '🇹🇬' },
-  { id: 'Burundi', name: 'Burundi', flag: '🇧🇮' },
-  { id: 'Central African Republic', name: 'Central African Republic', flag: '🇨🇫' },
+  { id: 'Malabo', name: 'Malabo', flag: '🇬🇶' },
+  { id: 'Asmara', name: 'Asmara', flag: '🇪🇷' },
+  { id: 'Libreville', name: 'Libreville', flag: '🇬🇦' },
+  { id: 'Banjul', name: 'Banjul', flag: '🇬🇲' },
+  { id: 'Conakry', name: 'Conakry', flag: '🇬🇳' },
+  { id: 'Bissau', name: 'Bissau', flag: '🇬🇼' },
+  { id: 'Maseru', name: 'Maseru', flag: '🇱🇸' },
+  { id: 'Monrovia', name: 'Monrovia', flag: '🇱🇷' },
+  { id: 'Lilongwe', name: 'Lilongwe', flag: '🇲🇼' },
+  { id: 'Bamako', name: 'Bamako', flag: '🇲🇱' },
+  { id: 'Nouakchott', name: 'Nouakchott', flag: '🇲🇷' },
+  { id: 'Niamey', name: 'Niamey', flag: '🇳🇪' },
+  { id: 'Saint-Denis', name: 'Saint-Denis', flag: '🇷🇪' },
+  { id: 'Sao Tome', name: 'Sao Tome', flag: '🇸🇹' },
+  { id: 'Freetown', name: 'Freetown', flag: '🇸🇱' },
+  { id: 'Mogadishu', name: 'Mogadishu', flag: '🇸🇴' },
+  { id: 'Juba', name: 'Juba', flag: '🇸🇸' },
+  { id: 'Mbabane', name: 'Mbabane', flag: '🇸🇿' },
+  { id: 'Lome', name: 'Lome', flag: '🇹🇬' },
+  { id: 'Bujumbura', name: 'Bujumbura', flag: '🇧🇮' },
+  { id: 'Bangui', name: 'Bangui', flag: '🇨🇫' },
 ];
 
 export function LiveFeed() {
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedCountry, setSelectedCountry] = useState('all');
+  const [selectedLocation, setSelectedLocation] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
@@ -225,7 +225,7 @@ export function LiveFeed() {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [streamToUnlock, setStreamToUnlock] = useState<LiveStream | null>(null);
   const [unlockedStreams, setUnlockedStreams] = useState<Set<number>>(new Set());
-  const [recentCountries, setRecentCountries] = useState<string[]>(['Tanzania', 'United Arab Emirates', 'United States']);
+  const [recentLocations, setRecentLocations] = useState<string[]>(['Dar es Salaam', 'Dubai', 'New York']);
   const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
   const [upcomingStreams, setUpcomingStreams] = useState<LiveStream[]>([]);
   const [showTicketModal, setShowTicketModal] = useState(false);
@@ -244,8 +244,8 @@ export function LiveFeed() {
     try {
       const live = await getLiveStreams();
       if (live) {
-        const mappedLive = await Promise.all(live.map(async (e: any) => {
-          const profile = await getProfile(e.organizer_id);
+        const mappedLive = live.map((e: any) => {
+          const profile = e.organizer;
           return {
             ...e,
             thumbnail: e.image_url,
@@ -255,31 +255,18 @@ export function LiveFeed() {
             viewers: e.streaming?.liveViewers || 0,
             isLive: true,
             playback_url: e.streaming?.playback_url,
-            country: profile?.location?.split(',').pop()?.trim() || 'Tanzania'
+            location: profile?.location?.split(',')[0]?.trim() || 'Dar es Salaam'
           };
-        }));
+        });
         setLiveStreams(mappedLive as unknown as LiveStream[]);
       }
       
       const upcoming = await getUpcomingStreams();
       if (upcoming) {
-        // Filter out instant live events (those created with "Go Live Now" usually have specific titles or metadata, 
-        // but checking if they are NOT live is the main thing. However, instant events are typically
-        // meant to be live immediately. If an instant event is not live, it might be ended or not started.
-        // We should only show scheduled events here.
-        // For now, let's filter out events that look like "Instant Live" or "Live Stream" if they are not live,
-        // or rely on the category/description if we added that metadata.
-        // But the user specifically said "this was just a livestream not an event".
-        // Usually "Instant Live" events are created with status='published' and isLive=false initially?
-        // No, createInstantEvent sets isLive=false but then immediately opens StreamManager which sets isLive=true.
-        // If it was ended, isLive=false.
-        // If we want to hide "Instant Live" type events from "Starting Soon" (which implies scheduled events),
-        // we can filter by description !== 'Instant live stream' which we set in LiveSetupModal.
-        
-        const mappedUpcoming = await Promise.all(upcoming
-          .filter((e: any) => e.description !== 'Instant live stream') // Filter out instant streams
-          .map(async (e: any) => {
-            const profile = await getProfile(e.organizer_id);
+        const mappedUpcoming = upcoming
+          .filter((e: any) => e.description !== 'Instant live stream')
+          .map((e: any) => {
+            const profile = e.organizer;
             return {
               ...e,
               thumbnail: e.image_url,
@@ -287,10 +274,10 @@ export function LiveFeed() {
               host: profile?.full_name || 'Event Organizer',
               host_avatar: profile?.avatar_url,
               organizer_id: e.organizer_id,
-              country: profile?.location?.split(',').pop()?.trim() || 'Tanzania',
+              location: profile?.location?.split(',')[0]?.trim() || 'Dar es Salaam',
               countdown: Math.max(0, Math.floor((new Date(`${e.date}T${e.time}`).getTime() - new Date().getTime()) / (1000 * 60)))
             };
-        }));
+        });
         setUpcomingStreams(mappedUpcoming as unknown as LiveStream[]);
       }
     } catch (error) {
@@ -301,18 +288,16 @@ export function LiveFeed() {
   useEffect(() => {
     fetchStreams();
 
-    // Subscribe to real-time updates for live streams
     const channel = supabase
       .channel('live-feed-updates')
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to all events (INSERT/UPDATE/DELETE) to ensure feed is always fresh
+          event: '*',
           schema: 'public',
           table: 'events',
         },
         () => {
-           // Refetch on any event change to ensure we catch go-live status updates
            fetchStreams();
         }
       )
@@ -330,34 +315,29 @@ export function LiveFeed() {
         if (user) {
           const profile = await getProfile(user.id);
           
-          // Check for migration from localStorage
-          const localStored = localStorage.getItem('eventz-recent-countries');
+          const localStored = localStorage.getItem('eventz-recent-locations');
           
-          if (profile?.preferences?.recentCountries) {
-            setRecentCountries(profile.preferences.recentCountries);
-            // If we have data in Supabase, we can clear local storage to keep it clean
-            if (localStored) localStorage.removeItem('eventz-recent-countries');
+          if (profile?.preferences?.recentLocations) {
+            setRecentLocations(profile.preferences.recentLocations);
+            if (localStored) localStorage.removeItem('eventz-recent-locations');
           } else if (localStored) {
-            // Migration: User has local data but no Supabase data
-            const countries = JSON.parse(localStored);
-            setRecentCountries(countries);
+            const locations = JSON.parse(localStored);
+            setRecentLocations(locations);
             
-            // Save to Supabase
             const currentPreferences = profile?.preferences || {};
             await updateProfile(user.id, {
               preferences: {
                 ...currentPreferences,
-                recentCountries: countries
+                recentLocations: locations
               }
             });
             
-            // Clear local storage after successful migration
-            localStorage.removeItem('eventz-recent-countries');
+            localStorage.removeItem('eventz-recent-locations');
           }
         } else {
-          const stored = localStorage.getItem('eventz-recent-countries');
+          const stored = localStorage.getItem('eventz-recent-locations');
           if (stored) {
-            setRecentCountries(JSON.parse(stored));
+            setRecentLocations(JSON.parse(stored));
           }
         }
       } catch (error) {
@@ -367,7 +347,6 @@ export function LiveFeed() {
 
     loadPreferences();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       loadPreferences();
     });
@@ -377,41 +356,30 @@ export function LiveFeed() {
     };
   }, []);
 
-  // Save recent country when user selects one
-  const handleCountrySelect = async (countryId: string) => {
-    setSelectedCountry(countryId);
+  const handleLocationSelect = async (locationId: string) => {
+    setSelectedLocation(locationId);
     setShowLocationFilter(false);
     setLocationSearch('');
 
-    // Don't add "all" to recent searches
-    if (countryId === 'all') return;
+    if (locationId === 'all') return;
 
-    // Update recent countries (keep max 3, most recent first)
-    const updated = [countryId, ...recentCountries.filter(c => c !== countryId)].slice(0, 3);
-    setRecentCountries(updated);
+    const updated = [locationId, ...recentLocations.filter(c => c !== locationId)].slice(0, 3);
+    setRecentLocations(updated);
     
-        // Save to Supabase if logged in, otherwise localStorage
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // We need to fetch current preferences first to not overwrite other fields if any (though currently only recentCountries)
-        // Or just update using jsonb_set logic if we had that exposed, but updateProfile does a merge at top level.
-        // But `preferences` is a jsonb column. Supabase update merges top-level columns.
-        // But for the jsonb value itself, it replaces it unless we handle it carefully.
-        // Assuming we just have recentCountries for now, replacing `preferences` object is fine.
-        // If we add more keys to preferences later, we should fetch first.
-        // Fetch current preferences if needed in future
         const profile = await getProfile(user.id);
         const currentPreferences = profile?.preferences || {};
         
         await updateProfile(user.id, { 
           preferences: { 
             ...currentPreferences,
-            recentCountries: updated 
+            recentLocations: updated 
           } 
         });
       } else {
-        localStorage.setItem('eventz-recent-countries', JSON.stringify(updated));
+        localStorage.setItem('eventz-recent-locations', JSON.stringify(updated));
       }
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -421,7 +389,7 @@ export function LiveFeed() {
   const filteredLiveStreams = liveStreams.filter(
     (stream: LiveStream) => 
       (selectedCategory === 'all' || stream.category === selectedCategory) &&
-      (selectedCountry === 'all' || stream.country === selectedCountry)
+      (selectedLocation === 'all' || stream.location === selectedLocation)
   );
 
   const liveEvents = filteredLiveStreams.filter(stream => 
@@ -435,18 +403,16 @@ export function LiveFeed() {
   const filteredUpcomingStreams = upcomingStreams.filter(
     (stream: LiveStream) => 
       (selectedCategory === 'all' || stream.category === selectedCategory) &&
-      (selectedCountry === 'all' || stream.country === selectedCountry)
+      (selectedLocation === 'all' || stream.location === selectedLocation)
   );
 
-  // Filter countries based on search
-  const filteredCountries = countries.filter(country =>
-    country.name.toLowerCase().includes(locationSearch.toLowerCase())
+  const filteredLocations = locations.filter(location =>
+    location.name.toLowerCase().includes(locationSearch.toLowerCase())
   );
 
-  // Show only 3 default countries when search is empty
-  const displayedCountries = locationSearch.trim() === '' 
-    ? countries.filter(c => c.id === 'all' || recentCountries.includes(c.id))
-    : filteredCountries;
+  const displayedLocations = locationSearch.trim() === '' 
+    ? locations.filter(c => c.id === 'all' || recentLocations.includes(c.id))
+    : filteredLocations;
 
   // Reminder toggling logic can be reintroduced when reminder UI is active
 
@@ -506,15 +472,15 @@ export function LiveFeed() {
                 className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
               >
                 {(() => {
-                  const country = countries.find(c => c.id === selectedCountry);
-                  if (country?.icon) {
-                    const Icon = country.icon;
+                  const location = locations.find(c => c.id === selectedLocation);
+                  if (location?.icon) {
+                    const Icon = location.icon;
                     return <Icon className="w-3.5 h-3.5 text-gray-700" />;
                   }
-                  return <span className="text-sm">{country?.flag || '🇹🇿'}</span>;
+                  return <span className="text-sm">{location?.flag || '🇹🇿'}</span>;
                 })()}
                 <span className="text-xs font-medium text-gray-700 hidden sm:block">
-                  {countries.find(c => c.id === selectedCountry)?.name || 'Tanzania'}
+                  {locations.find(c => c.id === selectedLocation)?.name || 'Dar es Salaam'}
                 </span>
               </button>
 
@@ -557,6 +523,10 @@ export function LiveFeed() {
                     src={stream.thumbnail}
                     alt={stream.title}
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out"
+                    width={400}
+                    height={225}
+                    quality={80}
+                    resize="cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity"></div>
                   
@@ -615,6 +585,10 @@ export function LiveFeed() {
                     src={stream.thumbnail}
                     alt={stream.title}
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out"
+                    width={200}
+                    height={266}
+                    quality={80}
+                    resize="cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-80 group-hover:opacity-100 transition-opacity"></div>
                   
@@ -671,6 +645,10 @@ export function LiveFeed() {
                         src={stream.thumbnail}
                         alt={stream.title}
                         className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                        width={100}
+                        height={100}
+                        quality={70}
+                        resize="cover"
                       />
                     </div>
 
@@ -807,26 +785,26 @@ export function LiveFeed() {
               </div>
               
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {displayedCountries.length > 0 ? (
-                  displayedCountries.map((country) => (
+                {displayedLocations.length > 0 ? (
+                  displayedLocations.map((location) => (
                     <button
-                      key={country.id}
-                      onClick={() => handleCountrySelect(country.id)}
+                      key={location.id}
+                      onClick={() => handleLocationSelect(location.id)}
                       className={`w-full text-left px-5 py-3.5 rounded-xl transition-all flex items-center gap-3 ${
-                        selectedCountry === country.id
+                        selectedLocation === location.id
                           ? 'bg-purple-600 text-white shadow-lg'
                           : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                       }`}
                     >
                       {/* @ts-ignore - icon property exists on some items */}
-                      {country.icon ? (
+                      {location.icon ? (
                          // @ts-ignore
-                        <country.icon className={`w-6 h-6 ${selectedCountry === country.id ? 'text-white' : 'text-gray-700'}`} />
+                        <location.icon className={`w-6 h-6 ${selectedLocation === location.id ? 'text-white' : 'text-gray-700'}`} />
                       ) : (
                          // @ts-ignore
-                        <span className="text-2xl">{country.flag}</span>
+                        <span className="text-2xl">{location.flag}</span>
                       )}
-                      <span>{country.name}</span>
+                      <span>{location.name}</span>
                     </button>
                   ))
                 ) : (

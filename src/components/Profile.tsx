@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, Calendar, Video, Bookmark, X, Sparkles, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star, ChevronRight } from 'lucide-react';
+import { Settings, Calendar, Video, Bookmark, X, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Smile, Loader2, Upload, Heart, Plus, Trash, BarChart3, User, Briefcase, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { TicketViewer } from './TicketViewer';
@@ -32,7 +33,11 @@ interface ProfileProps {
   onViewPost?: (post: any) => void;
 }
 
-export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup, userId, onBack, onViewPost }: ProfileProps) {
+export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup, userId: userIdProp, onBack, onViewPost }: ProfileProps) {
+  const { userId: userIdParam } = useParams<{ userId: string }>();
+  const userId = userIdProp || userIdParam;
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<'tickets' | 'events' | 'media' | 'saved' | 'my_events' | 'hosted' | 'upcoming'>('media');
   const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSavedEventsModal, setShowSavedEventsModal] = useState(false);
@@ -513,7 +518,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const uniqueTicketGroups = Object.values(groupedTickets);
 
   return (
-    <div className="bg-white min-h-screen pb-20 pt-6 px-6">
+    <div className="bg-white min-h-screen pb-16 pt-6 px-6">
       {/* Header Section */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
@@ -598,6 +603,17 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                     <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
                       <Wallet className="w-5 h-5 stroke-[1.5]" />
                       <span className="font-medium text-[15px]">Wallet</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                  </button>
+
+                  <button
+                    onClick={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); setIsSidebarOpen(false); }}
+                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
+                      <User className="w-5 h-5 stroke-[1.5]" />
+                      <span className="font-medium text-[15px]">Edit Profile</span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                   </button>
@@ -963,9 +979,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               <>
                 {savedEvents.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 px-6">
-                    <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-4 relative">
-                      <Bookmark className="w-10 h-10 text-purple-600" />
-                      <Sparkles className="w-5 h-5 text-pink-500 absolute -top-1 -right-1 animate-pulse" />
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                      <Bookmark className="w-8 h-8 text-gray-300" />
                     </div>
                     <h3 className="text-gray-900 mb-2">No Saved Events Yet</h3>
                     <p className="text-gray-600 text-center text-sm max-w-xs leading-relaxed">
@@ -1117,9 +1132,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             <div className="flex-1 overflow-y-auto px-6 py-6">
               {savedEvents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 px-6">
-                  <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-6 relative">
-                    <Bookmark className="w-12 h-12 text-purple-600" />
-                    <Sparkles className="w-6 h-6 text-pink-500 absolute -top-1 -right-1 animate-pulse" />
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <Bookmark className="w-8 h-8 text-gray-300" />
                   </div>
                   <h3 className="text-gray-900 mb-3 text-center">Your Event Collection Awaits</h3>
                   <p className="text-gray-600 text-center max-w-md leading-relaxed">
@@ -1322,7 +1336,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                     >
                       <div className="flex flex-col items-center gap-4">
                         <div className="w-16 h-16 bg-pink-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                          <Video className="w-8 h-8 text-white" />
+                          <Play className="w-8 h-8 text-white fill-white" />
                         </div>
                         <div className="text-center">
                           <h3 className="text-gray-900 mb-1">Videos</h3>

@@ -2,18 +2,12 @@ import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { PostCard } from './PostCard';
 import { PostSkeleton } from './PostSkeleton';
-import { MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
+import { Calendar, Search, MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Sparkles, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, toggleFollow, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments, getProfile } from '../utils/supabase/api';
 import { formatTimeAgo } from '../utils/format';
 import { Post, Comment, HighlightClip, Conversation } from '../types';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 import { PostDetailModal } from './PostDetailModal';
 import { handleShare } from '../utils/share';
 import { mapPostsToViewModel } from '../utils/postMapper';
@@ -72,10 +66,11 @@ export function Feed({
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
   // const [messageSearch, setMessageSearch] = useState('');
   const [likeAnimation, setLikeAnimation] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
-  const [commentTexts, setCommentTexts] = useState<{ [key: number]: string }>({});
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
   const [fullScreenTouchStart, setFullScreenTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [videoTouchStart, setVideoTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [lastVideoTap, setLastVideoTap] = useState<number>(0);
@@ -84,6 +79,7 @@ export function Feed({
   const [isMuted, setIsMuted] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [renderCount, setRenderCount] = useState(20);
+  const [exploreSearch, setExploreSearch] = useState('');
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -170,6 +166,13 @@ export function Feed({
       setCurrentUser(user);
       
       if (user) {
+        try {
+          const profile = await getProfile(user.id);
+          setCurrentUserProfile(profile || null);
+        } catch (e) {
+          setCurrentUserProfile(null);
+        }
+
         // Load following
         try {
           const following = await getFollowedUserIds(user.id);
@@ -245,12 +248,49 @@ export function Feed({
 
   // Sync activeConversation with global conversations updates and mark as read
   useEffect(() => {
+    const fetchConversationMessages = async (convId: number) => {
+      try {
+        const msgs = await getMessages(convId);
+        const formattedMsgs = msgs.map((m: any) => ({
+          id: m.id,
+          senderId: m.sender_id === currentUser?.id ? 0 : parseInt(m.sender_id) || 1,
+          text: m.content,
+          timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          read: m.is_read
+        }));
+
+        // We need to update the global conversations in App.tsx state too, 
+        // but for now let's just update the local activeConversation state
+        // and ideally we'd have a way to sync this back or just manage it here.
+        // Actually, since Feed is a child of App, and App manages conversations,
+        // we should probably have a function in App to load messages for a conv.
+      } catch (e) {
+        console.error('Error loading messages for conversation:', e);
+      }
+    };
+
     if (activeConversation) {
       const updatedConv = globalConversations?.find(c => c.id === activeConversation.id);
       
       if (updatedConv) {
-        // Update local state to match global state (handles new messages, ID updates, etc.)
-        if (updatedConv !== activeConversation) {
+        // If we don't have messages yet, fetch them
+        if (updatedConv.messages.length === 0 && updatedConv.lastMessage.text !== 'Start a conversation...') {
+           // We'll fetch them and update the local activeConversation
+           const loadMsgs = async () => {
+             try {
+               const msgs = await getMessages(updatedConv.id);
+               const formattedMsgs = msgs.map((m: any) => ({
+                 id: m.id,
+                 senderId: m.sender_id === currentUser?.id ? 0 : parseInt(m.sender_id) || 1,
+                 text: m.content,
+                 timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                 read: m.is_read
+               }));
+               setActiveConversation({ ...updatedConv, messages: formattedMsgs });
+             } catch (e) { console.error(e); }
+           };
+           loadMsgs();
+        } else if (updatedConv !== activeConversation) {
           setActiveConversation(updatedConv);
         }
         
@@ -260,8 +300,41 @@ export function Feed({
         }
       }
     }
-  }, [activeConversation, globalConversations, onMarkAsRead]);
+  }, [activeConversation?.id, globalConversations, onMarkAsRead, currentUser?.id]);
   
+
+  // Fetch comments for selected post
+  useEffect(() => {
+    if (selectedPost && (!selectedPost.comments || selectedPost.comments.length === 0) && selectedPost.comments_count > 0) {
+      const fetchComments = async () => {
+        try {
+          const { data: commentsData } = await supabase
+            .from('post_comments')
+            .select('*, user:profiles(*)')
+            .eq('post_id', selectedPost.id)
+            .order('created_at', { ascending: true });
+          
+          if (commentsData) {
+            const mappedComments = commentsData.map((c: any) => ({
+              id: c.id,
+              user: {
+                name: c.user?.full_name || c.user?.username || 'User',
+                avatar: c.user?.avatar_url || '',
+                is_organizer: c.user?.is_organizer || false
+              },
+              text: c.text,
+              timestamp: formatTimeAgo(c.created_at)
+            }));
+            
+            setSelectedPost(prev => prev ? { ...prev, comments: mappedComments } : null);
+          }
+        } catch (e) {
+          console.error('Error fetching comments for modal:', e);
+        }
+      };
+      fetchComments();
+    }
+  }, [selectedPost?.id]);
 
   const unreadMessagesCount = (globalConversations || []).reduce((acc, conv) => {
     if (!conv) return acc;
@@ -452,8 +525,7 @@ export function Feed({
 
   // handleDoubleTap removed
 
-  const handlePostComment = async (postId: number) => {
-    const text = commentTexts[postId];
+  const handlePostComment = async (postId: number, text: string, parentId?: number) => {
     if (!text || !text.trim()) return;
 
     if (!currentUser) {
@@ -462,19 +534,23 @@ export function Feed({
     }
 
     try {
-      const newCommentData = await createPostComment(postId, currentUser.id, text.trim());
+      const newCommentData = await createPostComment(postId, currentUser.id, text.trim(), parentId);
       
-      const newComment: Comment = {
+      const newComment: any = {
         id: newCommentData.id,
         user: {
           name: newCommentData.user?.full_name || newCommentData.user?.username || 'Unknown',
           avatar: newCommentData.user?.avatar_url,
+          is_organizer: newCommentData.user?.is_organizer || false
         },
         text: newCommentData.text,
         timestamp: 'Just now',
+        parent_id: newCommentData.parent_id,
+        likes_count: 0,
+        is_liked: false
       };
 
-      setPosts(posts.map(post => {
+      setPosts(prev => prev.map(post => {
         if (post.id === postId) {
           return {
             ...post,
@@ -485,33 +561,51 @@ export function Feed({
         return post;
       }));
 
-      setCommentTexts({ ...commentTexts, [postId]: '' });
-      toast.success('Reply posted! 💬');
+      setSelectedPost(prev => {
+        if (!prev || prev.id !== postId) return prev;
+        return {
+          ...prev,
+          comments: [...(prev.comments || []), newComment],
+          comments_count: (prev.comments_count || 0) + 1,
+        };
+      });
+
+      toast.success('Comment posted');
     } catch (error) {
       console.error('Error posting comment:', error);
       toast.error('Failed to post comment');
     }
   };
 
-  const handleFollow = async (userId: string) => {
+  const handleLikeComment = async (commentId: number) => {
     if (!currentUser) {
-      toast.error('Please sign in to follow users');
+      toast.error('Please sign in to like comments');
       return;
     }
-    
-    // Optimistic update
-    const newFollowingIds = new Set(followingIds);
-    newFollowingIds.add(userId);
-    setFollowingIds(newFollowingIds);
-    toast.success('Following user');
 
     try {
-      await toggleFollow(currentUser.id, userId);
-    } catch (error) {
-      console.error('Error toggling follow:', error);
-      toast.error('Failed to update follow status');
-      // Revert
-      setFollowingIds(followingIds);
+      const isLiked = await toggleLikeComment(commentId, currentUser.id);
+      
+      // Update selectedPost comments locally
+      setSelectedPost(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          comments: (prev.comments || []).map((c: any) => {
+            if (c.id === commentId) {
+              return {
+                ...c,
+                is_liked: isLiked,
+                likes_count: isLiked ? (c.likes_count || 0) + 1 : Math.max(0, (c.likes_count || 0) - 1)
+              };
+            }
+            return c;
+          })
+        };
+      });
+    } catch (e) {
+      console.error('Error liking comment:', e);
+      toast.error('Failed to update like');
     }
   };
 
@@ -544,31 +638,40 @@ export function Feed({
   const handleOpenUserProfile = (user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; isOrganizerPage?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     
-    // Unified profile: open UserProfile modal for both users and organizers
-    setSelectedUserProfile({
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      avatar: user.avatar,
-      verified: user.verified,
-      isOrganizer: user.isOrganizer || user.isOrganizerPage,
-      type: user.isOrganizerPage || user.isOrganizer ? 'Organizer' : 'Attendee'
-    });
+    // Use onViewPost to navigate to the profile page
+    if (onViewPost) {
+      onViewPost({ id: user.id, isProfile: true });
+    }
   };
 
 
 
   const filteredPosts = posts.filter(post => {
+    const search = exploreSearch.trim().toLowerCase();
+    const matchesSearch = !search
+      ? true
+      : [
+          post.user?.name,
+          post.user?.username,
+          post.content?.text,
+          post.content?.hashtags?.join(' '),
+          post.event?.name,
+          post.event?.location,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(search);
+
+    if (!matchesSearch) return false;
     if (activeFilter === 'organizers') return post.user.isOrganizer;
     if (activeFilter === 'trending') return post.likes > 200;
     if (activeFilter === 'following') return followingIds.has(post.user.id);
     return true;
   });
-  const totalToRender = Math.min(filteredPosts.length, renderCount);
 
 
   const handlePostClick = (post: Post) => {
-    // Navigate to post detail view
     if (onViewPost) {
       onViewPost(post);
     }
@@ -584,10 +687,7 @@ export function Feed({
             {/* Brand Section */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <h1 className="text-gray-900 text-xl font-bold">Community</h1>
-                <span className="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
-                  LIVE
-                </span>
+                <h1 className="text-gray-900 text-xl font-bold">Explore</h1>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -626,6 +726,18 @@ export function Feed({
                   )}
                 </button>
 
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  value={exploreSearch}
+                  onChange={(e) => setExploreSearch(e.target.value)}
+                  placeholder="Search posts, people, events..."
+                  className="w-full pl-11 pr-4 py-3 bg-gray-100/60 hover:bg-gray-100 focus:bg-white border border-transparent focus:border-[#8A2BE2]/20 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-[#8A2BE2]/5 transition-all text-sm font-medium"
+                />
               </div>
             </div>
 
@@ -693,15 +805,11 @@ export function Feed({
                 <div key={post.id} style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}>
                   <PostCard
                     post={post}
-                    currentUser={currentUser}
                     onLike={(id) => toggleLike(id)}
                     onSave={(id) => toggleSave(id)}
                     onShare={(p) => sharePost(p)}
                     onProfileClick={(user) => handleOpenUserProfile(user)}
-                    onFollow={handleFollow}
-                    onDelete={handleDeletePost}
                     onMessage={(user) => handleStartConversationLocal(user)}
-                    isFollowed={followingIds.has(post.user.id)}
                     audioUnlocked={audioUnlocked}
                     onViewPost={() => handlePostClick(post)}
                   />
@@ -722,8 +830,8 @@ export function Feed({
           {/* Empty State */}
           {!isLoading && filteredPosts.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 px-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center mb-4">
-                <Sparkles className="w-10 h-10 text-purple-600" />
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <MessageCircle className="w-8 h-8 text-gray-300" />
               </div>
               <h3 className="text-gray-900 text-lg font-semibold mb-2">Nothing here yet</h3>
               <p className="text-gray-600 text-center text-sm max-w-xs">
@@ -739,16 +847,15 @@ export function Feed({
         <PostDetailModal
           post={selectedPost}
           currentUser={currentUser}
+          currentUserProfile={currentUserProfile}
           onClose={closePostDetail}
           onLike={(id, e) => toggleLike(id, e)}
           onSave={(id, e) => toggleSave(id, e)}
           onShare={(p, e) => sharePost(p, e)}
           onDelete={handleDeletePost}
           onProfileClick={(user, e) => handleOpenUserProfile(user, e)}
-          onComment={(postId, text) => {
-            setCommentTexts({ ...commentTexts, [postId]: text });
-            handlePostComment(postId);
-          }}
+          onComment={(postId, text, parentId) => handlePostComment(postId, text, parentId)}
+          onLikeComment={handleLikeComment}
         />
       )}
 

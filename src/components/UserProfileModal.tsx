@@ -4,7 +4,7 @@ import { UserAvatar } from './UserAvatar';
 import { EventDetailModal } from './EventDetailModal';
 import { PostDetailModal } from './PostDetailModal';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
-import { MapPin, Calendar, Share2, Video, LayoutGrid, Layers, ChevronLeft, Star } from 'lucide-react';
+import { MapPin, Calendar, Share2, Video, Play, LayoutGrid, Layers, ChevronLeft, Star } from 'lucide-react';
 import { 
   getOrganizerStats, 
   getOrganizerEvents, 
@@ -513,8 +513,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
                               </div>
                            )}
                            {(post.highlights && post.highlights.length > 0) && (
-                              <div className="absolute top-2 right-2">
-                                 <Video className="w-4 h-4 text-white drop-shadow-md" />
+                              <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
+                                 <Play className="w-3 h-3 drop-shadow-md" />
                               </div>
                            )}
                         </div>

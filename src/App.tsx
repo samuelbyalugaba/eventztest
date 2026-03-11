@@ -23,8 +23,7 @@ import {
   getLiveStreams,
   getMutualFollows,
   subscribeToOnlineUsers,
-  deleteConversation,
-  createPostComment
+  deleteConversation
 } from './utils/supabase/api';
 import { Message, Conversation } from './types';
 import { getPosts } from './utils/supabase/api';
@@ -36,7 +35,6 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOrganizer, setIsOrganizer] = useState(false);
-  const [hasOrganizerProfile, setHasOrganizerProfile] = useState(false);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   
   // Auth state
@@ -87,7 +85,6 @@ export default function App() {
         setCurrentUser(null);
         setIsAuthenticated(false);
         setIsOrganizer(false);
-        setHasOrganizerProfile(false);
       } else if (event === 'TOKEN_REFRESHED' && session) {
         setCurrentUser(session.user);
         setIsAuthenticated(true);
@@ -193,9 +190,6 @@ export default function App() {
             // Determine if user is an organizer
             const isOrg = profile.is_organizer || false;
             setIsOrganizer(isOrg);
-            
-            // Check if they have completed organizer profile setup
-            setHasOrganizerProfile(isOrg || !!profile.organizer_type);
           }
         } catch (error) {
           console.error('Error fetching profile:', error);
@@ -214,24 +208,14 @@ export default function App() {
 
   // Fetch conversations when authenticated
   useEffect(() => {
-        const fetchConversations = async () => {
+    const fetchConversations = async () => {
       if (isAuthenticated && currentUser) {
         try {
           const apiConvs = await getConversations(currentUser.id);
           
-          const formattedConvs: Conversation[] = await Promise.all(apiConvs.map(async (c: any) => {
+          const formattedConvs: Conversation[] = apiConvs.map((c: any) => {
             const otherUser = c.participant1_id === currentUser.id ? c.participant2 : c.participant1;
             
-            // Fetch messages for this conversation
-            const msgs = await getMessages(c.id);
-            const formattedMsgs: Message[] = msgs.map((m: any) => ({
-              id: m.id,
-              senderId: m.sender_id === currentUser.id ? 0 : parseInt(m.sender_id) || 1, // Hack: 0 is current user, others are > 0. UI expects number IDs.
-              text: m.content,
-              timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              read: m.is_read
-            }));
-
             return {
               id: c.id,
               user: {
@@ -248,9 +232,9 @@ export default function App() {
                 isRead: c.last_message?.is_read || false,
               },
               unreadCount: c.unread_count || 0,
-              messages: formattedMsgs
+              messages: [] // Start with empty messages, fetch on demand
             };
-          }));
+          });
           
           setConversations(formattedConvs);
         } catch (error) {
@@ -503,7 +487,6 @@ export default function App() {
                 text: realMessage.text,
                 timestamp: 'Just now',
                 isRead: true,
-                isRead: true,
               },
             };
           }
@@ -609,7 +592,6 @@ export default function App() {
 
   const handleStartOrganizerSetup = () => {
     setIsOrganizer(false);
-    setHasOrganizerProfile(false);
     navigate('/create');
   };
 
@@ -629,8 +611,19 @@ export default function App() {
     );
   }
 
-  const handleViewPost = (post: any) => {
-    navigate(`/post/${post.id}`, { state: { post } });
+  const handleViewPost = (item: any) => {
+    if (item.isProfile) {
+      if (item.id && item.id !== 'unknown') {
+        navigate(`/profile/${item.id}`);
+      } else {
+        // Fallback: if we can't find the user ID, maybe it's the current user? 
+        // Or just don't navigate to a broken URL.
+        console.warn('Cannot navigate to profile: User ID is missing', item);
+        navigate('/profile');
+      }
+    } else {
+      navigate(`/post/${item.id}`, { state: { post: item } });
+    }
   };
 
   const shouldHideBottomNav = location.pathname.startsWith('/create') || location.pathname.startsWith('/edit-event') || location.pathname.startsWith('/post') || location.pathname.startsWith('/event/');
@@ -716,6 +709,17 @@ export default function App() {
                )}
              </div>
           } />
+          <Route path="/profile/:userId" element={
+             <div className="animate-in fade-in duration-200">
+               <Profile 
+                 onLogout={handleLogout} 
+                 onCreateEvent={handleCreateEvent}
+                 onEditEvent={handleEditEvent}
+                 onStartOrganizerSetup={handleStartOrganizerSetup}
+                 onViewPost={handleViewPost}
+               />
+             </div>
+          } />
           <Route path="/post/:id" element={
              <PostDetailWrapper 
                  currentUser={currentUser}
@@ -723,19 +727,7 @@ export default function App() {
              />
           } />
           <Route path="/event/:id" element={
-             <EventDetailWrapper 
-                 onStartConversation={handleStartConversation}
-                 onPurchaseTicket={(event) => {
-                   // Handle purchase logic or navigation if needed
-                   // For now, the modal handles UI, but wrapper props might need to bridge it.
-                   // Actually, EventDetailModal usually handles purchase flow internally or via props.
-                   // Let's pass simple handlers or just log for now if logic is complex to hoist.
-                   console.log('Purchase ticket for', event);
-                 }}
-                 onPurchaseNormalTicket={(event) => {
-                   console.log('Purchase normal ticket for', event);
-                 }}
-             />
+             <EventDetailWrapper onStartConversation={handleStartConversation} />
           } />
         </Routes>
       </div>

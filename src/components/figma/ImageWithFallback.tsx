@@ -6,6 +6,10 @@ const ERROR_IMG_SRC = 'https://placehold.co/600x600/f3f4f6/9ca3af?text=No+Image'
 interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackType?: 'image' | 'video'
   fallbackSrc?: string
+  width?: number
+  height?: number
+  quality?: number
+  resize?: 'cover' | 'contain' | 'fill'
 }
 
 export function ImageWithFallback(props: ImageWithFallbackProps) {

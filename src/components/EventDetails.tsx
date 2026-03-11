@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, MessageCircle, Ticket, Music, Trophy, Globe } from 'lucide-react';
@@ -13,7 +14,7 @@ import { EventDetailModal } from './EventDetailModal';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { SimplifiedTicketModal } from './SimplifiedTicketModal';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getSavedEvents, getPosts, type Event as ApiEvent, incrementEventView } from '../utils/supabase/api';
+import { getEvents, getSavedEvents, type Event as ApiEvent } from '../utils/supabase/api';
 
 import { eventsStore } from '../store/eventStore';
 
@@ -24,8 +25,6 @@ const locations = [
   { id: 'zanzibar', name: 'Zanzibar, Tanzania', flag: '🇹🇿' },
   { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
 ];
-
-import { useNavigate } from 'react-router-dom';
 
 interface EventDetailsProps {
   conversations: Conversation[];
@@ -47,7 +46,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     const unsubscribe = eventsStore.subscribe(() => {
       setEvents(eventsStore.getEvents());
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Fetch data logic
@@ -103,32 +104,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const handleEventClick = (event: ApiEvent) => {
-    // Navigate to event details route if using router, 
-    // but here we are using a modal.
-    // If we want deep linking support for modal, we can push state to URL.
-    // However, the requirement is "URL-Based Navigation".
-    // So we should probably navigate to /event/:id
-    
-    // But wait, the current architecture uses EventDetailModal within this component.
-    // If we navigate to /event/:id, we need a route for it.
-    // The previous prompt's TODO list said "Investigate EventDetails component to ensure event clicks navigate to /event/:id".
-    
-    // So we should replace setSelectedEvent with navigation.
-    // But we also need to ensure /event/:id renders something.
-    // Currently App.tsx does NOT have a /event/:id route.
-    // I should add that route first or handle it here.
-    
-    // Let's assume we want to keep the modal experience but update the URL?
-    // Or full page navigation?
-    // "Turn the page into URL-Based Navigation" implies full page or at least URL reflects state.
-    
-    // If I just navigate, I need to create the route in App.tsx.
-    // Let's create the route first.
-    
-    // Actually, I can just navigate to /event/:id and let App.tsx handle it.
-    // But App.tsx doesn't have it yet.
-    // I will add the route in App.tsx in the next step.
-    // For now, let's update this handler.
     navigate(`/event/${event.id}`);
   };
 
@@ -147,8 +122,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     ticketsSold: selectedUser.ticketsSold || 3450,
     avgRating: selectedUser.avgRating || 4.8
   } : null;
-
-  const organizerEvents = selectedUser?.is_organizer ? (selectedUser.upcomingEvents || []) : [];
 
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex] = useState(0);
@@ -724,35 +697,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             id: selectedUser.id,
             name: selectedUser.full_name || selectedUser.name,
             type: selectedUser.is_organizer ? 'Organizer' : (selectedUser.type || 'Attendee'),
-            followers: organizerStats?.followers?.toString() || selectedUser.followers || '0',
-            eventsHosted: selectedUser.is_organizer ? (organizerStats?.totalEvents || 0) : undefined,
-            eventsAttended: !selectedUser.is_organizer ? 156 : undefined,
-            avatar: selectedUser.avatar_url || selectedUser.avatar,
+            avatar: selectedUser.avatar_url || selectedUser.avatar || '',
+            verified: !!selectedUser.verified,
             coverImage: selectedUser.cover_url || (selectedUser.full_name === 'Buki Jenard' ? 'https://i.ibb.co/F2wGf9R/B-Cover.jpg' : selectedUser.name === 'Luchy Ranks' ? 'https://i.ibb.co/k2Jg34Nv/L-cover.jpg' : 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200'),
             bio: selectedUser.bio,
-            location: selectedUser.location || 'Unknown',
-            verified: selectedUser.verified,
-            joinedDate: 'January 2023',
-            email: selectedUser.contact_email,
-            phone: selectedUser.phone,
-            instagram: selectedUser.social_links?.instagram,
-            twitter: selectedUser.social_links?.twitter,
-            upcomingEvents: selectedUser.is_organizer ? organizerEvents.map(event => ({
-              id: event.id,
-              title: event.title,
-              date: event.date,
-              time: event.time,
-              location: event.location,
-              image: event.image_url,
-              attendees: (event.attendees || 0) + (event.streaming?.liveViewers || 0),
-              price: event.price_range
-            })) : undefined,
-            stats: selectedUser.is_organizer ? {
-              totalEvents: organizerStats?.totalEvents || 0,
-              totalAttendees: organizerStats?.ticketsSold || 0,
-              avgRating: organizerStats?.avgRating || 0,
-              reviewsCount: 0,
-            } : undefined,
+            followers: organizerStats?.followers ?? selectedUser.followers ?? 0,
           }}
           onClose={() => setSelectedUser(null)}
           onFollow={() => {
