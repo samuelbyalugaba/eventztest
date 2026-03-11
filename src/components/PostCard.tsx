@@ -211,6 +211,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
   const currentMedia = videoUrl || post.content.images?.[carouselIndex] || post.content.image;
   const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
   const videoPoster = post.isHighlight ? post.content.images?.find((u) => !!u && !isVideo(u)) : undefined;
+  const currentVideoSrc = currentMedia ? `${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}` : undefined;
 
   // Determine display profile (Unified Identity)
   const displayProfile = {
@@ -385,7 +386,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                   {isVideoLoading && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                   <video
                     ref={videoRef}
-                    src={`${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}`}
+                    src={currentVideoSrc}
                     poster={videoPoster}
                     className="w-full h-auto max-h-[600px]"
                     loop
