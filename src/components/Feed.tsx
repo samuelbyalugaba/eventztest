@@ -703,7 +703,7 @@ export function Feed({
             {/* Brand Section */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <h1 className="text-gray-900 text-xl font-bold">Explore</h1>
+                <h1 className="text-gray-900 text-xl font-bold"><span className='text-purple-600'>Community</span> Explore</h1>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -751,7 +751,7 @@ export function Feed({
                 <input
                   value={exploreSearch}
                   onChange={(e) => setExploreSearch(e.target.value)}
-                  placeholder="Search posts, people, events..."
+                  placeholder="Search"
                   className="w-full pl-11 pr-4 py-3 bg-gray-100/60 hover:bg-gray-100 focus:bg-white border border-transparent focus:border-[#8A2BE2]/20 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-[#8A2BE2]/5 transition-all text-sm font-medium"
                 />
               </div>

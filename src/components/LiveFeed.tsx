@@ -554,7 +554,7 @@ export function LiveFeed() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-10 bg-white rounded-xl border border-gray-100 border-dashed">
+            <div className="py-10 bg-white rounded-xl border border-gray-100 border-dashed">
               <p className="text-gray-500 text-sm">No live events at the moment</p>
             </div>
           )}
@@ -612,7 +612,7 @@ export function LiveFeed() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 bg-white rounded-xl border border-gray-100 border-dashed">
+            <div className="py-8 bg-white rounded-xl border border-gray-100 border-dashed">
               <p className="text-gray-500 text-sm">No creators live right now</p>
             </div>
           )}
