@@ -122,11 +122,19 @@
 
 @layer base {
   input, textarea, select, button {
-    @apply focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none !important;
+    @apply focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  button:focus-visible {
     outline: none !important;
-    outline-width: 0 !important;
     box-shadow: none !important;
-    border-color: transparent !important;
   }
 }
 
