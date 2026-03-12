@@ -334,7 +334,7 @@ export default function CreatePostPage() {
                 e.target.style.height = `${e.target.scrollHeight}px`;
               }}
               placeholder="What's happening?"
-              className="w-full text-[17px] leading-relaxed text-gray-900 placeholder-gray-500 border-none focus:ring-0 p-0 mt-1 resize-none min-h-[140px]"
+              className="w-full text-[17px] leading-relaxed text-gray-900 placeholder-gray-500 border-none p-0 mt-1 resize-none min-h-[140px]"
             />
 
             {(locationTag.trim() || scheduledAt.trim()) && (

@@ -478,6 +478,36 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                     </div>
                   </div>
 
+                  {/* Location & Website Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={profileData.location}
+                          onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                          placeholder="City, Country"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Website</label>
+                      <div className="relative">
+                        <Globe className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="url"
+                          value={profileData.website}
+                          onChange={(e) => setProfileData({ ...profileData, website: e.target.value })}
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                          placeholder="https://yourwebsite.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Email & Phone Row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -503,36 +533,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                           className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
                           placeholder="+255 XXX XXX XXX"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Location & Website Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
-                      <div className="relative">
-                        <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                          type="text"
-                          value={profileData.location}
-                          onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
-                          placeholder="City, Country"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-900 ml-1">Website</label>
-                      <div className="relative">
-                        <Globe className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                          type="url"
-                          value={profileData.website}
-                          onChange={(e) => setProfileData({ ...profileData, website: e.target.value })}
-                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
-                          placeholder="https://yourwebsite.com"
                         />
                       </div>
                     </div>

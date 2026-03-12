@@ -230,7 +230,9 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
           <UserAvatar 
             src={displayProfile.avatar} 
             name={displayProfile.name} 
-            className="w-10 h-10 ring-2 ring-purple-50 cursor-pointer"
+            size="md"
+            verified={post.user.verified}
+            className="ring-2 ring-purple-50 cursor-pointer"
             onClick={() => onProfileClick(displayProfile as any)}
           />
           <div className="flex flex-col">
@@ -243,13 +245,6 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
               </span>
               {(displayProfile.isOrganizer || post.user.isOrganizerPage) && (
                 <Star className="w-3.5 h-3.5 text-purple-600 fill-purple-600" />
-              )}
-              {post.user.verified && !post.user.isOrganizer && (
-                <div className="bg-blue-500 rounded-full p-0.5" title="Verified">
-                  <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                  </svg>
-                </div>
               )}
             </div>
             <span className="text-xs text-gray-400">

@@ -472,7 +472,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                       type="text"
                       value={profileData.username}
                       onChange={(e) => setProfileData({ ...profileData, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                       placeholder="username"
                     />
                   </div>
@@ -487,70 +487,10 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                       type="text"
                       value={profileData.name}
                       onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                       placeholder="Your name"
                     />
                   </div>
-                </div>
-
-
-
-                {/* Email Input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
-                      placeholder="your.email@example.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Phone Input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Phone</label>
-                  <div className="relative">
-                    <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="tel"
-                      value={profileData.phone}
-                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
-                      placeholder="+255 712 345 678"
-                    />
-                  </div>
-                </div>
-
-
-
-                {/* Date of Birth Input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Date of Birth</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="date"
-                      value={profileData.birthdate}
-                      onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Bio Textarea */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Bio</label>
-                  <textarea
-                    value={profileData.bio}
-                    onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                    placeholder="Tell your story..."
-                    rows={4}
-                    className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
-                  />
                 </div>
 
                 {isCreatorProfile && (
@@ -571,7 +511,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                           }}
                           onFocus={() => setShowCategoryDropdown(true)}
                           placeholder="Select category"
-                          className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                          className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                         />
                         <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
 
@@ -613,7 +553,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                           }}
                           onFocus={() => profileData.location.length >= 3 && setShowLocationDropdown(true)}
                           placeholder="City, Country"
-                          className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                          className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
                         />
                         {loadingLocations && (
                           <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 animate-spin" />
@@ -643,6 +583,67 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                     </div>
                   </>
                 )}
+
+
+
+                {/* Email Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="email"
+                      value={profileData.email}
+                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                      placeholder="your.email@example.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Phone Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Phone</label>
+                  <div className="relative">
+                    <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                      placeholder="+255 712 345 678"
+                    />
+                  </div>
+                </div>
+
+
+
+                {/* Date of Birth Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Date of Birth</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="date"
+                      value={profileData.birthdate}
+                      onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
+                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Bio Textarea */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900 ml-1">Bio</label>
+                  <textarea
+                    value={profileData.bio}
+                    onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                    placeholder="Tell your story..."
+                    rows={4}
+                    className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
+                  />
+                </div>
+
               </div>
 
               {/* Save Button */}

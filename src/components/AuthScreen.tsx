@@ -231,7 +231,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                     required
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    className="block w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all outline-none font-medium"
+                    className="block w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white transition-all outline-none font-medium"
                     placeholder="John Doe"
                     disabled={isSubmitting}
                   />
@@ -252,7 +252,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="block w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all outline-none font-medium"
+                  className="block w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white transition-all outline-none font-medium"
                   placeholder="you@example.com"
                   disabled={isSubmitting}
                 />
@@ -272,7 +272,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="block w-full h-12 pl-12 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all outline-none font-medium"
+                  className="block w-full h-12 pl-12 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white transition-all outline-none font-medium"
                   placeholder="••••••••"
                   disabled={isSubmitting}
                 />

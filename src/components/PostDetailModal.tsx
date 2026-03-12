@@ -386,7 +386,9 @@ export function PostDetailModal({
               <UserAvatar
                 src={post.user.avatar}
                 name={post.user.name}
-                className="w-10 h-10 rounded-xl object-cover cursor-pointer hover:opacity-80 transition-all"
+                size="md"
+                verified={post.user.verified}
+                className="cursor-pointer hover:opacity-80 transition-all"
                 onClick={(e) => onProfileClick(post.user, e)}
               />
               <div>
@@ -399,13 +401,6 @@ export function PostDetailModal({
                   </span>
                   {post.user.isOrganizer && (
                     <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
-                  )}
-                  {post.user.verified && !post.user.isOrganizer && (
-                    <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
-                      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                      </svg>
-                    </div>
                   )}
                 </div>
                 <span className="text-gray-500 text-sm">{post.timestamp || 'Just now'}</span>
@@ -600,7 +595,7 @@ export function PostDetailModal({
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Add a comment..."
               rows={1}
-              className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 focus:ring-0 resize-none min-h-[20px] max-h-[80px] py-1.5"
+              className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 resize-none min-h-[20px] max-h-[80px] py-1.5"
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';

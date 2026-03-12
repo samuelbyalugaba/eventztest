@@ -3,13 +3,25 @@ import { useState, useMemo } from 'react';
 interface UserAvatarProps {
   src?: string | null;
   name?: string | null;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  verified?: boolean;
   className?: string;
   onClick?: (e?: React.MouseEvent) => void;
 }
 
-export function UserAvatar({ src, name, className = '', onClick }: UserAvatarProps) {
+export function UserAvatar({ src, name, size = 'md', verified, className = '', onClick }: UserAvatarProps) {
   const [imageError, setImageError] = useState(false);
   const safeName = name || '';
+
+  const sizeClasses = {
+    'xs': 'w-6 h-6 text-[10px]',
+    'sm': 'w-8 h-8 text-[12px]',
+    'md': 'w-10 h-10 text-[14px]',
+    'lg': 'w-12 h-12 text-[16px]',
+    'xl': 'w-14 h-14 text-[18px]',
+    '2xl': 'w-16 h-16 text-[20px]',
+    '3xl': 'w-20 h-20 text-[24px]',
+  };
 
   const initials = useMemo(() => {
     if (!safeName) return '?';
@@ -35,27 +47,44 @@ export function UserAvatar({ src, name, className = '', onClick }: UserAvatarPro
     return colors[Math.abs(hash) % colors.length];
   }, [safeName]);
 
-  if (!src || imageError) {
-    const hasRoundedClass = className.includes('rounded-');
-    return (
-      <div 
-        className={`flex items-center justify-center ${hasRoundedClass ? '' : 'rounded-full'} text-white font-medium ${bgColor} ${className}`}
-        onClick={onClick}
-      >
-        {initials}
-      </div>
-    );
-  }
+  const renderAvatar = () => {
+    if (!src || imageError) {
+      const hasRoundedClass = className.includes('rounded-');
+      return (
+        <div 
+          className={`flex items-center justify-center ${hasRoundedClass ? '' : 'rounded-full'} text-white font-medium ${bgColor} ${sizeClasses[size]} ${className}`}
+          onClick={onClick}
+        >
+          {initials}
+        </div>
+      );
+    }
 
-  const hasRoundedClass = className.includes('rounded-');
+    const hasRoundedClass = className.includes('rounded-');
+
+    return (
+      <img 
+        src={src} 
+        alt={safeName || 'User'} 
+        className={`${hasRoundedClass ? '' : 'rounded-full'} object-cover ${sizeClasses[size]} ${className}`}
+        onError={() => setImageError(true)}
+        onClick={onClick}
+      />
+    );
+  };
 
   return (
-    <img 
-      src={src} 
-      alt={safeName || 'User'} 
-      className={`${hasRoundedClass ? '' : 'rounded-full'} object-cover ${className}`}
-      onError={() => setImageError(true)}
-      onClick={onClick}
-    />
+    <div className="relative inline-block flex-shrink-0">
+      {renderAvatar()}
+      {verified && (
+        <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-sm">
+          <div className="bg-blue-500 rounded-full w-3.5 h-3.5 flex items-center justify-center">
+            <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

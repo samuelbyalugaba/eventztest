@@ -6,7 +6,7 @@ import { PostSkeleton } from './PostSkeleton';
 import { Calendar, Camera, Search, MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments, getProfile, getMessages, toggleLikeComment, updatePostCaption } from '../utils/supabase/api';
+import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments, getProfile, getMessages, toggleLikeComment, updatePostCaption, searchProfiles } from '../utils/supabase/api';
 import { formatTimeAgo } from '../utils/format';
 import { Post, HighlightClip, Conversation } from '../types';
 import { PostDetailModal } from './PostDetailModal';
@@ -82,6 +82,29 @@ export function Feed({
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [renderCount, setRenderCount] = useState(20);
   const [exploreSearch, setExploreSearch] = useState('');
+  const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
+  const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
+
+  useEffect(() => {
+    const performSearch = async () => {
+      if (exploreSearch.trim().length >= 2) {
+        setIsSearchingProfiles(true);
+        try {
+          const profiles = await searchProfiles(exploreSearch.trim());
+          setSearchedProfiles(profiles || []);
+        } catch (error) {
+          console.error('Error searching profiles:', error);
+        } finally {
+          setIsSearchingProfiles(false);
+        }
+      } else {
+        setSearchedProfiles([]);
+      }
+    };
+
+    const timer = setTimeout(performSearch, 300);
+    return () => clearTimeout(timer);
+  }, [exploreSearch]);
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -752,7 +775,7 @@ export function Feed({
                   value={exploreSearch}
                   onChange={(e) => setExploreSearch(e.target.value)}
                   placeholder="Search"
-                  className="w-full pl-11 pr-4 py-3 bg-gray-100/60 hover:bg-gray-100 focus:bg-white border border-transparent focus:border-[#8A2BE2]/20 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-[#8A2BE2]/5 transition-all text-sm font-medium"
+                  className="w-full pl-11 pr-4 py-3 bg-gray-100/60 hover:bg-gray-100 focus:bg-white border border-transparent rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none transition-all text-sm font-medium"
                 />
               </div>
             </div>
@@ -809,6 +832,70 @@ export function Feed({
 
         {/* Unique Card-Based Posts */}
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+          {exploreSearch.trim().length >= 2 && (
+            <div className="mb-8 -mx-4">
+              <div className="flex items-center justify-between px-5 mb-4">
+                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">Profiles</h3>
+                {isSearchingProfiles && (
+                  <div className="w-3.5 h-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                )}
+              </div>
+              
+              {searchedProfiles.length > 0 ? (
+                <div className="flex overflow-x-auto gap-5 px-5 pb-2 scrollbar-hide">
+                  {searchedProfiles.map((profile) => (
+                    <button
+                      key={profile.id}
+                      onClick={() => handleOpenUserProfile({
+                        id: profile.id,
+                        name: profile.full_name || profile.username,
+                        username: profile.username,
+                        avatar: profile.avatar_url,
+                        verified: profile.verified,
+                        isOrganizer: profile.is_organizer
+                      })}
+                      className="flex flex-col items-center gap-2.5 flex-shrink-0 w-20 group"
+                    >
+                      <div className="relative">
+                        <UserAvatar 
+                          src={profile.avatar_url} 
+                          name={profile.full_name || profile.username} 
+                          size="lg"
+                          verified={profile.verified}
+                          className="ring-2 ring-transparent group-hover:ring-purple-500/30 transition-all duration-300"
+                        />
+                        {profile.is_organizer && (
+                          <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm z-10">
+                            <Star className="w-3.5 h-3.5 text-purple-600 fill-current" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-center w-full">
+                        <p className="text-[12px] font-bold text-gray-900 truncate mb-0.5">
+                          {profile.full_name?.split(' ')[0] || profile.username}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-medium truncate">@{profile.username}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : !isSearchingProfiles && (
+                <div className="px-5">
+                  <div className="p-6 text-center bg-gray-50/50 rounded-2xl border border-gray-100 border-dashed">
+                    <p className="text-xs text-gray-400">No matching profiles</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="mt-8 mb-4 px-5">
+                <div className="flex items-center gap-4">
+                  <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em] flex-shrink-0">Posts</h3>
+                  <div className="h-px flex-1 bg-gray-100/60"></div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <>
               <PostSkeleton />
