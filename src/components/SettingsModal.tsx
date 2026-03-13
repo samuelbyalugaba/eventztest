@@ -8,11 +8,10 @@ type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
 
 interface SettingsModalProps {
   onClose: () => void;
-  onLogout: () => Promise<void>;
   initialView?: SettingsView;
 }
 
-export function SettingsModal({ onClose, onLogout, initialView = 'main' }: SettingsModalProps) {
+export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalProps) {
   const [currentView, setCurrentView] = useState<SettingsView>(initialView);
   const [isOpen, setIsOpen] = useState(true);
 

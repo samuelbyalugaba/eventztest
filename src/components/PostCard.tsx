@@ -364,17 +364,17 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                                         videoEl.addEventListener('webkitendfullscreen', disableControls, { once: true } as any);
                                       }
                                     }}
-                                    className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                                    className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
                                   >
-                                    <Maximize className="w-4 h-4 text-white" />
+                                    <Maximize className="w-3.5 h-3.5 text-white" />
                                   </button>
                                 </div>
                                 <div className="absolute bottom-4 right-4 z-10">
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                                    className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                                    className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
                                   >
-                                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                                    {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                                   </button>
                                 </div>
                               </>
@@ -463,17 +463,17 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                           videoEl.addEventListener('webkitendfullscreen', disableControls, { once: true } as any);
                         }
                       }}
-                      className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                      className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
                     >
-                      <Maximize className="w-4 h-4 text-white" />
+                      <Maximize className="w-3.5 h-3.5 text-white" />
                     </button>
                   </div>
                   <div className="absolute bottom-4 right-4 z-10">
                     <button 
                       onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                      className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                      className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
                     >
-                      {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                      {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                   {isMuted && (

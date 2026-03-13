@@ -857,13 +857,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                             />
                           )}
                           {isVideo && (
-                            <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
-                              <Play className="w-3 h-3" />
+                            <div className="absolute top-2 right-2 p-0.5 bg-black/50 rounded text-white">
+                              <Play className="w-2.5 h-2.5" />
                             </div>
                           )}
                           {!isVideo && isCarousel && (
-                            <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
-                              <GalleryHorizontal className="w-3.5 h-3.5" />
+                            <div className="absolute top-2 right-2 p-0.5 bg-black/50 rounded text-white">
+                              <GalleryHorizontal className="w-3 h-3" />
                             </div>
                           )}
                           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity flex items-center justify-center">
@@ -1010,7 +1010,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {showSettingsModal && (
         <SettingsModal
           onClose={() => setShowSettingsModal(false)}
-          onLogout={handleLogout}
           initialView={settingsInitialView}
         />
       )}
