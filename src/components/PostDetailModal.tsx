@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
-  Star, MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX, Maximize2
+  Star, MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX, Maximize
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -145,6 +145,17 @@ export function PostDetailModal({
               >
                 <Share2 className="w-4 h-4" />
               </button>
+              {isOwner && (
+                <button
+                  onClick={() => {
+                    onDelete(post.id);
+                    onClose();
+                  }}
+                  className="p-2.5 bg-gray-100 hover:bg-red-100 text-gray-700 hover:text-red-600 rounded-xl transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
               <button
                 onClick={(e) => onSave(post.id, e)}
                 className={`p-2.5 rounded-xl transition-all ${
@@ -174,15 +185,15 @@ export function PostDetailModal({
                       >
                         Edit caption
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                      onClick={() => {
-                        onDelete(post.id);
-                        onClose(); // Close modal after deleting
-                      }} 
-                      className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Post
+                      <DropdownMenuItem
+                        onClick={() => {
+                          onDelete(post.id);
+                          onClose(); // Close modal after deleting
+                        }}
+                        className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer md:hidden"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Post
                       </DropdownMenuItem>
                     </>
                   ) : (
@@ -191,7 +202,7 @@ export function PostDetailModal({
                         toast.success('Post reported. We will review it shortly.');
                         onClose();
                       }}
-                      className="cursor-pointer"
+                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
                     >
                       Report Post
                     </DropdownMenuItem>
@@ -347,7 +358,7 @@ export function PostDetailModal({
                           }}
                           className="absolute bottom-4 left-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
                         >
-                          <Maximize2 className="w-5 h-5" />
+                          <Maximize className="w-5 h-5 text-white" />
                         </button>
                       </>
                    ) : (
@@ -413,7 +424,7 @@ export function PostDetailModal({
                                            }}
                                            className="absolute bottom-4 left-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
                                         >
-                                           <Maximize2 className="w-5 h-5" />
+                                           <Maximize className="w-5 h-5 text-white" />
                                         </button>
                                       </>
                                    ) : (

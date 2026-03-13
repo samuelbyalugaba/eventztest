@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Settings, Calendar, Bookmark, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Heart, Plus, Trash, BarChart3, User, LayoutGrid, Radio, Menu, Wallet, Layers, LogOut, ChevronLeft, Star, ChevronRight } from 'lucide-react';
+import { Settings, Calendar, Bookmark, Play, Ticket as TicketIcon, Camera, Image as ImageIcon, Heart, Plus, Trash2, BarChart3, User, LayoutGrid, Radio, Menu, Wallet, GalleryHorizontal, LogOut, ChevronLeft, Star, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsModal } from './SettingsModal';
 import { TicketViewer } from './TicketViewer';
@@ -829,17 +829,19 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                           )}
                           {!isVideo && isCarousel && (
                             <div className="absolute top-2 right-2 p-1 bg-black/50 rounded text-white">
-                              <Layers className="w-3 h-3" />
+                              <GalleryHorizontal className="w-3.5 h-3.5" />
                             </div>
                           )}
                           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <button 
-                              onClick={(e) => handleDeletePost(post.id, e)}
-                              className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
-                              title="Delete post"
-                            >
-                              <Trash className="w-3.5 h-3.5" />
-                            </button>
+                            {isOwnProfile && (
+                              <button 
+                                onClick={(e) => handleDeletePost(post.id, e)}
+                                className="absolute top-2 left-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded-full text-white transition-colors z-10"
+                                title="Delete post"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <div className="flex items-center gap-1 text-white text-sm">
                               <Heart className="w-4 h-4 fill-white" />
                               <span>{post.likes_count || 0}</span>

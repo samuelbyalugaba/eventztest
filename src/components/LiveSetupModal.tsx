@@ -145,7 +145,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                 <div className="px-4 py-4 space-y-4">
                   <div 
                     onClick={() => fileInputRef.current?.click()}
-                    className="relative w-full aspect-video bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden group"
+                    className="relative w-full aspect-video h-48 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden group"
                   >
                     {thumbnailPreview ? (
                       <>
@@ -229,39 +229,46 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
               )}
 
               {tab === 'from_event' && (
-                <div className="px-4 py-4">
+                <div className="px-4 py-4 space-y-4">
                   {events.length === 0 ? (
-                    <div className="text-center py-10">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <div className="relative w-full aspect-video h-48 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden group">
+                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-2">
                         <Tv className="w-6 h-6 text-gray-400" />
                       </div>
-                      <p className="text-gray-900 font-medium">No events found</p>
-                      <p className="text-gray-600 text-sm">Create an event then go live from it</p>
+                      <p className="text-gray-500 text-sm font-medium">No events found</p>
+                      <p className="text-gray-400 text-xs">Create an event first to go live from it</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {events.map((ev) => (
-                        <button
+                        <div
                           key={ev.id}
                           onClick={() => setSelectedEvent(ev)}
-                          className="w-full text-left p-3 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-between"
+                          className="relative w-full aspect-video h-48 bg-gray-100 rounded-xl border-2 border-gray-200 overflow-hidden cursor-pointer group hover:border-purple-600 transition-all"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                              <Calendar className="w-5 h-5 text-gray-600" />
+                          {ev.image_url ? (
+                            <>
+                              <img src={ev.image_url} alt={ev.title} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <p className="text-white font-medium">Select Event</p>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50">
+                              <Calendar className="w-8 h-8 text-gray-400 mb-2" />
+                              <p className="text-gray-500 text-sm">No Cover Image</p>
                             </div>
-                            <div>
-                              <p className="text-gray-900 font-medium text-sm">{ev.title}</p>
-                              <p className="text-gray-600 text-xs flex items-center gap-2">
-                                <span>{ev.date}</span>
-                                <span className="inline-flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" /> {ev.location || 'Virtual'}
-                                </span>
-                              </p>
-                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
+                            <p className="font-medium truncate">{ev.title}</p>
+                            <p className="text-xs opacity-90 flex items-center gap-2">
+                              <span>{ev.date}</span>
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> {ev.location || 'Virtual'}
+                              </span>
+                            </p>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-gray-400" />
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}

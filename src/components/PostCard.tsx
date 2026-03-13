@@ -5,7 +5,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { CommentIcon } from './icons/CommentIcon';
 import { 
   MessageSquare, Share2, Bookmark, 
-  Volume2, VolumeX, Maximize2,
+  Volume2, VolumeX, Maximize,
   ThumbsUp,
   Star
 } from 'lucide-react';
@@ -371,7 +371,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                                     }}
                                     className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
                                   >
-                                    <Maximize2 className="w-4 h-4" />
+                                    <Maximize className="w-4 h-4 text-white" />
                                   </button>
                                 </div>
                                 <div className="absolute bottom-4 right-4 z-10">
@@ -466,7 +466,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                       }}
                       className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
                     >
-                      <Maximize2 className="w-4 h-4" />
+                      <Maximize className="w-4 h-4 text-white" />
                     </button>
                   </div>
                   <div className="absolute bottom-4 right-4 z-10">
