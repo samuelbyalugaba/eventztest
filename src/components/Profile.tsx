@@ -498,15 +498,15 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                       </div>
                       <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                     </button>
-                  </div>
 
-                  <div className="border-t border-gray-50 p-2">
+                    <div className="my-2 border-t border-gray-50" />
+
                     <button
                       onClick={() => {
                         setIsSidebarOpen(false);
                         onLogout?.().then(() => toast.success("Logged out"));
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                      className="w-full flex items-center gap-3 px-6 py-4 text-red-600 hover:bg-red-50 transition-colors"
                     >
                       <LogOut className="w-5 h-5 stroke-[1.5]" />
                       <span className="font-medium text-[15px]">Log out</span>
