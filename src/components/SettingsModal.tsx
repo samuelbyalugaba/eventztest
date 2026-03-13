@@ -436,58 +436,64 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
 
           {/* Edit Profile View */}
           {currentView === 'profile' && (
-            <div className="space-y-8 pb-10">
-              {/* Avatar Section - Modern & Minimal (Matching Creator Setup) */}
-              <div className="flex flex-col items-center mb-10">
-                <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-50 border-4 border-white shadow-xl shadow-purple-100 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-300">
-                    {profileData.avatarUrl ? (
-                      <img src={profileData.avatarUrl} alt={profileData.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-12 h-12 text-gray-300" />
-                    )}
+            <div className="max-w-md mx-auto space-y-8 pb-10">
+              <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={handleAvatarClick}
+                    className="relative h-16 w-16 rounded-full overflow-visible"
+                    aria-label="Change profile photo"
+                  >
+                    <div className="absolute inset-0 rounded-full overflow-hidden bg-gray-50 border border-gray-200 flex items-center justify-center">
+                      {profileData.avatarUrl ? (
+                        <img src={profileData.avatarUrl} alt={profileData.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <User className="w-8 h-8 text-gray-300" />
+                      )}
+                    </div>
+                    <div className="absolute bottom-0 right-0 translate-x-1 translate-y-1 h-7 w-7 rounded-full bg-purple-600 text-white flex items-center justify-center ring-2 ring-white shadow-sm">
+                      <Camera className="w-3.5 h-3.5" />
+                    </div>
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{profileData.name || 'Your profile'}</p>
+                    <p className="text-xs text-gray-500">Upload a square photo for best results</p>
                   </div>
-                  <div className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-[#8A2BE2] text-white flex items-center justify-center shadow-lg border-4 border-white transform transition-transform group-hover:scale-110">
-                    <Camera className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleAvatarChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
                 </div>
-                <p className="mt-4 text-sm font-medium text-gray-500">Tap to upload photo</p>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleAvatarChange}
+                  accept="image/*"
+                  className="hidden"
+                />
               </div>
 
-              {/* Profile Fields - Mobile Native Look (Matching Creator Setup) */}
-              <div className="space-y-6">
-                {/* Username Input */}
+              <div className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Username</label>
+                  <label className="text-sm font-medium text-gray-700">Username</label>
                   <div className="relative">
-                    <AtSign className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       value={profileData.username}
                       onChange={(e) => setProfileData({ ...profileData, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
                       placeholder="username"
                     />
                   </div>
                 </div>
 
-                {/* Full Name Input */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Full Name</label>
+                  <label className="text-sm font-medium text-gray-700">Full Name</label>
                   <div className="relative">
-                    <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       value={profileData.name}
                       onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
                       placeholder="Your name"
                     />
                   </div>
@@ -496,9 +502,9 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                 {isCreatorProfile && (
                   <>
                     <div className="space-y-2" ref={categoryRef}>
-                      <label className="text-sm font-semibold text-gray-900 ml-1">Category</label>
+                      <label className="text-sm font-medium text-gray-700">Category</label>
                       <div className="relative">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                           type="text"
                           value={categorySearch}
@@ -511,12 +517,12 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                           }}
                           onFocus={() => setShowCategoryDropdown(true)}
                           placeholder="Select category"
-                          className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                          className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
                         />
-                        <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
 
                         {showCategoryDropdown && (
-                          <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
+                          <div className="absolute z-30 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide py-1 animate-in fade-in zoom-in duration-200">
                             {filteredCategories.length > 0 ? (
                               filteredCategories.map((c) => (
                                 <button
@@ -526,14 +532,14 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                                     setCategorySearch(c);
                                     setShowCategoryDropdown(false);
                                   }}
-                                  className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.category === c ? 'text-purple-600 font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
+                                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors flex items-center justify-between ${profileData.category === c ? 'text-purple-700 bg-purple-50' : 'text-gray-700'}`}
                                 >
                                   {c}
                                   {profileData.category === c && <Check className="w-4 h-4" />}
                                 </button>
                               ))
                             ) : (
-                              <div className="px-5 py-4 text-sm text-gray-400 text-center italic">No categories found</div>
+                              <div className="px-4 py-3 text-sm text-gray-500 text-center">No categories found</div>
                             )}
                           </div>
                         )}
@@ -541,9 +547,9 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                     </div>
 
                     <div className="space-y-2" ref={locationRef}>
-                      <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
+                      <label className="text-sm font-medium text-gray-700">Location</label>
                       <div className="relative">
-                        <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                           type="text"
                           value={profileData.location}
@@ -553,14 +559,14 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                           }}
                           onFocus={() => profileData.location.length >= 3 && setShowLocationDropdown(true)}
                           placeholder="City, Country"
-                          className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                          className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
                         />
                         {loadingLocations && (
-                          <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 animate-spin" />
+                          <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 animate-spin" />
                         )}
 
                         {showLocationDropdown && locationSuggestions.length > 0 && (
-                          <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto py-2 animate-in fade-in zoom-in duration-200">
+                          <div className="absolute z-30 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto py-1 animate-in fade-in zoom-in duration-200">
                             {locationSuggestions.map((loc, idx) => (
                               <button
                                 key={idx}
@@ -569,7 +575,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                                   setShowLocationDropdown(false);
                                   setLocationSuggestions([]);
                                 }}
-                                className="w-full text-left px-5 py-3.5 text-sm text-gray-600 hover:bg-purple-50 transition-colors font-medium border-b border-gray-50 last:border-0"
+                                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
                               >
                                 <div className="flex items-start gap-3">
                                   <MapPin className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
@@ -584,73 +590,64 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                   </>
                 )}
 
-
-
-                {/* Email Input */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Email</label>
+                  <label className="text-sm font-medium text-gray-700">Email</label>
                   <div className="relative">
-                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="email"
                       value={profileData.email}
                       onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
                       placeholder="your.email@example.com"
                     />
                   </div>
                 </div>
 
-                {/* Phone Input */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Phone</label>
+                  <label className="text-sm font-medium text-gray-700">Phone</label>
                   <div className="relative">
-                    <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="tel"
                       value={profileData.phone}
                       onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
                       placeholder="+255 712 345 678"
                     />
                   </div>
                 </div>
 
-
-
-                {/* Date of Birth Input */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Date of Birth</label>
+                  <label className="text-sm font-medium text-gray-700">Date of Birth</label>
                   <div className="relative">
-                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="date"
                       value={profileData.birthdate}
                       onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
-                      className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
                     />
                   </div>
                 </div>
 
-                {/* Bio Textarea */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-900 ml-1">Bio</label>
+                  <label className="text-sm font-medium text-gray-700">Bio</label>
                   <textarea
                     value={profileData.bio}
                     onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                     placeholder="Tell your story..."
                     rows={4}
-                    className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition resize-none"
                   />
                 </div>
-
               </div>
 
-              {/* Save Button */}
-              <div className="pt-4">
+
+              <div className="pt-2">
                 <button
                   onClick={handleSaveProfile}
-                  className="w-full bg-[#8A2BE2] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-purple-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  className="w-full h-11 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <span>Save Changes</span>
                   <Save className="w-5 h-5" />

@@ -497,7 +497,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           </button>
         </div>
         
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="p-4 sm:p-6 max-w-5xl mx-auto">
            <div className="grid md:grid-cols-2 gap-12 items-start">
              <div>
                <h3 className="text-gray-900 font-semibold mb-4 flex items-center gap-2">
@@ -537,7 +537,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
                  </div>
 
-                 <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                    <div>
                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Category</label>
                      <p className="text-gray-900 mt-1 flex items-center gap-2">
@@ -656,7 +656,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={async () => {
                 const shared = await shareUtil({
@@ -691,48 +691,58 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-slate-50 pb-24">
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-md sticky top-0 z-50 px-4 py-4 border-b border-gray-100 flex items-center justify-between transition-all">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={onBack}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6 text-gray-900" />
-          </button>
-          <h1 className="text-xl font-bold text-gray-900">
-            {isEditing ? 'Edit Event' : 'Create Event'}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setShowPreview(true)}
-            className="p-2 text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
-          >
-            <Eye className="w-6 h-6" />
-          </button>
-          <button 
-            onClick={handlePublish}
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-70"
-          >
-            {isSubmitting ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : isAutoSaving ? (
-              <div className="flex items-center gap-2">
-                 <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                 <span className="text-xs">Saving...</span>
-              </div>
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {isEditing ? 'Save' : 'Publish'}
-          </button>
+      <div className="bg-white sticky top-0 z-50 border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={onBack}
+              className="h-10 w-10 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-900" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+                {isEditing ? 'Edit Event' : 'Create Event'}
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">
+                {isEditing ? 'Update details and save changes' : 'Create a new event and publish when ready'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowPreview(true)}
+              className="h-10 w-10 inline-flex items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              aria-label="Preview"
+            >
+              <Eye className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handlePublish}
+              disabled={isSubmitting}
+              className="h-10 px-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors inline-flex items-center gap-2 disabled:opacity-70"
+            >
+              {isSubmitting ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : isAutoSaving ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="text-xs">Saving...</span>
+                </div>
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {isEditing ? 'Save' : 'Publish'}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="px-6 py-6 max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 sm:p-6">
         {/* Category Selection - Visual Cards */}
         <div className="mb-8">
           <label className="block text-gray-900 mb-4">Select Event Category</label>
@@ -856,7 +866,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         </div>
 
         {/* Date & Time */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-gray-900 mb-3">Date</label>
             <div className="relative">
@@ -1158,6 +1168,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             <span className="text-sm truncate">{isEditing ? 'Update' : 'Publish'}</span>
           </button>
         </div>
+      </div>
       </div>
 
       {/* Share Modal */}
