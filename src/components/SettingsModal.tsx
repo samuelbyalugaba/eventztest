@@ -1,4 +1,4 @@
-import { X, User, Shield, HelpCircle, LogOut, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar, Search, ChevronDown, Loader2 } from 'lucide-react';
+import { X, User, Shield, HelpCircle, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar, Search, ChevronDown, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique, uploadImage } from '../utils/supabase/api';
@@ -420,19 +420,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
                 </div>
 
                 <div className="pt-6 border-t border-gray-100">
-                  <button 
-                    onClick={() => {
-                      onLogout().then(() => {
-                        toast.success("Logged out successfully");
-                        handleOpenChange(false);
-                      });
-                    }}
-                    className="w-full p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl hover:bg-red-100 transition-all flex items-center justify-center gap-2 font-bold active:scale-[0.98]"
-                  >
-                    <LogOut className="w-5 h-5" />
-                    <span>Log Out</span>
-                  </button>
-                  <p className="text-center text-gray-400 text-xs mt-6 font-medium">
+                  <p className="text-center text-gray-400 text-xs font-medium">
                     EVENTZ v1.0.0 • Made with ❤️ in Tanzania
                   </p>
                 </div>

@@ -430,83 +430,88 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                   <Menu className="w-8 h-8" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 bg-white border-l border-gray-100">
+              <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 bg-white border-l border-gray-100 h-[75vh] bottom-auto overflow-hidden">
                 <SheetTitle className="sr-only">Menu</SheetTitle>
                 <SheetDescription className="sr-only">
                   Navigation menu for wallet, dashboard, settings, and logout.
                 </SheetDescription>
-                <div className="p-6 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden ring-1 ring-gray-100">
-                       {profileImage ? (
-                         <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
-                       ) : (
-                         <UserAvatar name={displayName} className="w-full h-full text-sm" />
-                       )}
-                     </div>
-                     <div>
-                       <h3 className="font-bold text-gray-900 text-sm leading-tight">{displayName}</h3>
-                       <p className="text-gray-500 text-xs">@{userProfile?.username || 'user'}</p>
-                     </div>
+                <div className="flex flex-col h-full">
+                  <div className="p-6 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden ring-1 ring-gray-100">
+                        {profileImage ? (
+                          <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
+                        ) : (
+                          <UserAvatar name={displayName} className="w-full h-full text-sm" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{displayName}</h3>
+                        <p className="text-gray-500 text-xs">@{userProfile?.username || 'user'}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="py-2">
-                  <button 
-                    onClick={() => { setShowWalletModal(true); setIsSidebarOpen(false); }}
-                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
-                      <Wallet className="w-5 h-5 stroke-[1.5]" />
-                      <span className="font-medium text-[15px]">Wallet</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
-                  </button>
-
-                  <button
-                    onClick={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); setIsSidebarOpen(false); }}
-                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
-                      <User className="w-5 h-5 stroke-[1.5]" />
-                      <span className="font-medium text-[15px]">Edit Profile</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
-                  </button>
-                  
-                  {isOrganizer && (
-                    <button 
-                      onClick={() => { setShowProfessionalDashboard(true); setIsSidebarOpen(false); }}
+                  <div className="flex-1 overflow-y-auto py-2">
+                    <button
+                      onClick={() => { setShowWalletModal(true); setIsSidebarOpen(false); }}
                       className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
                     >
                       <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
-                        <BarChart3 className="w-5 h-5 stroke-[1.5]" />
-                        <span className="font-medium text-[15px]">Professional Dashboard</span>
+                        <Wallet className="w-5 h-5 stroke-[1.5]" />
+                        <span className="font-medium text-[15px]">Wallet</span>
                       </div>
                       <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                     </button>
-                  )}
-                  
-                  <button 
-                    onClick={() => { setSettingsInitialView('main'); setShowSettingsModal(true); setIsSidebarOpen(false); }}
-                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
-                      <Settings className="w-5 h-5 stroke-[1.5]" />
-                      <span className="font-medium text-[15px]">Settings</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
-                  </button>
-                  
-                  <div className="my-2 border-t border-gray-50" />
-                  
-                  <button 
-                    onClick={() => { onLogout?.().then(() => toast.success("Logged out")); }}
-                    className="w-full flex items-center gap-3 px-6 py-4 text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <LogOut className="w-5 h-5 stroke-[1.5]" />
-                    <span className="font-medium text-[15px]">Log out</span>
-                  </button>
+
+                    <button
+                      onClick={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); setIsSidebarOpen(false); }}
+                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
+                        <User className="w-5 h-5 stroke-[1.5]" />
+                        <span className="font-medium text-[15px]">Edit Profile</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                    </button>
+
+                    {isOrganizer && (
+                      <button
+                        onClick={() => { setShowProfessionalDashboard(true); setIsSidebarOpen(false); }}
+                        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
+                          <BarChart3 className="w-5 h-5 stroke-[1.5]" />
+                          <span className="font-medium text-[15px]">Professional Dashboard</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => { setSettingsInitialView('main'); setShowSettingsModal(true); setIsSidebarOpen(false); }}
+                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
+                        <Settings className="w-5 h-5 stroke-[1.5]" />
+                        <span className="font-medium text-[15px]">Settings</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                    </button>
+                  </div>
+
+                  <div className="border-t border-gray-50 p-2">
+                    <button
+                      onClick={() => {
+                        setIsSidebarOpen(false);
+                        onLogout?.().then(() => toast.success("Logged out"));
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                    >
+                      <LogOut className="w-5 h-5 stroke-[1.5]" />
+                      <span className="font-medium text-[15px]">Log out</span>
+                    </button>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
