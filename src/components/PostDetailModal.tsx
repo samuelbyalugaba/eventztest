@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
-  Star, MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX
+  Star, MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX, Maximize2
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -71,6 +71,34 @@ export function PostDetailModal({
       setCurrent(api.selectedScrollSnap() + 1);
     });
   }, [api]);
+
+  // Effect to handle fullscreen controls
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const videos = document.querySelectorAll('video');
+      videos.forEach(v => {
+        if (document.fullscreenElement === v || 
+            (document as any).webkitFullscreenElement === v || 
+            (document as any).msFullscreenElement === v) {
+          v.controls = true;
+        } else {
+          v.controls = false;
+        }
+      });
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
 
   const handlePostComment = () => {
     if (!commentText.trim()) return;
@@ -281,13 +309,17 @@ export function PostDetailModal({
                    {isMediaVideo ? (
                       <>
                         <video 
+                          id={`video-${post.id}`}
                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
                           className="w-full h-full object-contain max-h-[70vh]"
-                          controls
                           autoPlay
                           playsInline
                           loop
                           muted={isMuted}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
                         />
                         <button
                           onClick={(e) => {
@@ -297,6 +329,25 @@ export function PostDetailModal({
                           className="absolute bottom-4 right-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
                         >
                           {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const videoEl = document.getElementById(`video-${post.id}`) as HTMLVideoElement;
+                            if (videoEl) {
+                              if (videoEl.requestFullscreen) {
+                                videoEl.requestFullscreen();
+                              } else if ((videoEl as any).webkitRequestFullscreen) {
+                                (videoEl as any).webkitRequestFullscreen();
+                              } else if ((videoEl as any).msRequestFullscreen) {
+                                (videoEl as any).msRequestFullscreen();
+                              }
+                              videoEl.controls = true;
+                            }
+                          }}
+                          className="absolute bottom-4 left-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                        >
+                          <Maximize2 className="w-5 h-5" />
                         </button>
                       </>
                    ) : (
@@ -324,14 +375,17 @@ export function PostDetailModal({
                                    {isMediaVideo ? (
                                       <>
                                         <video 
+                                          id={`video-${post.id}-${index}`}
                                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
                                           className="w-full h-full object-contain max-h-[70vh]"
-                                          controls
-                                          // Only autoplay if it's the active slide
                                           autoPlay={isActive}
                                           playsInline
                                           loop
                                           muted={isMuted}
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                          }}
                                         />
                                         <button
                                            onClick={(e) => {
@@ -341,6 +395,25 @@ export function PostDetailModal({
                                            className="absolute bottom-4 right-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
                                         >
                                            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                        </button>
+                                        <button
+                                           onClick={(e) => {
+                                             e.stopPropagation();
+                                             const videoEl = document.getElementById(`video-${post.id}-${index}`) as HTMLVideoElement;
+                                             if (videoEl) {
+                                               if (videoEl.requestFullscreen) {
+                                                 videoEl.requestFullscreen();
+                                               } else if ((videoEl as any).webkitRequestFullscreen) {
+                                                 (videoEl as any).webkitRequestFullscreen();
+                                               } else if ((videoEl as any).msRequestFullscreen) {
+                                                 (videoEl as any).msRequestFullscreen();
+                                               }
+                                               videoEl.controls = true;
+                                             }
+                                           }}
+                                           className="absolute bottom-4 left-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                                        >
+                                           <Maximize2 className="w-5 h-5" />
                                         </button>
                                       </>
                                    ) : (

@@ -5,7 +5,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { CommentIcon } from './icons/CommentIcon';
 import { 
   MessageSquare, Share2, Bookmark, 
-  Volume2, VolumeX, 
+  Volume2, VolumeX, Maximize2,
   ThumbsUp,
   Star
 } from 'lucide-react';
@@ -69,6 +69,34 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
     };
   }, [api]);
   
+  // Effect to handle fullscreen controls
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const videos = document.querySelectorAll('video');
+      videos.forEach(v => {
+        if (document.fullscreenElement === v || 
+            (document as any).webkitFullscreenElement === v || 
+            (document as any).msFullscreenElement === v) {
+          v.controls = true;
+        } else {
+          v.controls = false;
+        }
+      });
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
   // Intersection Observer for Video Autoplay & Concurrency Management
   useEffect(() => {
     // Listen for other videos playing
@@ -307,6 +335,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                           <div className="relative w-full h-full bg-black">
                             {isVideoLoading && isActive && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                             <video
+                              id={`video-card-${post.id}-${index}`}
                               ref={isActive ? videoRef : null}
                               src={`${media}${media.includes('#') ? '' : '#t=0.1'}`}
                               poster={videoPoster}
@@ -315,12 +344,36 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                               muted={isMuted}
                               playsInline
                               preload="metadata"
-                              onClick={handleManualPlay}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
                               onLoadedData={() => setIsVideoLoading(false)}
                             />
                             {/* Video Controls (Show only on active slide) */}
                             {isActive && (
                               <>
+                                <div className="absolute bottom-4 left-4 z-10">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const videoEl = document.getElementById(`video-card-${post.id}-${index}`) as HTMLVideoElement;
+                                      if (videoEl) {
+                                        if (videoEl.requestFullscreen) {
+                                          videoEl.requestFullscreen();
+                                        } else if ((videoEl as any).webkitRequestFullscreen) {
+                                          (videoEl as any).webkitRequestFullscreen();
+                                        } else if ((videoEl as any).msRequestFullscreen) {
+                                          (videoEl as any).msRequestFullscreen();
+                                        }
+                                        videoEl.controls = true;
+                                      }
+                                    }}
+                                    className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                                  >
+                                    <Maximize2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                                 <div className="absolute bottom-4 right-4 z-10">
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
@@ -380,6 +433,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                 <div className="relative w-full bg-black min-h-[250px]">
                   {isVideoLoading && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                   <video
+                    id={`video-card-${post.id}`}
                     ref={videoRef}
                     src={currentVideoSrc}
                     poster={videoPoster}
@@ -388,9 +442,33 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                     muted={isMuted}
                     playsInline
                     preload="metadata"
-                    onClick={handleManualPlay}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     onLoadedData={() => setIsVideoLoading(false)}
                   />
+                  <div className="absolute bottom-4 left-4 z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const videoEl = document.getElementById(`video-card-${post.id}`) as HTMLVideoElement;
+                        if (videoEl) {
+                          if (videoEl.requestFullscreen) {
+                            videoEl.requestFullscreen();
+                          } else if ((videoEl as any).webkitRequestFullscreen) {
+                            (videoEl as any).webkitRequestFullscreen();
+                          } else if ((videoEl as any).msRequestFullscreen) {
+                            (videoEl as any).msRequestFullscreen();
+                          }
+                          videoEl.controls = true;
+                        }
+                      }}
+                      className="p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </button>
+                  </div>
                   <div className="absolute bottom-4 right-4 z-10">
                     <button 
                       onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
