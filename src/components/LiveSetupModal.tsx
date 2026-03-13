@@ -71,6 +71,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
       const streaming: any = {
         available: true,
         isLive: false,
+        isInstant: true,
         visibility,
         virtualPrice: virtualPrice.trim() || null,
         category,

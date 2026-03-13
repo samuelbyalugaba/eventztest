@@ -555,7 +555,8 @@ export const getEvents = async () => {
   // Calculate attendees from tickets count
   // Prioritize using the 'attendees' column from the events table if it exists and is not null
   // Otherwise fall back to counting tickets (which may be limited by RLS)
-  return data.map((event: any) => ({
+  const visibleEvents = (data || []).filter((event: any) => !event?.streaming?.isInstant);
+  return visibleEvents.map((event: any) => ({
     ...event,
     attendees: (event.attendees !== undefined && event.attendees !== null) 
       ? event.attendees 
@@ -581,7 +582,8 @@ export const getOrganizerEvents = async (organizerId: string) => {
     throw error;
   }
 
-  return data.map((event: any) => ({
+  const visibleEvents = (data || []).filter((event: any) => !event?.streaming?.isInstant);
+  return visibleEvents.map((event: any) => ({
     ...event,
     interested: event.saved_events?.[0]?.count || 0,
     shares: event.posts?.[0]?.count || 0,

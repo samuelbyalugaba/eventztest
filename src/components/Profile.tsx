@@ -18,7 +18,7 @@ import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "./ui/sheet";
-import { Post as UiPost } from '../types';
+import { Conversation, Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
 
 import { EventListModal } from './EventListModal';
@@ -41,6 +41,7 @@ interface ProfileProps {
   onCreateEvent?: () => void;
   onEditEvent?: (event: any) => void;
   onStartOrganizerSetup?: () => void;
+  onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
   userId?: string; // Optional: View another user's profile
   onBack?: () => void; // Optional: Back button handler
   onViewPost?: (post: any) => void;
@@ -697,7 +698,26 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           <button 
             className="flex-1 py-2 bg-gray-50 text-gray-900 border border-gray-100 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-all active:scale-95"
             onClick={() => {
-              toast.info('Message feature coming soon');
+              if (!currentUser) {
+                toast.error('Please sign in to message');
+                return;
+              }
+              const targetUserId = userId || currentUser.id;
+              if (targetUserId === currentUser.id) return;
+
+              navigate('/feed', {
+                state: {
+                  openMessages: true,
+                  userToMessage: {
+                    id: targetUserId,
+                    name: userProfile?.full_name || userProfile?.username || 'User',
+                    username: userProfile?.username || '',
+                    avatar: userProfile?.avatar_url || '',
+                    verified: !!userProfile?.verified,
+                    isOrganizer: !!userProfile?.is_organizer,
+                  }
+                }
+              });
             }}
           >
             Message
@@ -976,7 +996,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {/* Floating Action Button - Share Post */}
       <button
         onClick={() => navigate('/compose/post')}
-        className="fixed bottom-24 right-6 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
+        className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-6 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
         title="Share a post"
       >
         <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
@@ -1110,6 +1130,26 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             username: selectedUserForModal.username || '',
           } as any}
           onClose={() => setShowUserProfileModal(false)}
+          onMessage={() => {
+            if (!currentUser) {
+              toast.error('Please sign in to message');
+              return;
+            }
+            navigate('/feed', {
+              state: {
+                openMessages: true,
+                userToMessage: {
+                  id: selectedUserForModal.id,
+                  name: selectedUserForModal.full_name || selectedUserForModal.username || 'User',
+                  username: selectedUserForModal.username || '',
+                  avatar: selectedUserForModal.avatar_url || '',
+                  verified: !!selectedUserForModal.verified,
+                  isOrganizer: !!selectedUserForModal.is_organizer,
+                }
+              }
+            });
+            setShowUserProfileModal(false);
+          }}
         />
       )}
       

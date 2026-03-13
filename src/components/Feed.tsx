@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { UserAvatar } from './UserAvatar';
 import { PostCard } from './PostCard';
 import { PostSkeleton } from './PostSkeleton';
@@ -48,6 +49,9 @@ export function Feed({
   currentUser: propCurrentUser,
   onViewPost 
 }: FeedProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const handledNavKeyRef = useRef<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -82,6 +86,32 @@ export function Feed({
   const [exploreSearch, setExploreSearch] = useState('');
   const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
   const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
+
+  useEffect(() => {
+    if (handledNavKeyRef.current === location.key) return;
+    handledNavKeyRef.current = location.key;
+
+    const state = (location.state || {}) as any;
+    if (!state?.openMessages && !state?.userToMessage) return;
+
+    if (state.openMessages) setShowMessages(true);
+
+    if (state.userToMessage) {
+      (async () => {
+        try {
+          setShowMessages(true);
+          const conv = await onStartConversation(state.userToMessage);
+          if (conv) setActiveConversation(conv);
+        } catch (e) {
+          console.error('Failed to start conversation from navigation state', e);
+        } finally {
+          navigate(location.pathname, { replace: true });
+        }
+      })();
+    } else {
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.key, location.pathname, location.state, navigate, onStartConversation]);
 
   useEffect(() => {
     const performSearch = async () => {

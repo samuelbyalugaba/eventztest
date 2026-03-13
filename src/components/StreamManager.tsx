@@ -1,23 +1,28 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, CreditCard, RotateCcw, Heart, Send, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { type Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, updateEventStreamingStatus, getEventAnalytics, generateStreamKeys, getEventLikes, supabase } from '../utils/supabase/api';
+import { type Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../utils/agora';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 interface StreamManagerProps {
   event: Event;
   onClose: () => void;
-  onUpdateStatus: (isLive: boolean) => void;
+  onUpdateStatus: (isLive: boolean) => Promise<void> | void;
 }
 
 export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerProps) {
   const [isLive, setIsLive] = useState(event.streaming?.isLive || false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
   const [streamHealth, setStreamHealth] = useState<'good' | 'poor' | 'offline'>(isLive ? 'good' : 'offline');
   const [likes, setLikes] = useState(0);
+  const countdownIntervalRef = useRef<number | null>(null);
+  const startTimeoutRef = useRef<number | null>(null);
 
   // Network Quality Monitoring
   useEffect(() => {
@@ -403,6 +408,64 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     }
   };
 
+  const isInstantStream = Boolean((event.streaming as any)?.isInstant);
+
+  const clearStartTimers = () => {
+    if (countdownIntervalRef.current) {
+      window.clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    if (startTimeoutRef.current) {
+      window.clearTimeout(startTimeoutRef.current);
+      startTimeoutRef.current = null;
+    }
+    setIsStarting(false);
+    setCountdown(0);
+  };
+
+  const stopStream = async (opts?: { showToast?: boolean; deleteInstant?: boolean }) => {
+    clearStartTimers();
+
+    if (client.current) {
+      try {
+        await client.current.leave();
+      } catch {}
+    }
+
+    if (isLive) {
+      setIsLive(false);
+      setStreamHealth('offline');
+      try {
+        await Promise.resolve(onUpdateStatus(false));
+      } catch (error: any) {
+        toast.error(error?.message || 'Failed to update stream status');
+      }
+      if (opts?.showToast) toast.info('Stream ended');
+    }
+
+    if (isInstantStream && opts?.deleteInstant) {
+      try {
+        await deleteEvent(event.id);
+      } catch (error: any) {
+        toast.error(error?.message || 'Failed to remove instant livestream');
+      }
+    }
+  };
+
+  const handleRequestClose = () => {
+    if (isInstantStream || isLive || isStarting || countdown > 0) {
+      setExitConfirmOpen(true);
+      return;
+    }
+    onClose();
+  };
+
+  const handleConfirmClose = async () => {
+    setExitConfirmOpen(false);
+    await stopStream({ deleteInstant: true });
+    onClose();
+  };
+
   const toggleLive = async () => {
     const newState = !isLive;
     const channelName = `event-${event.id}`;
@@ -410,22 +473,33 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
     if (newState) {
       if (countdown === 0) {
+        setIsStarting(true);
         setCountdown(3);
-        const interval = setInterval(() => {
+        if (countdownIntervalRef.current) {
+          window.clearInterval(countdownIntervalRef.current);
+        }
+        countdownIntervalRef.current = window.setInterval(() => {
           setCountdown(prev => {
             if (prev <= 1) {
-              clearInterval(interval);
+              if (countdownIntervalRef.current) {
+                window.clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
               return 0;
             }
             return prev - 1;
           });
         }, 1000);
-        setTimeout(async () => {
+        if (startTimeoutRef.current) {
+          window.clearTimeout(startTimeoutRef.current);
+        }
+        startTimeoutRef.current = window.setTimeout(async () => {
           try {
             const token = await getAgoraToken(channelName, uid, 'publisher');
             if (!token) {
               toast.error("Failed to start stream: missing Agora token");
               console.error("Agora token retrieval returned null for channel:", channelName, "uid:", uid);
+              setIsStarting(false);
               return;
             }
             await client.current.setClientRole('host');
@@ -439,34 +513,23 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               await client.current.publish([localAudioTrack, localVideoTrack]);
             } else {
               toast.error("Camera/Mic not ready. Check permissions.");
+              setIsStarting(false);
               return;
             }
-            await updateEventStreamingStatus(event.id, true);
             setIsLive(true);
             setStreamHealth('good');
-            onUpdateStatus(true);
+            setIsStarting(false);
+            await Promise.resolve(onUpdateStatus(true));
             toast.success("You are now LIVE! 🔴");
           } catch (error: any) {
             console.error("Error starting stream:", error);
             toast.error(`Failed to start stream: ${error.message}`);
+            setIsStarting(false);
           }
         }, 3000);
       }
     } else {
-      // Stop Streaming (Leave)
-      try {
-        await client.current.leave();
-        
-        // Update DB status
-        await updateEventStreamingStatus(event.id, false);
-        
-        setIsLive(false);
-        setStreamHealth('offline');
-        onUpdateStatus(false);
-        toast.info("Stream ended");
-      } catch (error) {
-         console.error("Error stopping stream:", error);
-      }
+      await stopStream({ showToast: true });
     }
   };
 
@@ -524,7 +587,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           {/* LEFT: Exit & Basic Info */}
           <div className="flex items-center gap-3">
             <button
-              onClick={onClose}
+              onClick={handleRequestClose}
               className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors"
               title="Exit Stream"
             >
@@ -896,6 +959,22 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           </div>
         </div>
       </div>
+      <AlertDialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
+        <AlertDialogContent className="z-[70]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{isInstantStream ? 'Close livestream?' : 'End livestream?'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isInstantStream
+                ? 'Closing will end this livestream and remove it.'
+                : 'Closing will end the livestream for viewers.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep streaming</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClose}>End stream</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
