@@ -106,7 +106,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
 
   return (
     <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
-      <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl sm:shadow-xl sm:border sm:border-gray-200 max-h-[85vh] flex flex-col">
+      <div className="bg-white w-full h-[75vh] sm:h-auto sm:max-w-lg sm:rounded-2xl sm:shadow-xl sm:border sm:border-gray-200 sm:max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <Radio className="w-5 h-5 text-purple-600" />
