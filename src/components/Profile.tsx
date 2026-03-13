@@ -392,16 +392,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           <div className="w-20 h-20 rounded-full overflow-hidden bg-white ring-1 ring-gray-200">
             {isLoading ? (
               <div className="w-full h-full bg-gray-200 animate-pulse" />
-            ) : profileImage ? (
-              <ImageWithFallback
-                src={profileImage}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
             ) : (
               <UserAvatar 
+                src={profileImage}
                 name={displayName} 
                 className="w-full h-full text-2xl" 
+                size="3xl"
               />
             )}
           </div>
@@ -542,13 +538,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
              
             <div className="flex items-start justify-between">
               <p className={`${(isOrganizer && userProfile?.bio) ? 'text-gray-800 font-medium' : 'text-gray-600'} leading-relaxed text-[15px]`}>
-                {(isOrganizer && userProfile?.bio) ? userProfile.bio : (
-                  userProfile?.bio || (
-                    !isOrganizer && <span className="text-gray-400 italic">No bio yet. Add your bio in Settings.</span>
-                  )
+                {userProfile?.bio ? userProfile.bio : (
+                  isOwnProfile ? (
+                    <span className="text-gray-400 italic">No bio yet. Add your bio in Settings.</span>
+                  ) : null
                 )}
               </p>
-              {!userProfile?.bio && !isOrganizer && (
+              {!userProfile?.bio && isOwnProfile && (
                 <button 
                   onClick={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
                   className="ml-4 px-3 py-1.5 text-xs rounded-full bg-purple-50 text-purple-700 font-semibold hover:bg-purple-100 transition-colors"
@@ -768,13 +764,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                       <ImageIcon className="w-8 h-8 text-gray-300" />
                     </div>
                     <p className="text-gray-900 font-medium mb-1">No posts yet</p>
-                    <p className="text-gray-500 text-sm max-w-xs mx-auto">Share event photos and videos</p>
+                    {isOwnProfile && <p className="text-gray-500 text-sm max-w-xs mx-auto">Share event photos and videos</p>}
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
                     {filteredUserPosts.map((post) => {
                       const firstImage = post.image_urls?.[0];
-                      const isMediaVideo = (url?: string) => !!url && /\.(mp4|webm|ogg|mov)$/i.test(url);
+                      const isMediaVideo = (url?: string) => !!url && (/\.(mp4|webm|ogg|mov)$/i.test(url) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight'));
                       const videoSrc = post.video_url || (isMediaVideo(firstImage) ? firstImage : undefined);
                       const isVideo = !!videoSrc;
                       const isCarousel = (post.image_urls?.length || 0) > 1;

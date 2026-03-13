@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { UserAvatar } from './UserAvatar';
 import { PostCard } from './PostCard';
 import { PostSkeleton } from './PostSkeleton';
-import { Calendar, Camera, Search, MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
+import { Calendar, Search, MessageCircle, X, Eye, ArrowLeft, Users as UsersIcon, Star, LayoutGrid, ThumbsUp, Play, ChevronLeft, ChevronRight, MessageSquare, Volume2, VolumeX, Bell, Heart, UserPlus, TrendingUp, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, incrementPostView, getNotifications, Notification, deletePost, markNotificationsAsRead, getPostComments, getProfile, getMessages, toggleLikeComment, updatePostCaption, searchProfiles } from '../utils/supabase/api';
@@ -49,7 +48,6 @@ export function Feed({
   currentUser: propCurrentUser,
   onViewPost 
 }: FeedProps) {
-  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -686,23 +684,6 @@ export function Feed({
 
 
   const filteredPosts = posts.filter(post => {
-    const search = exploreSearch.trim().toLowerCase();
-    const matchesSearch = !search
-      ? true
-      : [
-          post.user?.name,
-          post.user?.username,
-          post.content?.text,
-          post.content?.hashtags?.join(' '),
-          post.event?.name,
-          post.event?.location,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(search);
-
-    if (!matchesSearch) return false;
     if (activeFilter === 'organizers') return post.user.isOrganizer;
     if (activeFilter === 'trending') return post.likes > 200;
     if (activeFilter === 'following') return followingIds.has(post.user.id);
@@ -832,7 +813,7 @@ export function Feed({
 
         {/* Unique Card-Based Posts */}
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-          {exploreSearch.trim().length >= 2 && (
+          {exploreSearch.trim().length >= 2 ? (
             <div className="mb-8 -mx-4">
               <div className="flex items-center justify-between px-5 mb-4">
                 <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">Profiles</h3>
@@ -886,61 +867,56 @@ export function Feed({
                   </div>
                 </div>
               )}
-              
-              <div className="mt-8 mb-4 px-5">
-                <div className="flex items-center gap-4">
-                  <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em] flex-shrink-0">Posts</h3>
-                  <div className="h-px flex-1 bg-gray-100/60"></div>
-                </div>
-              </div>
             </div>
-          )}
-
-          {isLoading ? (
-            <>
-              <PostSkeleton />
-              <PostSkeleton />
-              <PostSkeleton />
-            </>
           ) : (
             <>
-              {filteredPosts.map((post, index) => (
-                <div key={post.id} style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}>
-                  <PostCard
-                    post={post}
-                    onLike={(id) => toggleLike(id)}
-                    onSave={(id) => toggleSave(id)}
-                    onShare={(p) => sharePost(p)}
-                    onProfileClick={(user) => handleOpenUserProfile(user)}
-                    onMessage={(user) => handleStartConversationLocal(user)}
-                    audioUnlocked={audioUnlocked}
-                    onViewPost={() => handlePostClick(post)}
-                  />
+              {isLoading ? (
+                <>
+                  <PostSkeleton />
+                  <PostSkeleton />
+                  <PostSkeleton />
+                </>
+              ) : (
+                <>
+                  {filteredPosts.map((post, index) => (
+                    <div key={post.id} style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}>
+                      <PostCard
+                        post={post}
+                        onLike={(id) => toggleLike(id)}
+                        onSave={(id) => toggleSave(id)}
+                        onShare={(p) => sharePost(p)}
+                        onProfileClick={(user) => handleOpenUserProfile(user)}
+                        onMessage={(user) => handleStartConversationLocal(user)}
+                        audioUnlocked={audioUnlocked}
+                        onViewPost={() => handlePostClick(post)}
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
+              
+              {/* Infinite scroll sentinel (auto-load more when near bottom) */}
+              {hasMore && (
+                <div id="feed-sentinel" className="py-6">
+                  <div className="flex justify-center">
+                    <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
                 </div>
-              ))}
-            </>
-          )}
-          
-          {/* Infinite scroll sentinel (auto-load more when near bottom) */}
-          {hasMore && (
-            <div id="feed-sentinel" className="py-6">
-              <div className="flex justify-center">
-                <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Empty State */}
-          {!isLoading && filteredPosts.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 px-6">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                <MessageCircle className="w-8 h-8 text-gray-300" />
-              </div>
-              <h3 className="text-gray-900 text-lg font-semibold mb-2">Nothing here yet</h3>
-              <p className="text-gray-600 text-center text-sm max-w-xs">
-                Follow organizers and explore events to see updates
-              </p>
-            </div>
+              {/* Empty State */}
+              {!isLoading && filteredPosts.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 px-6">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <MessageCircle className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <h3 className="text-gray-900 text-lg font-semibold mb-2">Nothing here yet</h3>
+                  <p className="text-gray-600 text-center text-sm max-w-xs">
+                    Follow organizers and explore events to see updates
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -1604,14 +1580,6 @@ export function Feed({
       )}
       {/* Notifications Modal */}
        
-       {/* Floating Action Button - Share Post */}
-      <button
-        onClick={() => navigate('/compose/post')}
-        className="fixed bottom-24 right-6 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
-        title="Share a post"
-      >
-        <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
-      </button>
-    </>
+     </>
   );
 }

@@ -2183,7 +2183,7 @@ export const getNotifications = async (userId: string) => {
         event:events!inner(id, title, organizer_id),
         user:profiles(id, full_name, avatar_url)
       `)
-      .eq('events.organizer_id', userId)
+      .eq('event.organizer_id', userId)
       .order('created_at', { ascending: false })
       .limit(20);
 

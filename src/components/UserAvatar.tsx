@@ -48,7 +48,8 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
   }, [safeName]);
 
   const renderAvatar = () => {
-    if (!src || imageError) {
+    const hasImage = src && src.trim() !== '' && src !== 'null';
+    if (!hasImage || imageError) {
       const hasRoundedClass = className.includes('rounded-');
       return (
         <div 
@@ -74,7 +75,7 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
   };
 
   return (
-    <div className="relative inline-block flex-shrink-0">
+    <div className={`relative inline-flex flex-shrink-0 items-center justify-center ${className.includes('w-full') ? 'w-full' : ''} ${className.includes('h-full') ? 'h-full' : ''}`}>
       {renderAvatar()}
       {verified && (
         <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-sm">

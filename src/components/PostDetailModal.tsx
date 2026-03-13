@@ -36,7 +36,7 @@ interface PostDetailModalProps {
 
 const isVideo = (url?: string) => {
   if (!url) return false;
-  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+  return /\.(mp4|webm|ogg|mov)$/i.test(url) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight');
 };
 
 export function PostDetailModal({  
@@ -274,7 +274,7 @@ export function PostDetailModal({
 
             if (mediaItems.length === 1) {
               const media = mediaItems[0];
-              const isMediaVideo = isVideo(media) || !!post.video_url;
+              const isMediaVideo = isVideo(media) || media === post.video_url || (post.highlights && post.highlights.some((h: any) => h.videoUrl === media));
 
               return (
                 <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
@@ -315,7 +315,7 @@ export function PostDetailModal({
               <Carousel setApi={setApi} className="w-full group">
                 <CarouselContent>
                   {mediaItems.map((media: string, index: number) => {
-                    const isMediaVideo = isVideo(media);
+                    const isMediaVideo = isVideo(media) || media === post.video_url || (post.highlights && post.highlights.some((h: any) => h.videoUrl === media));
                     const isActive = index === (current - 1);
                     
                     return (
