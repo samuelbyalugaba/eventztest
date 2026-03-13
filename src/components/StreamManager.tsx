@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Copy, Eye, EyeOff, Radio, Settings, MessageCircle, Mic, Video, VideoOff, MicOff, Share2, Activity, CreditCard, RotateCcw, Heart, Send, Users } from 'lucide-react';
+import { X, Copy, Eye, EyeOff, Radio, Settings, Mic, Video, VideoOff, MicOff, Activity, CreditCard, RotateCcw, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { type Event, getStreamMessages, sendStreamMessage, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent } from '../utils/supabase/api';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent } from '../utils/supabase/api';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../utils/agora';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
@@ -44,11 +43,9 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   // Chat State
   const [messages, setMessages] = useState<StreamMessage[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [likesAnimation, setLikesAnimation] = useState<number[]>([]);
-  const [showChat, setShowChat] = useState(true);
+  const [showChat] = useState(true);
 
   // Agora State
   const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
@@ -395,19 +392,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     };
   }, [streamMethod, event.id]);
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!newMessage.trim()) return;
-
-    try {
-      await sendStreamMessage(event.id, newMessage);
-      setNewMessage('');
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      toast.error('Failed to send message');
-    }
-  };
-
   const isInstantStream = Boolean((event.streaming as any)?.isInstant);
 
   const clearStartTimers = () => {
@@ -502,15 +486,21 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               setIsStarting(false);
               return;
             }
-            await client.current.setClientRole('host');
-            await client.current.join(AGORA_APP_ID, channelName, token, uid);
+            const agoraClient = client.current;
+            if (!agoraClient) {
+              toast.error("Failed to start stream: Agora client not ready");
+              setIsStarting(false);
+              return;
+            }
+            await agoraClient.setClientRole('host');
+            await agoraClient.join(AGORA_APP_ID, channelName, token, uid);
             
             if (localAudioTrack && localVideoTrack) {
               // Ensure tracks are enabled before publishing
               if (!localAudioTrack.enabled) await localAudioTrack.setEnabled(true);
               if (!localVideoTrack.enabled) await localVideoTrack.setEnabled(true);
               
-              await client.current.publish([localAudioTrack, localVideoTrack]);
+              await agoraClient.publish([localAudioTrack, localVideoTrack]);
             } else {
               toast.error("Camera/Mic not ready. Check permissions.");
               setIsStarting(false);
@@ -536,25 +526,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
-  };
-
-  const handleShare = async () => {
-    const shareData = {
-      title: streamTitle,
-      text: `Watch "${streamTitle}" live on Eventz`,
-      url: window.location.href,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(shareData.url);
-        toast.success('Stream link copied to clipboard');
-      }
-    } catch (error) {
-      console.error('Share failed:', error);
-    }
   };
 
   return (

@@ -529,7 +529,7 @@ export function LiveFeed() {
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
                 <div className="absolute inset-0 w-2 h-2 rounded-full bg-red-500 animate-ping opacity-75"></div>
               </div>
-              <h1 className="text-gray-900 text-base font-bold tracking-tight">Live Feed</h1>
+              <h1 className="text-gray-900 text-base font-bold tracking-tight">Live Now</h1>
             </div>
             
             <div className="flex items-center gap-2">

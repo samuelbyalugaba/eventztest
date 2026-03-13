@@ -684,9 +684,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                  // Refresh follow stats for the profile being viewed
                   const followers = await getFollowersCount(targetUserId);
                   setFollowStats(prev => ({ ...prev, followers }));
-
-                  // Dispatch event to refresh profile elsewhere
-                  window.dispatchEvent(new Event('profileUpdated'));
                 } catch (error) {
                  console.error('Error toggling follow:', error);
                  toast.error('Failed to update follow status');
@@ -994,13 +991,15 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       </div>
 
       {/* Floating Action Button - Share Post */}
-      <button
-        onClick={() => navigate('/compose/post')}
-        className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-6 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
-        title="Share a post"
-      >
-        <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
-      </button>
+      {isOwnProfile && (
+        <button
+          onClick={() => navigate('/compose/post')}
+          className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-6 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
+          title="Share a post"
+        >
+          <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
+        </button>
+      )}
 
       {/* Settings Modal */}
       {showSettingsModal && (

@@ -824,7 +824,7 @@ export function Feed({
                 }`}
               >
                 <Star className="w-4 h-4" />
-                Organizers
+                Creator
               </button>
               <button
                 onClick={() => setActiveFilter('trending')}
@@ -942,7 +942,7 @@ export function Feed({
                   </div>
                   <h3 className="text-gray-900 text-lg font-semibold mb-2">Nothing here yet</h3>
                   <p className="text-gray-600 text-center text-sm max-w-xs">
-                    Follow organizers and explore events to see updates
+                    Follow creators and explore events to see updates
                   </p>
                 </div>
               )}

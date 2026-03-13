@@ -449,7 +449,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             </div>
           </div>
           
-          <p className="text-gray-600 text-sm ml-10">Discover amazing events happening around you</p>
+          <p className="text-gray-600 text-sm">Discover amazing events happening around you</p>
         </div>
 
         {/* Filters */}

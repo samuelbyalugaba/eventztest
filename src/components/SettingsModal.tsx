@@ -48,9 +48,13 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
 
   const CREATOR_CATEGORIES = [
     'Art Gallery', 'Artist', 'Bar', 'Band', 'Blogger', 'Book Store', 'Brand',
+    'Broadcasting & Media Production Company',
     'Business', 'Cafe', 'Charity', 'Church', 'Club', 'Coach', 'Comedy Club',
     'Community', 'Concert Venue', 'Conference', 'Content Creator', 'Corporate',
     'DJ', 'Dance Studio', 'Digital Creator', 'Education', 'Entrepreneur',
+    'Entertainment',
+    'Event Curator',
+    'Event Organizer',
     'Event Planner', 'Exhibition', 'Fashion', 'Festival', 'Fitness Trainer',
     'Government', 'Gym', 'Health/Beauty', 'Hotel', 'Influencer', 'Library',
     'Lounge', 'Media', 'Mosque', 'Museum', 'Music Venue', 'Musician',
@@ -59,6 +63,7 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
     'Podcast', 'Promoter', 'Public Figure', 'Radio Station',
     'Religious Organization', 'Resort', 'Restaurant', 'Retail', 'School',
     'Shopping', 'Social Club', 'Speaker', 'Sports Team', 'Startup',
+    'Sports Event',
     'Student Organization', 'Synagogue', 'Tech Community', 'Theater',
     'University', 'Venue', 'Video Creator', 'Wedding Planner', 'Workshop',
     'Writer', 'Yoga Studio', 'Youth Organization'
