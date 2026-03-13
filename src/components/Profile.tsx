@@ -793,6 +793,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                       const isMediaVideo = (url?: string) => !!url && (/\.(mp4|webm|ogg|mov)$/i.test(url) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight'));
                       const videoSrc = post.video_url || (isMediaVideo(firstImage) ? firstImage : undefined);
                       const isVideo = !!videoSrc;
+                      const videoThumbnail = isVideo ? (post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : post.image_urls?.find((u: string) => !!u && !isMediaVideo(u))) : undefined;
                       const isCarousel = (post.image_urls?.length || 0) > 1;
                       return (
                         <div
@@ -801,20 +802,31 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                           className="relative aspect-square cursor-pointer group bg-gray-100 overflow-hidden"
                         >
                           {isVideo ? (
-                            <video
-                              src={`${videoSrc!}${videoSrc!.includes('#') ? '' : '#t=0.1'}`}
-                              poster={post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : undefined}
-                              className="w-full h-full object-cover"
-                              muted
-                              playsInline
-                              loop
-                              preload="metadata"
-                              onMouseOver={(e) => e.currentTarget.play()}
-                              onMouseOut={(e) => {
-                                e.currentTarget.pause();
-                                e.currentTarget.currentTime = 0;
-                              }}
-                            />
+                            <>
+                              <video
+                                src={`${videoSrc!}${videoSrc!.includes('#') ? '' : '#t=0.1'}`}
+                                poster={post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : undefined}
+                                className={`w-full h-full object-cover ${
+                                  videoThumbnail ? 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-active:opacity-100 group-active:pointer-events-auto transition-opacity' : ''
+                                }`}
+                                muted
+                                playsInline
+                                loop
+                                preload="metadata"
+                                onMouseOver={(e) => e.currentTarget.play()}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.pause();
+                                  e.currentTarget.currentTime = 0;
+                                }}
+                              />
+                              {videoThumbnail && (
+                                <img
+                                  src={videoThumbnail}
+                                  alt=""
+                                  className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-100 group-hover:opacity-0 group-active:opacity-0 transition-opacity"
+                                />
+                              )}
+                            </>
                           ) : (
                             <ImageWithFallback
                               src={firstImage}
@@ -832,7 +844,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                               <GalleryHorizontal className="w-3.5 h-3.5" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/30" />
                             {isOwnProfile && (
                               <button 
                                 onClick={(e) => handleDeletePost(post.id, e)}
@@ -842,7 +855,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
-                            <div className="flex items-center gap-1 text-white text-sm">
+                            <div className="relative z-10 flex items-center gap-1 text-white text-sm">
                               <Heart className="w-4 h-4 fill-white" />
                               <span>{post.likes_count || 0}</span>
                             </div>
