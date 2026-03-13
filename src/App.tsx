@@ -641,7 +641,7 @@ export default function App() {
         }}
       />
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto pb-20">
+      <div className={`max-w-7xl mx-auto ${shouldHideBottomNav ? 'pb-20' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'}`}>
         <Routes>
           <Route path="/" element={<Navigate to="/events" replace />} />
           <Route path="/events" element={
@@ -735,7 +735,7 @@ export default function App() {
 
       {/* Bottom Navigation */}
       {!shouldHideBottomNav && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 pb-[env(safe-area-inset-bottom)]">
           <div className="max-w-7xl mx-auto px-2 sm:px-4">
             <div className="flex justify-around items-center h-16">
               <Link
