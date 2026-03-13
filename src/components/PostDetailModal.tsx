@@ -36,7 +36,10 @@ interface PostDetailModalProps {
 
 const isVideo = (url?: string) => {
   if (!url) return false;
-  return /\.(mp4|webm|ogg|mov)$/i.test(url) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight');
+  const raw = url.toLowerCase();
+  if (raw.includes('video') || raw.includes('highlight')) return true;
+  const cleaned = url.split('#')[0].split('?')[0];
+  return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
 };
 
 export function PostDetailModal({  
@@ -274,6 +277,19 @@ export function PostDetailModal({
       <div className="max-w-2xl mx-auto">
         {/* Media Content (Carousel or Single) */}
         <div className="relative bg-black rounded-b-3xl overflow-hidden">
+          <button
+            className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-black/35 backdrop-blur-sm rounded-full pr-3 py-1.5"
+            onClick={(e) => onProfileClick(post.user, e)}
+          >
+            <UserAvatar
+              src={post.user.avatar}
+              name={post.user.name}
+              size="sm"
+              verified={post.user.verified}
+              className="ring-2 ring-white/20"
+            />
+            <span className="text-white text-sm font-semibold max-w-[160px] truncate">{post.user.name}</span>
+          </button>
           {(() => {
             // Determine media items
             let mediaItems = post.content?.images || post.image_urls || [];
@@ -466,15 +482,7 @@ export function PostDetailModal({
         <div className="p-5 space-y-4">
           {/* User Card */}
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <UserAvatar
-                src={post.user.avatar}
-                name={post.user.name}
-                size="md"
-                verified={post.user.verified}
-                className="cursor-pointer hover:opacity-80 transition-all"
-                onClick={(e) => onProfileClick(post.user, e)}
-              />
+            <div className="flex items-center">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span 

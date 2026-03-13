@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { X, Radio, Calendar, MapPin, Tv, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { X, Radio, Calendar, MapPin, Tv, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerEvents, updateEventStreamingStatus, uploadImage } from '../utils/supabase/api';

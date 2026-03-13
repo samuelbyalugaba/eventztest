@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 interface UserAvatarProps {
   src?: string | null;
@@ -24,7 +24,7 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
   };
 
   const initials = useMemo(() => {
-    if (!safeName) return '?';
+    if (!safeName) return '';
     return safeName
       .split(' ')
       .filter(part => part.length > 0)
@@ -35,6 +35,7 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
   }, [safeName]);
 
   const bgColor = useMemo(() => {
+    if (!safeName) return 'bg-gray-200';
     const colors = [
       'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
       'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500',
@@ -64,13 +65,17 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
     const hasRoundedClass = className.includes('rounded-');
 
     return (
-      <img 
-        src={src} 
-        alt={safeName || 'User'} 
-        className={`${hasRoundedClass ? '' : 'rounded-full'} object-cover ${sizeClasses[size]} ${className}`}
-        onError={() => setImageError(true)}
-        onClick={onClick}
-      />
+      <div className={`relative overflow-hidden ${hasRoundedClass ? '' : 'rounded-full'} ${sizeClasses[size]} ${className}`} onClick={onClick}>
+        <div className={`absolute inset-0 z-0 flex items-center justify-center ${hasRoundedClass ? '' : 'rounded-full'} ${bgColor}`} aria-hidden="true">
+          <span className="text-white font-medium">{initials}</span>
+        </div>
+        <img 
+          src={src} 
+          alt={safeName || 'User'} 
+          className={`relative z-10 ${hasRoundedClass ? '' : 'rounded-full'} object-cover w-full h-full`}
+          onError={() => setImageError(true)}
+        />
+      </div>
     );
   };
 

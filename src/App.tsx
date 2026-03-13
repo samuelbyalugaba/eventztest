@@ -104,7 +104,8 @@ export default function App() {
     const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
     const isVideo = (url?: string) => {
       if (!url) return false;
-      return /\.(mp4|webm|ogg|mov)$/i.test(url);
+      const cleaned = url.split('#')[0].split('?')[0];
+      return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
     };
     const prefetchFeed = async () => {
       try {

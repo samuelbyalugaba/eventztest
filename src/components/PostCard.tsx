@@ -31,7 +31,8 @@ interface PostCardProps {
 
 const isVideo = (url?: string) => {
   if (!url) return false;
-  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+  const cleaned = url.split('#')[0].split('?')[0];
+  return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
 };
 
 export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onShare, onProfileClick, onMessage, onViewPost, audioUnlocked = false }: PostCardProps) {
@@ -42,7 +43,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
   const [likesCount, setLikesCount] = useState(post.likes);
   const [isSaved, setIsSaved] = useState(post.isSaved);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const commentsCount = post.comments_count || 0;
@@ -115,32 +116,21 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
           if (videoRef.current) {
             // Stricter threshold for autoplay - Must be FULLY visible (ratio >= 0.95 to account for subpixels)
             if (entry.isIntersecting && entry.intersectionRatio >= 0.95) {
-              // Try to play with sound first
               if (videoRef.current.paused) {
-                // Ensure we try unmuted first
-                videoRef.current.muted = false;
-                setIsMuted(false);
-                
+                const shouldMute = !audioUnlocked;
+                videoRef.current.muted = shouldMute;
+                setIsMuted(shouldMute);
+
                 const playPromise = videoRef.current.play();
                 if (playPromise !== undefined) {
-                  playPromise.then(() => {
-                    setIsPlaying(true);
-                    // Notify others to stop
-                    window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
-                  }).catch((error) => {
-                    console.log("Autoplay with sound failed, falling back to muted", error);
-                    // Autoplay with sound blocked; fallback to muted
-                    if (videoRef.current) {
-                      videoRef.current.muted = true;
-                      setIsMuted(true);
-                      videoRef.current.play().then(() => {
-                        setIsPlaying(true);
-                      }).catch((e) => {
-                        console.error("Autoplay muted failed", e);
-                        setIsPlaying(false);
-                      });
-                    }
-                  });
+                  playPromise
+                    .then(() => {
+                      setIsPlaying(true);
+                      window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
+                    })
+                    .catch(() => {
+                      setIsPlaying(false);
+                    });
                 }
               } else if (audioUnlocked && videoRef.current.muted) {
                 // If already playing and audio is unlocked, ensure we are unmuted

@@ -36,7 +36,8 @@ interface PostDetailPageProps {
 
 const isVideo = (url?: string) => {
   if (!url) return false;
-  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+  const cleaned = url.split('#')[0].split('?')[0];
+  return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
 };
 
 export function PostDetailPage({  
