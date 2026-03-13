@@ -35,7 +35,7 @@ interface LiveStreamViewerProps {
 }
 
 export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<{ user: string; text: string; avatar?: string }[]>([]);
@@ -122,11 +122,13 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
 
   // Initialize Agora Client (Audience)
   useEffect(() => {
-    let mounted = true;
+    // let mounted = true; // Removed unused variable
     const channelName = `event-${stream.id}`;
 
     const initAgora = async () => {
       try {
+        if (!client.current) return;
+
         // Use the generated String UID for token generation
         const token = await getAgoraToken(channelName, viewerUid, 'subscriber');
         if (!token) {
@@ -137,6 +139,7 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
         
         // Add event listeners
         client.current.on("user-published", async (user, mediaType) => {
+          if (!client.current) return;
           await client.current.subscribe(user, mediaType);
           
           if (mediaType === "video") {
@@ -175,9 +178,11 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     initAgora();
 
     return () => {
-      mounted = false;
-      client.current.leave();
-      client.current.removeAllListeners();
+      // mounted = false; // Removed unused variable
+      if (client.current) {
+        client.current.leave();
+        client.current.removeAllListeners();
+      }
 
       setViewerCount(prev => Math.max(prev - 1, 0));
       (async () => {
@@ -411,6 +416,10 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
                     <span className="flex items-center gap-1">
                       <Users className="w-3 h-3" />
                       {(viewerCount || 0).toLocaleString()}
+                    </span>
+                    <span className="flex items-center gap-1 text-white">
+                      <Heart className={`w-3 h-3 ${isLiked ? 'text-pink-500 fill-pink-500' : 'text-white'}`} />
+                      {likes.toLocaleString()}
                     </span>
                   </div>
                 </div>
