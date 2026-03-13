@@ -14,7 +14,7 @@ import { EventDetailModal } from './EventDetailModal';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { SimplifiedTicketModal } from './SimplifiedTicketModal';
 import { supabase } from '../utils/supabase/client';
-import { getEvents, getSavedEvents, type Event as ApiEvent } from '../utils/supabase/api';
+import { deleteEvent, getEvents, getSavedEvents, type Event as ApiEvent } from '../utils/supabase/api';
 
 import { eventsStore } from '../store/eventStore';
 
@@ -38,6 +38,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   
   // Initialize state directly from store
   const [events, setEvents] = useState<ApiEvent[]>(eventsStore.getEvents());
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // We track loading for internal logic but NOT for blocking the UI with skeletons
   const [isFetching, setIsFetching] = useState(false);
 
@@ -69,6 +70,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           getEvents(),
           (async () => {
             const { data: { user } } = await supabase.auth.getUser();
+            setCurrentUserId(user?.id ?? null);
             if (user) return getSavedEvents(user.id);
             return [];
           })()
@@ -246,6 +248,21 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     }
   };
 
+  const handleDeleteEvent = async (event: ApiEvent) => {
+    if (!currentUserId || currentUserId !== event.organizer_id) return;
+    const confirmed = window.confirm('Delete this event? This action cannot be undone.');
+    if (!confirmed) return;
+    try {
+      await deleteEvent(event.id);
+      const next = eventsStore.getEvents().filter(e => e.id !== event.id);
+      eventsStore.setEvents(next);
+      toast.success('Event deleted');
+    } catch (error: any) {
+      console.error('Failed to delete event', error);
+      toast.error(error?.message || 'Failed to delete event');
+    }
+  };
+
   const handleSendMessage = () => {
     if (!messageText.trim() || !activeConversation) return;
     onSendMessage(activeConversation.id, messageText);
@@ -395,6 +412,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     key={event.id}
                     event={event}
                     onClick={handleEventClick}
+                    currentUserId={currentUserId}
+                    onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
+                    onDeleteEvent={handleDeleteEvent}
                   />
                 ))}
               </div>
@@ -539,6 +559,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   key={event.id}
                   event={event}
                   onClick={handleEventClick}
+                  currentUserId={currentUserId}
+                  onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
+                  onDeleteEvent={handleDeleteEvent}
                 />
               ))}
             </div>
@@ -565,6 +588,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                  key={event.id}
                  event={event}
                  onClick={handleEventClick}
+                 currentUserId={currentUserId}
+                 onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
+                 onDeleteEvent={handleDeleteEvent}
                />
              ))}
            </div>

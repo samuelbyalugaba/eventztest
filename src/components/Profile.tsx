@@ -9,7 +9,7 @@ import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents, toggleFollow, getFollowedUserIds } from '../utils/supabase/api';
+import { deleteEvent, getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents, toggleFollow, getFollowedUserIds } from '../utils/supabase/api';
 import { WalletModal } from './WalletModal';
 import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
@@ -98,6 +98,22 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
   
   const isOwnProfile = !userId || (currentUser && userId === currentUser.id);
+
+  const handleDeleteEvent = async (event: AppEvent) => {
+    if (!currentUser || currentUser.id !== event.organizer_id) return;
+    const confirmed = window.confirm('Delete this event? This action cannot be undone.');
+    if (!confirmed) return;
+    try {
+      await deleteEvent(event.id);
+      setPublishedEvents(prev => prev.filter(e => e.id !== event.id));
+      setSavedEvents(prev => prev.filter(e => e.id !== event.id));
+      if (selectedEvent?.id === event.id) setSelectedEvent(null);
+      toast.success('Event deleted');
+    } catch (error: any) {
+      console.error('Failed to delete event', error);
+      toast.error(error?.message || 'Failed to delete event');
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -908,6 +924,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                         key={event.id}
                         event={event}
                         onClick={(e) => setSelectedEvent(e)}
+                        currentUserId={currentUser?.id}
+                        onEditEvent={onEditEvent}
+                        onDeleteEvent={handleDeleteEvent}
                         className="border border-gray-100 hover:shadow-md transition-all"
                       />
                     ))}
@@ -939,6 +958,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                         key={event.id}
                         event={event}
                         onClick={(e) => setSelectedEvent(e)}
+                        currentUserId={currentUser?.id}
+                        onEditEvent={onEditEvent}
+                        onDeleteEvent={handleDeleteEvent}
                         className="border border-gray-100 hover:shadow-md transition-all"
                       />
                     ))

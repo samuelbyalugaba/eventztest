@@ -1,17 +1,22 @@
-import { Calendar, MapPin, Tv } from 'lucide-react';
+import { Calendar, MapPin, MoreVertical, Pencil, Trash2, Tv } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import type { Event as ApiEvent } from '../utils/supabase/api';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 interface EventCardProps {
   event: ApiEvent;
   onClick: (event: ApiEvent) => void;
   className?: string;
+  currentUserId?: string | null;
+  onEditEvent?: (event: ApiEvent) => void;
+  onDeleteEvent?: (event: ApiEvent) => void;
 }
 
-export function EventCard({ event, onClick, className = '' }: EventCardProps) {
+export function EventCard({ event, onClick, className = '', currentUserId, onEditEvent, onDeleteEvent }: EventCardProps) {
   // Use passed organizer data if available, otherwise fallback to "Event Organizer"
   // Avoiding internal fetches to prevent N+1 request problem
   const organizerName = event.organizer?.full_name || 'Event Organizer';
+  const canManage = !!currentUserId && currentUserId === event.organizer_id && (!!onEditEvent || !!onDeleteEvent);
 
   const getCategoryColor = (category: string) => {
     switch (category.toLowerCase()) {
@@ -37,6 +42,50 @@ export function EventCard({ event, onClick, className = '' }: EventCardProps) {
           alt={event.title}
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
         />
+        {canManage && (
+          <div
+            className="absolute top-2 right-2 z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="w-8 h-8 rounded-full bg-black/60 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                  aria-label="Event actions"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={6} className="min-w-[160px]">
+                {onEditEvent && (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      onEditEvent(event);
+                    }}
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Edit event
+                  </DropdownMenuItem>
+                )}
+                {onEditEvent && onDeleteEvent && <DropdownMenuSeparator />}
+                {onDeleteEvent && (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={() => {
+                      onDeleteEvent(event);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete event
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
         {/* Category Badge */}
         <div className="absolute top-2 left-2">
           <span className={`px-3 py-1 rounded-full text-xs ${getCategoryColor(event.category)}`}>
