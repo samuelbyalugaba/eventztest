@@ -1248,7 +1248,7 @@ export function Feed({
               playsInline
               loop
               preload="metadata"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
               onCanPlay={(e) => {

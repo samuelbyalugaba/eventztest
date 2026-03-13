@@ -403,7 +403,7 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
                   }}
                   onCanPlay={() => setIsBuffering(false)}
                   onPause={() => setIsPlaying(false)}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover"
                 />
               )}
             </>

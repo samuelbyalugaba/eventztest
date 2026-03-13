@@ -34,7 +34,6 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [isBuffering, setIsBuffering] = useState(false);
-  const [showPlayButton, setShowPlayButton] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Update progress bar for videos
@@ -71,7 +70,6 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
           .catch(err => {
             console.log('Autoplay prevented on mobile, adding tap handler:', err);
             setIsPlaying(false);
-            setShowPlayButton(true);
           });
       }
     }
@@ -165,7 +163,7 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
               }}
               onPause={() => setIsPlaying(false)}
               onCanPlay={() => setIsBuffering(false)}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
             />
           ) : (
             <ImageWithFallback

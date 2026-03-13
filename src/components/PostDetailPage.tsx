@@ -297,7 +297,7 @@ export function PostDetailPage({
                       <>
                         <video 
                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
-                          className="w-full h-full object-contain max-h-[70vh]"
+                          className="w-full h-full object-cover max-h-[70vh]"
                           poster={posterToUse}
                           controls
                           autoPlay
@@ -341,7 +341,7 @@ export function PostDetailPage({
                                       <>
                                         <video 
                                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
-                                          className="w-full h-full object-contain max-h-[70vh]"
+                                          className="w-full h-full object-cover max-h-[70vh]"
                                           controls
                                           // Only autoplay if it's the active slide
                                           autoPlay={isActive}

@@ -340,7 +340,7 @@ export function PostDetailModal({
                         <video 
                           id={`video-${post.id}`}
                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
-                          className="w-full h-full object-contain max-h-[70vh]"
+                          className="w-full h-full object-cover max-h-[70vh]"
                           autoPlay
                           playsInline
                           loop
@@ -406,7 +406,7 @@ export function PostDetailModal({
                                         <video 
                                           id={`video-${post.id}-${index}`}
                                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
-                                          className="w-full h-full object-contain max-h-[70vh]"
+                                          className="w-full h-full object-cover max-h-[70vh]"
                                           autoPlay={isActive}
                                           playsInline
                                           loop
