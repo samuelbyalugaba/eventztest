@@ -294,6 +294,9 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         followers: prev.followers + (newStatus ? 1 : -1)
       }));
 
+      // Dispatch event to refresh profile elsewhere
+      window.dispatchEvent(new Event('profileUpdated'));
+
       if (onFollow) {
         onFollow();
       }

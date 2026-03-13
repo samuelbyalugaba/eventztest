@@ -9,7 +9,7 @@ import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents, toggleFollow, getFollowedUserIds } from '../utils/supabase/api';
 import { WalletModal } from './WalletModal';
 import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
@@ -152,121 +152,120 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const displayName = userProfile?.full_name || 'User';
   const organizerCategory = userProfile?.organizer_type;
 
-  useEffect(() => {
-    const handleProfileUpdated = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUser(user);
+
+      const targetUserId = userId || user?.id;
+      
+      if (targetUserId) {
+        const profile = await getProfile(targetUserId);
+        if (profile) {
+          setUserProfile(profile);
+          
+          if (profile.is_organizer) {
+            try {
+              const stats = await getOrganizerStats(targetUserId);
+              setOrganizerStats(stats);
+
+              const events = await getOrganizerEvents(targetUserId);
+              if (events) {
+                const mapEvent = (e: any) => ({
+                  ...e,
+                  coverImage: e.image_url || e.coverImage,
+                  price: e.price_range || e.price
+                });
+                setPublishedEvents(events.map(mapEvent));
+              }
+            } catch (err) {
+              console.error('Error loading organizer stats:', err);
+            }
+          }
+        }
+
+        try {
+          const followers = await getFollowersCount(targetUserId);
+          const following = await getFollowingCount(targetUserId);
+          setFollowStats({ followers, following });
+
+          // Check if current user is following this profile
+          if (user && targetUserId !== user.id) {
+            const followedIds = await getFollowedUserIds(user.id);
+            setIsFollowing(followedIds.includes(targetUserId));
+          }
+        } catch (err) {
+          console.error('Error loading follow stats:', err);
+        }
         
         if (isOwnProfile) {
-            const profile = await getProfile(user.id);
-            if (profile) {
-              setUserProfile(profile);
+           const saved = await getSavedEvents(targetUserId);
+           if (saved) {
+             setSavedEvents(saved as unknown as (AppEvent & { isSaved: boolean; hasReminder: boolean })[]);
+           }
+        }
+
+        if (isOwnProfile) {
+            const tickets = await getUserTickets(targetUserId);
+            if (tickets) {
+              setTicketEvents(tickets);
+              const attended = tickets
+                .filter(t => {
+                  if (!t.event?.date) return false;
+                  const eventDate = new Date(t.event.date);
+                  return !isNaN(eventDate.getTime()) && eventDate < new Date();
+                })
+                .map(t => t.event!)
+                .filter(e => !!e);
+              
+              const uniqueAttended = Array.from(new Map(attended.map(item => [item.id, item])).values());
+              setAttendedEvents(uniqueAttended);
             }
         }
-      } catch (e) {
-        console.error('Profile refresh failed', e);
+
+        const posts = await getPosts({ authorId: targetUserId });
+        if (posts) {
+           setUserPosts(posts);
+        }
       }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleProfileUpdated = async () => {
+      loadData();
     };
     window.addEventListener('profileUpdated', handleProfileUpdated as EventListener);
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdated as EventListener);
     };
-  }, [isOwnProfile]);
+  }, [userId, isOwnProfile]);
 
   useEffect(() => {
-    const fetchSavedEvents = async (uid: string) => {
-      try {
-        const saved = await getSavedEvents(uid);
-        if (saved) {
-           setSavedEvents(saved as unknown as (AppEvent & { isSaved: boolean; hasReminder: boolean })[]);
-        }
-      } catch (error) {
-        console.error('Error fetching saved events:', error);
-      }
-    };
-
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) setCurrentUser(user);
-
-        const targetUserId = userId || user?.id;
-        
-        if (targetUserId) {
-          const profile = await getProfile(targetUserId);
-          if (profile) {
-            setUserProfile(profile);
-            
-            if (profile.is_organizer) {
-              try {
-                const stats = await getOrganizerStats(targetUserId);
-                setOrganizerStats(stats);
-
-                const events = await getOrganizerEvents(targetUserId);
-                if (events) {
-                  const mapEvent = (e: any) => ({
-                    ...e,
-                    coverImage: e.image_url || e.coverImage,
-                    price: e.price_range || e.price
-                  });
-                  setPublishedEvents(events.map(mapEvent));
-                }
-              } catch (err) {
-                console.error('Error loading organizer stats:', err);
-              }
-            }
-          }
-
-          try {
-            const followers = await getFollowersCount(targetUserId);
-            const following = await getFollowingCount(targetUserId);
-            setFollowStats({ followers, following });
-          } catch (err) {
-            console.error('Error loading follow stats:', err);
-          }
-          
-          if (isOwnProfile) {
-             await fetchSavedEvents(targetUserId);
-             savedEventsSubscriptionRef.current = subscribeToSavedEvents(targetUserId, () => {
-                fetchSavedEvents(targetUserId);
-             });
-          }
-
-          if (isOwnProfile) {
-              const tickets = await getUserTickets(targetUserId);
-              if (tickets) {
-                setTicketEvents(tickets);
-                const attended = tickets
-                  .filter(t => {
-                    if (!t.event?.date) return false;
-                    const eventDate = new Date(t.event.date);
-                    return !isNaN(eventDate.getTime()) && eventDate < new Date();
-                  })
-                  .map(t => t.event!)
-                  .filter(e => !!e);
-                
-                const uniqueAttended = Array.from(new Map(attended.map(item => [item.id, item])).values());
-                setAttendedEvents(uniqueAttended);
-              }
-          }
-
-          const posts = await getPosts({ authorId: targetUserId });
-          if (posts) {
-             setUserPosts(posts);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading profile:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadData();
 
+    // Setup subscription if we have a user
+    let subscription: any = null;
+    
+    const setupSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (isOwnProfile && user) {
+        subscription = subscribeToSavedEvents(user.id, () => {
+          loadData();
+        });
+        savedEventsSubscriptionRef.current = subscription;
+      }
+    };
+    
+    setupSubscription();
+
     return () => {
-      if (savedEventsSubscriptionRef.current) savedEventsSubscriptionRef.current.unsubscribe?.();
+      if (subscription) subscription.unsubscribe?.();
       savedEventsSubscriptionRef.current = null;
     };
   }, [userId, isOwnProfile]);
@@ -667,9 +666,30 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                ? 'bg-gray-100 text-gray-900 hover:bg-gray-200' 
                : 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm'
             }`}
-            onClick={() => {
-               setIsFollowing(!isFollowing);
-               toast.success(isFollowing ? 'Unfollowed' : 'Followed');
+            onClick={async () => {
+               if (!currentUser) {
+                 toast.error('Please sign in to follow');
+                 return;
+               }
+               
+               const targetUserId = userId || currentUser.id;
+               if (targetUserId === currentUser.id) return;
+               
+               try {
+                 const newFollowingState = await toggleFollow(currentUser.id, targetUserId);
+                 setIsFollowing(newFollowingState);
+                 toast.success(newFollowingState ? 'Followed' : 'Unfollowed');
+                 
+                 // Refresh follow stats for the profile being viewed
+                  const followers = await getFollowersCount(targetUserId);
+                  setFollowStats(prev => ({ ...prev, followers }));
+
+                  // Dispatch event to refresh profile elsewhere
+                  window.dispatchEvent(new Event('profileUpdated'));
+                } catch (error) {
+                 console.error('Error toggling follow:', error);
+                 toast.error('Failed to update follow status');
+               }
             }}
           >
             {isFollowing ? 'Following' : 'Follow'}

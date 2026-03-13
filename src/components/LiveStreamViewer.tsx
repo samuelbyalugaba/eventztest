@@ -296,6 +296,9 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
         setIsFollowingHost(true);
         toast.success(`Following ${stream.host}`);
       }
+      
+      // Dispatch event to refresh profile elsewhere
+      window.dispatchEvent(new Event('profileUpdated'));
     } catch (error) {
       console.error('Follow error:', error);
       toast.error("Failed to update follow status");
