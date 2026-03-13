@@ -620,13 +620,13 @@ export function SettingsModal({ onClose, onLogout, initialView = 'main' }: Setti
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Date of Birth</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <div className="flex items-center gap-3 w-full h-11 px-4 bg-white border border-gray-200 rounded-xl text-gray-900 transition focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-200">
+                    <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
                     <input
                       type="date"
                       value={profileData.birthdate}
                       onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
-                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
+                      className="flex-1 min-w-0 h-full bg-transparent border-0 p-0 text-gray-900 outline-none"
                     />
                   </div>
                 </div>

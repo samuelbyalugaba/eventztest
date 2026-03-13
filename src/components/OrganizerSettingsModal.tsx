@@ -541,13 +541,13 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   {/* Date of Birth Input */}
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-900 ml-1">Date of Birth</label>
-                    <div className="relative">
-                      <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <div className="flex items-center gap-3 w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm focus-within:border-purple-500/20 focus-within:bg-white">
+                      <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
                       <input
                         type="date"
                         value={profileData.birthdate}
                         onChange={(e) => setProfileData({ ...profileData, birthdate: e.target.value })}
-                        className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                        className="flex-1 min-w-0 bg-transparent border-0 p-0 text-gray-900 font-medium outline-none"
                       />
                     </div>
                   </div>
