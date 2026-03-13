@@ -1,7 +1,5 @@
 import React, { useState } from 'react'
-import { Film } from 'lucide-react'
-
-const ERROR_IMG_SRC = 'https://placehold.co/600x600/f3f4f6/9ca3af?text=No+Image'
+import { Film, Image } from 'lucide-react'
 
 interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackType?: 'image' | 'video'
@@ -27,44 +25,29 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
 
   const { src, alt, style, className, fallbackType = 'image', fallbackSrc, ...rest } = props
   const hasSrc = !!src && String(src).trim() !== '' && String(src) !== 'null'
+  const showFallback = !hasSrc || didError
 
   return (
     <>
-      {!hasSrc ? (
+      {showFallback ? (
         <div
           className={`inline-block bg-gray-100 text-center align-middle ${className ?? ''}`}
           style={style}
         >
           <div className="flex items-center justify-center w-full h-full text-gray-400">
-            {fallbackType === 'video' ? (
+            {fallbackSrc ? (
+              <img
+                src={fallbackSrc}
+                alt="Error loading image"
+                {...rest}
+                className={className}
+                loading="lazy"
+                decoding="async"
+              />
+            ) : fallbackType === 'video' ? (
               <Film className="w-8 h-8 opacity-50" />
             ) : (
-              <img 
-                src={fallbackSrc || ERROR_IMG_SRC} 
-                alt="Error loading image" 
-                {...rest} 
-                className={fallbackSrc ? className : undefined} 
-                data-original-url={src} 
-              />
-            )}
-          </div>
-        </div>
-      ) : didError ? (
-        <div
-          className={`inline-block bg-gray-100 text-center align-middle ${className ?? ''}`}
-          style={style}
-        >
-          <div className="flex items-center justify-center w-full h-full text-gray-400">
-            {fallbackType === 'video' ? (
-              <Film className="w-8 h-8 opacity-50" />
-            ) : (
-              <img 
-                src={fallbackSrc || ERROR_IMG_SRC} 
-                alt="Error loading image" 
-                {...rest} 
-                className={fallbackSrc ? className : undefined} 
-                data-original-url={src} 
-              />
+              <Image className="w-8 h-8 opacity-50" />
             )}
           </div>
         </div>

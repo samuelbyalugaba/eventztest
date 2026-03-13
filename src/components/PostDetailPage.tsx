@@ -240,6 +240,7 @@ export function PostDetailPage({
             // Determine media items
             let mediaItems = post.content?.images || post.image_urls || [];
             let videoPoster: string | undefined;
+            const highlightVideoUrl = post.isHighlight && post.highlights?.[0]?.videoUrl;
             
             // If single image string provided instead of array
             if (typeof mediaItems === 'string') mediaItems = [mediaItems];
@@ -248,6 +249,12 @@ export function PostDetailPage({
             if (mediaItems.length === 0) {
               if (post.content?.image) mediaItems = [post.content.image];
               else if (post.image) mediaItems = [post.image];
+            }
+
+            if (highlightVideoUrl) {
+              const posterCandidate = (mediaItems as string[]).find((u: string) => u && !isVideo(u));
+              videoPoster = posterCandidate;
+              mediaItems = [highlightVideoUrl];
             }
 
             if (post.video_url) {
@@ -281,7 +288,8 @@ export function PostDetailPage({
 
             if (mediaItems.length === 1) {
               const media = mediaItems[0];
-              const isMediaVideo = isVideo(media) || !!post.video_url;
+              const isMediaVideo = isVideo(media) || !!post.video_url || media === highlightVideoUrl;
+              const posterToUse = media === highlightVideoUrl ? undefined : videoPoster;
 
               return (
                 <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
@@ -290,7 +298,7 @@ export function PostDetailPage({
                         <video 
                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
                           className="w-full h-full object-contain max-h-[70vh]"
-                          poster={videoPoster}
+                          poster={posterToUse}
                           controls
                           autoPlay
                           playsInline

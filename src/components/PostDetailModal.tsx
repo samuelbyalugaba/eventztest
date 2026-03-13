@@ -293,6 +293,7 @@ export function PostDetailModal({
           {(() => {
             // Determine media items
             let mediaItems = post.content?.images || post.image_urls || [];
+            const highlightVideoUrl = post.isHighlight && post.highlights?.[0]?.videoUrl;
             
             // If single image string provided instead of array
             if (typeof mediaItems === 'string') mediaItems = [mediaItems];
@@ -317,19 +318,20 @@ export function PostDetailModal({
               }
             }
 
-            // Also check highlights array if present
-            if (mediaItems.length === 0 && post.highlights && post.highlights.length > 0) {
-                 const highlight = post.highlights[0];
-                 if (highlight.videoUrl) {
-                    mediaItems = [highlight.videoUrl];
-                 }
+            if (highlightVideoUrl) {
+              mediaItems = [highlightVideoUrl];
+            } else if (mediaItems.length === 0 && post.highlights && post.highlights.length > 0) {
+              const highlight = post.highlights[0];
+              if (highlight.videoUrl) {
+                mediaItems = [highlight.videoUrl];
+              }
             }
 
             if (mediaItems.length === 0) return null;
 
             if (mediaItems.length === 1) {
               const media = mediaItems[0];
-              const isMediaVideo = isVideo(media) || media === post.video_url || (post.highlights && post.highlights.some((h: any) => h.videoUrl === media));
+              const isMediaVideo = isVideo(media) || media === post.video_url || media === highlightVideoUrl || (post.highlights && post.highlights.some((h: any) => h.videoUrl === media));
 
               return (
                 <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
