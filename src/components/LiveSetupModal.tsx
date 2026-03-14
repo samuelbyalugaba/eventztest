@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { X, Radio, Calendar, MapPin, Tv, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getOrganizerEvents, updateEventStreamingStatus, uploadImage } from '../utils/supabase/api';
+import { getOrganizerEvents, subscribeToEventStreaming, updateEventStreamingStatus, uploadImage } from '../utils/supabase/api';
 import { StreamManager } from './StreamManager';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 
@@ -20,6 +20,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [activeLiveEvent, setActiveLiveEvent] = useState<ApiEvent | null>(null);
   
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       try {
-        const list = await getOrganizerEvents(user.id);
+        const list = await getOrganizerEvents(user.id, { includeInstant: true });
         setEvents(list || []);
       } catch (e) {
         console.warn('Failed to load events', e);
@@ -55,6 +56,32 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
     };
     load();
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (selectedEvent) return;
+
+    const liveEvent = events.find((e) => !!e?.streaming?.isLive) || null;
+    setActiveLiveEvent(liveEvent);
+  }, [events, isOpen, selectedEvent]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!activeLiveEvent) return;
+
+    const channel = subscribeToEventStreaming(activeLiveEvent.id, (streaming) => {
+      const isStillLive = !!streaming?.isLive;
+      if (!isStillLive) {
+        setActiveLiveEvent(null);
+      } else {
+        setActiveLiveEvent((prev) => (prev ? { ...prev, streaming: streaming as any } : prev));
+      }
+    });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [activeLiveEvent?.id, isOpen]);
 
   if (!isOpen) return null;
 
@@ -120,30 +147,72 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
 
         {!selectedEvent ? (
           <>
-            <div className="px-4 pt-4">
-              <div className="bg-gray-100 p-1 rounded-xl flex">
-                <button
-                  onClick={() => setTab('instant')}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-                    tab === 'instant' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  Go Live Now
-                </button>
-                <button
-                  onClick={() => setTab('from_event')}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-                    tab === 'from_event' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  From Event
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {tab === 'instant' && (
+            {activeLiveEvent ? (
+              <div className="flex-1 overflow-y-auto">
                 <div className="px-4 py-4 space-y-4">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
+                          <p className="text-red-700 font-semibold text-sm">You’re currently live</p>
+                        </div>
+                        <p className="text-gray-900 font-bold mt-2 line-clamp-2">
+                          {activeLiveEvent.title || 'Live Stream'}
+                        </p>
+                        <p className="text-gray-600 text-xs mt-1">
+                          Viewers: {(activeLiveEvent.streaming?.liveViewers || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      {activeLiveEvent.image_url ? (
+                        <img
+                          src={activeLiveEvent.image_url}
+                          alt=""
+                          className="w-20 h-12 rounded-lg object-cover border border-red-100"
+                        />
+                      ) : null}
+                    </div>
+                    <button
+                      onClick={() => setSelectedEvent(activeLiveEvent)}
+                      className="w-full mt-4 py-3 rounded-xl text-white font-semibold bg-purple-600 hover:bg-purple-700 transition-all"
+                    >
+                      Continue Live
+                    </button>
+                  </div>
+                  <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                    <p className="text-gray-900 font-semibold text-sm">Start a new live stream</p>
+                    <p className="text-gray-600 text-xs mt-1">
+                      End your current stream before starting another.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="px-4 pt-4">
+                  <div className="bg-gray-100 p-1 rounded-xl flex">
+                    <button
+                      onClick={() => setTab('instant')}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                        tab === 'instant' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600'
+                      }`}
+                    >
+                      Go Live Now
+                    </button>
+                    <button
+                      onClick={() => setTab('from_event')}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                        tab === 'from_event' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600'
+                      }`}
+                    >
+                      From Event
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                  {tab === 'instant' && (
+                    <div className="px-4 py-4 space-y-4">
                   <div 
                     onClick={() => fileInputRef.current?.click()}
                     className="relative w-full aspect-video h-48 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden group"
@@ -226,12 +295,12 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                   >
                     {isCreating ? 'Creating…' : 'Go Live'}
                   </button>
-                </div>
-              )}
+                    </div>
+                  )}
 
-              {tab === 'from_event' && (
-                <div className="px-4 py-4 space-y-4">
-                  {events.length === 0 ? (
+                  {tab === 'from_event' && (
+                    <div className="px-4 py-4 space-y-4">
+                      {events.filter((e) => !e?.streaming?.isInstant).length === 0 ? (
                     <div className="relative w-full aspect-video h-48 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden group">
                       <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-2">
                         <Tv className="w-6 h-6 text-gray-400" />
@@ -241,7 +310,9 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {events.map((ev) => (
+                      {events
+                        .filter((e) => !e?.streaming?.isInstant)
+                        .map((ev) => (
                         <button
                           key={ev.id}
                           type="button"
@@ -274,9 +345,11 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                       ))}
                     </div>
                   )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </>
         ) : (
           <div className="p-0">

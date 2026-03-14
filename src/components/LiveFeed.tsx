@@ -5,7 +5,7 @@ import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
 import { toast } from 'sonner';
-import { getEventById, getLiveStreams, getUpcomingStreams, getProfile, hasActiveVirtualTicket, updateProfile, type Event as ApiEvent } from '../utils/supabase/api';
+import { getEventById, getLiveStreams, getUpcomingStreams, getProfile, hasActiveVirtualTicket, subscribeToEventStreaming, updateProfile, type Event as ApiEvent } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 import { Skeleton } from './ui/skeleton';
 
@@ -348,6 +348,23 @@ export function LiveFeed() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (liveStreams.length === 0) return;
+
+    const channels = liveStreams.map((s) =>
+      subscribeToEventStreaming(s.id, (streaming) => {
+        const next = streaming?.liveViewers ?? 0;
+        setLiveStreams((prev) =>
+          prev.map((p) => (p.id === s.id ? { ...p, viewers: next } : p))
+        );
+      })
+    );
+
+    return () => {
+      channels.forEach((c) => c.unsubscribe());
+    };
+  }, [liveStreams.map((s) => s.id).join(',')]);
 
   useEffect(() => {
     fetchStreams();

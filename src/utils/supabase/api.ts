@@ -579,7 +579,10 @@ export const getEvents = async () => {
   }));
 };
 
-export const getOrganizerEvents = async (organizerId: string) => {
+export const getOrganizerEvents = async (
+  organizerId: string,
+  options?: { includeInstant?: boolean }
+) => {
   const { data, error } = await supabase
     .from('events')
     .select(`
@@ -597,7 +600,9 @@ export const getOrganizerEvents = async (organizerId: string) => {
     throw error;
   }
 
-  const visibleEvents = (data || []).filter((event: any) => !event?.streaming?.isInstant);
+  const visibleEvents = options?.includeInstant
+    ? (data || [])
+    : (data || []).filter((event: any) => !event?.streaming?.isInstant);
   return visibleEvents.map((event: any) => ({
     ...event,
     interested: event.saved_events?.[0]?.count || 0,
@@ -1664,12 +1669,14 @@ export const updateEventStreamingStatus = async (eventId: number, isLive: boolea
 };
 
 export const toggleLikeEvent = async (eventId: number, userId: string) => {
-  const { data: existing } = await supabase
+  const { data: existing, error: selectError } = await supabase
     .from('event_likes')
     .select('user_id')
     .eq('event_id', eventId)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
+
+  if (selectError) throw selectError;
 
   if (existing) {
     const { error } = await supabase.from('event_likes').delete().eq('event_id', eventId).eq('user_id', userId);
@@ -1747,6 +1754,43 @@ export const updateLiveViewerCount = async (eventId: number, delta: number) => {
 
   if (error) throw error;
   return data;
+};
+
+export const subscribeToEventStreaming = (
+  eventId: number,
+  onUpdate: (streaming: Event['streaming'] | null) => void
+) => {
+  const channelName = `event-streaming-${eventId}-${Math.random().toString(36).slice(2, 9)}`;
+  return supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
+      (payload: any) => {
+        onUpdate(payload.new?.streaming ?? null);
+      }
+    )
+    .subscribe();
+};
+
+export const subscribeToEventLikes = (
+  eventId: number,
+  onChange: (change: { delta: number; userId?: string }) => void
+) => {
+  const channelName = `event-likes-${eventId}-${Math.random().toString(36).slice(2, 9)}`;
+  return supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'event_likes', filter: `event_id=eq.${eventId}` },
+      (payload: any) => onChange({ delta: 1, userId: payload.new?.user_id })
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'event_likes', filter: `event_id=eq.${eventId}` },
+      (payload: any) => onChange({ delta: -1, userId: payload.old?.user_id })
+    )
+    .subscribe();
 };
 
 export const generateStreamKeys = async (eventId: number) => {

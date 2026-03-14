@@ -9,6 +9,8 @@ import {
   toggleLikeEvent,
   getEventLikes,
   hasUserLikedEvent,
+  subscribeToEventLikes,
+  subscribeToEventStreaming,
   sendGift,
   followUser,
   unfollowUser,
@@ -48,6 +50,9 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const currentUserIdRef = useRef<string | null>(null);
+  const viewerCountAdjustedRef = useRef(false);
+  const lastLocalLikeToggleAtRef = useRef(0);
   
   // Agora State
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
@@ -67,6 +72,7 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          currentUserIdRef.current = user.id;
           // Check Like status
           const liked = await hasUserLikedEvent(stream.id, user.id);
           setIsLiked(liked);
@@ -88,6 +94,35 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     };
     loadState();
   }, [stream.id, stream.organizer_id]);
+
+  useEffect(() => {
+    const channel = subscribeToEventStreaming(stream.id, (streaming) => {
+      const next = streaming?.liveViewers ?? 0;
+      setViewerCount(next);
+    });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [stream.id]);
+
+  useEffect(() => {
+    const channel = subscribeToEventLikes(stream.id, ({ delta, userId }) => {
+      const isOwnChange =
+        userId &&
+        currentUserIdRef.current &&
+        userId === currentUserIdRef.current &&
+        Date.now() - lastLocalLikeToggleAtRef.current < 2000;
+
+      if (isOwnChange) return;
+
+      setLikes((prev) => Math.max(0, prev + delta));
+    });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [stream.id]);
 
   // Load chat messages
   useEffect(() => {
@@ -162,9 +197,9 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
         // Join with the SAME String UID used for the token
         await client.current.join(AGORA_APP_ID, channelName, token, viewerUid);
 
-        setViewerCount(prev => prev + 1);
         try {
           await updateLiveViewerCount(stream.id, 1);
+          viewerCountAdjustedRef.current = true;
         } catch (error) {
           console.error('Failed to update live viewer count:', error);
         }
@@ -184,14 +219,16 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
         client.current.removeAllListeners();
       }
 
-      setViewerCount(prev => Math.max(prev - 1, 0));
-      (async () => {
-        try {
-          await updateLiveViewerCount(stream.id, -1);
-        } catch (error) {
-          console.error('Failed to decrement live viewer count:', error);
-        }
-      })();
+      if (viewerCountAdjustedRef.current) {
+        viewerCountAdjustedRef.current = false;
+        (async () => {
+          try {
+            await updateLiveViewerCount(stream.id, -1);
+          } catch (error) {
+            console.error('Failed to decrement live viewer count:', error);
+          }
+        })();
+      }
     };
   }, [stream.id]);
 
@@ -256,6 +293,7 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
   const handleLike = async () => {
     // Optimistic update for animation
     setReactions(prev => [...prev, Date.now()]);
+    lastLocalLikeToggleAtRef.current = Date.now();
     
     // Toggle logic
     const newIsLiked = !isLiked;
