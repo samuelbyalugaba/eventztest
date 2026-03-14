@@ -190,6 +190,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         transaction_id: transactionId
       });
 
+      window.dispatchEvent(new CustomEvent('virtualAccessPurchased', { detail: { eventId: event.id } }));
       setPaymentStep('success');
       toast.success('Virtual Access Granted! 🎥');
       setTimeout(() => {

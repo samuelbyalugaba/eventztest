@@ -8,7 +8,7 @@ import { LiveStreamViewer } from './LiveStreamViewer';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleSaveEvent, incrementEventView, getProfile, type Event as ApiEvent } from '../utils/supabase/api';
+import { getPosts, toggleSaveEvent, incrementEventView, getProfile, hasActiveVirtualTicket, type Event as ApiEvent } from '../utils/supabase/api';
 import { validateYouTubeUrl, getYouTubeVideoId } from '../utils/sanitize';
 
 export interface EventDetailModalProps {
@@ -30,6 +30,13 @@ const locations = [
 
 export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation, onTierSelect }: EventDetailModalProps) {
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
+  const [hasVirtualAccess, setHasVirtualAccess] = useState(false);
+  const [isCheckingVirtualAccess, setIsCheckingVirtualAccess] = useState(false);
+  const virtualPriceNumber = (() => {
+    const priceString = event.streaming?.virtualPrice || '0';
+    return parseFloat(String(priceString).replace(/[^0-9.]/g, '')) || 0;
+  })();
+  const requiresVirtualAccess = !!event.streaming?.available && virtualPriceNumber > 0;
   
   const isEventPast = (() => {
     try {
@@ -73,6 +80,40 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     };
     loadEventPosts();
   }, [event.id, event.organizer_id]);
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!requiresVirtualAccess) {
+        setHasVirtualAccess(true);
+        return;
+      }
+      setIsCheckingVirtualAccess(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setHasVirtualAccess(false);
+          return;
+        }
+        const ok = await hasActiveVirtualTicket(user.id, event.id);
+        setHasVirtualAccess(ok);
+      } catch {
+        setHasVirtualAccess(false);
+      } finally {
+        setIsCheckingVirtualAccess(false);
+      }
+    };
+    checkAccess();
+  }, [event.id, requiresVirtualAccess]);
+
+  useEffect(() => {
+    const onPurchased = (e: Event) => {
+      const eventId = (e as any)?.detail?.eventId;
+      if (Number(eventId) !== Number(event.id)) return;
+      setHasVirtualAccess(true);
+    };
+    window.addEventListener('virtualAccessPurchased', onPurchased as EventListener);
+    return () => window.removeEventListener('virtualAccessPurchased', onPurchased as EventListener);
+  }, [event.id]);
 
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -173,6 +214,16 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     if (!shared) {
       setShowShareModal(true);
     }
+  };
+  
+  const handleWatchLive = async () => {
+    if (!event.streaming?.isLive) return;
+    if (requiresVirtualAccess && !hasVirtualAccess) {
+      onPurchaseTicket(event);
+      toast.error('Virtual Access required to watch this live stream');
+      return;
+    }
+    setShowLiveStream(true);
   };
 
   return (
@@ -453,7 +504,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               </div>
 
               {/* Live Viewer Count */}
-              {event.streaming.isLive && event.streaming.liveViewers && event.streaming.liveViewers > 0 && (
+              {event.streaming.isLive && (event.streaming.liveViewers || 0) > 0 && (
                 <div className="flex items-center gap-2 mb-4 text-sm text-gray-600">
                   <Eye className="w-4 h-4" />
                   <span>{event.streaming.liveViewers.toLocaleString()} watching now</span>
@@ -537,7 +588,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       <div className="p-4 border-t border-gray-100 bg-white flex gap-3 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] shrink-0 safe-area-bottom">
          {event.streaming?.isLive ? (
            <button 
-             onClick={() => setShowLiveStream(true)}
+             onClick={handleWatchLive}
+             disabled={isCheckingVirtualAccess}
              className="flex-1 bg-red-600 text-white py-3 rounded-xl font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2 animate-pulse shadow-lg shadow-red-200"
            >
              <Tv className="w-5 h-5" />

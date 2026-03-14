@@ -971,6 +971,19 @@ export const getUserTickets = async (userId: string) => {
   return data;
 };
 
+export const hasActiveVirtualTicket = async (userId: string, eventId: number) => {
+  const { count, error } = await supabase
+    .from('tickets')
+    .select('id', { head: true, count: 'exact' })
+    .eq('user_id', userId)
+    .eq('event_id', eventId)
+    .eq('ticket_type', 'Virtual')
+    .eq('status', 'active');
+
+  if (error) throw error;
+  return (count || 0) > 0;
+};
+
 export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'event'> & { transaction_id?: number }) => {
   // Use the secure RPC function to purchase tickets (prevents free ticket glitch)
   const { data, error } = await supabase.rpc('purchase_ticket', {

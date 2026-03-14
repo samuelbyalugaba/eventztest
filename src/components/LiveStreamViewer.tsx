@@ -353,7 +353,7 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
     <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
       <div
         ref={containerRef}
-        className="relative w-full h-full max-w-sm md:max-w-md aspect-[9/16] bg-black overflow-hidden rounded-[32px] md:rounded-[40px] border border-white/10 shadow-xl"
+        className="relative w-full h-full bg-black overflow-hidden"
       >
         <div className="relative w-full h-full" onDoubleClick={handleLike}>
           {remoteUsers.length > 0 ? (

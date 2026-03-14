@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, MapPin, Search, Lock, Unlock, X, CheckCircle2, Globe, Eye, Bell, Smartphone, Clock, Video } from 'lucide-react';
+import { Filter, MapPin, Search, X, Globe, Eye, Bell, Smartphone, Clock, Video } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
 import { toast } from 'sonner';
-import { getLiveStreams, getUpcomingStreams, getProfile, updateProfile, type Event as ApiEvent } from '../utils/supabase/api';
+import { getEventById, getLiveStreams, getUpcomingStreams, getProfile, hasActiveVirtualTicket, updateProfile, type Event as ApiEvent } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 import { Skeleton } from './ui/skeleton';
 
@@ -285,9 +285,6 @@ export function LiveFeed() {
   const [locationSearch, setLocationSearch] = useState('');
   const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
-  const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const [streamToUnlock, setStreamToUnlock] = useState<LiveStream | null>(null);
-  const [unlockedStreams, setUnlockedStreams] = useState<Set<number>>(new Set());
   const [recentLocations, setRecentLocations] = useState<string[]>(['Dar es Salaam', 'Dubai', 'New York']);
   const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
   const [upcomingStreams, setUpcomingStreams] = useState<LiveStream[]>([]);
@@ -483,38 +480,42 @@ export function LiveFeed() {
 
   // Reminder toggling logic can be reintroduced when reminder UI is active
 
-  const handleStreamClick = (stream: LiveStream) => {
+  const handleStreamClick = async (stream: LiveStream) => {
     // Check if stream is live or upcoming
     if (stream.isLive) {
-      // Check if stream is paid and not unlocked
-      if (stream.isPaid && !unlockedStreams.has(stream.id)) {
-        setStreamToUnlock(stream);
-        setShowUnlockModal(true);
-      } else {
-        setSelectedStream(stream);
+      try {
+        const priceString = (stream as any)?.streaming?.virtualPrice || (stream as any)?.price_range || '0';
+        const priceNumber = parseFloat(String(priceString).replace(/[^0-9.]/g, '')) || 0;
+        const requiresVirtualAccess = priceNumber > 0;
+
+        if (!requiresVirtualAccess) {
+          setSelectedStream(stream);
+          return;
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error('Please sign in to watch paid live streams');
+          const fullEvent = await getEventById(stream.id);
+          setSelectedEvent(fullEvent as unknown as ApiEvent);
+          return;
+        }
+
+        const hasAccess = await hasActiveVirtualTicket(user.id, stream.id);
+        if (hasAccess) {
+          setSelectedStream(stream);
+          return;
+        }
+
+        toast.error('Virtual Access required to watch this live stream');
+        const fullEvent = await getEventById(stream.id);
+        handlePurchaseTicket(fullEvent as unknown as ApiEvent);
+      } catch {
+        toast.error('Unable to open stream');
       }
     } else {
       // It's an upcoming event, open details
       setSelectedEvent(stream as unknown as ApiEvent);
-    }
-  };
-
-  const handleUnlockStream = () => {
-    if (streamToUnlock) {
-      // Add to unlocked streams
-      const newUnlockedStreams = new Set(unlockedStreams);
-      newUnlockedStreams.add(streamToUnlock.id);
-      setUnlockedStreams(newUnlockedStreams);
-      
-      // Show success toast
-      toast.success('🎉 Stream unlocked successfully!', {
-        description: `You can now watch ${streamToUnlock.title}`,
-      });
-      
-      // Close unlock modal and open stream viewer
-      setShowUnlockModal(false);
-      setSelectedStream(streamToUnlock);
-      setStreamToUnlock(null);
     }
   };
 
@@ -903,7 +904,6 @@ export function LiveFeed() {
         <LiveStreamViewer
           stream={selectedStream}
           onClose={() => setSelectedStream(null)}
-          isUnlockedOverride={unlockedStreams.has(selectedStream.id)}
         />
       )}
 
@@ -926,111 +926,6 @@ export function LiveFeed() {
         />
       )}
 
-      {/* Unlock Stream Modal */}
-      {showUnlockModal && streamToUnlock && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={() => setShowUnlockModal(false)}
-        >
-          <div 
-            className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="relative h-48 overflow-hidden">
-              <ImageWithFallback
-                src={streamToUnlock.thumbnail}
-                alt={streamToUnlock.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-              
-              {/* Lock Icon Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 rounded-full bg-purple-600/90 backdrop-blur-sm flex items-center justify-center">
-                  <Lock className="w-8 h-8 text-white" />
-                </div>
-              </div>
-
-              {/* Close Button */}
-              <button 
-                onClick={() => setShowUnlockModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Live Badge */}
-              <div className="absolute top-4 left-4">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500 shadow-lg">
-                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-                  <span className="text-white text-xs tracking-wide">LIVE</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6">
-              <h2 className="text-gray-900 text-2xl mb-2">Premium Live Stream</h2>
-              <h3 className="text-gray-700 mb-1">{streamToUnlock.title}</h3>
-              <p className="text-gray-600 text-sm mb-6">{streamToUnlock.host}</p>
-
-              {/* Features */}
-              <div className="mb-6 p-4 bg-gradient-to-br from-purple-50 to-cyan-50 rounded-xl border border-purple-200">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-gray-700 text-sm">HD {streamToUnlock.quality} streaming quality</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-gray-700 text-sm">Multi-camera angles & replays</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-gray-700 text-sm">Live chat & real-time reactions</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-gray-700 text-sm">24-hour replay access</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Price */}
-              <div className="mb-6 flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                <span className="text-gray-700">Stream Access</span>
-                <span className="text-gray-900 text-2xl">TSh {streamToUnlock.price?.toLocaleString()}</span>
-              </div>
-
-              {/* CTA Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={handleUnlockStream}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-cyan-500 text-white py-4 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                >
-                  <Unlock className="w-5 h-5" />
-                  Unlock Stream
-                </button>
-                <button
-                  onClick={() => setShowUnlockModal(false)}
-                  className="px-6 py-4 rounded-xl border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
