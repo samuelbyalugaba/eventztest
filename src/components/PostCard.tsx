@@ -170,20 +170,6 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
     }
   }, [audioUnlocked, isPlaying]);
 
-  const handleManualPlay = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (videoRef.current) {
-      if (videoRef.current.paused) {
-        videoRef.current.play();
-        setIsPlaying(true);
-        window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
-      } else {
-        videoRef.current.pause();
-        setIsPlaying(false);
-      }
-    }
-  };
-
   const handleLike = async () => {
     // Optimistic UI
     const newIsLiked = !isLiked;

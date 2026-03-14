@@ -173,25 +173,37 @@ export const getProfile = async (userId: string) => {
 };
 
 export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
-  const sanitizedUpdates: Partial<Profile> = { ...updates };
+  const sanitizedUpdates: Partial<Profile> = Object.fromEntries(
+    Object.entries(updates).filter(([, v]) => v !== undefined)
+  ) as Partial<Profile>;
+
+  const emptyStringToNullKeys: (keyof Profile)[] = [
+    'username',
+    'full_name',
+    'avatar_url',
+    'bio',
+    'location',
+    'birthdate',
+    'cover_url',
+    'organizer_type',
+    'phone',
+    'website',
+    'contact_email',
+    'description'
+  ];
+
+  for (const k of emptyStringToNullKeys) {
+    const v = (sanitizedUpdates as any)[k];
+    if (typeof v === 'string' && v.trim() === '') {
+      (sanitizedUpdates as any)[k] = null;
+    }
+  }
+
   const removedPrivilegedKeys: (keyof Profile)[] = [];
   for (const k of ['is_organizer', 'verified'] as (keyof Profile)[]) {
     if (k in sanitizedUpdates) {
       delete (sanitizedUpdates as any)[k];
       removedPrivilegedKeys.push(k);
-    }
-  }
-
-  if ('organizer_type' in sanitizedUpdates) {
-    try {
-      const currentProfile = await getProfile(userId);
-      if (!currentProfile?.is_organizer) {
-        delete (sanitizedUpdates as any).organizer_type;
-        removedPrivilegedKeys.push('organizer_type');
-      }
-    } catch {
-      delete (sanitizedUpdates as any).organizer_type;
-      removedPrivilegedKeys.push('organizer_type');
     }
   }
 
@@ -230,6 +242,9 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
     avatar_url: sanitizedUpdates.avatar_url,
     bio: sanitizedUpdates.bio,
     location: sanitizedUpdates.location,
+    birthdate: sanitizedUpdates.birthdate,
+    cover_url: sanitizedUpdates.cover_url,
+    organizer_type: sanitizedUpdates.organizer_type,
     contact_email: sanitizedUpdates.contact_email,
     phone: sanitizedUpdates.phone,
     website: sanitizedUpdates.website,
