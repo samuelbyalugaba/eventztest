@@ -14,12 +14,14 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
   const [didError, setDidError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
-  const handleError = () => {
+  const handleError: React.ReactEventHandler<HTMLImageElement> = (e) => {
+    props.onError?.(e)
     setDidError(true)
     setIsLoading(false)
   }
 
-  const handleLoad = () => {
+  const handleLoad: React.ReactEventHandler<HTMLImageElement> = (e) => {
+    props.onLoad?.(e)
     setIsLoading(false)
   }
 

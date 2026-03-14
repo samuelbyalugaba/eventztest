@@ -65,6 +65,7 @@ export function PostDetailModal({
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState('');
   const [isSavingCaption, setIsSavingCaption] = useState(false);
+  const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
   const { offsetTop, offsetBottom } = useVisualViewport();
 
   useEffect(() => {
@@ -332,19 +333,27 @@ export function PostDetailModal({
             if (mediaItems.length === 1) {
               const media = mediaItems[0];
               const isMediaVideo = isVideo(media) || media === post.video_url || media === highlightVideoUrl || (post.highlights && post.highlights.some((h: any) => h.videoUrl === media));
+              const aspectRatio = mediaAspectRatios[media] ?? 4 / 5;
 
               return (
-                <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
+                <div className="relative w-full bg-black overflow-hidden group mx-auto" style={{ aspectRatio, maxHeight: '70vh' }}>
                    {isMediaVideo ? (
                       <>
                         <video 
                           id={`video-${post.id}`}
                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
-                          className="w-full h-full object-cover max-h-[70vh]"
+                          className="absolute inset-0 w-full h-full object-cover"
                           autoPlay
                           playsInline
                           loop
                           muted={isMuted}
+                          onLoadedMetadata={(e) => {
+                            const v = e.currentTarget;
+                            if (v.videoWidth > 0 && v.videoHeight > 0) {
+                              const next = v.videoWidth / v.videoHeight;
+                              setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                            }
+                          }}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -383,7 +392,14 @@ export function PostDetailModal({
                       <ImageWithFallback
                         src={media}
                         alt="Post detail"
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onLoad={(e) => {
+                          const img = e.currentTarget;
+                          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                            const next = img.naturalWidth / img.naturalHeight;
+                            setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                          }
+                        }}
                       />
                    )}
                 </div>
@@ -397,20 +413,28 @@ export function PostDetailModal({
                   {mediaItems.map((media: string, index: number) => {
                     const isMediaVideo = isVideo(media) || media === post.video_url || (post.highlights && post.highlights.some((h: any) => h.videoUrl === media));
                     const isActive = index === (current - 1);
+                    const aspectRatio = mediaAspectRatios[media] ?? 4 / 5;
                     
                     return (
                               <CarouselItem key={index} className="pl-0">
-                                 <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
+                                 <div className="relative w-full bg-black overflow-hidden group mx-auto" style={{ aspectRatio, maxHeight: '70vh' }}>
                                    {isMediaVideo ? (
                                       <>
                                         <video 
                                           id={`video-${post.id}-${index}`}
                                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
-                                          className="w-full h-full object-cover max-h-[70vh]"
+                                          className="absolute inset-0 w-full h-full object-cover"
                                           autoPlay={isActive}
                                           playsInline
                                           loop
                                           muted={isMuted}
+                                          onLoadedMetadata={(e) => {
+                                            const v = e.currentTarget;
+                                            if (v.videoWidth > 0 && v.videoHeight > 0) {
+                                              const next = v.videoWidth / v.videoHeight;
+                                              setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                                            }
+                                          }}
                                           onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
@@ -449,7 +473,14 @@ export function PostDetailModal({
                                       <ImageWithFallback
                                         src={media}
                                         alt={`Slide ${index + 1}`}
-                                        className="w-full h-full object-cover"
+                                        className="absolute inset-0 w-full h-full object-cover"
+                                        onLoad={(e) => {
+                                          const img = e.currentTarget;
+                                          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                                            const next = img.naturalWidth / img.naturalHeight;
+                                            setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                                          }
+                                        }}
                                       />
                                    )}
                                  </div>

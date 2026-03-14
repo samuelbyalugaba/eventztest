@@ -48,6 +48,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
   const videoRef = useRef<HTMLVideoElement>(null);
   const commentsCount = post.comments_count || 0;
   const [isVideoLoading, setIsVideoLoading] = useState(true);
+  const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
 
   // Haptic feedback helper
   const triggerHaptic = () => {
@@ -216,6 +217,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
   const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
   const videoPoster = post.isHighlight ? post.content.images?.find((u) => !!u && !isVideo(u)) : undefined;
   const currentVideoSrc = currentMedia ? `${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}` : undefined;
+  const currentAspectRatio = currentMedia ? (mediaAspectRatios[currentMedia] ?? 1) : 1;
 
   // Determine display profile (Unified Identity)
   const displayProfile = {
@@ -304,16 +306,16 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
 
                   return (
                     <CarouselItem key={index} className="pl-0">
-                      <div className="relative w-full flex items-center justify-center bg-gray-100 aspect-square">
+                      <div className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: mediaAspectRatios[media] ?? 1 }}>
                         {isMediaVideo ? (
-                          <div className="relative w-full h-full bg-black">
+                          <div className="absolute inset-0 bg-black">
                             {isVideoLoading && isActive && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                             <video
                               id={`video-card-${post.id}-${index}`}
                               ref={isActive ? videoRef : null}
                               src={`${media}${media.includes('#') ? '' : '#t=0.1'}`}
                               poster={videoPoster}
-                              className="w-full h-full object-cover"
+                              className="absolute inset-0 w-full h-full object-cover"
                               loop
                               muted={isMuted}
                               playsInline
@@ -324,6 +326,13 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                              }}
+                              onLoadedMetadata={(e) => {
+                                const v = e.currentTarget;
+                                if (v.videoWidth > 0 && v.videoHeight > 0) {
+                                  const next = v.videoWidth / v.videoHeight;
+                                  setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                                }
                               }}
                               onLoadedData={() => setIsVideoLoading(false)}
                             />
@@ -370,13 +379,20 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                           <ImageWithFallback
                             src={media}
                             alt={`Post content ${index + 1}`}
-                            className="w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-cover"
                             fallbackType="image"
                             loading={index === 0 ? "eager" : "lazy"}
                             width={600}
                             height={600}
                             quality={80}
                             resize="cover"
+                            onLoad={(e) => {
+                              const img = e.currentTarget;
+                              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                                const next = img.naturalWidth / img.naturalHeight;
+                                setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                              }
+                            }}
                           />
                         )}
                       </div>
@@ -408,7 +424,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
           <div className={`relative w-full flex items-center justify-center ${isCurrentMediaVideo ? 'bg-black min-h-[200px] sm:min-h-[250px]' : 'min-h-[200px] sm:min-h-[250px]'}`} onDoubleClick={handleDoubleTap}>
              {isCurrentMediaVideo ? (
                 /* ... Existing Video Logic for Single File ... */
-                <div className="relative w-full bg-black overflow-hidden aspect-square max-h-[420px] sm:max-h-[520px] md:max-h-[600px]">
+                <div className="relative w-full bg-black overflow-hidden" style={{ aspectRatio: currentAspectRatio }}>
                   {isVideoLoading && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                   <video
                     id={`video-card-${post.id}`}
@@ -426,6 +442,14 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                    }}
+                    onLoadedMetadata={(e) => {
+                      if (!currentMedia) return;
+                      const v = e.currentTarget;
+                      if (v.videoWidth > 0 && v.videoHeight > 0) {
+                        const next = v.videoWidth / v.videoHeight;
+                        setMediaAspectRatios((prev) => (prev[currentMedia] === next ? prev : { ...prev, [currentMedia]: next }));
+                      }
                     }}
                     onLoadedData={() => setIsVideoLoading(false)}
                   />
@@ -471,15 +495,25 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                   )}
                 </div>
              ) : (
-                <ImageWithFallback
-                  src={currentMedia}
-                  alt="Post content"
-                  className="w-full h-auto object-cover max-h-[420px] sm:max-h-[520px] md:max-h-[600px]"
-                  fallbackType="image"
-                  loading="lazy"
-                  width={800}
-                  quality={85}
-                />
+                <div className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: currentAspectRatio }}>
+                  <ImageWithFallback
+                    src={currentMedia}
+                    alt="Post content"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    fallbackType="image"
+                    loading="lazy"
+                    width={800}
+                    quality={85}
+                    onLoad={(e) => {
+                      if (!currentMedia) return;
+                      const img = e.currentTarget;
+                      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                        const next = img.naturalWidth / img.naturalHeight;
+                        setMediaAspectRatios((prev) => (prev[currentMedia] === next ? prev : { ...prev, [currentMedia]: next }));
+                      }
+                    }}
+                  />
+                </div>
              )}
           </div>
         )}

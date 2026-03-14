@@ -606,6 +606,13 @@ export function LiveFeed() {
                       <span className="text-white text-[10px] font-black tracking-widest uppercase leading-none">Live</span>
                     </div>
                   </div>
+                  
+                  <div className="absolute top-3 right-3">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white text-[10px] font-semibold">
+                      <Eye className="w-3 h-3 text-white/80" />
+                      <span>{stream.viewers?.toLocaleString() || 0}</span>
+                    </div>
+                  </div>
 
                   <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-500">
                     <h3 className="text-white text-base font-bold mb-1.5 line-clamp-1 drop-shadow-sm">{stream.title}</h3>
@@ -613,10 +620,6 @@ export function LiveFeed() {
                       <div className="flex items-center gap-2 text-white/80 text-[11px] font-medium">
                         <MapPin className="w-3.5 h-3.5 text-white/60" />
                         <span className="line-clamp-1 max-w-[120px]">{stream.location || stream.host}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white text-[10px] font-semibold">
-                        <Eye className="w-3 h-3 text-white/80" />
-                        <span>{stream.viewers?.toLocaleString() || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -666,6 +669,13 @@ export function LiveFeed() {
                     <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-600 shadow-lg shadow-red-600/20 backdrop-blur-sm border border-red-500/20">
                       <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
                       <span className="text-white text-[8px] font-black tracking-widest uppercase">Live</span>
+                    </div>
+                  </div>
+                  
+                  <div className="absolute top-2.5 right-2.5">
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white text-[8px] font-semibold">
+                      <Eye className="w-2.5 h-2.5 text-white/80" />
+                      <span>{stream.viewers?.toLocaleString() || 0}</span>
                     </div>
                   </div>
 
