@@ -507,7 +507,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               {event.streaming.isLive && (event.streaming.liveViewers || 0) > 0 && (
                 <div className="flex items-center gap-2 mb-4 text-sm text-gray-600">
                   <Eye className="w-4 h-4" />
-                  <span>{event.streaming.liveViewers.toLocaleString()} watching now</span>
+                  <span>{(event.streaming.liveViewers ?? 0).toLocaleString()} watching now</span>
                 </div>
               )}
 

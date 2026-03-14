@@ -49,6 +49,38 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
   const commentsCount = post.comments_count || 0;
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
+  
+  const requestVideoFullscreen = async (videoEl: HTMLVideoElement) => {
+    const isFullscreen = () =>
+      document.fullscreenElement === videoEl ||
+      (document as any).webkitFullscreenElement === videoEl ||
+      (document as any).msFullscreenElement === videoEl;
+
+    const disableControls = () => {
+      videoEl.controls = false;
+    };
+
+    videoEl.controls = false;
+    videoEl.addEventListener('webkitendfullscreen', disableControls, { once: true } as any);
+
+    try {
+      if (videoEl.requestFullscreen) {
+        await videoEl.requestFullscreen();
+      } else if ((videoEl as any).webkitEnterFullscreen) {
+        (videoEl as any).webkitEnterFullscreen();
+      } else if ((videoEl as any).webkitRequestFullscreen) {
+        (videoEl as any).webkitRequestFullscreen();
+      } else if ((videoEl as any).msRequestFullscreen) {
+        (videoEl as any).msRequestFullscreen();
+      }
+    } catch {
+      return;
+    }
+
+    if (isFullscreen() || (videoEl as any).webkitDisplayingFullscreen) {
+      videoEl.controls = true;
+    }
+  };
 
   // Haptic feedback helper
   const triggerHaptic = () => {
@@ -315,7 +347,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                               ref={isActive ? videoRef : null}
                               src={`${media}${media.includes('#') ? '' : '#t=0.1'}`}
                               poster={videoPoster}
-                              className="absolute inset-0 w-full h-full object-cover"
+                              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                               loop
                               muted={isMuted}
                               playsInline
@@ -323,10 +355,6 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                               controls={false}
                               disablePictureInPicture
                               controlsList="nodownload noplaybackrate noremoteplayback"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }}
                               onLoadedMetadata={(e) => {
                                 const v = e.currentTarget;
                                 if (v.videoWidth > 0 && v.videoHeight > 0) {
@@ -345,18 +373,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                                       e.stopPropagation();
                                       const videoEl = document.getElementById(`video-card-${post.id}-${index}`) as HTMLVideoElement;
                                       if (videoEl) {
-                                        if (videoEl.requestFullscreen) {
-                                          videoEl.requestFullscreen();
-                                        } else if ((videoEl as any).webkitRequestFullscreen) {
-                                          (videoEl as any).webkitRequestFullscreen();
-                                        } else if ((videoEl as any).msRequestFullscreen) {
-                                          (videoEl as any).msRequestFullscreen();
-                                        }
-                                        videoEl.controls = true;
-                                        const disableControls = () => {
-                                          videoEl.controls = false;
-                                        };
-                                        videoEl.addEventListener('webkitendfullscreen', disableControls, { once: true } as any);
+                                        requestVideoFullscreen(videoEl);
                                       }
                                     }}
                                     className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
@@ -431,7 +448,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                     ref={videoRef}
                     src={currentVideoSrc}
                     poster={videoPoster}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                     loop
                     muted={isMuted}
                     playsInline
@@ -439,10 +456,6 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                     controls={false}
                     disablePictureInPicture
                     controlsList="nodownload noplaybackrate noremoteplayback"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
                     onLoadedMetadata={(e) => {
                       if (!currentMedia) return;
                       const v = e.currentTarget;
@@ -459,18 +472,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                         e.stopPropagation();
                         const videoEl = document.getElementById(`video-card-${post.id}`) as HTMLVideoElement;
                         if (videoEl) {
-                          if (videoEl.requestFullscreen) {
-                            videoEl.requestFullscreen();
-                          } else if ((videoEl as any).webkitRequestFullscreen) {
-                            (videoEl as any).webkitRequestFullscreen();
-                          } else if ((videoEl as any).msRequestFullscreen) {
-                            (videoEl as any).msRequestFullscreen();
-                          }
-                          videoEl.controls = true;
-                          const disableControls = () => {
-                            videoEl.controls = false;
-                          };
-                          videoEl.addEventListener('webkitendfullscreen', disableControls, { once: true } as any);
+                          requestVideoFullscreen(videoEl);
                         }
                       }}
                       className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
@@ -486,13 +488,6 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                       {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                  {isMuted && (
-                    <div className="absolute top-4 left-4 z-10">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-black/50 text-white backdrop-blur-md">
-                        Tap to unmute
-                      </span>
-                    </div>
-                  )}
                 </div>
              ) : (
                 <div className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: currentAspectRatio }}>
