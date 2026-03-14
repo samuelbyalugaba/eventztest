@@ -318,7 +318,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
 
                   return (
                     <CarouselItem key={index} className="pl-0">
-                      <div className="relative w-full flex items-center justify-center bg-gray-100 aspect-[4/3] sm:aspect-square">
+                      <div className="relative w-full flex items-center justify-center bg-gray-100 aspect-square">
                         {isMediaVideo ? (
                           <div className="relative w-full h-full bg-black">
                             {isVideoLoading && isActive && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
@@ -422,7 +422,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
           <div className={`relative w-full flex items-center justify-center ${isCurrentMediaVideo ? 'bg-black min-h-[200px] sm:min-h-[250px]' : 'min-h-[200px] sm:min-h-[250px]'}`} onDoubleClick={handleDoubleTap}>
              {isCurrentMediaVideo ? (
                 /* ... Existing Video Logic for Single File ... */
-                <div className="relative w-full bg-black overflow-hidden aspect-video max-h-[420px] sm:max-h-[520px] md:max-h-[600px]">
+                <div className="relative w-full bg-black overflow-hidden aspect-square max-h-[420px] sm:max-h-[520px] md:max-h-[600px]">
                   {isVideoLoading && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                   <video
                     id={`video-card-${post.id}`}
