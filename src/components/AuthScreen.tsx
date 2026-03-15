@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Mail, Lock, User, Eye, EyeOff, Video, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../utils/supabase/client';
 import { checkUsernameUnique } from '../utils/supabase/api';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 interface AuthScreenProps {
   onAuthSuccess: (accessToken: string, user: any) => void;
@@ -183,149 +184,190 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
   };
 
   return (
-    <div className={`w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 ${embedded ? 'min-h-[60vh] bg-transparent' : 'min-h-[100dvh] bg-gradient-to-br from-indigo-50 via-white to-purple-50'}`}>
-      <div className="w-full max-w-md space-y-8">
-        
-        {/* Header Section */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-600/20">
-              <Video className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">EVENTZ</h1>
+    <div
+      className={`w-full flex items-center justify-center px-4 py-10 sm:px-6 ${
+        embedded ? 'min-h-[60vh] bg-transparent' : 'min-h-[100dvh] bg-gray-50'
+      }`}
+    >
+      <div className="w-full max-w-md">
+        <div className="mb-6 text-center">
+          <div className="text-xs font-semibold tracking-[0.3em] text-gray-500">EVENTZ</div>
+          <div className="mt-2 text-2xl font-semibold text-gray-900">
+            {isLogin ? 'Sign in' : 'Create account'}
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isLogin ? 'Welcome back' : 'Create an account'}
-          </h2>
-          <p className="text-gray-500">
-            {isLogin 
-              ? 'Enter your credentials to access your account' 
-              : 'Start your journey with the ultimate event hub'}
-          </p>
+          <div className="mt-1 text-sm text-gray-600">
+            {isLogin ? 'Use your email and password to continue.' : 'Create an account to get started.'}
+          </div>
         </div>
 
-        {/* Main Card */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-6 sm:p-8 shadow-xl shadow-indigo-100/50 relative overflow-hidden">
-          
-          {/* Config Error Banner */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
           {!isConfigured && (
-            <div className="absolute inset-x-0 top-0 bg-red-500/10 border-b border-red-500/20 p-3 flex items-center justify-center gap-2 text-red-600 text-sm font-medium">
-              <AlertCircle className="w-4 h-4" />
+            <div className="flex items-center gap-2 border-b border-gray-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4" />
               <span>Database configuration missing</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-            
-            {/* Full Name (Signup only) */}
-            {!isLogin && (
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-700 ml-1 block text-left">Full Name</label>
-                <div className="relative">
-                  <div className="absolute top-0 bottom-0 left-0 w-12 flex items-center justify-center pointer-events-none text-gray-400">
-                    <User className="h-5 w-5" />
+          <Tabs
+            value={isLogin ? 'login' : 'signup'}
+            onValueChange={(v) => {
+              const nextIsLogin = v === 'login';
+              setIsLogin(nextIsLogin);
+              setFormData({ email: '', password: '', fullName: '' });
+              setIsSubmitting(false);
+              setShowPassword(false);
+            }}
+            className="p-4"
+          >
+            <TabsList className="w-full bg-gray-100 rounded-xl">
+              <TabsTrigger className="data-[state=active]:bg-white data-[state=active]:shadow-sm" value="login">
+                Log in
+              </TabsTrigger>
+              <TabsTrigger className="data-[state=active]:bg-white data-[state=active]:shadow-sm" value="signup">
+                Sign up
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="login" className="mt-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-800 block text-left">Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+                    placeholder="you@example.com"
+                    disabled={isSubmitting}
+                    autoComplete="email"
+                    inputMode="email"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-800 block text-left">Password</label>
+                  <div className="relative">
+                    <input
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="block w-full h-11 pl-3 pr-11 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+                      placeholder="••••••••"
+                      disabled={isSubmitting}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute top-0 bottom-0 right-0 w-11 flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                   </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !isConfigured}
+                  className="w-full h-11 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSubmitting ? (
+                    <span className="inline-flex items-center justify-center">
+                      <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                      Processing...
+                    </span>
+                  ) : (
+                    'Sign in'
+                  )}
+                </button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="signup" className="mt-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-800 block text-left">Full name</label>
                   <input
                     name="fullName"
                     type="text"
                     required
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    className="block w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white transition-all outline-none font-medium"
+                    className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
                     placeholder="John Doe"
                     disabled={isSubmitting}
+                    autoComplete="name"
                   />
                 </div>
-              </div>
-            )}
 
-            {/* Email */}
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700 ml-1 block text-left">Email Address</label>
-              <div className="relative">
-                <div className="absolute top-0 bottom-0 left-0 w-12 flex items-center justify-center pointer-events-none text-gray-400">
-                  <Mail className="h-5 w-5" />
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-800 block text-left">Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+                    placeholder="you@example.com"
+                    disabled={isSubmitting}
+                    autoComplete="email"
+                    inputMode="email"
+                  />
                 </div>
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="block w-full h-12 pl-12 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white transition-all outline-none font-medium"
-                  placeholder="you@example.com"
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
 
-            {/* Password */}
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700 ml-1 block text-left">Password</label>
-              <div className="relative">
-                <div className="absolute top-0 bottom-0 left-0 w-12 flex items-center justify-center pointer-events-none text-gray-400">
-                  <Lock className="h-5 w-5" />
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-800 block text-left">Password</label>
+                  <div className="relative">
+                    <input
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="block w-full h-11 pl-3 pr-11 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+                      placeholder="At least 6 characters"
+                      disabled={isSubmitting}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute top-0 bottom-0 right-0 w-11 flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
                 </div>
-                <input
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="block w-full h-12 pl-12 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white transition-all outline-none font-medium"
-                  placeholder="••••••••"
-                  disabled={isSubmitting}
-                />
+
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-0 bottom-0 right-0 w-12 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  type="submit"
+                  disabled={isSubmitting || !isConfigured}
+                  className="w-full h-11 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {isSubmitting ? (
+                    <span className="inline-flex items-center justify-center">
+                      <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                      Processing...
+                    </span>
+                  ) : (
+                    'Create account'
+                  )}
                 </button>
-              </div>
-            </div>
-
-            {/* Action Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting || !isConfigured}
-              className="w-full flex items-center justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-600/20 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.98] mt-6"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                  Processing...
-                </>
-              ) : (
-                isLogin ? 'Sign In' : 'Create Account'
-              )}
-            </button>
-          </form>
-
-          {/* Toggle Mode */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setFormData({ email: '', password: '', fullName: '' });
-                  setIsSubmitting(false);
-                }}
-                className="font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
-              >
-                {isLogin ? 'Sign up' : 'Log in'}
-              </button>
-            </p>
-          </div>
+              </form>
+            </TabsContent>
+          </Tabs>
         </div>
-        
-        {/* Footer */}
-        <p className="text-center text-xs text-gray-400">
+
+        <div className="mt-4 text-center text-xs text-gray-500">
           By continuing, you agree to our Terms of Service and Privacy Policy.
-        </p>
+        </div>
       </div>
     </div>
   );
