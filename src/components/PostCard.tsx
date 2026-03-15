@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Post } from '../types';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -49,6 +49,17 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
   const commentsCount = post.comments_count || 0;
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
+  const [carouselHeight, setCarouselHeight] = useState<number | null>(null);
+
+  const updateCarouselHeight = useCallback(() => {
+    if (!api) return;
+    const index = api.selectedScrollSnap();
+    const slide = api.slideNodes()[index] as HTMLElement | undefined;
+    const frame = slide?.querySelector('[data-media-frame="true"]') as HTMLElement | null;
+    if (!frame) return;
+    const next = Math.ceil(frame.getBoundingClientRect().height);
+    if (next > 0) setCarouselHeight((prev) => (prev === next ? prev : next));
+  }, [api]);
   
   const requestVideoFullscreen = async (videoEl: HTMLVideoElement) => {
     const isFullscreen = () =>
@@ -97,11 +108,20 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
     };
     
     api.on("select", onSelect);
+
+    const onSize = () => {
+      requestAnimationFrame(updateCarouselHeight);
+    };
+    onSize();
+    api.on("reInit", onSize);
+    api.on("select", onSize);
     
     return () => {
       api.off("select", onSelect);
+      api.off("reInit", onSize);
+      api.off("select", onSize);
     };
-  }, [api]);
+  }, [api, updateCarouselHeight]);
   
   // Effect to handle fullscreen controls
   useEffect(() => {
@@ -330,7 +350,10 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
         {isCarousel ? (
           <div onDoubleClick={handleDoubleTap}>
             <Carousel setApi={setApi} className="w-full">
-              <CarouselContent>
+              <CarouselContent
+                className="transition-[height] duration-300"
+                style={carouselHeight ? { height: `${carouselHeight}px` } : undefined}
+              >
                 {post.content.images?.map((media, index) => {
                   const isMediaVideo = isVideo(media);
                   // Only attach ref if this is the ACTIVE slide to ensure IntersectionObserver works correctly
@@ -338,7 +361,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
 
                   return (
                     <CarouselItem key={index} className="pl-0">
-                      <div className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: mediaAspectRatios[media] ?? 1 }}>
+                      <div data-media-frame="true" className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: mediaAspectRatios[media] ?? 1 }}>
                         {isMediaVideo ? (
                           <div className="absolute inset-0 bg-black">
                             {isVideoLoading && isActive && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
@@ -347,7 +370,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                               ref={isActive ? videoRef : null}
                               src={`${media}${media.includes('#') ? '' : '#t=0.1'}`}
                               poster={videoPoster}
-                              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                               loop
                               muted={isMuted}
                               playsInline
@@ -361,6 +384,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                                   const next = v.videoWidth / v.videoHeight;
                                   setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
                                 }
+                                requestAnimationFrame(updateCarouselHeight);
                               }}
                               onLoadedData={() => setIsVideoLoading(false)}
                             />
@@ -396,7 +420,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                           <ImageWithFallback
                             src={media}
                             alt={`Post content ${index + 1}`}
-                            className="absolute inset-0 w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-contain"
                             fallbackType="image"
                             loading={index === 0 ? "eager" : "lazy"}
                             width={600}
@@ -409,6 +433,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                                 const next = img.naturalWidth / img.naturalHeight;
                                 setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
                               }
+                              requestAnimationFrame(updateCarouselHeight);
                             }}
                           />
                         )}
@@ -448,7 +473,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                     ref={videoRef}
                     src={currentVideoSrc}
                     poster={videoPoster}
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                     loop
                     muted={isMuted}
                     playsInline
@@ -494,7 +519,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
                   <ImageWithFallback
                     src={currentMedia}
                     alt="Post content"
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-contain"
                     fallbackType="image"
                     loading="lazy"
                     width={800}

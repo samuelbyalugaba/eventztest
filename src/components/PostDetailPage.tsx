@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
   Star, MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX
@@ -60,18 +60,37 @@ export function PostDetailPage({
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
+  const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
+  const [carouselHeight, setCarouselHeight] = useState<number | null>(null);
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState('');
   const [isSavingCaption, setIsSavingCaption] = useState(false);
   const { offsetTop, offsetBottom } = useVisualViewport();
 
+  const updateCarouselHeight = useCallback(() => {
+    if (!api) return;
+    const index = api.selectedScrollSnap();
+    const slide = api.slideNodes()[index] as HTMLElement | undefined;
+    const frame = slide?.querySelector('[data-media-frame="true"]') as HTMLElement | null;
+    if (!frame) return;
+    const next = Math.ceil(frame.getBoundingClientRect().height);
+    if (next > 0) setCarouselHeight((prev) => (prev === next ? prev : next));
+  }, [api]);
+
   useEffect(() => {
     if (!api) return;
-    setCurrent(api.selectedScrollSnap() + 1);
-    api.on("select", () => {
+    const onSelect = () => {
       setCurrent(api.selectedScrollSnap() + 1);
-    });
-  }, [api]);
+      requestAnimationFrame(updateCarouselHeight);
+    };
+    onSelect();
+    api.on("select", onSelect);
+    api.on("reInit", onSelect);
+    return () => {
+      api.off("select", onSelect);
+      api.off("reInit", onSelect);
+    };
+  }, [api, updateCarouselHeight]);
 
   const handlePostComment = () => {
     if (!commentText.trim()) return;
@@ -290,20 +309,35 @@ export function PostDetailPage({
               const media = mediaItems[0];
               const isMediaVideo = isVideo(media) || !!post.video_url || media === highlightVideoUrl;
               const posterToUse = media === highlightVideoUrl ? undefined : videoPoster;
+              const aspectRatio = mediaAspectRatios[media] ?? 4 / 5;
 
               return (
-                <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
+                <div
+                  className="relative w-full bg-black overflow-hidden group mx-auto"
+                  style={{
+                    aspectRatio,
+                    maxHeight: '70vh',
+                    width: `min(100%, calc(70vh * ${aspectRatio}))`,
+                  }}
+                >
                    {isMediaVideo ? (
                       <>
                         <video 
                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
-                          className="w-full h-full object-cover max-h-[70vh]"
+                          className="absolute inset-0 w-full h-full object-contain"
                           poster={posterToUse}
                           controls
                           autoPlay
                           playsInline
                           loop
                           muted={isMuted}
+                          onLoadedMetadata={(e) => {
+                            const v = e.currentTarget;
+                            if (v.videoWidth > 0 && v.videoHeight > 0) {
+                              const next = v.videoWidth / v.videoHeight;
+                              setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                            }
+                          }}
                         />
                         <button
                           onClick={(e) => {
@@ -319,7 +353,14 @@ export function PostDetailPage({
                       <ImageWithFallback
                         src={media}
                         alt="Post detail"
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-contain"
+                        onLoad={(e) => {
+                          const img = e.currentTarget;
+                          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                            const next = img.naturalWidth / img.naturalHeight;
+                            setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                          }
+                        }}
                       />
                    )}
                 </div>
@@ -329,25 +370,45 @@ export function PostDetailPage({
             // Carousel Render
             return (
               <Carousel setApi={setApi} className="w-full group">
-                <CarouselContent>
+                <CarouselContent
+                  className="transition-[height] duration-300"
+                  style={carouselHeight ? { height: `${carouselHeight}px` } : undefined}
+                >
                   {mediaItems.map((media: string, index: number) => {
                     const isMediaVideo = isVideo(media);
                     const isActive = index === (current - 1);
+                    const aspectRatio = mediaAspectRatios[media] ?? 4 / 5;
                     
                     return (
                               <CarouselItem key={index} className="pl-0">
-                                 <div className="relative aspect-[4/5] w-full bg-black flex items-center justify-center group">
+                                 <div
+                                   data-media-frame="true"
+                                   className="relative w-full bg-black overflow-hidden group mx-auto"
+                                   style={{
+                                     aspectRatio,
+                                     maxHeight: '70vh',
+                                     width: `min(100%, calc(70vh * ${aspectRatio}))`,
+                                   }}
+                                 >
                                    {isMediaVideo ? (
                                       <>
                                         <video 
                                           src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
-                                          className="w-full h-full object-cover max-h-[70vh]"
+                                          className="absolute inset-0 w-full h-full object-contain"
                                           controls
                                           // Only autoplay if it's the active slide
                                           autoPlay={isActive}
                                           playsInline
                                           loop
                                           muted={isMuted}
+                                          onLoadedMetadata={(e) => {
+                                            const v = e.currentTarget;
+                                            if (v.videoWidth > 0 && v.videoHeight > 0) {
+                                              const next = v.videoWidth / v.videoHeight;
+                                              setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                                            }
+                                            requestAnimationFrame(updateCarouselHeight);
+                                          }}
                                         />
                                         <button
                                            onClick={(e) => {
@@ -363,7 +424,15 @@ export function PostDetailPage({
                                       <ImageWithFallback
                                         src={media}
                                         alt={`Slide ${index + 1}`}
-                                        className="w-full h-full object-cover"
+                                        className="absolute inset-0 w-full h-full object-contain"
+                                        onLoad={(e) => {
+                                          const img = e.currentTarget;
+                                          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                                            const next = img.naturalWidth / img.naturalHeight;
+                                            setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
+                                          }
+                                          requestAnimationFrame(updateCarouselHeight);
+                                        }}
                                       />
                                    )}
                                  </div>
