@@ -52,6 +52,59 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
   const [organizerDisplayName, setOrganizerDisplayName] = useState(event.organizer?.full_name || 'Event Organizer');
   const [eventPosts, setEventPosts] = useState<any[]>([]);
 
+  // Extract the event's currency from price_range or virtualPrice to ensure consistency
+  const getEventCurrency = (): string => {
+    // Try to get currency from virtualPrice first (most specific)
+    if (event.streaming?.virtualPrice) {
+      const code = extractCurrencyFromPrice(event.streaming.virtualPrice);
+      return code;
+    }
+    // Then try price_range
+    if (event.price_range) {
+      const code = extractCurrencyFromPrice(event.price_range);
+      return code;
+    }
+    // Then try ticket tiers
+    if (event.ticket_tiers && event.ticket_tiers.length > 0) {
+      const code = extractCurrencyFromPrice(event.ticket_tiers[0].price);
+      return code;
+    }
+    // Default to TZS
+    return 'TZS';
+  };
+
+  // Format price using the event's currency for consistency
+  const formatEventPrice = (price: string | number | null | undefined): string => {
+    if (price === null || price === undefined) return 'Free';
+    
+    const priceStr = String(price).trim();
+    if (priceStr.toLowerCase() === 'free' || priceStr === '0' || priceStr === '') {
+      return 'Free';
+    }
+    
+    const numeric = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+    if (!numeric || Number.isNaN(numeric)) {
+      return 'Free';
+    }
+    
+    // Check if price already has currency
+    const hasCurrency = currencies.some(c => 
+      priceStr.includes(c.symbol) || priceStr.includes(c.code)
+    );
+    
+    // If price already has currency, use formatPrice (preserves it)
+    if (hasCurrency) {
+      return formatPrice(price);
+    }
+    
+    // Otherwise, use the event's currency
+    const eventCurrencyCode = getEventCurrency();
+    const currency = currencies.find(c => c.code === eventCurrencyCode);
+    const symbol = currency ? currency.symbol : 'TSh';
+    
+    return `${symbol} ${numeric.toLocaleString()}`;
+  };
+
   useEffect(() => {
     // Increment view count
     incrementEventView(event.id);
@@ -440,7 +493,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm mb-1">Ticket Price</p>
-                <p className="text-gray-900">{formatPrice(event.price_range)}</p>
+                <p className="text-gray-900">{formatEventPrice(event.price_range)}</p>
               </div>
               <div className="flex items-center gap-2 text-purple-600">
                 <Users className="w-5 h-5" />
@@ -477,7 +530,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                        </div>
                     </div>
                     <span className="font-bold text-gray-900">
-                      {formatPrice(tier.price)}
+                      {formatEventPrice(tier.price)}
                     </span>
                   </div>
                 ))}
@@ -516,7 +569,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
               <div className="flex items-center justify-between mb-4 p-3 bg-white rounded-xl border border-gray-100">
                 <span className="text-gray-600 text-sm">Virtual Ticket</span>
-                <span className="text-gray-900 font-semibold">{event.streaming.virtualPrice}</span>
+                <span className="text-gray-900 font-semibold">{formatEventPrice(event.streaming.virtualPrice)}</span>
               </div>
 
               {/* Virtual Ticket CTA */}
@@ -556,7 +609,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                       <p className="text-gray-500 text-xs">General admission access</p>
                     </div>
                   </div>
-                  <span className="text-purple-600 font-bold">{formatPrice(event.price_range)}</span>
+                  <span className="text-purple-600 font-bold">{formatEventPrice(event.price_range)}</span>
                 </button>
                 
                 {/* VIP Ticket Option - If applicable */}

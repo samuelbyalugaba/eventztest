@@ -211,11 +211,41 @@ export const formatPrice = (price: string | number | null | undefined): string =
     return 'Free';
   }
   
-  // Extract currency code
-  const code = extractCurrencyFromPrice(priceStr);
+  // First, try to detect if currency already exists in the price string
+  let detectedCurrency = null;
+  for (const currency of currencies) {
+    // Check if currency symbol or code exists in the string (case-insensitive)
+    const symbolRegex = new RegExp(currency.symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const codeRegex = new RegExp(`\\b${currency.code}\\b`, 'i');
+    
+    if (symbolRegex.test(priceStr) || codeRegex.test(priceStr)) {
+      detectedCurrency = currency;
+      break;
+    }
+  }
+  
+  // Extract currency code from the price string (this handles detection)
+  const code = detectedCurrency ? detectedCurrency.code : extractCurrencyFromPrice(priceStr);
   const currency = currencies.find(c => c.code === code);
   const symbol = currency ? currency.symbol : 'TSh';
   
-  // Format with currency symbol and thousand separators
+  // If currency was detected in the original string, preserve its format
+  if (detectedCurrency) {
+    const formattedNumber = numeric.toLocaleString();
+    // Check symbol position to preserve format
+    if (priceStr.trim().startsWith(detectedCurrency.symbol)) {
+      // Format: "Symbol Number" (e.g., "$ 100" or "TSh 100")
+      return `${detectedCurrency.symbol} ${formattedNumber}`;
+    } else if (priceStr.trim().endsWith(detectedCurrency.symbol)) {
+      // Format: "Number Symbol" (e.g., "100 USD")
+      return `${formattedNumber} ${detectedCurrency.symbol}`;
+    } else {
+      // Symbol in middle or mixed, use standard format
+      return `${detectedCurrency.symbol} ${formattedNumber}`;
+    }
+  }
+  
+  // No currency detected, use extracted/default currency symbol
+  // Format with currency symbol and thousand separators (standard: "Symbol Number")
   return `${symbol} ${numeric.toLocaleString()}`;
 };
