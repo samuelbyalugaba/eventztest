@@ -15,6 +15,7 @@ import { supabase } from './utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
   getProfile, 
+  checkUsernameUnique,
   getConversations, 
   getMessages, 
   sendMessage, 
@@ -189,6 +190,56 @@ export default function App() {
             // Determine if user is an organizer
             const isOrg = profile.is_organizer || false;
             setIsOrganizer(isOrg);
+          } else {
+            const meta: any = currentUser.user_metadata || {};
+            const nameCandidate =
+              meta.full_name ||
+              meta.name ||
+              (typeof currentUser.email === 'string' ? currentUser.email.split('@')[0] : null) ||
+              'User';
+
+            const baseUsername = String(nameCandidate).toLowerCase().replace(/[^a-z0-9]/g, '');
+            let finalUsername = baseUsername || `user${Math.floor(Date.now() % 10000)}`;
+            let isUnique = await checkUsernameUnique(finalUsername);
+
+            if (!isUnique) {
+              let counter = 1;
+              while (counter <= 10) {
+                const candidate = `${finalUsername}${counter}`;
+                if (await checkUsernameUnique(candidate)) {
+                  finalUsername = candidate;
+                  isUnique = true;
+                  break;
+                }
+                counter++;
+              }
+              if (!isUnique) {
+                finalUsername = `${finalUsername}${Math.floor(Date.now() % 10000)}`;
+              }
+            }
+
+            const avatarCandidate = meta.avatar_url || meta.picture || null;
+
+            await supabase
+              .from('profiles')
+              .upsert(
+                [
+                  {
+                    id: currentUser.id,
+                    email: currentUser.email,
+                    full_name: nameCandidate,
+                    username: finalUsername,
+                    avatar_url: avatarCandidate,
+                  },
+                ],
+                { onConflict: 'id', ignoreDuplicates: true }
+              );
+
+            const created = await getProfile(currentUser.id);
+            if (created) {
+              setUserProfile(created);
+              setIsOrganizer(created.is_organizer || false);
+            }
           }
         } catch (error) {
           console.error('Error fetching profile:', error);

@@ -117,16 +117,6 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
       toast.error('Please fill in all details');
       return;
     }
-    
-    if (selectedProvider !== 'Wallet' && !paymentPhone) {
-        toast.error('Please enter phone number');
-        return;
-    }
-    
-    if (selectedProvider === 'Wallet' && walletBalance < totalPrice) {
-        toast.error('Insufficient wallet balance');
-        return;
-    }
 
     try {
       setIsProcessing(true);
@@ -141,6 +131,43 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
       const firstTierName = Object.keys(selections)[0];
       const firstTier = tiers.find(t => t.name === firstTierName);
       const currency = firstTier ? extractCurrencyFromPrice(firstTier.price) : 'TZS';
+
+      // Handle free events - skip payment entirely
+      if (totalPrice === 0) {
+        // Create a transaction record with amount 0 for free tickets
+        const transaction = await createTransaction({
+          user_id: user.id,
+          event_id: event.id,
+          amount: 0,
+          currency: currency,
+          provider: 'Free',
+          status: 'completed',
+          metadata: {
+            type: 'free_ticket',
+            customer_name: formData.name,
+            customer_email: formData.email,
+            selections: JSON.stringify(selections),
+            total_quantity: totalTickets
+          }
+        });
+        
+        // Proceed directly to ticket creation
+        await finalizeTicketCreation(user.id, transaction.id);
+        return;
+      }
+    
+      // Paid events - require payment details
+      if (selectedProvider !== 'Wallet' && !paymentPhone) {
+        toast.error('Please enter phone number');
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (selectedProvider === 'Wallet' && walletBalance < totalPrice) {
+        toast.error('Insufficient wallet balance');
+        setIsProcessing(false);
+        return;
+      }
 
       if (selectedProvider === 'Wallet') {
          // Wallet Payment Flow
@@ -373,49 +400,62 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                 />
               </div>
 
-              {/* Payment Method */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-gray-900 text-sm">Payment Method</h3>
-                <div className="grid grid-cols-4 gap-2">
-                  {['Wallet', 'Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map(p => (
-                    <button
-                      key={p}
-                      onClick={() => setSelectedProvider(p)}
-                      className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all flex flex-col items-center justify-center gap-1 ${
-                        selectedProvider === p 
-                          ? 'border-[#8A2BE2] bg-purple-50 text-purple-700' 
-                          : 'border-gray-200 text-gray-600 hover:border-purple-200'
-                      }`}
-                    >
-                      {p === 'Wallet' && <Wallet className="w-3 h-3" />}
-                      {p}
-                    </button>
-                  ))}
-                </div>
-                
-                {selectedProvider === 'Wallet' ? (
-                   <div className={`p-4 rounded-xl border ${walletBalance >= totalPrice ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
-                      <div className="flex justify-between items-center mb-1">
-                         <span className="text-sm font-medium text-gray-700">Wallet Balance</span>
-                         <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
+              {/* Payment Method - Only show for paid events */}
+              {totalPrice > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-gray-900 text-sm">Payment Method</h3>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['Wallet', 'Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setSelectedProvider(p)}
+                        className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all flex flex-col items-center justify-center gap-1 ${
+                          selectedProvider === p 
+                            ? 'border-[#8A2BE2] bg-purple-50 text-purple-700' 
+                            : 'border-gray-200 text-gray-600 hover:border-purple-200'
+                        }`}
+                      >
+                        {p === 'Wallet' && <Wallet className="w-3 h-3" />}
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {selectedProvider === 'Wallet' ? (
+                     <div className={`p-4 rounded-xl border ${walletBalance >= totalPrice ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex justify-between items-center mb-1">
+                           <span className="text-sm font-medium text-gray-700">Wallet Balance</span>
+                           <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
+                        </div>
+                        {walletBalance < totalPrice && (
+                           <p className="text-xs text-red-600 font-medium">Insufficient balance. Please deposit funds.</p>
+                        )}
+                     </div>
+                  ) : (
+                      <div className="relative">
+                        <Smartphone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <input
+                          type="tel"
+                          placeholder="255 7XX XXX XXX"
+                          value={paymentPhone}
+                          onChange={(e) => setPaymentPhone(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                        />
                       </div>
-                      {walletBalance < totalPrice && (
-                         <p className="text-xs text-red-600 font-medium">Insufficient balance. Please deposit funds.</p>
-                      )}
-                   </div>
-                ) : (
-                    <div className="relative">
-                      <Smartphone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                      <input
-                        type="tel"
-                        placeholder="255 7XX XXX XXX"
-                        value={paymentPhone}
-                        onChange={(e) => setPaymentPhone(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
-                      />
-                    </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Free Event Notice */}
+              {totalPrice === 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Ticket className="w-5 h-5 text-green-600" />
+                    <h3 className="font-semibold text-green-900">Free Event</h3>
+                  </div>
+                  <p className="text-sm text-green-700">This event is free! Your tickets will be issued immediately after confirming your details.</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -438,13 +478,22 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                   : 'bg-gray-300 shadow-none cursor-not-allowed'
               }`}
             >
-              <span>Checkout</span>
-              {totalTickets > 0 && (
-                <span className="bg-white/20 px-2 py-0.5 rounded text-sm">
-                  {currencySymbol} {totalPrice.toLocaleString()}
-                </span>
+              {totalPrice === 0 ? (
+                <>
+                  <Ticket className="w-4 h-4" />
+                  <span>Get Free Tickets</span>
+                </>
+              ) : (
+                <>
+                  <span>Checkout</span>
+                  {totalTickets > 0 && (
+                    <span className="bg-white/20 px-2 py-0.5 rounded text-sm">
+                      {currencySymbol} {totalPrice.toLocaleString()}
+                    </span>
+                  )}
+                  <ArrowRight className="w-4 h-4" />
+                </>
               )}
-              <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <div className="flex gap-3">
@@ -465,6 +514,11 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     <span>Processing...</span>
+                  </>
+                ) : totalPrice === 0 ? (
+                  <>
+                    <span>Get Free Tickets</span>
+                    <Ticket className="w-4 h-4" />
                   </>
                 ) : (
                   <>
