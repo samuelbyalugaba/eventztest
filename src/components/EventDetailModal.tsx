@@ -77,18 +77,36 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
   const formatEventPrice = (price: string | number | null | undefined): string => {
     if (price === null || price === undefined) return 'Free';
     
+    // Handle number inputs directly
+    if (typeof price === 'number') {
+      if (price === 0 || Number.isNaN(price)) return 'Free';
+      const eventCurrencyCode = getEventCurrency();
+      const currency = currencies.find(c => c.code === eventCurrencyCode);
+      const symbol = currency ? currency.symbol : 'TSh';
+      return `${symbol} ${price.toLocaleString()}`;
+    }
+    
     const priceStr = String(price).trim();
-    // Only return "Free" if explicitly "free", "0", or truly empty
-    // Don't treat whitespace-only or empty strings as "Free" if there might be ticket tiers
+    
+    // Only return "Free" if explicitly "free"
     if (priceStr.toLowerCase() === 'free') {
       return 'Free';
     }
-    // Check if it's actually zero (not just empty string)
-    const numeric = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
-    if (numeric === 0 && priceStr !== '' && !priceStr.match(/[a-zA-Z]/)) {
-      return 'Free';
+    
+    // If empty string, return Free (unless we can calculate from tiers)
+    if (priceStr === '') {
+      if (!event.ticket_tiers || event.ticket_tiers.length === 0) {
+        return 'Free';
+      }
+      // Continue to calculate from tiers below if tiers exist
     }
-    if (priceStr === '' && (!event.ticket_tiers || event.ticket_tiers.length === 0)) {
+    
+    // Extract numeric value (remove all non-numeric except decimal point)
+    const numeric = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+    
+    // Only return Free if numeric is explicitly 0 AND the string represents just "0"
+    // Don't return Free for empty strings here - handle that above
+    if (numeric === 0 && priceStr !== '' && priceStr.match(/^[\s0.]+$/)) {
       return 'Free';
     }
     // If empty but has ticket tiers, try to calculate from tiers
@@ -158,12 +176,19 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       return formatPrice(price);
     }
     
-    // Otherwise, use the numeric value already extracted above (line 87)
-    // If numeric is 0 or invalid, return Free
-    if (!numeric || Number.isNaN(numeric)) {
+    // Otherwise, use the numeric value already extracted above
+    // Only return Free if numeric is explicitly 0 or NaN
+    // (We already checked for explicit "0" strings above, so numeric === 0 here means it's a valid 0)
+    if (Number.isNaN(numeric)) {
       return 'Free';
     }
     
+    // If numeric is 0, it's a free tier (already handled above, but double-check)
+    if (numeric === 0) {
+      return 'Free';
+    }
+    
+    // Format with event's currency
     const eventCurrencyCode = getEventCurrency();
     const currency = currencies.find(c => c.code === eventCurrencyCode);
     const symbol = currency ? currency.symbol : 'TSh';
@@ -596,7 +621,18 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                        </div>
                     </div>
                     <span className="font-bold text-gray-900">
-                      {formatEventPrice(tier.price)}
+                      {(() => {
+                        // Try to use priceNumeric if available (more reliable)
+                        if (tier.priceNumeric !== undefined && tier.priceNumeric !== null && !isNaN(tier.priceNumeric)) {
+                          if (tier.priceNumeric === 0) return 'Free';
+                          const eventCurrencyCode = getEventCurrency();
+                          const currency = currencies.find(c => c.code === eventCurrencyCode);
+                          const symbol = currency ? currency.symbol : 'TSh';
+                          return `${symbol} ${tier.priceNumeric.toLocaleString()}`;
+                        }
+                        // Fallback to tier.price string
+                        return formatEventPrice(tier.price);
+                      })()}
                     </span>
                   </div>
                 ))}

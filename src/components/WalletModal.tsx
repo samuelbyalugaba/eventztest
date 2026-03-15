@@ -48,7 +48,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       try {
         nUser = await ntzsApi.getUser(user.id);
         // If not found (shouldn't happen if we use create as get), create it
-        if (!nUser) {
+        if (!nUser || !nUser.id) {
            nUser = await ntzsApi.createUser(user.id, user.email || '');
         }
       } catch (err) {
@@ -57,12 +57,19 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       }
 
       // 2. Get Real Balance from nTZS
-      try {
-        const { balanceTzs } = await ntzsApi.getBalance(user.id);
-        setBalance(balanceTzs || 0);
-      } catch (err) {
-        console.error('Failed to fetch balance', err);
-        // Fallback to 0 or local state if needed
+      // Use the nTZS internal user ID (nUser.id), not the Supabase external ID
+      if (nUser && nUser.id) {
+        try {
+          const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
+          setBalance(balanceTzs || 0);
+        } catch (err) {
+          console.error('Failed to fetch balance', err);
+          // Fallback to 0 or local state if needed
+          setBalance(0);
+        }
+      } else {
+        console.warn('No nTZS user ID available for balance check');
+        setBalance(0);
       }
 
       // 3. Load Transactions (For now, we might still rely on local DB if we sync them, 
@@ -108,8 +115,14 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Initiate nTZS Deposit
-      await ntzsApi.deposit(user.id, Number(amount), phone);
+      // 1. Get or create nTZS user to get internal ID
+      const nUser = await ntzsApi.getUser(user.id);
+      if (!nUser || !nUser.id) {
+        throw new Error('Failed to get nTZS user account');
+      }
+
+      // 2. Initiate nTZS Deposit
+      await ntzsApi.deposit(nUser.id, Number(amount), phone);
       
       // 2. Record intent in local DB (optional but good for UI immediate feedback)
       // We can assume 'pending' status.
@@ -150,8 +163,14 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Initiate nTZS Withdrawal
-      await ntzsApi.withdraw(user.id, Number(amount), phone);
+      // 1. Get or create nTZS user to get internal ID
+      const nUser = await ntzsApi.getUser(user.id);
+      if (!nUser || !nUser.id) {
+        throw new Error('Failed to get nTZS user account');
+      }
+
+      // 2. Initiate nTZS Withdrawal
+      await ntzsApi.withdraw(nUser.id, Number(amount), phone);
       
       toast.success('Withdrawal initiated! Funds will be sent to your M-Pesa.');
       setShowWithdraw(false);

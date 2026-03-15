@@ -64,15 +64,11 @@ export const ntzsApi = {
 
   /**
    * Get user profile and balance
+   * Uses createUser as idempotent get-or-create since nTZS API supports this pattern
    */
   async getUser(userId: string): Promise<NtzsUser> {
-    // Note: The proxy expects 'get_user' action with userId payload
-    // Ideally this maps to /api/v1/users/:id where id is the nTZS internal ID? 
-    // Or does it lookup by externalId? 
-    // Based on docs: "Calling create with the same externalId returns the existing user."
-    // So we can use createUser as a "get or create" safely.
-    // However, if we have the nTZS ID, we can use get_user.
-    // For now, let's assume we pass the external ID as a query or use create as idempotent fetch.
+    // nTZS API: "Calling create with the same externalId returns the existing user."
+    // So we can safely use createUser as a get-or-create pattern
     return this.createUser(userId, '', ''); 
   },
 

@@ -69,9 +69,15 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
         }
 
         // Fetch Wallet Balance
+        // First get or create nTZS user to get the internal ID
         try {
-          const { balanceTzs } = await ntzsApi.getBalance(user.id);
-          setWalletBalance(balanceTzs || 0);
+          const nUser = await ntzsApi.getUser(user.id);
+          if (nUser && nUser.id) {
+            const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
+            setWalletBalance(balanceTzs || 0);
+          } else {
+            setWalletBalance(0);
+          }
         } catch (err) {
           console.error('Failed to fetch balance', err);
           setWalletBalance(0);

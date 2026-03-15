@@ -43,15 +43,19 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         }
 
         // Fetch Wallet Balance
+        // First get or create nTZS user to get the internal ID
         try {
           // Use nTZS API for real balance
-          const { balanceTzs } = await ntzsApi.getBalance(user.id);
-          setWalletBalance(balanceTzs || 0);
+          const nUser = await ntzsApi.getUser(user.id);
+          if (nUser && nUser.id) {
+            const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
+            setWalletBalance(balanceTzs || 0);
+          } else {
+            setWalletBalance(0);
+          }
         } catch (err) {
           console.error('Failed to fetch wallet balance', err);
-          // Fallback to local calculation if API fails (optional, or just show 0)
-          // For now, keeping local calc as fallback or removing it entirely? 
-          // Removing local calc to avoid confusion. nTZS is the source of truth.
+          // Fallback to 0 if API fails. nTZS is the source of truth.
           setWalletBalance(0);
         }
       }

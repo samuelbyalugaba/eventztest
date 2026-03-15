@@ -43,6 +43,47 @@ interface CreateEventProps {
 }
 
 export function CreateEvent({ onBack, event }: CreateEventProps) {
+  // Rebuilt pricing calculation system - defined before useState to use in initialization
+  const calculatePriceRange = (tiers: TicketTier[], currencyCode: string): string => {
+    // No tiers = no price
+    if (!tiers || tiers.length === 0) {
+      return '';
+    }
+
+    // Extract valid prices (must be > 0 and a valid number)
+    const validPrices = tiers
+      .map(tier => {
+        const price = tier.priceNumeric;
+        // Check if price is a valid positive number
+        if (typeof price !== 'number') return null;
+        if (isNaN(price)) return null;
+        if (price <= 0) return null;
+        return price;
+      })
+      .filter((p): p is number => p !== null);
+
+    // No valid prices = empty string
+    if (validPrices.length === 0) {
+      return '';
+    }
+
+    // Calculate min and max
+    const min = Math.min(...validPrices);
+    const max = Math.max(...validPrices);
+    
+    // Get currency symbol
+    const currency = currencies.find(c => c.code === currencyCode);
+    const symbol = currency?.symbol || currencyCode;
+    
+    // Format: single price or range
+    if (min === max) {
+      return `${symbol} ${min.toLocaleString()}`;
+    } else {
+      return `${symbol} ${min.toLocaleString()} - ${symbol} ${max.toLocaleString()}`;
+    }
+  };
+
+  // Initialize form state - calculatePriceRange is available here
   const [formData, setFormData] = useState<EventForm>({
     title: event?.title || '',
     category: event?.category || 'Entertainment',
@@ -50,7 +91,23 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     date: event?.date || '',
     time: event?.time || '',
     location: event?.location || '',
-    price: event?.price_range || event?.price || '',
+    price: (() => {
+      // Initialize price: if event has tiers, calculate from tiers, otherwise use price_range
+      if (event?.ticket_tiers && event.ticket_tiers.length > 0) {
+        const tiers = event.ticket_tiers.map((t: any) => ({
+          name: t.name || '',
+          price: t.price || '',
+          priceNumeric: t.priceNumeric ?? (parseFloat(String(t.price || '0').replace(/[^0-9.]/g, '')) || 0),
+          available: t.available || 100,
+          features: t.features || []
+        }));
+        const currency = event?.currency || 'TZS';
+        // Calculate from tiers
+        const calculated = calculatePriceRange(tiers, currency);
+        return calculated || '';
+      }
+      return event?.price_range || event?.price || '';
+    })(),
     description: event?.description || '',
     coverImage: event?.image_url || event?.coverImage || null,
     ticketTiers: event?.ticket_tiers || [],
@@ -63,55 +120,60 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     }
   });
 
-  // Enforce default category if missing
-  useEffect(() => {
-    if (!formData.category) {
-      console.log('Category missing in state, defaulting to Entertainment');
-      setFormData(prev => ({ ...prev, category: 'Entertainment' }));
-    }
-  }, [formData.category]);
-
-  const calculatePriceRange = (tiers: TicketTier[], currencyCode: string) => {
-    if (tiers.length === 0) return '';
-    const prices = tiers.map(t => t.priceNumeric).filter(p => !isNaN(p));
-    if (prices.length === 0) return '';
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    
-    const currency = currencies.find(c => c.code === currencyCode) || { symbol: currencyCode };
-    const symbol = currency.symbol;
-    
-    return min === max ? `${symbol} ${min.toLocaleString()}` : `${symbol} ${min.toLocaleString()} - ${max.toLocaleString()}`;
-  };
-
   const handleCurrencyChange = (currencyCode: string) => {
     setFormData(prev => {
-      const newCurrency = currencyCode;
-      const currencyData = currencies.find(c => c.code === newCurrency) || { symbol: newCurrency };
+      const currencyData = currencies.find(c => c.code === currencyCode);
+      const symbol = currencyData?.symbol || currencyCode;
       
       // Update all existing tiers' display price string
-      const newTiers = prev.ticketTiers.map(tier => ({
-        ...tier,
-        price: `${currencyData.symbol} ${tier.priceNumeric.toLocaleString()}`
-      }));
+      const newTiers = prev.ticketTiers.map(tier => {
+        // Only update price string if priceNumeric is valid
+        const priceStr = (tier.priceNumeric > 0 && !isNaN(tier.priceNumeric))
+          ? `${symbol} ${tier.priceNumeric.toLocaleString()}`
+          : `${symbol} 0`;
+        
+        return {
+          ...tier,
+          price: priceStr
+        };
+      });
 
-      const newPriceRange = calculatePriceRange(newTiers, newCurrency);
+      // Recalculate price range from updated tiers
+      const newPriceRange = calculatePriceRange(newTiers, currencyCode);
       
       return {
         ...prev,
-        currency: newCurrency,
+        currency: currencyCode,
         ticketTiers: newTiers,
-        price: newPriceRange
+        // Always use calculated price when tiers exist, otherwise keep manual price
+        price: prev.ticketTiers.length > 0 ? newPriceRange : prev.price
       };
     });
   };
 
   const handleAddTier = () => {
     setFormData(prev => {
-      const currency = currencies.find(c => c.code === prev.currency) || { symbol: prev.currency };
+      const currency = currencies.find(c => c.code === prev.currency);
+      const symbol = currency?.symbol || prev.currency;
+      
+      const newTier: TicketTier = {
+        name: '',
+        price: `${symbol} 0`,
+        priceNumeric: 0, // Start with 0 - user must enter price
+        available: 100,
+        features: []
+      };
+      
+      const newTiers = [...prev.ticketTiers, newTier];
+      
+      // Recalculate price range (will be empty since new tier has priceNumeric: 0)
+      const newPriceRange = calculatePriceRange(newTiers, prev.currency);
+      
       return {
         ...prev,
-        ticketTiers: [...prev.ticketTiers, { name: '', price: `${currency.symbol} 0`, priceNumeric: 0, available: 100, features: [] }]
+        ticketTiers: newTiers,
+        // Clear price when adding new empty tier, or recalculate if other tiers have prices
+        price: newPriceRange
       };
     });
   };
@@ -120,8 +182,18 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     setFormData(prev => {
       const newTiers = [...prev.ticketTiers];
       newTiers.splice(index, 1);
-      const newPrice = newTiers.length > 0 ? calculatePriceRange(newTiers, prev.currency) : '';
-      return { ...prev, ticketTiers: newTiers, price: newPrice };
+      
+      // Recalculate price range
+      const newPriceRange = newTiers.length > 0 
+        ? calculatePriceRange(newTiers, prev.currency)
+        : ''; // No tiers = no auto-calculated price
+      
+      return { 
+        ...prev, 
+        ticketTiers: newTiers, 
+        // Always use calculated price when tiers exist, empty string when no tiers
+        price: newPriceRange
+      };
     });
   };
 
@@ -130,15 +202,32 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       const newTiers = [...prev.ticketTiers];
       const updatedTier = { ...newTiers[index], [field]: value };
       
+      // Handle priceNumeric updates
       if (field === 'priceNumeric') {
-        const currency = currencies.find(c => c.code === prev.currency) || { symbol: prev.currency };
-        updatedTier.price = `${currency.symbol} ${Number(value).toLocaleString()}`;
+        const currency = currencies.find(c => c.code === prev.currency);
+        const symbol = currency?.symbol || prev.currency;
+        
+        // Parse the value to number
+        const numericValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+        
+        // Update both priceNumeric and price string
+        updatedTier.priceNumeric = numericValue;
+        updatedTier.price = numericValue > 0 
+          ? `${symbol} ${numericValue.toLocaleString()}`
+          : `${symbol} 0`;
       }
       
       newTiers[index] = updatedTier;
       
-      const newPrice = calculatePriceRange(newTiers, prev.currency);
-      return { ...prev, ticketTiers: newTiers, price: newPrice || prev.price };
+      // Always recalculate price range from current tiers
+      const newPriceRange = calculatePriceRange(newTiers, prev.currency);
+      
+      return { 
+        ...prev, 
+        ticketTiers: newTiers, 
+        // Always use calculated price - never keep stale values
+        price: newPriceRange
+      };
     });
   };
 
@@ -385,16 +474,22 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
        return;
     }
 
-    // Ensure price is calculated from tiers if empty
-    let finalPrice = formData.price;
-    if (!finalPrice && formData.ticketTiers.length > 0) {
+    // Calculate final price: use calculated price if tiers exist, otherwise use manual price
+    let finalPrice = '';
+    if (formData.ticketTiers.length > 0) {
+      // Always calculate from tiers when tiers exist
       finalPrice = calculatePriceRange(formData.ticketTiers, formData.currency);
-    }
-    
-    // Validate price exists (either manually entered or calculated from tiers)
-    if (!finalPrice) {
-      toast.error('Please set a price or add ticket tiers with prices');
-      return;
+      if (!finalPrice) {
+        toast.error('Please add prices to your ticket tiers');
+        return;
+      }
+    } else {
+      // No tiers - use manual price entry
+      finalPrice = formData.price.trim();
+      if (!finalPrice) {
+        toast.error('Please set a price or add ticket tiers with prices');
+        return;
+      }
     }
 
     // Date validation
@@ -1083,12 +1178,25 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-gray-900">{formData.price || 'Calculating...'}</span>
+                    <span className="text-lg font-bold text-gray-900">
+                      {(() => {
+                        // Always recalculate from current tiers to ensure accuracy
+                        const calculated = calculatePriceRange(formData.ticketTiers, formData.currency);
+                        return calculated || 'Enter prices above';
+                      })()}
+                    </span>
                     <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
                       Auto
                     </span>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">Based on your ticket tiers above</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {(() => {
+                      const calculated = calculatePriceRange(formData.ticketTiers, formData.currency);
+                      return calculated 
+                        ? 'Based on your ticket tiers above' 
+                        : 'Add prices to your ticket tiers above';
+                    })()}
+                  </p>
                 </div>
               </div>
             ) : (
