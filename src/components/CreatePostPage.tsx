@@ -316,7 +316,7 @@ export default function CreatePostPage() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-2xl mx-auto">
-          <div className="flex gap-4">
+          <div className="flex items-start gap-4">
             <UserAvatar 
               src={userProfile?.avatar_url} 
               name={userProfile?.full_name} 
@@ -334,7 +334,7 @@ export default function CreatePostPage() {
                 e.target.style.height = `${e.target.scrollHeight}px`;
               }}
               placeholder="What's happening?"
-              className="w-full text-[17px] leading-relaxed text-gray-900 placeholder-gray-500 border-none p-0 mt-1 resize-none min-h-[140px]"
+              className="w-full text-[17px] leading-relaxed text-gray-900 placeholder-gray-500 border-none p-0 resize-none min-h-[140px]"
             />
 
             {(locationTag.trim() || scheduledAt.trim()) && (

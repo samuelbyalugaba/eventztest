@@ -72,7 +72,7 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
         <img 
           src={src} 
           alt={safeName || 'User'} 
-          className={`relative z-10 ${hasRoundedClass ? '' : 'rounded-full'} object-cover w-full h-full`}
+          className={`relative z-10 ${hasRoundedClass ? '' : 'rounded-full'} object-cover object-top w-full h-full`}
           onError={() => setImageError(true)}
         />
       </div>
