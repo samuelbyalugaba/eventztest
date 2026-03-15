@@ -191,6 +191,12 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        // Ensure price is calculated from tiers if empty
+        let calculatedPrice = formData.price;
+        if (!calculatedPrice && formData.ticketTiers.length > 0) {
+          calculatedPrice = calculatePriceRange(formData.ticketTiers, formData.currency);
+        }
+
         const eventData = {
           title: formData.title,
           description: formData.description,
@@ -200,7 +206,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           category: formData.category || 'Entertainment', // Ensure category is never null
           subcategory: formData.subcategory,
           image_url: formData.coverImage || '',
-          price_range: formData.price,
+          price_range: calculatedPrice || formData.price,
           organizer_id: user.id,
           status: 'draft' as const,
           ticket_tiers: formData.ticketTiers,
@@ -325,6 +331,12 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         return;
       }
 
+      // Ensure price is calculated from tiers if empty
+      let calculatedPrice = formData.price;
+      if (!calculatedPrice && formData.ticketTiers.length > 0) {
+        calculatedPrice = calculatePriceRange(formData.ticketTiers, formData.currency);
+      }
+
       const eventData = {
         title: formData.title || 'Untitled Draft',
         description: formData.description,
@@ -334,7 +346,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         category: formData.category,
         subcategory: formData.subcategory,
         image_url: formData.coverImage || '',
-        price_range: formData.price,
+        price_range: calculatedPrice || formData.price,
         organizer_id: user.id,
         status: 'draft' as const,
       };
@@ -362,8 +374,8 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   const handlePublish = async () => {
     // Basic validation
-    if (!formData.title || !formData.date || !formData.price) {
-      toast.error('Please fill in all required fields (Title, Date, Price)');
+    if (!formData.title || !formData.date) {
+      toast.error('Please fill in all required fields (Title, Date)');
       return;
     }
     
@@ -371,6 +383,18 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     if (!formData.category) {
        toast.error('Please select a category');
        return;
+    }
+
+    // Ensure price is calculated from tiers if empty
+    let finalPrice = formData.price;
+    if (!finalPrice && formData.ticketTiers.length > 0) {
+      finalPrice = calculatePriceRange(formData.ticketTiers, formData.currency);
+    }
+    
+    // Validate price exists (either manually entered or calculated from tiers)
+    if (!finalPrice) {
+      toast.error('Please set a price or add ticket tiers with prices');
+      return;
     }
 
     // Date validation
@@ -400,7 +424,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         category: formData.category || 'Entertainment', // Ensure category is never null
         subcategory: formData.subcategory,
         image_url: formData.coverImage || '',
-        price_range: formData.price,
+        price_range: finalPrice,
         organizer_id: user.id,
         status: 'published' as const,
         ticket_tiers: formData.ticketTiers,
@@ -1040,21 +1064,47 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
              Add Ticket Type
           </button>
 
-          {/* Fallback/Summary Price Input */}
-          <div className="relative">
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-5 h-5 text-gray-400 font-bold text-sm pointer-events-none">
-              {currencies.find(c => c.code === formData.currency)?.symbol || '$'}
-            </div>
-            <input
-              type="text"
-              value={formData.price}
-              onChange={(e) => handleInputChange('price', e.target.value)}
-              placeholder={formData.ticketTiers.length > 0 ? "Auto-calculated from tiers" : "e.g., $45 - $120 or Free"}
-              readOnly={formData.ticketTiers.length > 0}
-              className={`w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all ${formData.ticketTiers.length > 0 ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
-            />
-            {formData.ticketTiers.length > 0 && (
-                <p className="text-xs text-gray-500 mt-1 ml-1">Price range is auto-calculated from ticket tiers.</p>
+          {/* Price Range Display/Input */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Price Range
+              {formData.ticketTiers.length > 0 && (
+                <span className="ml-2 text-xs font-normal text-gray-500">(Auto-calculated)</span>
+              )}
+            </label>
+            
+            {formData.ticketTiers.length > 0 ? (
+              // Display mode when tiers exist
+              <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl">
+                <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <span className="text-purple-600 font-bold text-lg">
+                    {currencies.find(c => c.code === formData.currency)?.symbol || formData.currency}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-gray-900">{formData.price || 'Calculating...'}</span>
+                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                      Auto
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">Based on your ticket tiers above</p>
+                </div>
+              </div>
+            ) : (
+              // Input mode when no tiers
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-5 h-5 text-gray-400 font-bold text-sm pointer-events-none">
+                  {currencies.find(c => c.code === formData.currency)?.symbol || '$'}
+                </div>
+                <input
+                  type="text"
+                  value={formData.price}
+                  onChange={(e) => handleInputChange('price', e.target.value)}
+                  placeholder="e.g., $45 - $120 or Free"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white"
+                />
+              </div>
             )}
           </div>
         </div>

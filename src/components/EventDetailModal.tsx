@@ -78,16 +78,77 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     if (price === null || price === undefined) return 'Free';
     
     const priceStr = String(price).trim();
-    if (priceStr.toLowerCase() === 'free' || priceStr === '0' || priceStr === '') {
+    // Only return "Free" if explicitly "free", "0", or truly empty
+    // Don't treat whitespace-only or empty strings as "Free" if there might be ticket tiers
+    if (priceStr.toLowerCase() === 'free') {
       return 'Free';
     }
-    
+    // Check if it's actually zero (not just empty string)
     const numeric = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
-    if (!numeric || Number.isNaN(numeric)) {
+    if (numeric === 0 && priceStr !== '' && !priceStr.match(/[a-zA-Z]/)) {
       return 'Free';
     }
+    if (priceStr === '' && (!event.ticket_tiers || event.ticket_tiers.length === 0)) {
+      return 'Free';
+    }
+    // If empty but has ticket tiers, try to calculate from tiers
+    if (priceStr === '' && event.ticket_tiers && event.ticket_tiers.length > 0) {
+      // Calculate from tiers
+      const prices = event.ticket_tiers.map(t => {
+        const tierPrice = parseFloat(String(t.price).replace(/[^0-9.]/g, '')) || 0;
+        return tierPrice;
+      }).filter(p => p > 0);
+      
+      if (prices.length > 0) {
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        const eventCurrencyCode = getEventCurrency();
+        const currency = currencies.find(c => c.code === eventCurrencyCode);
+        const symbol = currency ? currency.symbol : 'TSh';
+        return min === max ? `${symbol} ${min.toLocaleString()}` : `${symbol} ${min.toLocaleString()} - ${symbol} ${max.toLocaleString()}`;
+      }
+    }
     
-    // Check if price already has currency
+    // Check if it's a price range (contains " - " or "-" but not at the start)
+    const hasDash = priceStr.includes(' - ') || priceStr.includes('-');
+    const dashIndex = priceStr.indexOf('-');
+    const isRange = hasDash && dashIndex > 0;
+    
+    if (isRange) {
+      // Handle price ranges like "TSh 2,500 - 70,000" or "$ 100 - $ 200"
+      // Split on " - " first, then try single "-" if needed
+      let parts = priceStr.split(' - ');
+      if (parts.length === 1) {
+        parts = priceStr.split(/\s*-\s*/);
+      }
+      if (parts.length === 2) {
+        // Format each part separately
+        const formattedParts = parts.map(part => {
+          const trimmed = part.trim();
+          // Check if part already has currency
+          const hasCurrency = currencies.some(c => 
+            trimmed.includes(c.symbol) || trimmed.includes(c.code)
+          );
+          
+          if (hasCurrency) {
+            return formatPrice(trimmed);
+          } else {
+            // Extract numeric value
+            const numeric = parseFloat(trimmed.replace(/[^0-9.]/g, '')) || 0;
+            if (!numeric || Number.isNaN(numeric)) return trimmed;
+            
+            // Use event's currency
+            const eventCurrencyCode = getEventCurrency();
+            const currency = currencies.find(c => c.code === eventCurrencyCode);
+            const symbol = currency ? currency.symbol : 'TSh';
+            return `${symbol} ${numeric.toLocaleString()}`;
+          }
+        });
+        return formattedParts.join(' - ');
+      }
+    }
+    
+    // Single price - check if price already has currency
     const hasCurrency = currencies.some(c => 
       priceStr.includes(c.symbol) || priceStr.includes(c.code)
     );
@@ -97,7 +158,12 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       return formatPrice(price);
     }
     
-    // Otherwise, use the event's currency
+    // Otherwise, use the numeric value already extracted above (line 87)
+    // If numeric is 0 or invalid, return Free
+    if (!numeric || Number.isNaN(numeric)) {
+      return 'Free';
+    }
+    
     const eventCurrencyCode = getEventCurrency();
     const currency = currencies.find(c => c.code === eventCurrencyCode);
     const symbol = currency ? currency.symbol : 'TSh';
