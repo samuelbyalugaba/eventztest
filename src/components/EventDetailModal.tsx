@@ -10,6 +10,7 @@ import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
 import { getPosts, toggleSaveEvent, incrementEventView, getProfile, hasActiveVirtualTicket, type Event as ApiEvent } from '../utils/supabase/api';
 import { validateYouTubeUrl, getYouTubeVideoId } from '../utils/sanitize';
+import { extractCurrencyFromPrice, currencies } from '../utils/currencies';
 
 export interface EventDetailModalProps {
   event: ApiEvent;
@@ -50,6 +51,19 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
   const [organizerDisplayName, setOrganizerDisplayName] = useState(event.organizer?.full_name || 'Event Organizer');
   const [eventPosts, setEventPosts] = useState<any[]>([]);
+
+  const formatTierPrice = (price: string | number | null | undefined) => {
+    if (price === null || price === undefined) return 'Free';
+    const priceStr = String(price);
+    const numeric = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+    const code = extractCurrencyFromPrice(priceStr);
+    const currency = currencies.find(c => c.code === code);
+    const symbol = currency ? currency.symbol : 'TSh';
+    if (!numeric || Number.isNaN(numeric)) {
+      return 'Free';
+    }
+    return `${symbol} ${numeric.toLocaleString()}`;
+  };
 
   useEffect(() => {
     // Increment view count
@@ -475,7 +489,9 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                         )}
                        </div>
                     </div>
-                    <span className="font-bold text-gray-900">{tier.price}</span>
+                    <span className="font-bold text-gray-900">
+                      {formatTierPrice(tier.price)}
+                    </span>
                   </div>
                 ))}
               </div>
