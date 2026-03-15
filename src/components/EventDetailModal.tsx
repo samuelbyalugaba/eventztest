@@ -10,7 +10,7 @@ import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
 import { getPosts, toggleSaveEvent, incrementEventView, getProfile, hasActiveVirtualTicket, type Event as ApiEvent } from '../utils/supabase/api';
 import { validateYouTubeUrl, getYouTubeVideoId } from '../utils/sanitize';
-import { extractCurrencyFromPrice, currencies } from '../utils/currencies';
+import { extractCurrencyFromPrice, currencies, formatPrice } from '../utils/currencies';
 
 export interface EventDetailModalProps {
   event: ApiEvent;
@@ -51,19 +51,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
   const [organizerDisplayName, setOrganizerDisplayName] = useState(event.organizer?.full_name || 'Event Organizer');
   const [eventPosts, setEventPosts] = useState<any[]>([]);
-
-  const formatTierPrice = (price: string | number | null | undefined) => {
-    if (price === null || price === undefined) return 'Free';
-    const priceStr = String(price);
-    const numeric = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
-    const code = extractCurrencyFromPrice(priceStr);
-    const currency = currencies.find(c => c.code === code);
-    const symbol = currency ? currency.symbol : 'TSh';
-    if (!numeric || Number.isNaN(numeric)) {
-      return 'Free';
-    }
-    return `${symbol} ${numeric.toLocaleString()}`;
-  };
 
   useEffect(() => {
     // Increment view count
@@ -220,7 +207,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
     const shared = await handleShare({
       title: event.title,
-      text: `${event.date} at ${event.location}\nPrice: ${event.price_range}`,
+      text: `${event.date} at ${event.location}\nPrice: ${formatPrice(event.price_range)}`,
       url: eventUrl,
     });
     
@@ -453,7 +440,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm mb-1">Ticket Price</p>
-                <p className="text-gray-900">{event.price_range}</p>
+                <p className="text-gray-900">{formatPrice(event.price_range)}</p>
               </div>
               <div className="flex items-center gap-2 text-purple-600">
                 <Users className="w-5 h-5" />
@@ -490,7 +477,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                        </div>
                     </div>
                     <span className="font-bold text-gray-900">
-                      {formatTierPrice(tier.price)}
+                      {formatPrice(tier.price)}
                     </span>
                   </div>
                 ))}
@@ -569,7 +556,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                       <p className="text-gray-500 text-xs">General admission access</p>
                     </div>
                   </div>
-                  <span className="text-purple-600 font-bold">{event.price_range}</span>
+                  <span className="text-purple-600 font-bold">{formatPrice(event.price_range)}</span>
                 </button>
                 
                 {/* VIP Ticket Option - If applicable */}
@@ -652,7 +639,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         title={event.title}
-        text={`${event.date} at ${event.location}\nPrice: ${event.price_range}`}
+        text={`${event.date} at ${event.location}\nPrice: ${formatPrice(event.price_range)}`}
         url={`${window.location.origin}/event/${event.id}`}
       />
     </div>

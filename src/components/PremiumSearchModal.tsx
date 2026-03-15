@@ -2,6 +2,7 @@ import { X, Search, TrendingUp, Clock, MapPin, Calendar, Users, Music, Building2
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
+import { formatPrice } from '../utils/currencies';
 
 interface PremiumSearchModalProps {
   onClose: () => void;
@@ -350,7 +351,7 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                             <span className="px-2 py-1 bg-purple-100 text-purple-600 rounded-md text-xs">
                               {event.category}
                             </span>
-                            <span className="text-purple-600 text-sm">{event.price}</span>
+                            <span className="text-purple-600 text-sm">{formatPrice(event.price)}</span>
                           </div>
                         </div>
                       </button>

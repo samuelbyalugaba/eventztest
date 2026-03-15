@@ -1,4 +1,5 @@
 import { X, Check, Users, Sparkles, Crown, ArrowRight, Smartphone, CreditCard } from 'lucide-react';
+import { formatPrice } from '../utils/currencies';
 
 interface TicketTier {
   name: string;
@@ -163,7 +164,7 @@ export function TierTicketModal({
                             <p className="text-gray-500 text-sm">{tier.available} tickets available</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-gray-900 text-2xl">{tier.price}</p>
+                            <p className="text-gray-900 text-2xl">{formatPrice(tier.price)}</p>
                             <p className="text-gray-500 text-xs">per person</p>
                           </div>
                         </div>
@@ -219,7 +220,7 @@ export function TierTicketModal({
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-gray-900 text-2xl">How Many Tickets?</h2>
-                  <p className="text-gray-600 text-sm mt-1">{selectedTier} Ticket - {selectedTierData.price}</p>
+                  <p className="text-gray-600 text-sm mt-1">{selectedTier} Ticket - {formatPrice(selectedTierData.price)}</p>
                 </div>
                 <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
                   <X className="w-6 h-6" />
@@ -253,10 +254,10 @@ export function TierTicketModal({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-600 text-sm">Total Amount</p>
-                    <p className="text-gray-900 text-3xl mt-1">TSh {totalPrice.toLocaleString()}</p>
+                    <p className="text-gray-900 text-3xl mt-1">{formatPrice(totalPrice.toString())}</p>
                   </div>
                   <div className="text-right text-sm text-gray-500">
-                    <p>{quantity} × {selectedTierData.price}</p>
+                    <p>{quantity} × {formatPrice(selectedTierData.price)}</p>
                   </div>
                 </div>
               </div>
@@ -481,7 +482,7 @@ export function TierTicketModal({
                 <div className="space-y-2 text-sm text-gray-600">
                   <p><strong className="text-gray-900">Ticket Type:</strong> {selectedTier}</p>
                   <p><strong className="text-gray-900">Quantity:</strong> {quantity} ticket{quantity > 1 ? 's' : ''}</p>
-                  <p><strong className="text-gray-900">Price per ticket:</strong> {selectedTierData.price}</p>
+                  <p><strong className="text-gray-900">Price per ticket:</strong> {formatPrice(selectedTierData.price)}</p>
                 </div>
               </div>
 

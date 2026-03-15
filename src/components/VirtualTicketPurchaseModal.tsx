@@ -3,7 +3,7 @@ import { X, Tv, CheckCircle2, User, Mail, Smartphone, ArrowRight, Wallet } from 
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
-import { extractCurrencyFromPrice } from '../utils/currencies';
+import { extractCurrencyFromPrice, formatPrice } from '../utils/currencies';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 import { ntzsApi } from '../utils/ntzs-api';
 
@@ -232,7 +232,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900 text-sm line-clamp-1">{event.title}</h3>
-                        <p className="text-purple-700 font-bold text-sm">{event.streaming?.virtualPrice}</p>
+                        <p className="text-purple-700 font-bold text-sm">{formatPrice(event.streaming?.virtualPrice || event.price_range)}</p>
                     </div>
                 </div>
 

@@ -1,6 +1,7 @@
 import { X, Ticket as TicketIcon, Calendar, MapPin, ChevronRight } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Ticket } from '../utils/supabase/api';
+import { formatPrice } from '../utils/currencies';
 
 interface TicketListModalProps {
   isOpen: boolean;
@@ -86,7 +87,7 @@ export function TicketListModal({ isOpen, eventName, tickets, onClose, onSelectT
               
               <div className="flex items-center gap-3">
                 <div className="text-right hidden sm:block">
-                  <span className="block text-sm font-medium text-gray-900">{ticket.price}</span>
+                  <span className="block text-sm font-medium text-gray-900">{formatPrice(ticket.price)}</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
               </div>

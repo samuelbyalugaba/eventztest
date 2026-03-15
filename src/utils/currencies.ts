@@ -187,3 +187,35 @@ export const extractCurrencyFromPrice = (priceString: string): string => {
   // Default to TZS if purely numeric or unknown
   return 'TZS';
 };
+
+/**
+ * Formats a price string or number with currency symbol and proper formatting
+ * @param price - Price as string, number, null, or undefined
+ * @returns Formatted price string (e.g., "TSh 70,000" or "Free")
+ */
+export const formatPrice = (price: string | number | null | undefined): string => {
+  if (price === null || price === undefined) return 'Free';
+  
+  const priceStr = String(price).trim();
+  
+  // Handle "Free" string
+  if (priceStr.toLowerCase() === 'free' || priceStr === '0' || priceStr === '') {
+    return 'Free';
+  }
+  
+  // Extract numeric value
+  const numeric = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+  
+  // If no numeric value found, return "Free"
+  if (!numeric || Number.isNaN(numeric)) {
+    return 'Free';
+  }
+  
+  // Extract currency code
+  const code = extractCurrencyFromPrice(priceStr);
+  const currency = currencies.find(c => c.code === code);
+  const symbol = currency ? currency.symbol : 'TSh';
+  
+  // Format with currency symbol and thousand separators
+  return `${symbol} ${numeric.toLocaleString()}`;
+};

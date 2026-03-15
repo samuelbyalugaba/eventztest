@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
 import { toPng } from 'html-to-image';
+import { formatPrice } from '../utils/currencies';
 
 interface TicketEvent {
   id: number;
@@ -232,7 +233,7 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
                   </div>
                   <div>
                     <p className="text-white/70 text-xs mb-1">Price</p>
-                    <p className="text-white text-2xl font-bold">{ticket.price}</p>
+                    <p className="text-white text-2xl font-bold">{formatPrice(ticket.price)}</p>
                   </div>
                 </div>
               </div>

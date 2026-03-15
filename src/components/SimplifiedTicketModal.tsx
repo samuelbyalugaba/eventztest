@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Sparkles, Crown, ArrowRight, Smartphone, CreditCard, Ticket, Minus, Plus, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { extractCurrencyFromPrice, currencies } from '../utils/currencies';
+import { extractCurrencyFromPrice, currencies, formatPrice } from '../utils/currencies';
 import { createTransaction, initiateSnippePayment, waitForTransactionCompletion, createTicket } from '../utils/supabase/api';
 import { ntzsApi } from '../utils/ntzs-api';
 
@@ -321,7 +321,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                             </div>
                             <div>
                               <h3 className="font-bold text-gray-900">{tier.name}</h3>
-                              <p className="text-sm text-gray-500">{currencySymbol} {tier.priceNumeric.toLocaleString()}</p>
+                              <p className="text-sm text-gray-500">{formatPrice(tier.price)}</p>
                             </div>
                           </div>
                           
@@ -368,7 +368,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                      <div key={name} className="flex justify-between items-center text-sm">
                        <span className="text-gray-700">{qty}x {name} Ticket</span>
                        <span className="font-medium text-gray-900">
-                         {currencySymbol} {tier ? (tier.priceNumeric * qty).toLocaleString() : 0}
+                         {tier ? formatPrice(`${tier.priceNumeric * qty}`) : formatPrice('0')}
                        </span>
                      </div>
                    );
@@ -376,7 +376,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                 <div className="border-t border-purple-200 my-2 pt-2 flex justify-between items-center">
                   <span className="font-bold text-purple-900">Total</span>
                   <span className="text-lg font-bold text-purple-900">
-                    {currencySymbol} {totalPrice.toLocaleString()}
+                    {formatPrice(totalPrice.toString())}
                   </span>
                 </div>
               </div>
@@ -488,7 +488,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                   <span>Checkout</span>
                   {totalTickets > 0 && (
                     <span className="bg-white/20 px-2 py-0.5 rounded text-sm">
-                      {currencySymbol} {totalPrice.toLocaleString()}
+                      {formatPrice(totalPrice.toString())}
                     </span>
                   )}
                   <ArrowRight className="w-4 h-4" />
