@@ -17,6 +17,7 @@ import { ChatList } from './ChatList';
 import { ChatDetail } from './ChatDetail';
 import { UserProfileModal } from './UserProfileModal';
 import { ShareModal } from './ShareModal';
+import { FeedHeader } from './FeedHeader';
 
 type FilterTab = 'all' | 'organizers' | 'trending' | 'following';
 
@@ -86,6 +87,7 @@ export function Feed({
   const [exploreSearch, setExploreSearch] = useState('');
   const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
   const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
+  const feedContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (handledNavKeyRef.current === location.key) return;
@@ -133,6 +135,7 @@ export function Feed({
     const timer = setTimeout(performSearch, 300);
     return () => clearTimeout(timer);
   }, [exploreSearch]);
+
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -730,116 +733,28 @@ export function Feed({
   return (
     <>
       {/* Main Feed View */}
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
-        {/* Unique Header Design */}
-        <div className={`bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 transition-all ${showMessages || selectedPost ? 'z-0' : 'z-50'}`}>
-          <div className="px-4 pt-5 pb-4">
-            {/* Brand Section */}
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <h1 className="text-gray-900 text-xl font-bold"><span className='text-purple-600'>Community</span> Explore</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  className={`p-2.5 rounded-xl transition-colors relative ${showNotifications ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
-                  onClick={() => {
-                    if (!currentUser) {
-                      toast.error('Sign in to view notifications');
-                      return;
-                    }
-                    setShowNotifications(!showNotifications);
-                    setShowMessages(false);
-                  }}
-                >
-                  <Bell className={`w-5 h-5 ${showNotifications ? 'text-purple-600' : 'text-gray-700'}`} />
-                  {/* Notification Badge */}
-                  {notifications.filter(n => !n.read).length > 0 && (
-                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                  )}
-                </button>
-                <button
-                  className={`p-2.5 rounded-xl transition-colors relative ${showMessages ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
-                  onClick={() => {
-                    if (!currentUser) {
-                      toast.error('Sign in to view messages');
-                      return;
-                    }
-                    setShowMessages(!showMessages);
-                    setShowNotifications(false);
-                  }}
-                >
-                  <MessageSquare className="w-5 h-5 text-gray-700" />
-                  {unreadMessagesCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-[#8A2BE2] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                      {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
-                    </span>
-                  )}
-                </button>
-
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  value={exploreSearch}
-                  onChange={(e) => setExploreSearch(e.target.value)}
-                  placeholder="Search"
-                  className="w-full pl-11 pr-4 py-3 bg-gray-100/60 hover:bg-gray-100 focus:bg-white border border-transparent rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none transition-all text-sm font-medium"
-                />
-              </div>
-            </div>
-
-            {/* Unique Filter Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              <button
-                onClick={() => setActiveFilter('all')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
-                  activeFilter === 'all'
-                    ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-200'
-                    : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
-                }`}
-              >
-                <LayoutGrid className="w-4 h-4" />
-                All
-              </button>
-              <button
-                onClick={() => setActiveFilter('following')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
-                  activeFilter === 'following'
-                    ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-200'
-                    : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
-                }`}
-              >
-                <UsersIcon className="w-4 h-4" />
-                Following
-              </button>
-              <button
-                onClick={() => setActiveFilter('organizers')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
-                  activeFilter === 'organizers'
-                    ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-200'
-                    : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
-                }`}
-              >
-                <Star className="w-4 h-4" />
-                Creator
-              </button>
-              <button
-                onClick={() => setActiveFilter('trending')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
-                  activeFilter === 'trending'
-                    ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-200'
-                    : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
-                }`}
-              >
-                <TrendingUp className="w-4 h-4" />
-                Trending
-              </button>
-            </div>
-          </div>
-        </div>
+      <div ref={feedContainerRef} className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
+        {/* Feed Header Component */}
+        <FeedHeader
+          currentUser={currentUser}
+          showNotifications={showNotifications}
+          showMessages={showMessages}
+          unreadMessagesCount={unreadMessagesCount}
+          notifications={notifications}
+          exploreSearch={exploreSearch}
+          setExploreSearch={setExploreSearch}
+          activeFilter={activeFilter}
+          setActiveFilter={setActiveFilter}
+          onToggleNotifications={() => {
+            setShowNotifications(!showNotifications);
+            setShowMessages(false);
+          }}
+          onToggleMessages={() => {
+            setShowMessages(!showMessages);
+            setShowNotifications(false);
+          }}
+          showMessagesOrPost={showMessages || !!selectedPost}
+        />
 
         {/* Unique Card-Based Posts */}
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">

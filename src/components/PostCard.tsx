@@ -322,27 +322,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
         </div>
       </div>
 
-      {/* 2. TEXT CONTENT */}
-      {post.content.text && (
-        <div className="mb-3 px-1">
-          <p 
-            className={`text-gray-800 text-[15px] leading-relaxed transition-all cursor-pointer ${isExpanded ? '' : 'line-clamp-3'}`}
-            onClick={(e) => { e.stopPropagation(); onViewPost?.(); }}
-          >
-            {post.content.text}
-          </p>
-          {(post.content.text.length > 100 || post.content.text.split('\n').length > 3) && (
-            <button 
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-500 text-sm mt-1 hover:text-gray-700 font-medium"
-            >
-              {isExpanded ? 'Show less' : 'Show more'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* 3. MEDIA CONTENT */}
+      {/* 2. MEDIA CONTENT */}
       <div 
         className="relative overflow-hidden group rounded-2xl bg-gray-50 cursor-pointer"
         onClick={(e) => { e.stopPropagation(); onViewPost?.(); }}
@@ -546,7 +526,7 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
         )}
       </div>
 
-      {/* 4. FOOTER ACTION BAR */}
+      {/* 3. FOOTER ACTION BAR */}
       <div className="mt-4 bg-purple-50 rounded-2xl p-2 flex items-center justify-between gap-2">
         <button 
           onClick={handleLike}
@@ -579,6 +559,26 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
         </button>
 
       </div>
+
+      {/* 4. TEXT CONTENT (Caption) - moved below actions */}
+      {post.content.text && (
+        <div className="mt-3 px-1">
+          <p 
+            className={`text-gray-800 text-[15px] leading-relaxed transition-all cursor-pointer ${isExpanded ? '' : 'line-clamp-3'}`}
+            onClick={(e) => { e.stopPropagation(); onViewPost?.(); }}
+          >
+            {post.content.text}
+          </p>
+          {(post.content.text.length > 100 || post.content.text.split('\n').length > 3) && (
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-gray-500 text-sm mt-1 hover:text-gray-700 font-medium"
+            >
+              {isExpanded ? 'Show less' : 'Show more'}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 });
