@@ -2,6 +2,7 @@ import { X, User, Shield, HelpCircle, ChevronRight, Mail, Phone, MapPin, Camera,
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique, uploadImage } from '../utils/supabase/api';
+import { searchNominatim } from '../utils/nominatim';
 import { Sheet, SheetContent, SheetClose, SheetTitle, SheetDescription } from "./ui/sheet";
 
 type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
@@ -79,9 +80,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
     }
     setLoadingLocations(true);
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
-      if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
+      const data = await searchNominatim(query, { limit: 10 });
       setLocationSuggestions(data);
       setShowLocationDropdown(true);
     } catch (error) {

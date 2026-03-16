@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, Star, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase, getProfile, uploadImage, checkUsernameUnique, becomeOrganizer } from '../utils/supabase/api';
+import { searchNominatim } from '../utils/nominatim';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;
@@ -68,9 +69,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
     }
     setLoadingLocations(true);
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
-      if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
+      const data = await searchNominatim(query, { limit: 10 });
       setLocationSuggestions(data);
       setShowLocationDropdown(true);
     } catch (error) {

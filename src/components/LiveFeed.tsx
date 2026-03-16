@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { getEventById, getLiveStreams, getUpcomingStreams, getProfile, hasActiveVirtualTicket, subscribeToEventStreaming, updateProfile, type Event as ApiEvent } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 import { Skeleton } from './ui/skeleton';
+import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
 
 function LiveFeedSkeleton() {
   return (
@@ -90,6 +91,13 @@ interface LiveStream {
   countryFlag: string;
   playback_url?: string;
 }
+
+type LocationOption = {
+  id: string;
+  name: string;
+  flag?: string;
+  icon?: any;
+};
 
 const categories = [
   { id: 'all', name: 'All' },
@@ -283,6 +291,8 @@ export function LiveFeed() {
   const [showFilters, setShowFilters] = useState(false);
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
+  const [remoteLocationOptions, setRemoteLocationOptions] = useState<LocationOption[]>([]);
+  const [isSearchingLocations, setIsSearchingLocations] = useState(false);
   const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
   const [recentLocations, setRecentLocations] = useState<string[]>(['Dar es Salaam', 'Dubai', 'New York']);
@@ -390,6 +400,49 @@ export function LiveFeed() {
   }, []);
 
   useEffect(() => {
+    const q = locationSearch.trim();
+    if (q.length < 2) {
+      setRemoteLocationOptions([]);
+      setIsSearchingLocations(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsSearchingLocations(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchNominatim(q, { limit: 10, signal: controller.signal });
+        const seen = new Set<string>();
+        const next: LocationOption[] = [];
+
+        for (const r of results) {
+          const city = extractCityName(r);
+          if (!city) continue;
+          const key = normalizePlaceName(city);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          next.push({ id: city, name: city, icon: MapPin });
+          if (next.length >= 12) break;
+        }
+
+        setRemoteLocationOptions(next);
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') {
+          setRemoteLocationOptions([]);
+        }
+      } finally {
+        setIsSearchingLocations(false);
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [locationSearch]);
+
+  useEffect(() => {
     const loadPreferences = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -470,7 +523,7 @@ export function LiveFeed() {
   const filteredLiveStreams = liveStreams.filter(
     (stream: LiveStream) => 
       (selectedCategory === 'all' || stream.category === selectedCategory) &&
-      (selectedLocation === 'all' || stream.location === selectedLocation)
+      (selectedLocation === 'all' || normalizePlaceName(stream.location) === normalizePlaceName(selectedLocation))
   );
 
   const liveEvents = filteredLiveStreams.filter((stream) =>
@@ -490,16 +543,33 @@ export function LiveFeed() {
   const filteredUpcomingStreams = upcomingStreams.filter(
     (stream: LiveStream) => 
       (selectedCategory === 'all' || stream.category === selectedCategory) &&
-      (selectedLocation === 'all' || stream.location === selectedLocation)
+      (selectedLocation === 'all' || normalizePlaceName(stream.location) === normalizePlaceName(selectedLocation))
   );
 
-  const filteredLocations = locations.filter(location =>
-    location.name.toLowerCase().includes(locationSearch.toLowerCase())
-  );
+  const recentLocationOptions: LocationOption[] = recentLocations
+    .filter((id) => id !== 'all')
+    .map((id) => (locations.find((l) => l.id === id) as any) || ({ id, name: id, icon: MapPin } as LocationOption));
 
-  const displayedLocations = locationSearch.trim() === '' 
-    ? locations.filter(c => c.id === 'all' || recentLocations.includes(c.id))
-    : filteredLocations;
+  const localMatches: LocationOption[] = locations
+    .filter((location: any) => location.id !== 'all')
+    .filter((location: any) => location.name.toLowerCase().includes(locationSearch.toLowerCase())) as any;
+
+  const mergeUniqueById = (items: LocationOption[]) => {
+    const seen = new Set<string>();
+    const out: LocationOption[] = [];
+    for (const item of items) {
+      const key = normalizePlaceName(item.id);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(item);
+    }
+    return out;
+  };
+
+  const displayedLocations: LocationOption[] =
+    locationSearch.trim() === ''
+      ? ([locations[0] as any, ...recentLocationOptions] as any)
+      : ([locations[0] as any, ...mergeUniqueById([...localMatches, ...remoteLocationOptions])] as any);
 
   // Reminder toggling logic can be reintroduced when reminder UI is active
 
@@ -563,7 +633,11 @@ export function LiveFeed() {
                 className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
               >
                 {(() => {
-                  const location = locations.find(c => c.id === selectedLocation);
+                  const location =
+                    locations.find((c) => c.id === selectedLocation) ||
+                    (selectedLocation === 'all'
+                      ? locations[0]
+                      : ({ id: selectedLocation, name: selectedLocation, icon: MapPin } as any));
                   if (location?.icon) {
                     const Icon = location.icon;
                     return <Icon className="w-3.5 h-3.5 text-gray-700" />;
@@ -571,7 +645,8 @@ export function LiveFeed() {
                   return <span className="text-sm">{location?.flag || '🇹🇿'}</span>;
                 })()}
                 <span className="text-xs font-medium text-gray-700 hidden sm:block">
-                  {locations.find(c => c.id === selectedLocation)?.name || 'Dar es Salaam'}
+                  {(locations.find((c) => c.id === selectedLocation) as any)?.name ||
+                    (selectedLocation === 'all' ? 'All Cities' : selectedLocation)}
                 </span>
               </button>
 

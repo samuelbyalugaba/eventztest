@@ -15,16 +15,24 @@ import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { SimplifiedTicketModal } from './SimplifiedTicketModal';
 import { supabase } from '../utils/supabase/client';
 import { deleteEvent, getEvents, getSavedEvents, type Event as ApiEvent } from '../utils/supabase/api';
+import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
 
 import { eventsStore } from '../store/eventStore';
 
 const locations = [
   { id: 'all', name: 'All Locations', icon: <Globe className="w-5 h-5" /> },
-  { id: 'atlanta', name: 'Atlanta, USA', flag: '🇺🇸' },
-  { id: 'dar', name: 'Dar es Salaam, Tanzania', flag: '🇹🇿' },
-  { id: 'zanzibar', name: 'Zanzibar, Tanzania', flag: '🇹🇿' },
-  { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
+  { id: 'Atlanta', name: 'Atlanta, USA', flag: '🇺🇸' },
+  { id: 'Dar es Salaam', name: 'Dar es Salaam, Tanzania', flag: '🇹🇿' },
+  { id: 'Zanzibar', name: 'Zanzibar, Tanzania', flag: '🇹🇿' },
+  { id: 'New York', name: 'New York, USA', flag: '🇺🇸' },
 ];
+
+type LocationOption = {
+  id: string;
+  name: string;
+  flag?: string;
+  icon?: React.ReactNode;
+};
 
 interface EventDetailsProps {
   conversations: Conversation[];
@@ -111,6 +119,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   const [showFilters, setShowFilters] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
+  const [remoteLocationOptions, setRemoteLocationOptions] = useState<LocationOption[]>([]);
+  const [isSearchingLocations, setIsSearchingLocations] = useState(false);
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [eventToPurchase, setEventToPurchase] = useState<ApiEvent | null>(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -156,7 +166,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   const filteredEvents = React.useMemo(() => {
     return events.filter(event => {
-      const locationMatch = selectedLocation === 'all' || event.city === selectedLocation;
+      const eventCity = String((event as any)?.city || '').trim();
+      const locationMatch =
+        selectedLocation === 'all' ||
+        (eventCity !== '' && normalizePlaceName(eventCity) === normalizePlaceName(selectedLocation));
       const categoryMatch =
         selectedCategory === 'all' ||
         String((event as any).category || '').toLowerCase() === selectedCategory.toLowerCase();
@@ -201,9 +214,70 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   
 
-  const filteredLocations = locations.filter(location => 
-    location.name.toLowerCase().includes(locationSearch.toLowerCase())
-  );
+  useEffect(() => {
+    const q = locationSearch.trim();
+    if (q.length < 2) {
+      setRemoteLocationOptions([]);
+      setIsSearchingLocations(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsSearchingLocations(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchNominatim(q, { limit: 10, signal: controller.signal });
+        const seen = new Set<string>();
+        const next: LocationOption[] = [];
+
+        for (const r of results) {
+          const city = extractCityName(r);
+          if (!city) continue;
+          const key = normalizePlaceName(city);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          next.push({ id: city, name: city, icon: <MapPin className="w-5 h-5" /> });
+          if (next.length >= 12) break;
+        }
+
+        setRemoteLocationOptions(next);
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') {
+          setRemoteLocationOptions([]);
+        }
+      } finally {
+        setIsSearchingLocations(false);
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [locationSearch]);
+
+  const mergeUniqueById = (items: LocationOption[]) => {
+    const seen = new Set<string>();
+    const out: LocationOption[] = [];
+    for (const item of items) {
+      const key = normalizePlaceName(item.id);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(item);
+    }
+    return out;
+  };
+
+  const localMatches: LocationOption[] = (locations as any).filter((location: any) => {
+    if (location.id === 'all') return false;
+    return String(location.name || '').toLowerCase().includes(locationSearch.toLowerCase());
+  });
+
+  const displayedLocations: LocationOption[] =
+    locationSearch.trim() === ''
+      ? (locations as any)
+      : mergeUniqueById([locations[0] as any, ...localMatches, ...remoteLocationOptions]);
 
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
 
@@ -481,8 +555,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           <div className="flex gap-2 mb-4 flex-wrap">
             {selectedLocation !== 'all' && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                <span>{locations.find(l => l.id === selectedLocation)?.flag}</span>
-                <span>{locations.find(l => l.id === selectedLocation)?.name.split(',')[0]}</span>
+                <span>{(locations.find(l => l.id === selectedLocation) as any)?.flag || '📍'}</span>
+                <span>{String((locations.find(l => l.id === selectedLocation) as any)?.name || selectedLocation).split(',')[0]}</span>
                 <button 
                   onClick={() => setSelectedLocation('all')}
                   className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
@@ -632,7 +706,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-2">
-                  {filteredLocations.map((location) => (
+                  {displayedLocations.map((location) => (
                     <button
                       key={location.id}
                       onClick={() => setSelectedLocation(location.id)}
@@ -648,6 +722,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     </button>
                   ))}
                 </div>
+                {isSearchingLocations && (
+                  <div className="mt-2 text-xs text-gray-500">Searching…</div>
+                )}
               </div>
 
               <div className="mb-6">

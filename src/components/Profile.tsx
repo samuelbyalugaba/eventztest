@@ -622,11 +622,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           !isLoading && (
             <div 
                 onClick={onStartOrganizerSetup}
-                className="mb-8 bg-gray-50 rounded-2xl p-3 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
+                className="group mb-8 rounded-2xl p-3 flex items-center justify-between cursor-pointer border border-gray-100 bg-gradient-to-br from-white to-purple-50/40 hover:to-purple-50/70 hover:border-purple-200/60 hover:shadow-md transition-all active:scale-[0.99]"
             >
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#8A2BE2]">
-                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-[#A855F7] via-[#8A2BE2] to-[#5B21B6] shadow-[0_10px_25px_rgba(138,43,226,0.35)] ring-1 ring-white/40 relative overflow-hidden transition-all duration-300 group-hover:scale-[1.08] group-hover:shadow-[0_16px_45px_rgba(138,43,226,0.42)]">
+                        <span className="absolute -top-3 -left-3 w-8 h-8 bg-white/30 blur-xl rounded-full transition-transform duration-500 group-hover:translate-x-2 group-hover:translate-y-2" />
+                        <Star className="w-5 h-5 text-yellow-400 fill-yellow-400 drop-shadow-[0_2px_10px_rgba(250,204,21,0.35)] transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105" />
                     </div>
                     <div>
                         <h3 className="text-gray-900 font-bold text-sm">
@@ -637,7 +638,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                         </p>
                     </div>
                 </div>
-                <div className="text-gray-400">
+                <div className="text-gray-400 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-gray-500">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>

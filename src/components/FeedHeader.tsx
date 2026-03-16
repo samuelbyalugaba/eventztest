@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Bell, MessageSquare, LayoutGrid, Users as UsersIcon, Star, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,7 +31,6 @@ export function FeedHeader({
   onToggleMessages,
   showMessagesOrPost = false
 }: FeedHeaderProps) {
-  const [isAtTop, setIsAtTop] = useState(true);
   const [showExtendedHeader, setShowExtendedHeader] = useState(true);
 
   useEffect(() => {
@@ -42,7 +41,6 @@ export function FeedHeader({
       ([entry]) => {
         // When sentinel is intersecting, we are at the top
         const atTop = entry.isIntersecting;
-        setIsAtTop(atTop);
         setShowExtendedHeader(atTop);
       },
       { 
@@ -57,7 +55,7 @@ export function FeedHeader({
   }, []);
 
   return (
-    <div className={`bg-white/90 backdrop-blur-md border-b border-gray-100 transition-all duration-300 sticky top-0 ${showMessagesOrPost ? 'z-0' : 'z-50'}`}>
+    <div className={`bg-white border-b border-gray-100 transition-all duration-300 sticky top-0 ${showMessagesOrPost ? 'z-0' : 'z-50'}`}>
       <div className="px-4 pt-5 pb-4">
         {/* Brand Section - Always visible */}
         <div className="flex items-center justify-between mb-2">
@@ -125,7 +123,7 @@ export function FeedHeader({
               onClick={() => setActiveFilter('all')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
                 activeFilter === 'all'
-                  ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-200'
+                  ? 'bg-[#8A2BE2] text-white'
                   : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
               }`}
             >
@@ -136,7 +134,7 @@ export function FeedHeader({
               onClick={() => setActiveFilter('following')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
                 activeFilter === 'following'
-                  ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-200'
+                  ? 'bg-[#8A2BE2] text-white'
                   : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
               }`}
             >
@@ -147,7 +145,7 @@ export function FeedHeader({
               onClick={() => setActiveFilter('organizers')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
                 activeFilter === 'organizers'
-                  ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-200'
+                  ? 'bg-[#8A2BE2] text-white'
                   : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
               }`}
             >
@@ -158,7 +156,7 @@ export function FeedHeader({
               onClick={() => setActiveFilter('trending')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
                 activeFilter === 'trending'
-                  ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-200'
+                  ? 'bg-[#8A2BE2] text-white'
                   : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
               }`}
             >

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
 import { formatPrice } from '../utils/currencies';
+import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface PremiumSearchModalProps {
   onClose: () => void;
@@ -338,10 +339,11 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                         }}
                         className="w-full flex items-start gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all text-left"
                       >
-                        <img 
-                          src={event.image} 
+                        <ImageWithFallback
+                          src={(event as any).image_url ?? (event as any).image}
                           alt={event.title}
                           className="w-20 h-20 rounded-lg object-cover"
+                          fallbackSrc="/icons/icon-192x192.png"
                         />
                         <div className="flex-1">
                           <h4 className="text-gray-900 mb-1">{event.title}</h4>
