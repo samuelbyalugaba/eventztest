@@ -46,14 +46,21 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       // We use the Supabase User ID as the external ID
       let nUser: NtzsUser;
       try {
-        nUser = await ntzsApi.getUser(user.id);
+        // Pass email to getUser so it can be used for create if needed
+        nUser = await ntzsApi.getUser(user.id, user.email || '');
         // If not found (shouldn't happen if we use create as get), create it
         if (!nUser || !nUser.id) {
            nUser = await ntzsApi.createUser(user.id, user.email || '');
         }
       } catch (err) {
         console.error('Failed to get nTZS user, creating...', err);
-        nUser = await ntzsApi.createUser(user.id, user.email || '');
+        try {
+          nUser = await ntzsApi.createUser(user.id, user.email || '');
+        } catch (createErr) {
+          console.error('Failed to create nTZS user:', createErr);
+          // If user creation fails, we can't proceed with balance check
+          throw createErr;
+        }
       }
 
       // 2. Get Real Balance from nTZS
@@ -116,7 +123,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       if (!user) return;
 
       // 1. Get or create nTZS user to get internal ID
-      const nUser = await ntzsApi.getUser(user.id);
+      const nUser = await ntzsApi.getUser(user.id, user.email || '');
       if (!nUser || !nUser.id) {
         throw new Error('Failed to get nTZS user account');
       }
@@ -164,7 +171,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       if (!user) return;
 
       // 1. Get or create nTZS user to get internal ID
-      const nUser = await ntzsApi.getUser(user.id);
+      const nUser = await ntzsApi.getUser(user.id, user.email || '');
       if (!nUser || !nUser.id) {
         throw new Error('Failed to get nTZS user account');
       }

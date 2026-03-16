@@ -46,7 +46,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         // First get or create nTZS user to get the internal ID
         try {
           // Use nTZS API for real balance
-          const nUser = await ntzsApi.getUser(user.id);
+          const nUser = await ntzsApi.getUser(user.id, user.email || '');
           if (nUser && nUser.id) {
             const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
             setWalletBalance(balanceTzs || 0);

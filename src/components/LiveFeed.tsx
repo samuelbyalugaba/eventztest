@@ -473,12 +473,18 @@ export function LiveFeed() {
       (selectedLocation === 'all' || stream.location === selectedLocation)
   );
 
-  const liveEvents = filteredLiveStreams.filter(stream => 
-    ['entertainment', 'sports & fitness', 'business & tech', 'religion'].includes(stream.category.toLowerCase()) || stream.isPaid
+  const liveEvents = filteredLiveStreams.filter((stream) =>
+    ['entertainment', 'sports & fitness', 'business & tech', 'religion'].includes(
+      String(stream.category || '').toLowerCase()
+    ) || stream.isPaid
   );
 
-  const creatorsLive = filteredLiveStreams.filter(stream => 
-    !(['entertainment', 'sports & fitness', 'business & tech', 'religion'].includes(stream.category.toLowerCase()) || stream.isPaid)
+  const creatorsLive = filteredLiveStreams.filter((stream) =>
+    !(
+      ['entertainment', 'sports & fitness', 'business & tech', 'religion'].includes(
+        String(stream.category || '').toLowerCase()
+      ) || stream.isPaid
+    )
   );
 
   const filteredUpcomingStreams = upcomingStreams.filter(

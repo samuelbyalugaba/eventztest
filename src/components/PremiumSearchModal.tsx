@@ -1,4 +1,4 @@
-import { X, Search, TrendingUp, Clock, MapPin, Calendar, Users, Music, Building2, User } from 'lucide-react';
+import { X, Search, TrendingUp, Clock, MapPin, Calendar } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
@@ -15,7 +15,6 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState<'all' | 'events' | 'venues' | 'people'>('all');
   const [peopleResults, setPeopleResults] = useState<Profile[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [trendingData, setTrendingData] = useState<{events: any[], people: any[]}>({ events: [], people: [] });
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
@@ -72,12 +71,21 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
   }, [searchQuery]);
 
   // Filter events based on search query
-  const filteredEvents = events.filter(event => 
-    event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    event.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    event.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    event.subcategory.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 5);
+  const normalizedQuery = searchQuery.toLowerCase();
+  const filteredEvents = events
+    .filter((event) => {
+      const title = String(event.title || '').toLowerCase();
+      const category = String((event as any).category || '').toLowerCase();
+      const location = String((event as any).location || '').toLowerCase();
+      const subcategory = String((event as any).subcategory || '').toLowerCase();
+      return (
+        title.includes(normalizedQuery) ||
+        category.includes(normalizedQuery) ||
+        location.includes(normalizedQuery) ||
+        subcategory.includes(normalizedQuery)
+      );
+    })
+    .slice(0, 5);
 
   const filteredPeople = peopleResults;
 

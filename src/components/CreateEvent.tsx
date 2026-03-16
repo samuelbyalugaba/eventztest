@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EventCard } from './EventCard';
-import { Upload, Calendar, MapPin, DollarSign, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3, Plus, Trash2, X, Tv } from 'lucide-react';
+import { Upload, Calendar, MapPin, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Sparkles, Share2, TrendingUp, Users, BarChart3, Plus, Trash2, X, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShareModal } from './ShareModal';
 import { handleShare as shareUtil } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
-import { currencies } from '../utils/currencies';
+import { currencies, extractCurrencyFromPrice } from '../utils/currencies';
 import { createEvent, updateEvent, uploadImage, getProfile, getEventAnalytics } from '../utils/supabase/api';
 
 interface TicketTier {
@@ -83,6 +83,55 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     }
   };
 
+  const initialCurrency = (() => {
+    const direct = (event as any)?.currency;
+    if (typeof direct === 'string' && direct.trim()) return direct.trim();
+
+    const tierPrice = (event as any)?.ticket_tiers?.[0]?.price;
+    if (typeof tierPrice === 'string' && tierPrice.trim()) return extractCurrencyFromPrice(tierPrice);
+
+    const priceRange = (event as any)?.price_range || (event as any)?.price;
+    if (typeof priceRange === 'string' && priceRange.trim()) return extractCurrencyFromPrice(priceRange);
+
+    return 'TZS';
+  })();
+
+  const normalizeManualPrice = (value: string, currencyCode: string) => {
+    const input = String(value ?? '').trim();
+    if (!input) return '';
+
+    if (input.toLowerCase() === 'free') return 'Free';
+
+    const currency = currencies.find(c => c.code === currencyCode);
+    const symbol = currency?.symbol || currencyCode;
+
+    const includesCurrency = currencies.some(c => {
+      if (!c.symbol) return false;
+      return input.includes(c.symbol) || new RegExp(`\\b${c.code}\\b`, 'i').test(input);
+    });
+
+    if (includesCurrency) return input;
+
+    const parts = input.split(/\s*-\s*/).filter(Boolean);
+    if (parts.length === 2) {
+      const left = parseFloat(parts[0].replace(/[^0-9.]/g, ''));
+      const right = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
+      if (!isNaN(left) && !isNaN(right) && left > 0 && right > 0) {
+        const min = Math.min(left, right);
+        const max = Math.max(left, right);
+        return `${symbol} ${min.toLocaleString()} - ${symbol} ${max.toLocaleString()}`;
+      }
+      return input;
+    }
+
+    const numeric = parseFloat(input.replace(/[^0-9.]/g, ''));
+    if (!isNaN(numeric) && numeric > 0) {
+      return `${symbol} ${numeric.toLocaleString()}`;
+    }
+
+    return input;
+  };
+
   // Initialize form state - calculatePriceRange is available here
   const [formData, setFormData] = useState<EventForm>({
     title: event?.title || '',
@@ -101,7 +150,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           available: t.available || 100,
           features: t.features || []
         }));
-        const currency = event?.currency || 'TZS';
+        const currency = initialCurrency;
         // Calculate from tiers
         const calculated = calculatePriceRange(tiers, currency);
         return calculated || '';
@@ -111,7 +160,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     description: event?.description || '',
     coverImage: event?.image_url || event?.coverImage || null,
     ticketTiers: event?.ticket_tiers || [],
-    currency: event?.currency || 'TZS',
+    currency: initialCurrency,
     streaming: {
       available: event?.streaming?.available || false,
       virtualPrice: event?.streaming?.virtualPrice || '',
@@ -280,11 +329,10 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Ensure price is calculated from tiers if empty
-        let calculatedPrice = formData.price;
-        if (!calculatedPrice && formData.ticketTiers.length > 0) {
-          calculatedPrice = calculatePriceRange(formData.ticketTiers, formData.currency);
-        }
+        const priceRange =
+          formData.ticketTiers.length > 0
+            ? calculatePriceRange(formData.ticketTiers, formData.currency)
+            : normalizeManualPrice(formData.price, formData.currency);
 
         const eventData = {
           title: formData.title,
@@ -295,7 +343,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           category: formData.category || 'Entertainment', // Ensure category is never null
           subcategory: formData.subcategory,
           image_url: formData.coverImage || '',
-          price_range: calculatedPrice || formData.price,
+          price_range: priceRange,
           organizer_id: user.id,
           status: 'draft' as const,
           ticket_tiers: formData.ticketTiers,
@@ -474,7 +522,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
        return;
     }
 
-    // Calculate final price: use calculated price if tiers exist, otherwise use manual price
+    // Calculate final price: use calculated price if tiers exist, otherwise normalize manual price
     let finalPrice = '';
     if (formData.ticketTiers.length > 0) {
       // Always calculate from tiers when tiers exist
@@ -485,7 +533,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       }
     } else {
       // No tiers - use manual price entry
-      finalPrice = formData.price.trim();
+      finalPrice = normalizeManualPrice(formData.price, formData.currency);
       if (!finalPrice) {
         toast.error('Please set a price or add ticket tiers with prices');
         return;
@@ -569,6 +617,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   // Preview Screen
   if (showPreview) {
+    const previewPriceRange =
+      formData.ticketTiers.length > 0
+        ? calculatePriceRange(formData.ticketTiers, formData.currency)
+        : normalizeManualPrice(formData.price, formData.currency);
+
     const previewEvent: any = {
       id: savedEventId || 0,
       title: formData.title || 'Untitled Event',
@@ -578,7 +631,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       time: formData.time,
       location: formData.location || 'TBD',
       image_url: formData.coverImage || '',
-      price_range: formData.price,
+      price_range: previewPriceRange,
       description: formData.description,
       organizer: userProfile ? {
         full_name: userProfile.full_name || userProfile.username || 'You',

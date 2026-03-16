@@ -42,7 +42,7 @@ export function ExploreMap() {
           let filteredEvents = events;
           if (selectedCategory !== 'All') {
             filteredEvents = events.filter((e: any) => 
-              e.category.toLowerCase() === selectedCategory.toLowerCase()
+              String(e.category || '').toLowerCase() === selectedCategory.toLowerCase()
             );
           }
 
@@ -50,8 +50,8 @@ export function ExploreMap() {
           setTrendingEvents(filteredEvents.slice(0, 4).map((e: any) => ({
             id: e.id,
             title: e.title,
-            category: e.category,
-            categoryLabel: e.category.toUpperCase(),
+            category: String(e.category || ''),
+            categoryLabel: String(e.category || '').toUpperCase(),
             image: e.image_url,
             time: `${new Date(e.date).toLocaleDateString(undefined, { weekday: 'short' })} · ${e.time}`,
             location: e.location,
@@ -62,7 +62,7 @@ export function ExploreMap() {
           setWeekendEvents(filteredEvents.slice(4, 7).map((e: any, index: number) => ({
             id: e.id,
             title: e.title,
-            category: e.category,
+            category: String(e.category || ''),
             image: e.image_url,
             gradient: index % 2 === 0 ? 'from-purple-500 to-pink-500' : 'from-blue-500 to-cyan-500'
           })));
@@ -71,7 +71,7 @@ export function ExploreMap() {
           setRecommendedEvents(filteredEvents.slice(7, 9).map((e: any) => ({
              id: e.id,
              title: e.title,
-             category: e.category,
+             category: String(e.category || ''),
              image: e.image_url,
              time: `${new Date(e.date).toLocaleDateString(undefined, { weekday: 'long' })} · ${e.time}`,
           })));
@@ -92,7 +92,7 @@ export function ExploreMap() {
   }, [selectedCategory]);
 
   const getCategoryBadgeColor = (category: string) => {
-    switch (category.toLowerCase()) {
+    switch ((category || '').toLowerCase()) {
       case 'cultural':
         return 'bg-purple-100 text-purple-700';
       case 'startup':

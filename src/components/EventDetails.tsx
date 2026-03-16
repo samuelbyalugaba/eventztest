@@ -157,8 +157,12 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const filteredEvents = React.useMemo(() => {
     return events.filter(event => {
       const locationMatch = selectedLocation === 'all' || event.city === selectedLocation;
-      const categoryMatch = selectedCategory === 'all' || event.category.toLowerCase() === selectedCategory.toLowerCase();
-      const subcategoryMatch = selectedSubcategory === '' || event.subcategory.toLowerCase() === selectedSubcategory.toLowerCase();
+      const categoryMatch =
+        selectedCategory === 'all' ||
+        String((event as any).category || '').toLowerCase() === selectedCategory.toLowerCase();
+      const subcategoryMatch =
+        selectedSubcategory === '' ||
+        String((event as any).subcategory || '').toLowerCase() === selectedSubcategory.toLowerCase();
       return locationMatch && categoryMatch && subcategoryMatch;
     });
   }, [events, selectedLocation, selectedCategory, selectedSubcategory]);

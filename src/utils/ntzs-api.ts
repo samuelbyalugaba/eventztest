@@ -65,11 +65,13 @@ export const ntzsApi = {
   /**
    * Get user profile and balance
    * Uses createUser as idempotent get-or-create since nTZS API supports this pattern
+   * Note: We need to pass at least an email, so this should be called with email from the caller
    */
-  async getUser(userId: string): Promise<NtzsUser> {
+  async getUser(userId: string, email?: string): Promise<NtzsUser> {
     // nTZS API: "Calling create with the same externalId returns the existing user."
     // So we can safely use createUser as a get-or-create pattern
-    return this.createUser(userId, '', ''); 
+    // Pass email if provided, otherwise use empty string (API may require it)
+    return this.createUser(userId, email || '', ''); 
   },
 
   /**

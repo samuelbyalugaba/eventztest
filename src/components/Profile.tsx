@@ -10,7 +10,6 @@ import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
 import { deleteEvent, getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents, toggleFollow, getFollowedUserIds } from '../utils/supabase/api';
-import { WalletModal } from './WalletModal';
 import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
@@ -58,7 +57,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [showTicketViewer, setShowTicketViewer] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<TicketViewerTicket | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
-  const [showWalletModal, setShowWalletModal] = useState(false);
   const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
@@ -112,18 +110,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     } catch (error: any) {
       console.error('Failed to delete event', error);
       toast.error(error?.message || 'Failed to delete event');
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      if (onLogout) {
-        await onLogout();
-      } else {
-        await supabase.auth.signOut();
-      }
-    } catch (e) {
-      console.error('Logout failed', e);
     }
   };
 
@@ -287,27 +273,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     };
   }, [userId, isOwnProfile]);
 
-  const handleDeletePost = async (postId: number, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
-
-    try {
-      setUserPosts(prev => prev.filter(p => p.id !== postId));
-      await deletePost(postId);
-      toast.success('Post deleted');
-    } catch (error) {
-      console.error('Error deleting post:', error);
-      toast.error('Failed to delete post');
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const posts = await getPosts({ authorId: user.id });
-        if (posts) setUserPosts(posts);
-      }
-    }
-  };
-
   const handleOpenPost = (post: ApiPost) => {
     let postUser;
     
@@ -470,7 +435,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
                   <div className="flex-1 overflow-y-auto py-2">
                     <button
-                      onClick={() => { setShowWalletModal(true); setIsSidebarOpen(false); }}
+                      onClick={() => { toast.info('Wallet coming soon'); setIsSidebarOpen(false); }}
                       className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors group"
                     >
                       <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
@@ -1017,14 +982,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         <SettingsModal
           onClose={() => setShowSettingsModal(false)}
           initialView={settingsInitialView}
-        />
-      )}
-
-      {/* Wallet Modal */}
-      {showWalletModal && (
-        <WalletModal
-          isOpen={showWalletModal}
-          onClose={() => setShowWalletModal(false)}
         />
       )}
 

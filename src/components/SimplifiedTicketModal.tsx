@@ -43,10 +43,13 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
 
   // Normalize tiers (handle single price events)
   const tiers: TicketTier[] = (event.ticketTiers && event.ticketTiers.length > 0) 
-    ? event.ticketTiers.map(t => ({
-        ...t,
-        priceNumeric: parseInt(t.price.replace(/[^\d]/g, '')) || 0
-      }))
+    ? event.ticketTiers
+        .filter(t => t && t.name) // Filter out any null/undefined tiers
+        .map(t => ({
+          ...t,
+          name: t.name || 'Standard', // Ensure name is never null/undefined
+          priceNumeric: parseInt((t.price || '').replace(/[^\d]/g, '')) || 0
+        }))
     : [{
         name: 'Standard',
         price: event.price_range,
@@ -71,7 +74,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
         // Fetch Wallet Balance
         // First get or create nTZS user to get the internal ID
         try {
-          const nUser = await ntzsApi.getUser(user.id);
+          const nUser = await ntzsApi.getUser(user.id, user.email || '');
           if (nUser && nUser.id) {
             const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
             setWalletBalance(balanceTzs || 0);
@@ -280,9 +283,11 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
       onClose();
   };
 
-  const getTierIcon = (name: string) => {
-    if (name.toLowerCase().includes('vvip')) return <Crown className="w-5 h-5" />;
-    if (name.toLowerCase().includes('vip')) return <Sparkles className="w-5 h-5" />;
+  const getTierIcon = (name: string | null | undefined) => {
+    if (!name) return <Ticket className="w-5 h-5" />;
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('vvip')) return <Crown className="w-5 h-5" />;
+    if (lowerName.includes('vip')) return <Sparkles className="w-5 h-5" />;
     return <Ticket className="w-5 h-5" />;
   };
 
@@ -414,7 +419,13 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                     {['Wallet', 'Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map(p => (
                       <button
                         key={p}
-                        onClick={() => setSelectedProvider(p)}
+                        onClick={() => {
+                          if (p === 'Wallet') {
+                            toast.info('Wallet coming soon');
+                            return;
+                          }
+                          setSelectedProvider(p);
+                        }}
                         className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all flex flex-col items-center justify-center gap-1 ${
                           selectedProvider === p 
                             ? 'border-[#8A2BE2] bg-purple-50 text-purple-700' 

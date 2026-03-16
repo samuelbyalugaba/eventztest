@@ -125,6 +125,7 @@ serve(async (req) => {
     let ntzsResponse;
     let lastError;
     let successUrl = '';
+    let all404s = true;
 
     for (const baseUrl of BASE_URLS) {
       try {
@@ -144,10 +145,12 @@ serve(async (req) => {
         // If 404, it might be the wrong domain/path, so try next one
         if (ntzsResponse.status === 404) {
            console.warn(`[ntzs-proxy] 404 from ${baseUrl}, trying next...`);
-           lastError = new Error(`404 Not Found at ${baseUrl}`);
+           lastError = new Error(`404 Not Found at ${baseUrl}${endpoint}`);
            continue;
         }
 
+        // Got a non-404 response (could be 200, 400, 401, 500, etc.)
+        all404s = false;
         successUrl = baseUrl;
         break; // Stop if we get a response (non-404)
       } catch (err) {
@@ -164,6 +167,20 @@ serve(async (req) => {
         details: lastError?.message || 'Unknown network error'
       }), {
         status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // If all URLs returned 404, return a clear error
+    if (all404s && ntzsResponse.status === 404) {
+      console.error('[ntzs-proxy] All endpoints returned 404');
+      return new Response(JSON.stringify({ 
+        error: `nTZS API Error: 404 Not Found`,
+        details: `Endpoint ${endpoint} not found on any nTZS API base URL. This may indicate an incorrect endpoint path or the user/resource does not exist.`,
+        endpoint: endpoint,
+        triedUrls: BASE_URLS.map(url => `${url}${endpoint}`)
+      }), {
+        status: 200, // Return 200 to allow client to read error message
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }

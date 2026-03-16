@@ -13,10 +13,12 @@ interface EventListModalProps {
 export function EventListModal({ title, events, onClose, onEventClick }: EventListModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredEvents = events.filter(event => 
-    event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    event.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const normalizedQuery = searchQuery.toLowerCase();
+  const filteredEvents = events.filter((event) => {
+    const title = String(event.title || '').toLowerCase();
+    const location = String(event.location || '').toLowerCase();
+    return title.includes(normalizedQuery) || location.includes(normalizedQuery);
+  });
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
