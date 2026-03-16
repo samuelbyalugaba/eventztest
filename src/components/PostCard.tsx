@@ -167,40 +167,40 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
       (entries) => {
         entries.forEach((entry) => {
           if (videoRef.current) {
-            // Stricter threshold for autoplay - Must be FULLY visible (ratio >= 0.95 to account for subpixels)
-            if (entry.isIntersecting && entry.intersectionRatio >= 0.95) {
-              if (videoRef.current.paused) {
-                const shouldMute = !audioUnlocked;
-                videoRef.current.muted = shouldMute;
-                setIsMuted(shouldMute);
+          // Threshold for autoplay - Now starts at 50% visibility
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            if (videoRef.current.paused) {
+              const shouldMute = !audioUnlocked;
+              videoRef.current.muted = shouldMute;
+              setIsMuted(shouldMute);
 
-                const playPromise = videoRef.current.play();
-                if (playPromise !== undefined) {
-                  playPromise
-                    .then(() => {
-                      setIsPlaying(true);
-                      window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
-                    })
-                    .catch(() => {
-                      setIsPlaying(false);
-                    });
-                }
-              } else if (audioUnlocked && videoRef.current.muted) {
-                // If already playing and audio is unlocked, ensure we are unmuted
-                videoRef.current.muted = false;
-                setIsMuted(false);
+              const playPromise = videoRef.current.play();
+              if (playPromise !== undefined) {
+                playPromise
+                  .then(() => {
+                    setIsPlaying(true);
+                    window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
+                  })
+                  .catch(() => {
+                    setIsPlaying(false);
+                  });
               }
-            } else {
-              // Pause if less than 80% visible
-              if (!videoRef.current.paused) {
-                videoRef.current.pause();
-                setIsPlaying(false);
-              }
+            } else if (audioUnlocked && videoRef.current.muted) {
+              // If already playing and audio is unlocked, ensure we are unmuted
+              videoRef.current.muted = false;
+              setIsMuted(false);
             }
+          } else {
+            // Pause if less than 50% visible
+            if (!videoRef.current.paused) {
+              videoRef.current.pause();
+              setIsPlaying(false);
+            }
+          }
           }
         });
       },
-      { threshold: 0.95 }
+      { threshold: 0.5 }
     );
 
     if (videoRef.current) {

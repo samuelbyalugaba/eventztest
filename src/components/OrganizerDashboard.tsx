@@ -682,9 +682,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                       <div className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <h3 className="text-gray-900 font-semibold line-clamp-1">{event.title}</h3>
-                          <span className="text-[#8A2BE2] font-bold text-sm">
-                            {formatPrice(event.price?.toString() || event.price_range || '0')}
-                          </span>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                           <div className="flex items-center gap-1.5">

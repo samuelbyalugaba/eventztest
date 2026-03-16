@@ -2,7 +2,6 @@ import { Calendar, MapPin, MoreVertical, Pencil, Trash2, Tv } from 'lucide-react
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { currencies, extractCurrencyFromPrice, formatPrice } from '../utils/currencies';
 
 interface EventCardProps {
   event: ApiEvent;
@@ -18,29 +17,6 @@ export function EventCard({ event, onClick, className = '', currentUserId, onEdi
   // Avoiding internal fetches to prevent N+1 request problem
   const organizerName = event.organizer?.full_name || 'Event Organizer';
   const canManage = !!currentUserId && currentUserId === event.organizer_id && (!!onEditEvent || !!onDeleteEvent);
-  const displayPrice = (() => {
-    const raw = String((event as any)?.price_range ?? (event as any)?.price ?? '').trim();
-    if (!raw) return '';
-
-    if (raw.toLowerCase() === 'free') return 'Free';
-
-    const parts = raw.split(/\s*-\s*/).filter(Boolean);
-    if (parts.length === 2) {
-      const currencyCode = String((event as any)?.currency ?? '').trim() || extractCurrencyFromPrice(raw);
-      const currency = currencies.find(c => c.code === currencyCode);
-      const symbol = currency?.symbol || currencyCode;
-
-      const left = parseFloat(parts[0].replace(/[^0-9.]/g, ''));
-      const right = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
-      if (isNaN(left) || isNaN(right) || left <= 0 || right <= 0) return raw;
-
-      const min = Math.min(left, right);
-      const max = Math.max(left, right);
-      return `${symbol} ${min.toLocaleString()} - ${symbol} ${max.toLocaleString()}`;
-    }
-
-    return formatPrice(raw);
-  })();
 
   const getCategoryColor = (category: string) => {
     switch ((category || '').toLowerCase()) {
@@ -151,13 +127,6 @@ export function EventCard({ event, onClick, className = '', currentUserId, onEdi
               <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="line-clamp-1">{event.location}</span>
             </div>
-          ) : (
-            <div></div>
-          )}
-          {displayPrice ? (
-            <span className="text-[#8A2BE2] font-bold text-xs bg-purple-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-              {displayPrice}
-            </span>
           ) : (
             <div />
           )}

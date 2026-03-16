@@ -733,7 +733,10 @@ export function Feed({
   return (
     <>
       {/* Main Feed View */}
-      <div ref={feedContainerRef} className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
+      <div ref={feedContainerRef} className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
+        {/* Top sentinel for scroll detection */}
+        <div id="top-sentinel" className="absolute top-0 left-0 w-full h-px pointer-events-none" />
+        
         {/* Feed Header Component */}
         <FeedHeader
           currentUser={currentUser}
