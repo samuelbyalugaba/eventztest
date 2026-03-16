@@ -572,9 +572,11 @@ export function PostDetailModal({
           </div>
 
           {/* Post Content */}
-          <div className="text-gray-800 text-[15px] leading-relaxed">
-            {post.content?.text || post.content}
-          </div>
+          {post.content?.text && (
+            <div className="text-gray-800 text-[15px] leading-relaxed">
+              {post.content.text}
+            </div>
+          )}
 
           {/* Event Card - If Available */}
           {post.event && (
