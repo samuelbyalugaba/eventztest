@@ -4,18 +4,25 @@ import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
 import { formatPrice } from '../utils/currencies';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
 
 interface PremiumSearchModalProps {
   onClose: () => void;
   events: any[];
   onEventSelect: (event: any) => void;
   onPersonSelect?: (person: any) => void;
+  onVenueSelect?: (venue: { name: string; lat?: string; lon?: string }) => void;
 }
 
-export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSelect }: PremiumSearchModalProps) {
+type VenueResult = { id: string; name: string; subtitle?: string; lat?: string; lon?: string };
+
+export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSelect, onVenueSelect }: PremiumSearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState<'all' | 'events' | 'venues' | 'people'>('all');
+  const [isSearchingPeople, setIsSearchingPeople] = useState(false);
+  const [isSearchingVenues, setIsSearchingVenues] = useState(false);
   const [peopleResults, setPeopleResults] = useState<Profile[]>([]);
+  const [venueResults, setVenueResults] = useState<VenueResult[]>([]);
   const [trendingData, setTrendingData] = useState<{events: any[], people: any[]}>({ events: [], people: [] });
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
@@ -55,21 +62,77 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
         setPeopleResults([]);
         return;
       }
+
+      if (searchCategory !== 'all' && searchCategory !== 'people') {
+        return;
+      }
       
-      setIsSearching(true);
+      setIsSearchingPeople(true);
       try {
         const results = await searchProfiles(searchQuery);
         setPeopleResults(results || []);
       } catch (error) {
         console.error('Error searching profiles:', error);
       } finally {
-        setIsSearching(false);
+        setIsSearchingPeople(false);
       }
     };
 
     const timeoutId = setTimeout(searchPeople, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [searchQuery, searchCategory]);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setVenueResults([]);
+      return;
+    }
+
+    if (searchCategory !== 'all' && searchCategory !== 'venues') {
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsSearchingVenues(true);
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const results = await searchNominatim(q, { limit: 10, signal: controller.signal });
+        const seen = new Set<string>();
+        const next: VenueResult[] = [];
+
+        for (const r of results) {
+          const city = extractCityName(r);
+          if (!city) continue;
+          const key = normalizePlaceName(city);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          next.push({
+            id: String(r.place_id),
+            name: city,
+            subtitle: r.display_name,
+            lat: r.lat,
+            lon: r.lon,
+          });
+          if (next.length >= 6) break;
+        }
+
+        setVenueResults(next);
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') {
+          setVenueResults([]);
+        }
+      } finally {
+        setIsSearchingVenues(false);
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [searchQuery, searchCategory]);
 
   // Filter events based on search query
   const normalizedQuery = searchQuery.toLowerCase();
@@ -89,6 +152,13 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
     .slice(0, 5);
 
   const filteredPeople = peopleResults;
+  const filteredVenues = venueResults;
+  const isSearching = isSearchingPeople || isSearchingVenues;
+  const showEmptyState =
+    (searchCategory === 'all' && filteredPeople.length === 0 && filteredEvents.length === 0 && filteredVenues.length === 0) ||
+    (searchCategory === 'people' && filteredPeople.length === 0) ||
+    (searchCategory === 'events' && filteredEvents.length === 0) ||
+    (searchCategory === 'venues' && filteredVenues.length === 0);
 
   const categories = [
     { id: 'all', name: 'All', icon: '🔍' },
@@ -127,6 +197,9 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                 className="w-full pl-11 pr-4 py-3 bg-gray-100/50 hover:bg-gray-100 focus:bg-white border border-transparent focus:border-[#8A2BE2]/20 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-[#8A2BE2]/5 transition-all text-sm font-medium"
               />
             </div>
+            {isSearching && (
+              <div className="w-5 h-5 border-2 border-gray-300 border-t-[#8A2BE2] rounded-full animate-spin" aria-hidden />
+            )}
           </div>
 
           {/* Category Tabs */}
@@ -321,8 +394,38 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                 </div>
               )}
 
+              {filteredVenues.length > 0 && (searchCategory === 'all' || searchCategory === 'venues') && (
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-gray-900">Venues</h3>
+                    <p className="text-gray-500 text-sm">{filteredVenues.length} found</p>
+                  </div>
+                  <div className="space-y-3">
+                    {filteredVenues.map((venue) => (
+                      <button
+                        key={venue.id}
+                        onClick={() => {
+                          onVenueSelect && onVenueSelect({ name: venue.name, lat: venue.lat, lon: venue.lon });
+                          addToRecent(venue.name);
+                          onClose();
+                        }}
+                        className="w-full flex items-start gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all text-left"
+                      >
+                        <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-[#8A2BE2] flex-shrink-0 border border-purple-100">
+                          <MapPin className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-gray-900 font-medium truncate">{venue.name}</div>
+                          {venue.subtitle && <div className="text-xs text-gray-500 mt-0.5 truncate">{venue.subtitle}</div>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Search Results - Events */}
-              {filteredEvents.length > 0 && (searchCategory === 'all' || searchCategory === 'events') ? (
+              {filteredEvents.length > 0 && (searchCategory === 'all' || searchCategory === 'events') && (
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-gray-900">Events</h3>
@@ -367,18 +470,16 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                     ))}
                   </div>
                 </div>
-              ) : (
-                <>
-                  {filteredPeople.length === 0 && (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Search className="w-8 h-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-gray-900 mb-2">No results found</h3>
-                      <p className="text-gray-500 text-sm">Try searching for something else</p>
-                    </div>
-                  )}
-                </>
+              )}
+
+              {showEmptyState && (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-gray-900 mb-2">No results found</h3>
+                  <p className="text-gray-500 text-sm">Try searching for something else</p>
+                </div>
               )}
             </>
           )}

@@ -1392,6 +1392,37 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
   })) as ApiPost[];
 };
 
+export const getProfilePostsGrid = async (options: { authorId: string; limit?: number; offset?: number }) => {
+  let query = supabase
+    .from('posts')
+    .select(`
+      id,
+      user_id,
+      content,
+      image_urls,
+      video_url,
+      views,
+      duration,
+      hashtags,
+      created_at,
+      posted_as_organizer,
+      user:profiles(id, full_name, username, avatar_url, verified, is_organizer),
+      event:events(id, title, date, time, location, image_url, price_range)
+    `)
+    .eq('user_id', options.authorId)
+    .order('created_at', { ascending: false });
+
+  if (typeof options.limit === 'number') {
+    const start = options.offset || 0;
+    const end = start + Math.max(0, options.limit - 1);
+    query = query.range(start, end);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []) as unknown as ApiPost[];
+};
+
 export const getPostById = async (postId: number, currentUserId?: string) => {
   const { data: post, error } = await supabase
     .from('posts')

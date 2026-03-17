@@ -9,7 +9,7 @@ import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { deleteEvent, getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents, toggleFollow, checkIsFollowing } from '../utils/supabase/api';
+import { deleteEvent, getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getProfilePostsGrid, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents, toggleFollow, checkIsFollowing } from '../utils/supabase/api';
 import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
@@ -168,6 +168,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const displayName = userProfile?.full_name || 'User';
   const organizerCategory = userProfile?.organizer_type;
   const POSTS_PAGE_SIZE = 18;
+  const PROFILE_CACHE_TTL_MS = 60_000;
 
   const loadData = async () => {
     const seq = ++loadSeqRef.current;
@@ -184,6 +185,27 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       if (user) setCurrentUser(user);
       const targetUserId = userId || user?.id;
       if (!targetUserId) return;
+
+      const viewerId = user?.id || null;
+      const cacheKey = viewerId ? `eventz_profile_cache_${viewerId}_${targetUserId}` : `eventz_profile_cache_${targetUserId}`;
+      try {
+        const cachedRaw = sessionStorage.getItem(cacheKey);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (cached?.ts && Date.now() - cached.ts < PROFILE_CACHE_TTL_MS) {
+            if (cached.profile) setUserProfile(cached.profile);
+            if (cached.followStats) setFollowStats(cached.followStats);
+            if (typeof cached.isFollowing === 'boolean') setIsFollowing(cached.isFollowing);
+            if (Array.isArray(cached.posts)) {
+              setUserPosts(cached.posts);
+              setPostsOffset(cached.posts.length);
+              setHasMorePosts(cached.posts.length === POSTS_PAGE_SIZE);
+              setIsLoadingPosts(false);
+            }
+            setIsLoading(false);
+          }
+        }
+      } catch {}
 
       if (lastLoadedProfileIdRef.current !== targetUserId) {
         setOrganizerStats(null);
@@ -212,12 +234,22 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       setIsFollowing(!!followingFlag);
       setIsLoading(false);
 
-      const posts = await getPosts({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: 0 });
+      const posts = await getProfilePostsGrid({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: 0 });
       if (seq !== loadSeqRef.current) return;
       setUserPosts(posts || []);
       setPostsOffset((posts || []).length);
       setHasMorePosts((posts || []).length === POSTS_PAGE_SIZE);
       setIsLoadingPosts(false);
+
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          ts: Date.now(),
+          profile,
+          followStats: { followers, following },
+          isFollowing: !!followingFlag,
+          posts: posts || []
+        }));
+      } catch {}
     } catch (error) {
       console.error('Error loading profile:', error);
       setIsLoading(false);
@@ -234,7 +266,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
     try {
       setIsLoadingMorePosts(true);
-      const next = await getPosts({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: postsOffset });
+      const next = await getProfilePostsGrid({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: postsOffset });
       const nextPosts = next || [];
       setUserPosts(prev => [...prev, ...nextPosts]);
       setPostsOffset(prev => prev + nextPosts.length);
@@ -976,7 +1008,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                               muted
                               playsInline
                               loop
-                              preload="metadata"
+                              preload="none"
                               onMouseOver={(e) => e.currentTarget.play()}
                               onMouseOut={(e) => {
                                 e.currentTarget.pause();

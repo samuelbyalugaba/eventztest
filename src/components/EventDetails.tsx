@@ -709,6 +709,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           events={events}
                     onEventSelect={(event: ApiEvent) => handleEventClick(event)}
           onPersonSelect={(person) => setSelectedUser(person)}
+          onVenueSelect={(venue) => {
+            setSelectedLocation(venue.name);
+            setSelectedCategory('all');
+            setSelectedSubcategory('');
+          }}
         />
       )}
 

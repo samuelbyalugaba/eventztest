@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { UserAvatar } from './UserAvatar';
 import { PostCard } from './PostCard';
@@ -90,7 +90,10 @@ export function Feed({
   const [exploreSearch, setExploreSearch] = useState('');
   const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
   const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
-  const [isRestoringScroll, setIsRestoringScroll] = useState(!!sessionStorage.getItem('feedScrollPos'));
+  const [isRestoringScroll, setIsRestoringScroll] = useState(
+    !!sessionStorage.getItem('feedScrollPos') || !!sessionStorage.getItem('feedLastPostId')
+  );
+  const restoreAttemptedRef = useRef(false);
   const [feedHeaderHeight, setFeedHeaderHeight] = useState(0);
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const feedScrollRef = useRef<HTMLDivElement>(null);
@@ -120,90 +123,85 @@ export function Feed({
     }
   }, []);
 
-  // Restore scroll position when returning from post detail (smooth slide-back to the clicked post)
-  useEffect(() => {
-    if (!isLoading && posts.length > 0) {
-      const savedPos = sessionStorage.getItem('feedScrollPos');
-      const lastPostId = sessionStorage.getItem('feedLastPostId');
-      const hasRestoreData = (savedPos !== null && savedPos !== '') || (lastPostId !== null && lastPostId !== '');
+  useLayoutEffect(() => {
+    if (restoreAttemptedRef.current) return;
+    if (isLoading || posts.length === 0) return;
 
-      if (!hasRestoreData) {
-        setIsRestoringScroll(false);
+    const savedPos = sessionStorage.getItem('feedScrollPos');
+    const lastPostId = sessionStorage.getItem('feedLastPostId');
+    const hasRestoreData = (savedPos !== null && savedPos !== '') || (lastPostId !== null && lastPostId !== '');
+
+    if (!hasRestoreData) {
+      restoreAttemptedRef.current = true;
+      setIsRestoringScroll(false);
+      return;
+    }
+
+    let rafId = 0;
+    const startMs = performance.now();
+    const maxWaitMs = 2500;
+
+    const finish = () => {
+      sessionStorage.removeItem('feedScrollPos');
+      sessionStorage.removeItem('feedLastPostId');
+      restoreAttemptedRef.current = true;
+      setIsRestoringScroll(false);
+    };
+
+    const attempt = () => {
+      const scrollEl = feedScrollRef.current;
+      const currentLastPostId = sessionStorage.getItem('feedLastPostId');
+      const currentSavedPos = sessionStorage.getItem('feedScrollPos');
+      const target = currentLastPostId ? document.getElementById(`post-${currentLastPostId}`) : null;
+
+      if (target) {
+        if (scrollEl) {
+          const scrollRect = scrollEl.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          scrollEl.scrollTop += targetRect.top - scrollRect.top;
+        } else {
+          const targetRect = target.getBoundingClientRect();
+          window.scrollTo(0, window.scrollY + targetRect.top);
+        }
+        finish();
         return;
       }
 
-      let timeoutId: ReturnType<typeof setTimeout>;
-      let retryId: ReturnType<typeof setTimeout>;
-      let attempts = 0;
-      const maxAttempts = 20;
-      const scrollY = savedPos !== null && savedPos !== '' ? parseInt(savedPos, 10) : 0;
-      const validScrollY = !isNaN(scrollY) && scrollY >= 0;
-
-      const tryScroll = () => {
-        const scrollEl = feedScrollRef.current;
-        const element = lastPostId ? document.getElementById(`post-${lastPostId}`) : null;
-
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          sessionStorage.removeItem('feedScrollPos');
-          sessionStorage.removeItem('feedLastPostId');
-          setTimeout(() => setIsRestoringScroll(false), 100);
-          return;
-        }
-
+      if (currentSavedPos !== null && currentSavedPos !== '') {
+        const scrollY = parseInt(currentSavedPos, 10);
+        const validScrollY = !isNaN(scrollY) && scrollY >= 0;
         if (validScrollY) {
           if (scrollEl) {
-            const scrollHeight = scrollEl.scrollHeight;
-            const clientHeight = scrollEl.clientHeight;
-            const isTallEnough = scrollHeight >= scrollY + clientHeight / 2 || (scrollHeight === clientHeight && scrollY === 0);
-            if (isTallEnough) {
-              scrollEl.scrollTo({ top: scrollY, behavior: 'smooth' });
-              const scrollDiff = Math.abs(scrollEl.scrollTop - scrollY);
-              if (scrollDiff < 15) {
-                sessionStorage.removeItem('feedScrollPos');
-                sessionStorage.removeItem('feedLastPostId');
-                setTimeout(() => setIsRestoringScroll(false), 100);
-                return;
-              }
+            const maxScrollTop = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
+            if (maxScrollTop >= scrollY) {
+              scrollEl.scrollTop = scrollY;
+              finish();
+              return;
             }
           } else {
-            const currentHeight = document.documentElement.scrollHeight;
-            const viewportHeight = window.innerHeight;
-            const isPageTallEnough = currentHeight >= scrollY + viewportHeight / 2 || (currentHeight === viewportHeight && scrollY === 0);
-            if (isPageTallEnough) {
-              window.scrollTo({ top: scrollY, behavior: 'smooth' });
-              const scrollDiff = Math.abs(window.scrollY - scrollY);
-              if (scrollDiff < 15) {
-                sessionStorage.removeItem('feedScrollPos');
-                sessionStorage.removeItem('feedLastPostId');
-                setTimeout(() => setIsRestoringScroll(false), 100);
-                return;
-              }
+            const doc = document.documentElement;
+            const maxScrollTop = Math.max(0, doc.scrollHeight - window.innerHeight);
+            if (maxScrollTop >= scrollY) {
+              window.scrollTo(0, scrollY);
+              finish();
+              return;
             }
           }
         }
+      }
 
-        attempts += 1;
-        if (attempts < maxAttempts) {
-          retryId = setTimeout(tryScroll, 120);
-        } else {
-          if (validScrollY) {
-            if (scrollEl) scrollEl.scrollTo({ top: scrollY, behavior: 'smooth' });
-            else window.scrollTo({ top: scrollY, behavior: 'smooth' });
-          }
-          sessionStorage.removeItem('feedScrollPos');
-          sessionStorage.removeItem('feedLastPostId');
-          setTimeout(() => setIsRestoringScroll(false), 100);
-        }
-      };
+      if (performance.now() - startMs >= maxWaitMs) {
+        finish();
+        return;
+      }
+      rafId = requestAnimationFrame(attempt);
+    };
 
-      timeoutId = setTimeout(tryScroll, 200);
+    attempt();
 
-      return () => {
-        clearTimeout(timeoutId);
-        clearTimeout(retryId!);
-      };
-    }
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
   }, [isLoading, posts.length]);
 
   useEffect(() => {
@@ -957,7 +955,11 @@ export function Feed({
             setFeedScrollContainer(el);
           }}
           className="overflow-y-auto h-[100dvh] overscroll-behavior-y-contain"
-          style={{ paddingTop: feedHeaderHeight > 0 ? `${feedHeaderHeight}px` : '7rem' }}
+          style={{
+            paddingTop: feedHeaderHeight > 0 ? `${feedHeaderHeight}px` : '7rem',
+            visibility: isRestoringScroll ? 'hidden' : 'visible',
+            pointerEvents: isRestoringScroll ? 'none' : 'auto',
+          }}
         >
           {/* Top sentinel for scroll detection */}
           <div id="top-sentinel" className="w-full h-px pointer-events-none" />
