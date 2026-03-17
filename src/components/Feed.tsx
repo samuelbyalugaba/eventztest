@@ -104,69 +104,70 @@ export function Feed({
     }
   }, []);
 
-  // Restore scroll position on mount after data loads
+  // Restore scroll position when returning from post detail (smooth slide-back to the clicked post)
   useEffect(() => {
     if (!isLoading && posts.length > 0) {
       const savedPos = sessionStorage.getItem('feedScrollPos');
       const lastPostId = sessionStorage.getItem('feedLastPostId');
-      
-      if (savedPos && parseInt(savedPos) > 0) {
-        let attempts = 0;
-        const maxAttempts = 15; // Increased attempts
-        
-        const tryScroll = () => {
-          const scrollY = parseInt(savedPos);
+      const hasRestoreData = (savedPos !== null && savedPos !== '') || (lastPostId !== null && lastPostId !== '');
+
+      if (!hasRestoreData) {
+        setIsRestoringScroll(false);
+        return;
+      }
+
+      let timeoutId: ReturnType<typeof setTimeout>;
+      let retryId: ReturnType<typeof setTimeout>;
+      let attempts = 0;
+      const maxAttempts = 20;
+      const scrollY = savedPos !== null && savedPos !== '' ? parseInt(savedPos, 10) : 0;
+      const validScrollY = !isNaN(scrollY) && scrollY >= 0;
+
+      const tryScroll = () => {
+        const element = lastPostId ? document.getElementById(`post-${lastPostId}`) : null;
+
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          sessionStorage.removeItem('feedScrollPos');
+          sessionStorage.removeItem('feedLastPostId');
+          setTimeout(() => setIsRestoringScroll(false), 100);
+          return;
+        }
+
+        if (validScrollY) {
           const currentHeight = document.documentElement.scrollHeight;
           const viewportHeight = window.innerHeight;
-          
-          // If we have a lastPostId, try to find that element first
-          let elementFound = false;
-          if (lastPostId) {
-            const element = document.getElementById(`post-${lastPostId}`);
-            if (element) {
-              elementFound = true;
-            }
-          }
+          const isPageTallEnough = currentHeight >= scrollY + viewportHeight / 2 || (currentHeight === viewportHeight && scrollY === 0);
 
-          // Check if the page is tall enough to reach the scroll target
-          // or if we've already found the specific element we want
-          const isPageReady = elementFound || (currentHeight >= scrollY + viewportHeight / 2) || (currentHeight === viewportHeight && scrollY === 0);
-
-          if (isPageReady) {
-            window.scrollTo({
-              top: scrollY,
-              behavior: 'auto'
-            });
-            
-            // Check if we are close enough to the target
+          if (isPageTallEnough) {
+            window.scrollTo({ top: scrollY, behavior: 'smooth' });
             const scrollDiff = Math.abs(window.scrollY - scrollY);
-            if (scrollDiff < 10) {
+            if (scrollDiff < 15) {
               sessionStorage.removeItem('feedScrollPos');
               sessionStorage.removeItem('feedLastPostId');
-              // Delay turning off isRestoringScroll slightly to ensure render settles
               setTimeout(() => setIsRestoringScroll(false), 100);
               return;
             }
           }
-          
-          if (attempts < maxAttempts) {
-            attempts++;
-            // If the page isn't tall enough, it might be because more posts are needed
-            // but for restoration we expect them to be in the posts state (from cache)
-            setTimeout(tryScroll, 100);
-          } else {
-            // Final attempt and cleanup
-            window.scrollTo(0, scrollY);
-            sessionStorage.removeItem('feedScrollPos');
-            sessionStorage.removeItem('feedLastPostId');
-            setTimeout(() => setIsRestoringScroll(false), 100);
-          }
-        };
-        
-        setTimeout(tryScroll, 150);
-      } else {
-        setIsRestoringScroll(false);
-      }
+        }
+
+        attempts += 1;
+        if (attempts < maxAttempts) {
+          retryId = setTimeout(tryScroll, 120);
+        } else {
+          if (validScrollY) window.scrollTo({ top: scrollY, behavior: 'smooth' });
+          sessionStorage.removeItem('feedScrollPos');
+          sessionStorage.removeItem('feedLastPostId');
+          setTimeout(() => setIsRestoringScroll(false), 100);
+        }
+      };
+
+      timeoutId = setTimeout(tryScroll, 200);
+
+      return () => {
+        clearTimeout(timeoutId);
+        clearTimeout(retryId!);
+      };
     }
   }, [isLoading, posts.length]);
 
