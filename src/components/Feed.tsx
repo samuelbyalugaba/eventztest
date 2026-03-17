@@ -18,6 +18,7 @@ import { ChatDetail } from './ChatDetail';
 import { UserProfileModal } from './UserProfileModal';
 import { ShareModal } from './ShareModal';
 import { FeedHeader } from './FeedHeader';
+import { CommentsSheet } from './CommentsSheet';
 
 type FilterTab = 'all' | 'organizers' | 'trending' | 'following';
 
@@ -67,6 +68,8 @@ export function Feed({
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; type?: string } | null>(null);
+  const [showComments, setShowComments] = useState(false);
+  const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
   // const [messageSearch, setMessageSearch] = useState('');
@@ -87,7 +90,85 @@ export function Feed({
   const [exploreSearch, setExploreSearch] = useState('');
   const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
   const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
+  const [isRestoringScroll, setIsRestoringScroll] = useState(!!sessionStorage.getItem('feedScrollPos'));
   const feedContainerRef = useRef<HTMLDivElement>(null);
+
+  // Set scroll restoration to manual to prevent browser interference
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      const original = window.history.scrollRestoration;
+      window.history.scrollRestoration = 'manual';
+      return () => {
+        window.history.scrollRestoration = original;
+      };
+    }
+  }, []);
+
+  // Restore scroll position on mount after data loads
+  useEffect(() => {
+    if (!isLoading && posts.length > 0) {
+      const savedPos = sessionStorage.getItem('feedScrollPos');
+      const lastPostId = sessionStorage.getItem('feedLastPostId');
+      
+      if (savedPos && parseInt(savedPos) > 0) {
+        let attempts = 0;
+        const maxAttempts = 15; // Increased attempts
+        
+        const tryScroll = () => {
+          const scrollY = parseInt(savedPos);
+          const currentHeight = document.documentElement.scrollHeight;
+          const viewportHeight = window.innerHeight;
+          
+          // If we have a lastPostId, try to find that element first
+          let elementFound = false;
+          if (lastPostId) {
+            const element = document.getElementById(`post-${lastPostId}`);
+            if (element) {
+              elementFound = true;
+            }
+          }
+
+          // Check if the page is tall enough to reach the scroll target
+          // or if we've already found the specific element we want
+          const isPageReady = elementFound || (currentHeight >= scrollY + viewportHeight / 2) || (currentHeight === viewportHeight && scrollY === 0);
+
+          if (isPageReady) {
+            window.scrollTo({
+              top: scrollY,
+              behavior: 'auto'
+            });
+            
+            // Check if we are close enough to the target
+            const scrollDiff = Math.abs(window.scrollY - scrollY);
+            if (scrollDiff < 10) {
+              sessionStorage.removeItem('feedScrollPos');
+              sessionStorage.removeItem('feedLastPostId');
+              // Delay turning off isRestoringScroll slightly to ensure render settles
+              setTimeout(() => setIsRestoringScroll(false), 100);
+              return;
+            }
+          }
+          
+          if (attempts < maxAttempts) {
+            attempts++;
+            // If the page isn't tall enough, it might be because more posts are needed
+            // but for restoration we expect them to be in the posts state (from cache)
+            setTimeout(tryScroll, 100);
+          } else {
+            // Final attempt and cleanup
+            window.scrollTo(0, scrollY);
+            sessionStorage.removeItem('feedScrollPos');
+            sessionStorage.removeItem('feedLastPostId');
+            setTimeout(() => setIsRestoringScroll(false), 100);
+          }
+        };
+        
+        setTimeout(tryScroll, 150);
+      } else {
+        setIsRestoringScroll(false);
+      }
+    }
+  }, [isLoading, posts.length]);
 
   useEffect(() => {
     if (handledNavKeyRef.current === location.key) return;
@@ -247,7 +328,21 @@ export function Feed({
       }
 
       const mapped = fresh && fresh.length > 0 ? mapPosts(fresh) : [];
-      setPosts(mapped);
+      
+      // Smart update of posts state to allow scroll restoration
+      setPosts(prev => {
+        // If we are currently restoring scroll and the previous list is longer than the fresh one
+        // (likely because we loaded from cache), keep the previous list but update the first N posts
+        if (sessionStorage.getItem('feedScrollPos') && prev.length > mapped.length) {
+          const merged = [...prev];
+          mapped.forEach((post, i) => {
+            merged[i] = post;
+          });
+          return merged;
+        }
+        return mapped;
+      });
+      
       const payload = { posts: mapped, timestamp: Date.now() };
       feedCacheMemory = payload;
       localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(payload));
@@ -724,9 +819,68 @@ export function Feed({
   });
 
 
-  const handlePostClick = (post: Post) => {
+  const handlePostClick = (post: Post, startTime?: number, isMuted?: boolean) => {
+    // Save scroll position and last post ID before navigating
+    sessionStorage.setItem('feedScrollPos', window.scrollY.toString());
+    sessionStorage.setItem('feedLastPostId', post.id.toString());
+    
     if (onViewPost) {
-      onViewPost(post);
+      onViewPost({ ...post, startTime, isMuted });
+    }
+  };
+
+  const handleViewComments = async (post: Post) => {
+    setSelectedPostForComments(post);
+    setShowComments(true);
+    
+    // Fetch fresh comments for the sheet
+    try {
+      const comments = await getPostComments(post.id);
+      if (comments) {
+        setPosts(prev => prev.map(p => {
+          if (p.id !== post.id) return p;
+          return {
+            ...p,
+            comments: comments.map((c: any) => ({
+              id: c.id,
+              user: {
+                name: c.user?.full_name || c.user?.username || 'User',
+                avatar: c.user?.avatar_url || '',
+                is_organizer: c.user?.is_organizer || false
+              },
+              text: c.text,
+              timestamp: formatTimeAgo(c.created_at),
+              parent_id: c.parent_id,
+              likes_count: c.likes_count || 0,
+              is_liked: c.is_liked || false
+            })),
+            comments_count: comments.length
+          } as any;
+        }));
+        
+        setSelectedPostForComments(prev => {
+          if (!prev || prev.id !== post.id) return prev;
+          return {
+            ...prev,
+            comments: comments.map((c: any) => ({
+              id: c.id,
+              user: {
+                name: c.user?.full_name || c.user?.username || 'User',
+                avatar: c.user?.avatar_url || '',
+                is_organizer: c.user?.is_organizer || false
+              },
+              text: c.text,
+              timestamp: formatTimeAgo(c.created_at),
+              parent_id: c.parent_id,
+              likes_count: c.likes_count || 0,
+              is_liked: c.is_liked || false
+            })),
+            comments_count: comments.length
+          } as any;
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching comments:', err);
     }
   };
 
@@ -827,7 +981,14 @@ export function Feed({
               ) : (
                 <>
                   {filteredPosts.map((post, index) => (
-                    <div key={post.id} style={{ animation: `slideUp 0.4s ease-out ${index * 0.08}s both` }}>
+                    <div 
+                      key={post.id} 
+                      id={`post-${post.id}`}
+                      style={{ 
+                        animation: isRestoringScroll ? 'none' : `slideUp 0.4s ease-out ${index * 0.08}s both`,
+                        opacity: isRestoringScroll ? 1 : undefined
+                      }}
+                    >
                       <PostCard
                         post={post}
                         onLike={(id) => toggleLike(id)}
@@ -836,7 +997,8 @@ export function Feed({
                         onProfileClick={(user) => handleOpenUserProfile(user)}
                         onMessage={(user) => handleStartConversationLocal(user)}
                         audioUnlocked={audioUnlocked}
-                        onViewPost={() => handlePostClick(post)}
+                        onViewPost={(startTime, isMuted) => handlePostClick(post, startTime, isMuted)}
+                        onViewComments={() => handleViewComments(post)}
                       />
                     </div>
                   ))}
@@ -1504,7 +1666,7 @@ export function Feed({
           }}
           onClose={() => setSelectedUserProfile(null)}
           onFollow={() => {
-            toast.success(`Following ${selectedUserProfile.name}! 🎉`);
+            toast.success(`Following ${selectedUserProfile.name}`);
           }}
           onMessage={() => {
             handleStartConversationLocal(selectedUserProfile);
@@ -1528,6 +1690,20 @@ export function Feed({
       )}
       {/* Notifications Modal */}
        
+      {showComments && selectedPostForComments && (
+        <CommentsSheet
+          isOpen={showComments}
+          onClose={() => {
+            setShowComments(false);
+            setSelectedPostForComments(null);
+          }}
+          post={selectedPostForComments}
+          currentUser={currentUser}
+          userProfile={currentUserProfile}
+          onComment={handlePostComment}
+          onLikeComment={handleLikeComment}
+        />
+      )}
      </>
   );
 }

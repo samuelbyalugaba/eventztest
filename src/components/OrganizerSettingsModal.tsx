@@ -19,9 +19,9 @@ import {
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
-import { supabase } from '../utils/supabase/client';
-import { updateProfile, getProfile, uploadImage } from '../utils/supabase/api';
+import { supabase, getProfile, updateProfile, uploadImage, updateStreamingSettings, updatePrivacySettings, updatePaymentSettings } from '../utils/supabase/api';
 import { isSafeUrl } from '../utils/sanitize';
+import { CREATOR_CATEGORIES } from '../utils/categories';
 
 interface OrganizerSettingsModalProps {
   onClose: () => void;
@@ -74,28 +74,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
 
-  const CREATOR_CATEGORIES = [
-    'Art Gallery', 'Artist', 'Bar', 'Band', 'Blogger', 'Book Store', 'Brand',
-    'Broadcasting & Media Production Company',
-    'Business', 'Cafe', 'Charity', 'Church', 'Club', 'Coach', 'Comedy Club',
-    'Community', 'Concert Venue', 'Conference', 'Content Creator', 'Corporate',
-    'DJ', 'Dance Studio', 'Digital Creator', 'Education', 'Entrepreneur',
-    'Entertainment',
-    'Event Curator',
-    'Event Organizer',
-    'Event Planner', 'Exhibition', 'Fashion', 'Festival', 'Fitness Trainer',
-    'Government', 'Gym', 'Health/Beauty', 'Hotel', 'Influencer', 'Library',
-    'Lounge', 'Media', 'Mosque', 'Museum', 'Music Venue', 'Musician',
-    'Networking Group', 'Nightclub', 'Non-Profit', 'Organization', 'Park',
-    'Party Planner', 'Performing Arts', 'Personal Blog', 'Photographer',
-    'Podcast', 'Promoter', 'Public Figure', 'Radio Station',
-    'Religious Organization', 'Resort', 'Restaurant', 'Retail', 'School',
-    'Shopping', 'Social Club', 'Speaker', 'Sports Team', 'Startup',
-    'Sports Event',
-    'Student Organization', 'Synagogue', 'Tech Community', 'Theater',
-    'University', 'Venue', 'Video Creator', 'Wedding Planner', 'Workshop',
-    'Writer', 'Yoga Studio', 'Youth Organization'
-  ].sort();
+
 
   const [categorySearch, setCategorySearch] = useState('');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);

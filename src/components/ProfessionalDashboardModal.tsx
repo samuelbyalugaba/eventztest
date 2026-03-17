@@ -8,6 +8,7 @@ import {
   Star,
   Calendar,
   Clock,
+  ArrowLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
@@ -130,6 +131,12 @@ export function ProfessionalDashboardModal({
       {/* Header */}
       <div className="bg-white px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
+          <button 
+            onClick={onClose}
+            className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-6 h-6 text-gray-900" />
+          </button>
           <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
         </div>
         

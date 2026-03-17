@@ -465,14 +465,14 @@ export default function CreatePostPage() {
         <div className="flex items-center gap-1 relative">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
+            className="p-3 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
             title="Media"
             type="button"
           >
-            <ImageIcon className="w-5 h-5" />
+            <ImageIcon className="w-6 h-6" />
           </button>
           <button
-            className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
+            className="p-3 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
             title="Emoji"
             type="button"
             onClick={() => {
@@ -481,10 +481,10 @@ export default function CreatePostPage() {
               setShowScheduleModal(false);
             }}
           >
-            <Smile className="w-5 h-5" />
+            <Smile className="w-6 h-6" />
           </button>
           <button
-            className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
+            className="p-3 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
             title="Location"
             type="button"
             onClick={() => {
@@ -494,10 +494,10 @@ export default function CreatePostPage() {
               setShowScheduleModal(false);
             }}
           >
-            <MapPin className="w-5 h-5" />
+            <MapPin className="w-6 h-6" />
           </button>
           <button
-            className="p-2 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
+            className="p-3 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
             title="Schedule"
             type="button"
             onClick={() => {
@@ -507,7 +507,7 @@ export default function CreatePostPage() {
               setShowLocationModal(false);
             }}
           >
-            <Calendar className="w-5 h-5" />
+            <Calendar className="w-6 h-6" />
           </button>
 
           {showEmojiPicker && (

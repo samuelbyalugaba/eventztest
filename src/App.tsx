@@ -672,7 +672,13 @@ export default function App() {
         navigate('/profile');
       }
     } else {
-      navigate(`/post/${item.id}`, { state: { post: item } });
+      navigate(`/post/${item.id}`, { 
+        state: { 
+          post: item, 
+          startTime: item.startTime, 
+          isMuted: item.isMuted 
+        } 
+      });
     }
   };
 
@@ -682,14 +688,31 @@ export default function App() {
     <div className="min-h-screen bg-gray-50">
       <Toaster 
         position="top-center" 
-        richColors 
+        richColors={false}
         closeButton
         toastOptions={{
+          className: "font-sans",
           style: {
-            background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(0, 0, 0, 0.05)',
+            borderRadius: '16px',
+            color: '#1a1a1a',
+            boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
+            padding: '16px',
+            fontSize: '14px',
+            fontWeight: 500,
           },
+          classNames: {
+            toast: "group toast group-[.toaster]:bg-white group-[.toaster]:text-neutral-900 group-[.toaster]:border-neutral-200 group-[.toaster]:shadow-lg",
+            description: "group-[.toast]:text-neutral-500",
+            actionButton: "group-[.toast]:bg-neutral-900 group-[.toast]:text-neutral-50",
+            cancelButton: "group-[.toast]:bg-neutral-100 group-[.toast]:text-neutral-500",
+            error: "group-[.toaster]:border-l-4 group-[.toaster]:border-l-red-500",
+            success: "group-[.toaster]:border-l-4 group-[.toaster]:border-l-black",
+            warning: "group-[.toaster]:border-l-4 group-[.toaster]:border-l-amber-500",
+            info: "group-[.toaster]:border-l-4 group-[.toaster]:border-l-blue-500",
+          }
         }}
       />
       {/* Main Content */}

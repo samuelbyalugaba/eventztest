@@ -157,53 +157,42 @@ export function PWAInstallPrompt() {
 
   return (
     <div className="fixed bottom-24 left-4 right-4 z-50 animate-slide-up">
-      <div className="bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
         {/* Close Button */}
         <button
           onClick={handleDismiss}
-          className="absolute top-3 right-3 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all"
+          className="absolute top-3 right-3 w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center hover:bg-gray-100 transition-all"
         >
-          <X className="w-4 h-4 text-white" />
+          <X className="w-4 h-4 text-gray-500" />
         </button>
 
         <div className="p-5">
           {/* Icon */}
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-                <Smartphone className="w-6 h-6 text-white" />
-              </div>
+            <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Smartphone className="w-6 h-6 text-purple-600" />
             </div>
 
             <div className="flex-1 pr-6">
-              <h3 className="text-white text-lg mb-1">Install EVENTZ App</h3>
-              <p className="text-white/90 text-sm mb-4">
-                Get the full experience with offline access, push notifications, and faster loading
+              <h3 className="text-gray-900 font-bold text-lg mb-1">Install App</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Get the full experience with offline access and instant notifications
               </p>
 
-              {/* Features */}
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-white/95 text-xs">
-                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div>
-                  <span>Works offline</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/95 text-xs">
-                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div>
-                  <span>Instant notifications for your events</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/95 text-xs">
-                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full"></div>
-                  <span>Faster and more reliable</span>
-                </div>
+              {/* Features - Simplified */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="bg-gray-50 text-gray-600 text-[10px] font-medium px-2 py-1 rounded-full border border-gray-100">Works offline</span>
+                <span className="bg-gray-50 text-gray-600 text-[10px] font-medium px-2 py-1 rounded-full border border-gray-100">Faster loading</span>
+                <span className="bg-gray-50 text-gray-600 text-[10px] font-medium px-2 py-1 rounded-full border border-gray-100">Live updates</span>
               </div>
 
               {/* Install Button */}
               <button
                 onClick={handleInstall}
-                className="w-full flex items-center justify-center gap-2 bg-white text-purple-700 px-4 py-3 rounded-xl hover:shadow-lg transition-all"
+                className="w-full flex items-center justify-center gap-2 bg-black text-white px-4 py-3 rounded-xl hover:bg-neutral-800 transition-all font-semibold shadow-sm"
               >
-                <Download className="w-5 h-5" />
-                <span className="font-medium">Install Now</span>
+                <Download className="w-4 h-4" />
+                <span>Add to Home Screen</span>
               </button>
             </div>
           </div>

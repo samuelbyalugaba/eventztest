@@ -25,7 +25,8 @@ interface PostCardProps {
   onShare: (post: Post) => Promise<void>;
   onProfileClick: (user: Post['user']) => void;
   onMessage?: (user: any) => void;
-  onViewPost?: () => void;
+  onViewPost?: (startTime?: number, isMuted?: boolean) => void;
+  onViewComments?: () => void;
   audioUnlocked?: boolean;
 }
 
@@ -35,7 +36,17 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
 };
 
-export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onShare, onProfileClick, onMessage, onViewPost, audioUnlocked = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ 
+  post, 
+  onLike, 
+  onSave, 
+  onShare, 
+  onProfileClick, 
+  onMessage, 
+  onViewPost, 
+  onViewComments, 
+  audioUnlocked = false 
+}: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -325,7 +336,11 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
       {/* 2. MEDIA CONTENT */}
       <div 
         className="relative overflow-hidden group rounded-2xl bg-gray-50 cursor-pointer"
-        onClick={(e) => { e.stopPropagation(); onViewPost?.(); }}
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          const startTime = videoRef.current?.currentTime || 0;
+          onViewPost?.(startTime, isMuted); 
+        }}
       >
         {isCarousel ? (
           <div onDoubleClick={handleDoubleTap}>
@@ -537,7 +552,10 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
         </button>
 
         <button 
-          onClick={(e) => { e.stopPropagation(); onViewPost?.(); }}
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            onViewComments?.(); 
+          }}
           className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
         >
           <CommentIcon className="w-5 h-5" color="#4b5563" />
@@ -565,7 +583,11 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onSave, onS
         <div className="mt-3 px-1">
           <p 
             className={`text-gray-800 text-[15px] leading-relaxed transition-all cursor-pointer ${isExpanded ? '' : 'line-clamp-3'}`}
-            onClick={(e) => { e.stopPropagation(); onViewPost?.(); }}
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              const startTime = videoRef.current?.currentTime || 0;
+              onViewPost?.(startTime, isMuted); 
+            }}
           >
             {post.content.text}
           </p>

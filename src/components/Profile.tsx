@@ -249,6 +249,35 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     };
   }, [userId, isOwnProfile]);
 
+  // Restore scroll position when returning from post detail (smooth slide-back to the clicked post)
+  useEffect(() => {
+    if (isLoading || filteredUserPosts.length === 0) return;
+    const savedScroll = sessionStorage.getItem(PROFILE_SCROLL_KEY);
+    const savedPostId = sessionStorage.getItem(PROFILE_POST_ID_KEY);
+    if (!savedScroll && !savedPostId) return;
+
+    const restore = () => {
+      if (savedPostId) {
+        const el = document.getElementById(`profile-post-${savedPostId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          sessionStorage.removeItem(PROFILE_SCROLL_KEY);
+          sessionStorage.removeItem(PROFILE_POST_ID_KEY);
+          return;
+        }
+      }
+      const scrollY = parseInt(savedScroll || '0', 10);
+      if (!isNaN(scrollY) && scrollY >= 0) {
+        window.scrollTo({ top: scrollY, behavior: 'smooth' });
+      }
+      sessionStorage.removeItem(PROFILE_SCROLL_KEY);
+      sessionStorage.removeItem(PROFILE_POST_ID_KEY);
+    };
+
+    const timeoutId = setTimeout(restore, 150);
+    return () => clearTimeout(timeoutId);
+  }, [isLoading, filteredUserPosts.length]);
+
   useEffect(() => {
     loadData();
 
@@ -273,7 +302,14 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     };
   }, [userId, isOwnProfile]);
 
+  const PROFILE_SCROLL_KEY = 'eventz_profile_scroll';
+  const PROFILE_POST_ID_KEY = 'eventz_profile_post_id';
+
   const handleOpenPost = (post: ApiPost) => {
+    // Save scroll position and clicked post id so we can restore when returning from post detail
+    sessionStorage.setItem(PROFILE_SCROLL_KEY, String(window.scrollY));
+    sessionStorage.setItem(PROFILE_POST_ID_KEY, String(post.id));
+
     let postUser;
     
     if (isOwnProfile) {
@@ -801,6 +837,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                       const isCarousel = (post.image_urls?.length || 0) > 1;
                       return (
                         <div
+                          id={`profile-post-${post.id}`}
                           key={post.id}
                           onClick={() => handleOpenPost(post)}
                           className="relative aspect-square cursor-pointer group bg-gray-100 overflow-hidden"

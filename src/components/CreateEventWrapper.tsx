@@ -98,6 +98,7 @@ export function CreateEventWrapper({ currentUser, isAuthenticated, onAuthSuccess
         onComplete={() => {
             setIsOrganizer(true);
             setHasOrganizerProfile(true);
+            navigate('/profile');
         }} 
         onBack={() => navigate('/profile')}
       />

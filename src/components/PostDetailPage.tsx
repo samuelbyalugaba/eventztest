@@ -32,6 +32,8 @@ interface PostDetailPageProps {
   onProfileClick: (user: any, e?: React.MouseEvent) => void;
   onComment: (postId: number, text: string, parentId?: number) => void;
   onLikeComment?: (commentId: number) => void;
+  startTime?: number;
+  initialMuted?: boolean;
 }
 
 const isVideo = (url?: string) => {
@@ -52,20 +54,54 @@ export function PostDetailPage({
   onEditCaption,
   onProfileClick,
   onComment,
-  onLikeComment
+  onLikeComment,
+  startTime = 0,
+  initialMuted = false
 }: PostDetailPageProps) {
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: number, name: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(initialMuted);
   const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
   const [carouselHeight, setCarouselHeight] = useState<number | null>(null);
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState('');
   const [isSavingCaption, setIsSavingCaption] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { offsetTop, offsetBottom } = useVisualViewport();
+
+  // Handle video initialization and transition
+  useEffect(() => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      
+      const handleMetadata = () => {
+        if (startTime > 0) {
+          video.currentTime = startTime;
+        }
+        
+        // Ensure it starts playing if it's supposed to
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.log("Autoplay was prevented:", error);
+          });
+        }
+      };
+
+      if (video.readyState >= 1) { // HAVE_METADATA
+        handleMetadata();
+      } else {
+        video.addEventListener('loadedmetadata', handleMetadata, { once: true });
+      }
+
+      return () => {
+        video.removeEventListener('loadedmetadata', handleMetadata);
+      };
+    }
+  }, [startTime]);
 
   const updateCarouselHeight = useCallback(() => {
     if (!api) return;
@@ -323,13 +359,14 @@ export function PostDetailPage({
                    {isMediaVideo ? (
                       <>
                         <video 
-                          src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
+                          ref={videoRef}
+                          src={media} 
                           className="absolute inset-0 w-full h-full object-contain"
                           poster={posterToUse}
                           controls
-                          autoPlay
                           playsInline
                           loop
+                          preload="auto"
                           muted={isMuted}
                           onLoadedMetadata={(e) => {
                             const v = e.currentTarget;
@@ -393,13 +430,13 @@ export function PostDetailPage({
                                    {isMediaVideo ? (
                                       <>
                                         <video 
-                                          src={`${media}${media.includes('#') ? '' : '#t=0.1'}`} 
+                                          ref={isActive ? videoRef : null}
+                                          src={media} 
                                           className="absolute inset-0 w-full h-full object-contain"
                                           controls
-                                          // Only autoplay if it's the active slide
-                                          autoPlay={isActive}
                                           playsInline
                                           loop
+                                          preload="auto"
                                           muted={isMuted}
                                           onLoadedMetadata={(e) => {
                                             const v = e.currentTarget;

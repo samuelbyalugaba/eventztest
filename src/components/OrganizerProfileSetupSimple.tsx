@@ -3,29 +3,12 @@ import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, S
 import { toast } from 'sonner';
 import { supabase, getProfile, uploadImage, checkUsernameUnique, becomeOrganizer } from '../utils/supabase/api';
 import { searchNominatim } from '../utils/nominatim';
+import { CREATOR_CATEGORIES } from '../utils/categories';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;
   onBack?: () => void;
 }
-
-const CREATOR_CATEGORIES = [
-  'Art Gallery', 'Artist', 'Bar', 'Band', 'Blogger', 'Book Store', 'Brand',
-  'Business', 'Cafe', 'Charity', 'Church', 'Club', 'Coach', 'Comedy Club',
-  'Community', 'Concert Venue', 'Conference', 'Content Creator', 'Corporate',
-  'DJ', 'Dance Studio', 'Digital Creator', 'Education', 'Entrepreneur',
-  'Event Planner', 'Exhibition', 'Fashion', 'Festival', 'Fitness Trainer',
-  'Government', 'Gym', 'Health/Beauty', 'Hotel', 'Influencer', 'Library',
-  'Lounge', 'Media', 'Mosque', 'Museum', 'Music Venue', 'Musician',
-  'Networking Group', 'Nightclub', 'Non-Profit', 'Organization', 'Park',
-  'Party Planner', 'Performing Arts', 'Personal Blog', 'Photographer',
-  'Podcast', 'Promoter', 'Public Figure', 'Radio Station',
-  'Religious Organization', 'Resort', 'Restaurant', 'Retail', 'School',
-  'Shopping', 'Social Club', 'Speaker', 'Sports Team', 'Startup',
-  'Student Organization', 'Synagogue', 'Tech Community', 'Theater',
-  'University', 'Venue', 'Video Creator', 'Wedding Planner', 'Workshop',
-  'Writer', 'Yoga Studio', 'Youth Organization'
-].sort();
 
 export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSetupProps) {
   const [organizerName, setOrganizerName] = useState('');

@@ -17,6 +17,8 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
   const navigate = useNavigate();
   const location = useLocation();
   const [post, setPost] = useState<any>(location.state?.post || null);
+  const startTime = location.state?.startTime || 0;
+  const initialMuted = location.state?.isMuted !== undefined ? location.state.isMuted : false;
   const [loading, setLoading] = useState(!post);
 
   useEffect(() => {
@@ -270,6 +272,8 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
       }}
       onComment={handleComment}
       onLikeComment={handleLikeComment}
+      startTime={startTime}
+      initialMuted={initialMuted}
     />
   );
 }
