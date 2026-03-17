@@ -754,9 +754,9 @@ export default function App() {
              </div>
           } />
           <Route path="/live" element={
-             <div className="animate-in fade-in duration-200">
-               <LiveFeed />
-             </div>
+            <div className="animate-in fade-in duration-200">
+              <LiveFeed isPaused={!!backgroundLocation} />
+            </div>
           } />
           <Route path="/create" element={
              <CreateEventWrapper 

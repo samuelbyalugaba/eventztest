@@ -285,7 +285,7 @@ const locations = [
   { id: 'Bangui', name: 'Bangui', flag: '🇨🇫' },
 ];
 
-export function LiveFeed() {
+export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -294,6 +294,13 @@ export function LiveFeed() {
   const [remoteLocationOptions, setRemoteLocationOptions] = useState<LocationOption[]>([]);
   const [isSearchingLocations, setIsSearchingLocations] = useState(false);
   const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
+
+  // Close stream viewer if background is paused
+  useEffect(() => {
+    if (isPaused && selectedStream) {
+      setSelectedStream(null);
+    }
+  }, [isPaused, selectedStream]);
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
   const [recentLocations, setRecentLocations] = useState<string[]>(['Dar es Salaam', 'Dubai', 'New York']);
   const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);

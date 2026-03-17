@@ -87,6 +87,17 @@ export function Feed({
   const [rewindAnimation, setRewindAnimation] = useState<{ show: boolean; direction: 'left' | 'right' } | null>(null);
   // const [showChatMenu, setShowChatMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+
+  // Force pause highlight player if background is paused (e.g. modal open)
+  useEffect(() => {
+    if (isPaused && playingVideo) {
+      const video = document.getElementById('highlight-video') as HTMLVideoElement;
+      if (video && !video.paused) {
+        video.pause();
+        setIsPlaying(false);
+      }
+    }
+  }, [isPaused, playingVideo]);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [renderCount, setRenderCount] = useState(20);
   const [exploreSearch, setExploreSearch] = useState('');

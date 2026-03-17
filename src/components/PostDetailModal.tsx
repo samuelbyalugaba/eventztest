@@ -372,6 +372,10 @@ export function PostDetailModal({
                           playsInline
                           loop
                           muted={isMuted}
+                          onPlay={() => {
+                            // Dispatch event to pause other videos
+                            window.dispatchEvent(new CustomEvent('video-play', { detail: { id: post.id } }));
+                          }}
                           onLoadedMetadata={(e) => {
                             const v = e.currentTarget;
                             if (v.videoWidth > 0 && v.videoHeight > 0) {
@@ -464,6 +468,10 @@ export function PostDetailModal({
                                           playsInline
                                           loop
                                           muted={isMuted}
+                                          onPlay={() => {
+                                            // Dispatch event to pause other videos
+                                            window.dispatchEvent(new CustomEvent('video-play', { detail: { id: post.id } }));
+                                          }}
                                           onLoadedMetadata={(e) => {
                                             const v = e.currentTarget;
                                             if (v.videoWidth > 0 && v.videoHeight > 0) {

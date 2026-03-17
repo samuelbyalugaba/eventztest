@@ -168,7 +168,8 @@ export const PostCard = React.memo(function PostCard({
   useEffect(() => {
     // Listen for other videos playing
     const handleOtherVideoPlay = (e: CustomEvent) => {
-      if (e.detail.postId !== post.id && videoRef.current && !videoRef.current.paused) {
+      const otherId = e.detail.id || e.detail.postId;
+      if (otherId !== post.id && videoRef.current && !videoRef.current.paused) {
         videoRef.current.pause();
         setIsPlaying(false);
       }

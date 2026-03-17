@@ -85,7 +85,10 @@ export function PostDetailPage({
         // Ensure it starts playing if it's supposed to
         const playPromise = video.play();
         if (playPromise !== undefined) {
-          playPromise.catch(error => {
+          playPromise.then(() => {
+            // Dispatch event to pause other videos
+            window.dispatchEvent(new CustomEvent('video-play', { detail: { id: post.id } }));
+          }).catch(error => {
             console.log("Autoplay was prevented:", error);
           });
         }
