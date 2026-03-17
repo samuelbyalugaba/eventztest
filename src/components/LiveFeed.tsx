@@ -285,7 +285,11 @@ const locations = [
   { id: 'Bangui', name: 'Bangui', flag: '🇨🇫' },
 ];
 
+let liveFeedCache: { liveStreams: LiveStream[]; upcomingStreams: LiveStream[]; ts: number } | null = null;
+const LIVE_FEED_CACHE_TTL_MS = 60_000;
+
 export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
+  const hasFreshCache = !!(liveFeedCache && Date.now() - liveFeedCache.ts < LIVE_FEED_CACHE_TTL_MS);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -303,9 +307,9 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
   }, [isPaused, selectedStream]);
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
   const [recentLocations, setRecentLocations] = useState<string[]>(['Dar es Salaam', 'Dubai', 'New York']);
-  const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
-  const [upcomingStreams, setUpcomingStreams] = useState<LiveStream[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [liveStreams, setLiveStreams] = useState<LiveStream[]>(hasFreshCache ? liveFeedCache!.liveStreams : []);
+  const [upcomingStreams, setUpcomingStreams] = useState<LiveStream[]>(hasFreshCache ? liveFeedCache!.upcomingStreams : []);
+  const [isLoading, setIsLoading] = useState(!hasFreshCache);
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [eventToPurchase, setEventToPurchase] = useState<ApiEvent | null>(null);
   const [reminders, setReminders] = useState<Set<number>>(new Set());
@@ -318,10 +322,12 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
     }
   };
 
-  const fetchStreams = async () => {
-    setIsLoading(true);
+  const fetchStreams = async ({ showLoading }: { showLoading?: boolean } = {}) => {
+    const shouldShowLoading = showLoading ?? liveStreams.length === 0;
+    if (shouldShowLoading) setIsLoading(true);
     try {
       const live = await getLiveStreams();
+      let nextLive: LiveStream[] = liveStreams;
       if (live) {
         const mappedLive = live.map((e: any) => {
           const profile = e.organizer;
@@ -337,10 +343,12 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
             location: profile?.location?.split(',')[0]?.trim() || 'Dar es Salaam'
           };
         });
-        setLiveStreams(mappedLive as unknown as LiveStream[]);
+        nextLive = mappedLive as unknown as LiveStream[];
+        setLiveStreams(nextLive);
       }
       
       const upcoming = await getUpcomingStreams();
+      let nextUpcoming: LiveStream[] = upcomingStreams;
       if (upcoming) {
         const mappedUpcoming = upcoming
           .filter((e: any) => e.description !== 'Instant live stream')
@@ -357,8 +365,11 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
               countdown: Math.max(0, Math.floor((new Date(`${e.date}T${e.time}`).getTime() - new Date().getTime()) / (1000 * 60)))
             };
         });
-        setUpcomingStreams(mappedUpcoming as unknown as LiveStream[]);
+        nextUpcoming = mappedUpcoming as unknown as LiveStream[];
+        setUpcomingStreams(nextUpcoming);
       }
+
+      liveFeedCache = { liveStreams: nextLive, upcomingStreams: nextUpcoming, ts: Date.now() };
     } catch (error) {
       console.error('Error fetching streams:', error);
     } finally {
@@ -384,7 +395,7 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
   }, [liveStreams.map((s) => s.id).join(',')]);
 
   useEffect(() => {
-    fetchStreams();
+    fetchStreams({ showLoading: !hasFreshCache });
 
     const channel = supabase
       .channel('live-feed-updates')

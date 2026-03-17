@@ -7,12 +7,14 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  componentStack: string | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
+    componentStack: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -21,6 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
+    this.setState({ componentStack: errorInfo.componentStack || null });
   }
 
   public render() {
@@ -37,6 +40,20 @@ export class ErrorBoundary extends Component<Props, State> {
                 {this.state.error?.message}
               </code>
             </div>
+            {import.meta.env.DEV && this.state.componentStack && (
+              <div className="bg-gray-100 p-4 rounded overflow-auto mb-6 max-h-48">
+                <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                  {this.state.componentStack.trim().split('\n').slice(0, 25).join('\n')}
+                </pre>
+              </div>
+            )}
+            {import.meta.env.DEV && this.state.error?.stack && (
+              <div className="bg-gray-100 p-4 rounded overflow-auto mb-6 max-h-48">
+                <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                  {this.state.error.stack.trim().split('\n').slice(0, 25).join('\n')}
+                </pre>
+              </div>
+            )}
             <button
               onClick={() => window.location.reload()}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"

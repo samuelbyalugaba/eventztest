@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, MessageCircle, Ticket, Music, Trophy, Globe } from 'lucide-react';
 import { EventCard } from './EventCard';
@@ -41,6 +41,7 @@ interface EventDetailsProps {
 
 export function EventDetails({ conversations: globalConversations, onStartConversation, onSendMessage }: EventDetailsProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [viewMode, setViewMode] = useState<'home' | 'list'>('home');
   
   // Initialize state directly from store
@@ -113,7 +114,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const handleEventClick = (event: ApiEvent) => {
-    navigate(`/event/${event.id}`);
+    const backgroundBase = (location.state as any)?.backgroundLocation || location;
+    navigate(`/event/${event.id}`, { state: { backgroundLocation: backgroundBase } });
   };
 
   const [showFilters, setShowFilters] = useState(false);

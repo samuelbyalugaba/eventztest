@@ -271,7 +271,8 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
       }}
       onProfileClick={(user) => {
         if (user && user.id) {
-          navigate(`/profile/${user.id}`);
+          const backgroundBase = (location.state as any)?.backgroundLocation || location;
+          navigate(`/profile/${user.id}`, { state: { backgroundLocation: backgroundBase } });
         } else {
           toast.error('Could not find user profile');
         }

@@ -558,7 +558,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {/* Header Section */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
-          {!isOwnProfile && onBack && (
+          {onBack && (
             <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
               <ChevronLeft className="w-6 h-6 text-gray-900" />
             </button>
@@ -1002,27 +1002,21 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                           <>
                             <video
                               src={`${videoSrc!}${videoSrc!.includes('#') ? '' : '#t=0.1'}`}
-                              poster={post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : undefined}
-                              className={`w-full h-full object-cover ${
-                                videoThumbnail ? 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-active:opacity-100 group-active:pointer-events-auto transition-opacity' : ''
-                              }`}
+                              poster={videoThumbnail}
+                              className="w-full h-full object-cover"
                               muted
                               playsInline
                               loop
-                              preload="none"
+                              preload={videoThumbnail ? 'none' : 'auto'}
+                              onLoadedData={(e) => {
+                                e.currentTarget.pause();
+                              }}
                               onMouseOver={(e) => !isPaused && e.currentTarget.play()}
                               onMouseOut={(e) => {
                                 e.currentTarget.pause();
                                 e.currentTarget.currentTime = 0;
                               }}
                             />
-                            {videoThumbnail && (
-                              <img
-                                src={videoThumbnail}
-                                alt=""
-                                className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-100 group-hover:opacity-0 group-active:opacity-0 transition-opacity"
-                              />
-                            )}
                           </>
                         ) : (
                           <ImageWithFallback

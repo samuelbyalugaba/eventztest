@@ -34,13 +34,14 @@ export function FeedHeader({
   showMessagesOrPost = false,
   scrollContainer
 }: FeedHeaderProps) {
+  const headerRef = useRef<HTMLDivElement | null>(null);
   const [showExtendedHeader, setShowExtendedHeader] = useState(true);
-  const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
+  const headerHeightRef = useRef(0);
+  const headerOffsetRef = useRef(0);
 
   const SCROLL_THRESHOLD_PX = 60;
-  const SCROLL_DELTA_PX = 8; // min movement to treat as "scrolling down/up" (reduces jitter)
 
   const getScrollY = (el: HTMLElement | null | undefined) => {
     if (el) return el.scrollTop;
@@ -49,36 +50,53 @@ export function FeedHeader({
     return docEl ? docEl.scrollTop : window.scrollY ?? document.documentElement.scrollTop ?? 0;
   };
 
+  const applyOffset = (nextOffset: number) => {
+    const el = headerRef.current;
+    if (!el) return;
+    const clamped = Math.max(0, Math.min(headerHeightRef.current, nextOffset));
+    headerOffsetRef.current = clamped;
+    el.style.transform = `translate3d(0, ${-clamped}px, 0)`;
+  };
+
   useEffect(() => {
     lastScrollY.current = getScrollY(scrollContainer ?? undefined);
   }, [scrollContainer]);
 
   useEffect(() => {
-    const scrollEl = scrollContainer ?? null;
-    const updateVisibility = () => {
-      const currentScrollY = getScrollY(scrollEl);
-      const prev = lastScrollY.current;
-      const delta = currentScrollY - prev;
-      lastScrollY.current = currentScrollY;
+    const el = headerRef.current;
+    if (!el) return;
 
-      if (currentScrollY <= SCROLL_THRESHOLD_PX) {
-        setIsVisible(true);
-        return;
-      }
-      if (delta > SCROLL_DELTA_PX) {
-        setIsVisible(false);
-        return;
-      }
-      if (delta < -SCROLL_DELTA_PX) {
-        setIsVisible(true);
-      }
+    const update = () => {
+      headerHeightRef.current = Math.ceil(el.getBoundingClientRect().height);
+      applyOffset(headerOffsetRef.current);
     };
 
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const scrollEl = scrollContainer ?? null;
     const onScroll = () => {
       if (!ticking.current) {
         ticking.current = true;
         requestAnimationFrame(() => {
-          updateVisibility();
+          const currentScrollY = getScrollY(scrollEl);
+          const prev = lastScrollY.current;
+          const delta = currentScrollY - prev;
+          lastScrollY.current = currentScrollY;
+
+          if (showMessagesOrPost || currentScrollY <= SCROLL_THRESHOLD_PX) {
+            applyOffset(0);
+            ticking.current = false;
+            return;
+          }
+
+          if (delta !== 0) {
+            applyOffset(headerOffsetRef.current + delta);
+          }
           ticking.current = false;
         });
       }
@@ -91,12 +109,10 @@ export function FeedHeader({
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    document.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', onScroll);
-      document.removeEventListener('scroll', onScroll);
     };
-  }, [scrollContainer]);
+  }, [scrollContainer, showMessagesOrPost]);
 
   useEffect(() => {
     const sentinel = document.getElementById('top-sentinel');
@@ -121,11 +137,8 @@ export function FeedHeader({
   return (
     <div
       id="feed-header"
-      className={`bg-white border-b border-gray-100 fixed top-0 left-0 right-0 z-50 transform ${
-        isVisible
-          ? 'translate-y-0 transition-none'
-          : '-translate-y-full transition-transform duration-300 ease-out'
-      }`}
+      ref={headerRef}
+      className="bg-white border-b border-gray-100 fixed top-0 left-0 right-0 z-50 transform-gpu will-change-transform"
     >
       <div className="px-4 pt-5 pb-4">
         {/* Brand Section - Always visible */}
@@ -173,7 +186,7 @@ export function FeedHeader({
         </div>
 
         {/* Search and Filters - Animated on scroll */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+        <div className={`overflow-hidden transition-[max-height,opacity,margin-top] duration-200 ease-out ${
           showExtendedHeader ? 'max-h-40 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0 pointer-events-none'
         }`}>
           <div className="mb-4">

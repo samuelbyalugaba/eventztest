@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { EventDetails } from './components/EventDetails';
 import { LiveFeed } from './components/LiveFeed';
@@ -7,6 +7,7 @@ import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
 import { CreateEventWrapper } from './components/CreateEventWrapper';
 import { PostDetailWrapper } from './components/PostDetailWrapper';
+import { ProfileModalWrapper } from './components/ProfileModalWrapper';
 import { EventDetailWrapper } from './components/EventDetailWrapper';
 import CreatePostPage from './components/CreatePostPage';
 import { Calendar, Radio, User, Rss } from 'lucide-react';
@@ -34,6 +35,8 @@ import { formatTimeAgo } from './utils/format';
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const prevTabPathRef = useRef<string | null>(null);
+  const prevWasModalRef = useRef(false);
   const [isOrganizer, setIsOrganizer] = useState(false);
   
   // Auth state
@@ -649,6 +652,65 @@ export default function App() {
     navigate(`/edit-event/${event.id}`);
   };
 
+  const handleViewPost = (item: any) => {
+    const backgroundBase = (location.state as any)?.backgroundLocation || location;
+    if (item.isProfile) {
+      if (item.id && item.id !== 'unknown') {
+        navigate(`/profile/${item.id}`, { state: { backgroundLocation: backgroundBase } });
+      } else {
+        // Fallback: if we can't find the user ID, maybe it's the current user? 
+        // Or just don't navigate to a broken URL.
+        console.warn('Cannot navigate to profile: User ID is missing', item);
+        navigate('/profile', { state: { backgroundLocation: backgroundBase } });
+      }
+    } else {
+      // Use location state to implement modal routing
+      navigate(`/post/${item.id}`, { 
+        state: { 
+          backgroundLocation: backgroundBase,
+          post: item, 
+          startTime: item.startTime, 
+          isMuted: item.isMuted 
+        } 
+      });
+    }
+  };
+
+  const isPostModal = location.pathname.startsWith('/post/') && location.state?.backgroundLocation;
+  const isEventModal = location.pathname.startsWith('/event/') && location.state?.backgroundLocation;
+  const shouldHideBottomNav = location.pathname.startsWith('/create') || 
+                               location.pathname.startsWith('/edit-event') || 
+                               (location.pathname.startsWith('/post') && !isPostModal) || 
+                               (location.pathname.startsWith('/event/') && !isEventModal);
+
+  const backgroundLocation = location.state?.backgroundLocation;
+
+  useEffect(() => {
+    const isModal =
+      !!(location.state as any)?.backgroundLocation &&
+      (location.pathname.startsWith('/post/') ||
+        location.pathname.startsWith('/profile') ||
+        location.pathname.startsWith('/event/'));
+
+    const isTabPath = (p: string) => p === '/events' || p === '/live' || p === '/profile';
+
+    const prevPath = prevTabPathRef.current;
+    if (prevPath && !prevWasModalRef.current && isTabPath(prevPath)) {
+      sessionStorage.setItem(`eventz_tab_scroll_${prevPath}`, String(window.scrollY));
+    }
+
+    if (!isModal && isTabPath(location.pathname)) {
+      const saved = sessionStorage.getItem(`eventz_tab_scroll_${location.pathname}`);
+      if (saved !== null) {
+        const y = Number(saved) || 0;
+        requestAnimationFrame(() => window.scrollTo(0, y));
+      }
+    }
+
+    prevTabPathRef.current = location.pathname;
+    prevWasModalRef.current = isModal;
+  }, [location.key, location.pathname, (location.state as any)?.backgroundLocation]);
+
   // Show loading screen while checking auth
   if (isCheckingAuth) {
     return (
@@ -660,37 +722,6 @@ export default function App() {
       </div>
     );
   }
-
-  const handleViewPost = (item: any) => {
-    if (item.isProfile) {
-      if (item.id && item.id !== 'unknown') {
-        navigate(`/profile/${item.id}`);
-      } else {
-        // Fallback: if we can't find the user ID, maybe it's the current user? 
-        // Or just don't navigate to a broken URL.
-        console.warn('Cannot navigate to profile: User ID is missing', item);
-        navigate('/profile');
-      }
-    } else {
-      // Use location state to implement modal routing
-      navigate(`/post/${item.id}`, { 
-        state: { 
-          backgroundLocation: location,
-          post: item, 
-          startTime: item.startTime, 
-          isMuted: item.isMuted 
-        } 
-      });
-    }
-  };
-
-  const isPostModal = location.pathname.startsWith('/post/') && location.state?.backgroundLocation;
-  const shouldHideBottomNav = location.pathname.startsWith('/create') || 
-                               location.pathname.startsWith('/edit-event') || 
-                               (location.pathname.startsWith('/post') && !isPostModal) || 
-                               location.pathname.startsWith('/event/');
-
-  const backgroundLocation = location.state?.backgroundLocation;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -830,6 +861,34 @@ export default function App() {
                 userProfile={userProfile}
               />
             } 
+          />
+          <Route
+            path="/event/:id"
+            element={<EventDetailWrapper onStartConversation={handleStartConversation} />}
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProfileModalWrapper
+                onLogout={handleLogout}
+                onCreateEvent={handleCreateEvent}
+                onEditEvent={handleEditEvent}
+                onStartOrganizerSetup={handleStartOrganizerSetup}
+                onViewPost={handleViewPost}
+              />
+            }
+          />
+          <Route
+            path="/profile/:userId"
+            element={
+              <ProfileModalWrapper
+                onLogout={handleLogout}
+                onCreateEvent={handleCreateEvent}
+                onEditEvent={handleEditEvent}
+                onStartOrganizerSetup={handleStartOrganizerSetup}
+                onViewPost={handleViewPost}
+              />
+            }
           />
         </Routes>
       )}
