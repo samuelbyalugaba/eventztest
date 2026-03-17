@@ -92,6 +92,8 @@ export function Feed({
   const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
   const [isRestoringScroll, setIsRestoringScroll] = useState(!!sessionStorage.getItem('feedScrollPos'));
   const feedContainerRef = useRef<HTMLDivElement>(null);
+  const feedScrollRef = useRef<HTMLDivElement>(null);
+  const [feedScrollContainer, setFeedScrollContainer] = useState<HTMLDivElement | null>(null);
 
   // Set scroll restoration to manual to prevent browser interference
   useEffect(() => {
@@ -124,6 +126,7 @@ export function Feed({
       const validScrollY = !isNaN(scrollY) && scrollY >= 0;
 
       const tryScroll = () => {
+        const scrollEl = feedScrollRef.current;
         const element = lastPostId ? document.getElementById(`post-${lastPostId}`) : null;
 
         if (element) {
@@ -135,18 +138,33 @@ export function Feed({
         }
 
         if (validScrollY) {
-          const currentHeight = document.documentElement.scrollHeight;
-          const viewportHeight = window.innerHeight;
-          const isPageTallEnough = currentHeight >= scrollY + viewportHeight / 2 || (currentHeight === viewportHeight && scrollY === 0);
-
-          if (isPageTallEnough) {
-            window.scrollTo({ top: scrollY, behavior: 'smooth' });
-            const scrollDiff = Math.abs(window.scrollY - scrollY);
-            if (scrollDiff < 15) {
-              sessionStorage.removeItem('feedScrollPos');
-              sessionStorage.removeItem('feedLastPostId');
-              setTimeout(() => setIsRestoringScroll(false), 100);
-              return;
+          if (scrollEl) {
+            const scrollHeight = scrollEl.scrollHeight;
+            const clientHeight = scrollEl.clientHeight;
+            const isTallEnough = scrollHeight >= scrollY + clientHeight / 2 || (scrollHeight === clientHeight && scrollY === 0);
+            if (isTallEnough) {
+              scrollEl.scrollTo({ top: scrollY, behavior: 'smooth' });
+              const scrollDiff = Math.abs(scrollEl.scrollTop - scrollY);
+              if (scrollDiff < 15) {
+                sessionStorage.removeItem('feedScrollPos');
+                sessionStorage.removeItem('feedLastPostId');
+                setTimeout(() => setIsRestoringScroll(false), 100);
+                return;
+              }
+            }
+          } else {
+            const currentHeight = document.documentElement.scrollHeight;
+            const viewportHeight = window.innerHeight;
+            const isPageTallEnough = currentHeight >= scrollY + viewportHeight / 2 || (currentHeight === viewportHeight && scrollY === 0);
+            if (isPageTallEnough) {
+              window.scrollTo({ top: scrollY, behavior: 'smooth' });
+              const scrollDiff = Math.abs(window.scrollY - scrollY);
+              if (scrollDiff < 15) {
+                sessionStorage.removeItem('feedScrollPos');
+                sessionStorage.removeItem('feedLastPostId');
+                setTimeout(() => setIsRestoringScroll(false), 100);
+                return;
+              }
             }
           }
         }
@@ -155,7 +173,10 @@ export function Feed({
         if (attempts < maxAttempts) {
           retryId = setTimeout(tryScroll, 120);
         } else {
-          if (validScrollY) window.scrollTo({ top: scrollY, behavior: 'smooth' });
+          if (validScrollY) {
+            if (scrollEl) scrollEl.scrollTo({ top: scrollY, behavior: 'smooth' });
+            else window.scrollTo({ top: scrollY, behavior: 'smooth' });
+          }
           sessionStorage.removeItem('feedScrollPos');
           sessionStorage.removeItem('feedLastPostId');
           setTimeout(() => setIsRestoringScroll(false), 100);
@@ -475,19 +496,22 @@ export function Feed({
   useEffect(() => {
     const sentinel = document.getElementById('feed-sentinel');
     if (!sentinel) return;
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setRenderCount((c) => c + 20);
-          if (hasMore && !isLoadingMore) {
-            handleLoadMore();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setRenderCount((c) => c + 20);
+            if (hasMore && !isLoadingMore) {
+              handleLoadMore();
+            }
           }
-        }
-      });
-    }, { threshold: 0.1 });
+        });
+      },
+      { threshold: 0.1, root: feedScrollContainer ?? null }
+    );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [renderCount, posts.length, activeFilter, hasMore, isLoadingMore]);
+  }, [renderCount, posts.length, activeFilter, hasMore, isLoadingMore, feedScrollContainer]);
 
   useEffect(() => {
     if (currentUser) {
@@ -821,10 +845,10 @@ export function Feed({
 
 
   const handlePostClick = (post: Post, startTime?: number, isMuted?: boolean) => {
-    // Save scroll position and last post ID before navigating
-    sessionStorage.setItem('feedScrollPos', window.scrollY.toString());
+    const scrollPos = feedScrollRef.current?.scrollTop ?? window.scrollY;
+    sessionStorage.setItem('feedScrollPos', String(scrollPos));
     sessionStorage.setItem('feedLastPostId', post.id.toString());
-    
+
     if (onViewPost) {
       onViewPost({ ...post, startTime, isMuted });
     }
@@ -889,10 +913,7 @@ export function Feed({
     <>
       {/* Main Feed View */}
       <div ref={feedContainerRef} className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
-        {/* Top sentinel for scroll detection */}
-        <div id="top-sentinel" className="absolute top-0 left-0 w-full h-px pointer-events-none" />
-        
-        {/* Feed Header Component */}
+        {/* Feed Header Component (fixed; hide/show on scroll of the container below) */}
         <FeedHeader
           currentUser={currentUser}
           showNotifications={showNotifications}
@@ -912,10 +933,22 @@ export function Feed({
             setShowNotifications(false);
           }}
           showMessagesOrPost={showMessages || !!selectedPost}
+          scrollContainer={feedScrollContainer}
         />
 
-        {/* Unique Card-Based Posts */}
-        <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+        {/* Scroll container: this is what actually scrolls (full-height area below fixed header) */}
+        <div
+          ref={(el) => {
+            (feedScrollRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+            setFeedScrollContainer(el);
+          }}
+          className="overflow-y-auto h-[100dvh] overscroll-behavior-y-contain"
+          style={{ paddingTop: '7rem' }}
+        >
+          {/* Top sentinel for scroll detection */}
+          <div id="top-sentinel" className="w-full h-px pointer-events-none" />
+          {/* Unique Card-Based Posts */}
+          <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
           {exploreSearch.trim().length >= 2 ? (
             <div className="mb-8 -mx-4">
               <div className="flex items-center justify-between px-5 mb-4">
@@ -1029,6 +1062,7 @@ export function Feed({
               )}
             </>
           )}
+          </div>
         </div>
       </div>
 

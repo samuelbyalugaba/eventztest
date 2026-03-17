@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, Bell, MessageSquare, LayoutGrid, Users as UsersIcon, Star, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -15,6 +15,8 @@ interface FeedHeaderProps {
   onToggleNotifications: () => void;
   onToggleMessages: () => void;
   showMessagesOrPost?: boolean;
+  /** The element that actually scrolls (feed content). If not set, falls back to window. */
+  scrollContainer?: HTMLElement | null;
 }
 
 export function FeedHeader({
@@ -29,9 +31,72 @@ export function FeedHeader({
   setActiveFilter,
   onToggleNotifications,
   onToggleMessages,
-  showMessagesOrPost = false
+  showMessagesOrPost = false,
+  scrollContainer
 }: FeedHeaderProps) {
   const [showExtendedHeader, setShowExtendedHeader] = useState(true);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
+
+  const SCROLL_THRESHOLD_PX = 60;
+  const SCROLL_DELTA_PX = 8; // min movement to treat as "scrolling down/up" (reduces jitter)
+
+  const getScrollY = (el: HTMLElement | null | undefined) => {
+    if (el) return el.scrollTop;
+    if (typeof window === 'undefined') return 0;
+    const docEl = document.scrollingElement;
+    return docEl ? docEl.scrollTop : window.scrollY ?? document.documentElement.scrollTop ?? 0;
+  };
+
+  useEffect(() => {
+    lastScrollY.current = getScrollY(scrollContainer ?? undefined);
+  }, [scrollContainer]);
+
+  useEffect(() => {
+    const scrollEl = scrollContainer ?? null;
+    const updateVisibility = () => {
+      const currentScrollY = getScrollY(scrollEl);
+      const prev = lastScrollY.current;
+      const delta = currentScrollY - prev;
+      lastScrollY.current = currentScrollY;
+
+      if (currentScrollY <= SCROLL_THRESHOLD_PX) {
+        setIsVisible(true);
+        return;
+      }
+      if (delta > SCROLL_DELTA_PX) {
+        setIsVisible(false);
+        return;
+      }
+      if (delta < -SCROLL_DELTA_PX) {
+        setIsVisible(true);
+      }
+    };
+
+    const onScroll = () => {
+      if (!ticking.current) {
+        ticking.current = true;
+        requestAnimationFrame(() => {
+          updateVisibility();
+          ticking.current = false;
+        });
+      }
+    };
+
+    if (scrollEl) {
+      lastScrollY.current = scrollEl.scrollTop;
+      scrollEl.addEventListener('scroll', onScroll, { passive: true });
+      return () => scrollEl.removeEventListener('scroll', onScroll);
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('scroll', onScroll);
+    };
+  }, [scrollContainer]);
 
   useEffect(() => {
     const sentinel = document.getElementById('top-sentinel');
@@ -39,23 +104,28 @@ export function FeedHeader({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // When sentinel is intersecting, we are at the top
         const atTop = entry.isIntersecting;
         setShowExtendedHeader(atTop);
       },
-      { 
+      {
+        root: scrollContainer ?? null,
         threshold: 0,
-        // Using 0px to ensure it triggers correctly at the very top
-        rootMargin: '0px' 
+        rootMargin: '0px'
       }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, []);
+  }, [scrollContainer]);
 
   return (
-    <div className={`bg-white border-b border-gray-100 transition-all duration-300 sticky top-0 ${showMessagesOrPost ? 'z-0' : 'z-50'}`}>
+    <div
+      className={`bg-white border-b border-gray-100 fixed top-0 left-0 right-0 z-50 transform ${
+        isVisible
+          ? 'translate-y-0 transition-none'
+          : '-translate-y-full transition-transform duration-300 ease-out'
+      }`}
+    >
       <div className="px-4 pt-5 pb-4">
         {/* Brand Section - Always visible */}
         <div className="flex items-center justify-between mb-2">
