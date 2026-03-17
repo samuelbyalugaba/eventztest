@@ -251,7 +251,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
   // Restore scroll position when returning from post detail (smooth slide-back to the clicked post)
   useEffect(() => {
-    if (isLoading || filteredUserPosts.length === 0) return;
+    if (isLoading || userPosts.length === 0) return;
     const savedScroll = sessionStorage.getItem(PROFILE_SCROLL_KEY);
     const savedPostId = sessionStorage.getItem(PROFILE_POST_ID_KEY);
     if (!savedScroll && !savedPostId) return;
@@ -276,7 +276,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
     const timeoutId = setTimeout(restore, 150);
     return () => clearTimeout(timeoutId);
-  }, [isLoading, filteredUserPosts.length]);
+  }, [isLoading, userPosts.length]);
 
   useEffect(() => {
     loadData();
