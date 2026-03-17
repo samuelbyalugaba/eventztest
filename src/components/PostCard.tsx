@@ -28,6 +28,7 @@ interface PostCardProps {
   onViewPost?: (startTime?: number, isMuted?: boolean) => void;
   onViewComments?: () => void;
   audioUnlocked?: boolean;
+  isPaused?: boolean;
 }
 
 const isVideo = (url?: string) => {
@@ -45,7 +46,8 @@ export const PostCard = React.memo(function PostCard({
   onMessage, 
   onViewPost, 
   onViewComments, 
-  audioUnlocked = false 
+  audioUnlocked = false,
+  isPaused = false
 }: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
@@ -178,36 +180,37 @@ export const PostCard = React.memo(function PostCard({
       (entries) => {
         entries.forEach((entry) => {
           if (videoRef.current) {
-          // Threshold for autoplay - Now starts at 50% visibility
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            if (videoRef.current.paused) {
-              const shouldMute = !audioUnlocked;
-              videoRef.current.muted = shouldMute;
-              setIsMuted(shouldMute);
+            // Threshold for autoplay - Now starts at 50% visibility
+            // Also check if we are explicitly paused (e.g. modal is open)
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && !isPaused) {
+              if (videoRef.current.paused) {
+                const shouldMute = !audioUnlocked;
+                videoRef.current.muted = shouldMute;
+                setIsMuted(shouldMute);
 
-              const playPromise = videoRef.current.play();
-              if (playPromise !== undefined) {
-                playPromise
-                  .then(() => {
-                    setIsPlaying(true);
-                    window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
-                  })
-                  .catch(() => {
-                    setIsPlaying(false);
-                  });
+                const playPromise = videoRef.current.play();
+                if (playPromise !== undefined) {
+                  playPromise
+                    .then(() => {
+                      setIsPlaying(true);
+                      window.dispatchEvent(new CustomEvent('video-play', { detail: { postId: post.id } }));
+                    })
+                    .catch(() => {
+                      setIsPlaying(false);
+                    });
+                }
+              } else if (audioUnlocked && videoRef.current.muted) {
+                // If already playing and audio is unlocked, ensure we are unmuted
+                videoRef.current.muted = false;
+                setIsMuted(false);
               }
-            } else if (audioUnlocked && videoRef.current.muted) {
-              // If already playing and audio is unlocked, ensure we are unmuted
-              videoRef.current.muted = false;
-              setIsMuted(false);
+            } else {
+              // Pause if less than 50% visible OR if we are explicitly paused
+              if (!videoRef.current.paused) {
+                videoRef.current.pause();
+                setIsPlaying(false);
+              }
             }
-          } else {
-            // Pause if less than 50% visible
-            if (!videoRef.current.paused) {
-              videoRef.current.pause();
-              setIsPlaying(false);
-            }
-          }
           }
         });
       },
@@ -218,13 +221,19 @@ export const PostCard = React.memo(function PostCard({
       observer.observe(videoRef.current);
     }
 
+    // Force pause if isPaused becomes true while visible
+    if (isPaused && videoRef.current && !videoRef.current.paused) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+
     return () => {
       window.removeEventListener('video-play', handleOtherVideoPlay as EventListener);
       if (videoRef.current) {
         observer.unobserve(videoRef.current);
       }
     };
-  }, [carouselIndex, post.id, audioUnlocked]);
+  }, [carouselIndex, post.id, audioUnlocked, isPaused]);
 
   // Effect to handle audio unlock when already playing
   useEffect(() => {

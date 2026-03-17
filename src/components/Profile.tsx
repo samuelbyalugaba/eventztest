@@ -44,9 +44,10 @@ interface ProfileProps {
   userId?: string; // Optional: View another user's profile
   onBack?: () => void; // Optional: Back button handler
   onViewPost?: (post: any) => void;
+  isPaused?: boolean;
 }
 
-export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup, userId: userIdProp, onBack, onViewPost }: ProfileProps) {
+export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup, userId: userIdProp, onBack, onViewPost, isPaused = false }: ProfileProps) {
   const { userId: userIdParam } = useParams<{ userId: string }>();
   const userId = userIdProp || userIdParam;
   const navigate = useNavigate();
@@ -1009,7 +1010,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
                               playsInline
                               loop
                               preload="none"
-                              onMouseOver={(e) => e.currentTarget.play()}
+                              onMouseOver={(e) => !isPaused && e.currentTarget.play()}
                               onMouseOut={(e) => {
                                 e.currentTarget.pause();
                                 e.currentTarget.currentTime = 0;

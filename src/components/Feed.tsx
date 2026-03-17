@@ -33,6 +33,7 @@ interface FeedProps {
   isOrganizer?: boolean;
   onCreateEvent?: () => void;
   onViewPost?: (post: any) => void;
+  isPaused?: boolean;
 }
 
 let feedCacheMemory: { posts: any[]; timestamp: number } | null = null;
@@ -49,7 +50,8 @@ export function Feed({
   onlineUsers = [], 
   onDeleteConversation, 
   currentUser: propCurrentUser,
-  onViewPost 
+  onViewPost,
+  isPaused
 }: FeedProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1049,6 +1051,7 @@ export function Feed({
                         audioUnlocked={audioUnlocked}
                         onViewPost={(startTime, isMuted) => handlePostClick(post, startTime, isMuted)}
                         onViewComments={() => handleViewComments(post)}
+                        isPaused={isPaused}
                       />
                     </div>
                   ))}

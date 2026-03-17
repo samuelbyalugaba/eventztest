@@ -672,8 +672,10 @@ export default function App() {
         navigate('/profile');
       }
     } else {
+      // Use location state to implement modal routing
       navigate(`/post/${item.id}`, { 
         state: { 
+          backgroundLocation: location,
           post: item, 
           startTime: item.startTime, 
           isMuted: item.isMuted 
@@ -682,7 +684,13 @@ export default function App() {
     }
   };
 
-  const shouldHideBottomNav = location.pathname.startsWith('/create') || location.pathname.startsWith('/edit-event') || location.pathname.startsWith('/post') || location.pathname.startsWith('/event/');
+  const isPostModal = location.pathname.startsWith('/post/') && location.state?.backgroundLocation;
+  const shouldHideBottomNav = location.pathname.startsWith('/create') || 
+                               location.pathname.startsWith('/edit-event') || 
+                               (location.pathname.startsWith('/post') && !isPostModal) || 
+                               location.pathname.startsWith('/event/');
+
+  const backgroundLocation = location.state?.backgroundLocation;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -717,7 +725,7 @@ export default function App() {
       />
       {/* Main Content */}
       <div className={`max-w-7xl mx-auto ${shouldHideBottomNav ? 'pb-20' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'}`}>
-        <Routes>
+        <Routes location={backgroundLocation || location}>
           <Route path="/" element={<Navigate to="/events" replace />} />
           <Route path="/events" element={
              <div className="animate-in fade-in duration-200">
@@ -741,6 +749,7 @@ export default function App() {
                  isOrganizer={isOrganizer}
                  onCreateEvent={handleCreateEvent}
                  onViewPost={handleViewPost}
+                 isPaused={!!backgroundLocation}
                />
              </div>
           } />
@@ -778,6 +787,7 @@ export default function App() {
                    onEditEvent={handleEditEvent}
                    onStartOrganizerSetup={handleStartOrganizerSetup}
                    onViewPost={handleViewPost}
+                   isPaused={!!backgroundLocation}
                  />
                )}
              </div>
@@ -790,6 +800,7 @@ export default function App() {
                  onEditEvent={handleEditEvent}
                  onStartOrganizerSetup={handleStartOrganizerSetup}
                  onViewPost={handleViewPost}
+                 isPaused={!!backgroundLocation}
                />
              </div>
           } />
@@ -807,6 +818,21 @@ export default function App() {
           } />
         </Routes>
       </div>
+
+      {/* Modal Route Overlay */}
+      {backgroundLocation && (
+        <Routes>
+          <Route 
+            path="/post/:id" 
+            element={
+              <PostDetailWrapper 
+                currentUser={currentUser}
+                userProfile={userProfile}
+              />
+            } 
+          />
+        </Routes>
+      )}
 
       {/* Bottom Navigation */}
       {!shouldHideBottomNav && (
