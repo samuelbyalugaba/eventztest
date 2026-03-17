@@ -91,9 +91,23 @@ export function Feed({
   const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
   const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
   const [isRestoringScroll, setIsRestoringScroll] = useState(!!sessionStorage.getItem('feedScrollPos'));
+  const [feedHeaderHeight, setFeedHeaderHeight] = useState(0);
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const feedScrollRef = useRef<HTMLDivElement>(null);
   const [feedScrollContainer, setFeedScrollContainer] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const header = document.getElementById('feed-header');
+    if (!header) return;
+    const update = () => {
+      const next = Math.ceil(header.getBoundingClientRect().height);
+      setFeedHeaderHeight((prev) => (prev === next ? prev : next));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(header);
+    return () => ro.disconnect();
+  }, []);
 
   // Set scroll restoration to manual to prevent browser interference
   useEffect(() => {
@@ -943,7 +957,7 @@ export function Feed({
             setFeedScrollContainer(el);
           }}
           className="overflow-y-auto h-[100dvh] overscroll-behavior-y-contain"
-          style={{ paddingTop: '7rem' }}
+          style={{ paddingTop: feedHeaderHeight > 0 ? `${feedHeaderHeight}px` : '7rem' }}
         >
           {/* Top sentinel for scroll detection */}
           <div id="top-sentinel" className="w-full h-px pointer-events-none" />

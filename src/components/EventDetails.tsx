@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useEmblaCarousel from 'embla-carousel-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, MessageCircle, Ticket, Music, Trophy, Globe } from 'lucide-react';
 import { EventCard } from './EventCard';
@@ -203,17 +202,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     return { upcomingEvents: upcoming, pastEvents: past };
   }, [filteredEvents]);
 
-  const featuredEvents = React.useMemo(() => {
-    if (events.length === 0) return [];
-    const now = new Date();
-    return events
-      .filter(e => new Date(e.date) >= now)
-      .sort((a, b) => (b.views || 0) - (a.views || 0))
-      .slice(0, 5);
-  }, [events]);
-
-  
-
   useEffect(() => {
     const q = locationSearch.trim();
     if (q.length < 2) {
@@ -369,157 +357,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     if (selectedEvent) setSelectedEvent(null);
   };
 
-  // Embla Carousel setup (images only; panel content fades)
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'center', containScroll: 'trimSnaps' });
-  const [slideIndex, setSlideIndex] = useState(0);
-  const [panelIndex, setPanelIndex] = useState(0);
-  const [panelLeaving, setPanelLeaving] = useState(false);
-  const panelIndexRef = useRef(0);
-
-  useEffect(() => {
-    panelIndexRef.current = panelIndex;
-  }, [panelIndex]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    setSlideIndex(emblaApi.selectedScrollSnap());
-    const initial = emblaApi.selectedScrollSnap();
-    setPanelIndex(initial);
-    panelIndexRef.current = initial;
-    let timeoutId: ReturnType<typeof setTimeout>;
-    const onSelect = () => {
-      const next = emblaApi.selectedScrollSnap();
-      setSlideIndex(next);
-      if (next === panelIndexRef.current) return;
-      setPanelLeaving(true);
-      timeoutId = setTimeout(() => {
-        setPanelIndex(emblaApi.selectedScrollSnap());
-        panelIndexRef.current = emblaApi.selectedScrollSnap();
-        setPanelLeaving(false);
-      }, 220);
-    };
-    emblaApi.on('select', onSelect);
-    return () => {
-      emblaApi.off('select', onSelect);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [emblaApi]);
-
-  // Auto-play effect
-  useEffect(() => {
-    if (emblaApi) {
-      const autoplay = setInterval(() => {
-        emblaApi.scrollNext();
-      }, 5000);
-      return () => clearInterval(autoplay);
-    }
-  }, [emblaApi]);
-
   return (
     <div className="bg-gray-50 min-h-screen">
       {viewMode === 'home' ? (
         <div className="pb-24">
-          {/* 1. Hero: scrolling images + fixed panel with fade */}
-          <div className="relative w-full">
-            {/* Scrolling image carousel only */}
-            <div className="relative w-full overflow-hidden" ref={emblaRef}>
-              <div className="flex w-full touch-pan-y">
-                {featuredEvents.length > 0 ? (
-                  featuredEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex-[0_0_100%] min-w-0 relative cursor-pointer"
-                      onClick={() => handleEventClick(event)}
-                    >
-                      <div className="relative w-full h-[34vh] min-h-[180px] bg-neutral-800">
-                        <ImageWithFallback
-                          src={event.image_url}
-                          alt={event.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-transparent to-black/25 pointer-events-none" />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex-[0_0_100%] h-[34vh] min-h-[180px] flex items-center justify-center bg-neutral-100">
-                    {isFetching ? (
-                      <div className="flex flex-col items-center text-neutral-500">
-                        <div className="w-10 h-10 border-2 border-neutral-200 border-t-neutral-600 rounded-full animate-spin mb-3" />
-                        <span className="text-sm font-medium">Loading events...</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center text-neutral-400">
-                        <Calendar className="w-12 h-12 mb-3" />
-                        <span className="text-sm font-medium">No featured events</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Fixed panel (no scroll): content fades when slide changes */}
-            {featuredEvents.length > 0 && (
-              <div
-                className="relative w-full flex-shrink-0 bg-neutral-900 text-white cursor-pointer"
-                style={{ clipPath: 'polygon(0 14%, 100% 0, 100% 100%, 0 100%)' }}
-                onClick={() => featuredEvents[panelIndex] && handleEventClick(featuredEvents[panelIndex])}
-              >
-                <div
-                  className="pt-6 pb-5 px-5 transition-opacity duration-200"
-                  style={{ opacity: panelLeaving ? 0 : 1 }}
-                >
-                  {featuredEvents[panelIndex] && (() => {
-                    const event = featuredEvents[panelIndex];
-                    return (
-                      <>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="h-px w-6 bg-[#8A2BE2]" aria-hidden />
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-400">
-                            Featured
-                          </span>
-                        </div>
-                        <h2 className="text-white font-bold text-xl leading-tight tracking-tight line-clamp-2 mb-3">
-                          {event.title}
-                        </h2>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-neutral-400 text-sm">
-                          <span className="flex items-center gap-1.5">
-                            <Calendar className="w-4 h-4 text-[#8A2BE2]" />
-                            {event.date}
-                          </span>
-                          <span className="flex items-center gap-1.5 min-w-0 truncate">
-                            <MapPin className="w-4 h-4 text-[#8A2BE2] flex-shrink-0" />
-                            {event.location.split(',')[0]}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-neutral-500 text-xs flex items-center gap-1.5">
-                          <Ticket className="w-3.5 h-3.5" />
-                          {event.attendees || 0} going
-                        </p>
-                      </>
-                    );
-                  })()}
-                </div>
-                {/* Carousel pills - click doesn't navigate */}
-                {featuredEvents.length > 1 && (
-                  <div
-                    className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {featuredEvents.map((_, index) => (
-                      <div
-                        key={index}
-                        className={`h-0.5 rounded-full transition-all duration-300 ${slideIndex === index ? 'w-5 bg-[#8A2BE2]' : 'w-1.5 bg-white/40'}`}
-                        aria-hidden
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* 3. Search & Events List */}
           <div className="px-4 pb-8 pt-6">
             {/* Search Bar & Filter */}

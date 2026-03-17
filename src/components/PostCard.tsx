@@ -582,12 +582,7 @@ export const PostCard = React.memo(function PostCard({
       {post.content.text && (
         <div className="mt-3 px-1">
           <p 
-            className={`text-gray-800 text-[15px] leading-relaxed transition-all cursor-pointer ${isExpanded ? '' : 'line-clamp-3'}`}
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              const startTime = videoRef.current?.currentTime || 0;
-              onViewPost?.(startTime, isMuted); 
-            }}
+            className={`text-gray-800 text-[15px] leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-3'}`}
           >
             {post.content.text}
           </p>

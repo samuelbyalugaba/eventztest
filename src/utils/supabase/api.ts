@@ -288,6 +288,18 @@ export const getFollowedUserIds = async (userId: string) => {
   return data.map(f => f.following_id);
 };
 
+export const checkIsFollowing = async (followerId: string, followingId: string) => {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('id')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+};
+
 export const toggleFollow = async (followerId: string, followingId: string) => {
   const { data: existing, error: fetchError } = await supabase
     .from('follows')

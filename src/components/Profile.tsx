@@ -9,7 +9,7 @@ import { TicketViewer } from './TicketViewer';
 import { EventDetailModal } from './EventDetailModal';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '../utils/supabase/client';
-import { deleteEvent, getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents, toggleFollow, getFollowedUserIds } from '../utils/supabase/api';
+import { deleteEvent, getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getPosts, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, deletePost, getOrganizerStats, getOrganizerEvents, toggleFollow, checkIsFollowing } from '../utils/supabase/api';
 import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
@@ -75,8 +75,21 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
   const [userPosts, setUserPosts] = useState<ApiPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [isLoadingMorePosts, setIsLoadingMorePosts] = useState(false);
+  const [postsOffset, setPostsOffset] = useState(0);
+  const [hasMorePosts, setHasMorePosts] = useState(false);
+  const [isLoadingSavedEvents, setIsLoadingSavedEvents] = useState(false);
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false);
+  const [isLoadingOrganizerStats, setIsLoadingOrganizerStats] = useState(false);
+  const [isLoadingOrganizerEvents, setIsLoadingOrganizerEvents] = useState(false);
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   const [isFollowing, setIsFollowing] = useState(false);
+  const loadSeqRef = useRef(0);
+  const lastLoadedProfileIdRef = useRef<string | null>(null);
+  const savedEventsLoadedRef = useRef(false);
+  const ticketsLoadedRef = useRef(false);
+  const organizerEventsLoadedRef = useRef(false);
   
   // Event List Modal State
   const [showEventListModal, setShowEventListModal] = useState(false);
@@ -154,88 +167,171 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const profileImage = userProfile?.avatar_url;
   const displayName = userProfile?.full_name || 'User';
   const organizerCategory = userProfile?.organizer_type;
+  const POSTS_PAGE_SIZE = 18;
 
   const loadData = async () => {
+    const seq = ++loadSeqRef.current;
     try {
       setIsLoading(true);
+      setIsLoadingPosts(true);
+      setIsLoadingMorePosts(false);
+      setPostsOffset(0);
+      setHasMorePosts(false);
+
       const { data: { user } } = await supabase.auth.getUser();
+      if (seq !== loadSeqRef.current) return;
+
       if (user) setCurrentUser(user);
-
       const targetUserId = userId || user?.id;
-      
-      if (targetUserId) {
-        const profile = await getProfile(targetUserId);
-        if (profile) {
-          setUserProfile(profile);
-          
-          if (profile.is_organizer) {
-            try {
-              const stats = await getOrganizerStats(targetUserId);
-              setOrganizerStats(stats);
+      if (!targetUserId) return;
 
-              const events = await getOrganizerEvents(targetUserId);
-              if (events) {
-                const mapEvent = (e: any) => ({
-                  ...e,
-                  coverImage: e.image_url || e.coverImage,
-                  price: e.price_range || e.price
-                });
-                setPublishedEvents(events.map(mapEvent));
-              }
-            } catch (err) {
-              console.error('Error loading organizer stats:', err);
-            }
-          }
-        }
-
-        try {
-          const followers = await getFollowersCount(targetUserId);
-          const following = await getFollowingCount(targetUserId);
-          setFollowStats({ followers, following });
-
-          // Check if current user is following this profile
-          if (user && targetUserId !== user.id) {
-            const followedIds = await getFollowedUserIds(user.id);
-            setIsFollowing(followedIds.includes(targetUserId));
-          }
-        } catch (err) {
-          console.error('Error loading follow stats:', err);
-        }
-        
-        if (isOwnProfile) {
-           const saved = await getSavedEvents(targetUserId);
-           if (saved) {
-             setSavedEvents(saved as unknown as (AppEvent & { isSaved: boolean; hasReminder: boolean })[]);
-           }
-        }
-
-        if (isOwnProfile) {
-            const tickets = await getUserTickets(targetUserId);
-            if (tickets) {
-              setTicketEvents(tickets);
-              const attended = tickets
-                .filter(t => {
-                  if (!t.event?.date) return false;
-                  const eventDate = new Date(t.event.date);
-                  return !isNaN(eventDate.getTime()) && eventDate < new Date();
-                })
-                .map(t => t.event!)
-                .filter(e => !!e);
-              
-              const uniqueAttended = Array.from(new Map(attended.map(item => [item.id, item])).values());
-              setAttendedEvents(uniqueAttended);
-            }
-        }
-
-        const posts = await getPosts({ authorId: targetUserId });
-        if (posts) {
-           setUserPosts(posts);
-        }
+      if (lastLoadedProfileIdRef.current !== targetUserId) {
+        setOrganizerStats(null);
+        setPublishedEvents([]);
+        setSavedEvents([]);
+        setTicketEvents([]);
+        setAttendedEvents([]);
+        setUserPosts([]);
+        savedEventsLoadedRef.current = false;
+        ticketsLoadedRef.current = false;
+        organizerEventsLoadedRef.current = false;
+        lastLoadedProfileIdRef.current = targetUserId;
       }
+
+      const [profile, followers, following, followingFlag] = await Promise.all([
+        getProfile(targetUserId),
+        getFollowersCount(targetUserId),
+        getFollowingCount(targetUserId),
+        user && targetUserId !== user.id ? checkIsFollowing(user.id, targetUserId) : Promise.resolve(false)
+      ]);
+
+      if (seq !== loadSeqRef.current) return;
+
+      if (profile) setUserProfile(profile);
+      setFollowStats({ followers, following });
+      setIsFollowing(!!followingFlag);
+      setIsLoading(false);
+
+      const posts = await getPosts({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: 0 });
+      if (seq !== loadSeqRef.current) return;
+      setUserPosts(posts || []);
+      setPostsOffset((posts || []).length);
+      setHasMorePosts((posts || []).length === POSTS_PAGE_SIZE);
+      setIsLoadingPosts(false);
     } catch (error) {
       console.error('Error loading profile:', error);
-    } finally {
       setIsLoading(false);
+      setIsLoadingPosts(false);
+    } finally {
+      if (seq === loadSeqRef.current) setIsLoading(false);
+    }
+  };
+
+  const loadMorePosts = async () => {
+    if (isLoadingPosts || isLoadingMorePosts || !hasMorePosts) return;
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
+
+    try {
+      setIsLoadingMorePosts(true);
+      const next = await getPosts({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: postsOffset });
+      const nextPosts = next || [];
+      setUserPosts(prev => [...prev, ...nextPosts]);
+      setPostsOffset(prev => prev + nextPosts.length);
+      setHasMorePosts(nextPosts.length === POSTS_PAGE_SIZE);
+    } catch (e) {
+      console.error('Error loading more posts:', e);
+    } finally {
+      setIsLoadingMorePosts(false);
+    }
+  };
+
+  const loadOrganizerStatsIfNeeded = async () => {
+    if (!userProfile?.is_organizer || isLoadingOrganizerStats || organizerStats) return;
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
+
+    try {
+      setIsLoadingOrganizerStats(true);
+      const stats = await getOrganizerStats(targetUserId);
+      setOrganizerStats(stats);
+    } catch (e) {
+      console.error('Error loading organizer stats:', e);
+    } finally {
+      setIsLoadingOrganizerStats(false);
+    }
+  };
+
+  const loadOrganizerEventsIfNeeded = async () => {
+    if (!userProfile?.is_organizer || isLoadingOrganizerEvents || organizerEventsLoadedRef.current) return;
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
+
+    try {
+      setIsLoadingOrganizerEvents(true);
+      const events = await getOrganizerEvents(targetUserId);
+      if (events) {
+        const mapEvent = (e: any) => ({
+          ...e,
+          coverImage: e.image_url || e.coverImage,
+          price: e.price_range || e.price
+        });
+        setPublishedEvents(events.map(mapEvent));
+      }
+      organizerEventsLoadedRef.current = true;
+    } catch (e) {
+      console.error('Error loading organizer events:', e);
+    } finally {
+      setIsLoadingOrganizerEvents(false);
+    }
+  };
+
+  const loadSavedEventsIfNeeded = async () => {
+    if (!isOwnProfile || isLoadingSavedEvents || savedEventsLoadedRef.current) return;
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
+
+    try {
+      setIsLoadingSavedEvents(true);
+      const saved = await getSavedEvents(targetUserId);
+      if (saved) {
+        setSavedEvents(saved as unknown as (AppEvent & { isSaved: boolean; hasReminder: boolean })[]);
+      }
+      savedEventsLoadedRef.current = true;
+    } catch (e) {
+      console.error('Error loading saved events:', e);
+    } finally {
+      setIsLoadingSavedEvents(false);
+    }
+  };
+
+  const loadTicketsIfNeeded = async () => {
+    if (!isOwnProfile || isOrganizer || isLoadingTickets || ticketsLoadedRef.current) return;
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
+
+    try {
+      setIsLoadingTickets(true);
+      const tickets = await getUserTickets(targetUserId);
+      if (tickets) {
+        setTicketEvents(tickets);
+        const attended = tickets
+          .filter(t => {
+            if (!t.event?.date) return false;
+            const eventDate = new Date(t.event.date);
+            return !isNaN(eventDate.getTime()) && eventDate < new Date();
+          })
+          .map(t => t.event!)
+          .filter(e => !!e);
+
+        const uniqueAttended = Array.from(new Map(attended.map(item => [item.id, item])).values());
+        setAttendedEvents(uniqueAttended);
+      }
+      ticketsLoadedRef.current = true;
+    } catch (e) {
+      console.error('Error loading tickets:', e);
+    } finally {
+      setIsLoadingTickets(false);
     }
   };
 
@@ -248,6 +344,26 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       window.removeEventListener('profileUpdated', handleProfileUpdated as EventListener);
     };
   }, [userId, isOwnProfile]);
+
+  useEffect(() => {
+    loadOrganizerStatsIfNeeded();
+  }, [userProfile?.is_organizer, currentUser?.id, userId]);
+
+  useEffect(() => {
+    if (activeTab === 'upcoming') loadOrganizerEventsIfNeeded();
+  }, [activeTab, userProfile?.is_organizer, currentUser?.id, userId]);
+
+  useEffect(() => {
+    if (activeTab === 'saved') loadSavedEventsIfNeeded();
+  }, [activeTab, isOwnProfile, currentUser?.id, userId]);
+
+  useEffect(() => {
+    if (activeTab === 'tickets') loadTicketsIfNeeded();
+  }, [activeTab, isOwnProfile, isOrganizer, currentUser?.id, userId]);
+
+  useEffect(() => {
+    loadTicketsIfNeeded();
+  }, [isOwnProfile, isOrganizer, currentUser?.id, userId]);
 
   // Restore scroll position when returning from post detail (smooth slide-back to the clicked post)
   useEffect(() => {
@@ -287,8 +403,16 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     const setupSubscription = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (isOwnProfile && user) {
-        subscription = subscribeToSavedEvents(user.id, () => {
-          loadData();
+        subscription = subscribeToSavedEvents(user.id, async () => {
+          try {
+            const saved = await getSavedEvents(user.id);
+            if (saved) {
+              setSavedEvents(saved as unknown as (AppEvent & { isSaved: boolean; hasReminder: boolean })[]);
+              savedEventsLoadedRef.current = true;
+            }
+          } catch (e) {
+            console.error('Error refreshing saved events:', e);
+          }
         });
         savedEventsSubscriptionRef.current = subscription;
       }
@@ -603,7 +727,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               onClick={handleShowEventsList}
             >
               <div className="text-lg font-bold text-gray-900 leading-none mb-1">
-                  {isOrganizer ? (organizerStats ? organizerStats.totalEvents : 0) : attendedEvents.length}
+                  {isOrganizer ? (isLoadingOrganizerStats ? '—' : (organizerStats ? organizerStats.totalEvents : 0)) : (isLoadingTickets ? '—' : attendedEvents.length)}
               </div>
               <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
                   {isOrganizer ? 'Hosted' : 'Attended'}
@@ -806,201 +930,229 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
       {/* Content Area */}
       <div>
-        {isLoading ? (
+        {activeTab === 'media' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-1">
-              {[...Array(9)].map((_, i) => (
-                <div key={i} className="aspect-square bg-gray-200 rounded animate-pulse" />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <>
-            {activeTab === 'media' && (
+            {isLoadingPosts ? (
               <div className="space-y-4">
-                {filteredUserPosts.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                      <ImageIcon className="w-8 h-8 text-gray-300" />
-                    </div>
-                    <p className="text-gray-900 font-medium mb-1">No posts yet</p>
-                    {isOwnProfile && <p className="text-gray-500 text-sm max-w-xs mx-auto">Share event photos and videos</p>}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
-                    {filteredUserPosts.map((post) => {
-                      const firstImage = post.image_urls?.[0];
-                      const isMediaVideo = (url?: string) => !!url && (/\.(mp4|webm|ogg|mov)$/i.test(url) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight'));
-                      const videoSrc = post.video_url || (isMediaVideo(firstImage) ? firstImage : undefined);
-                      const isVideo = !!videoSrc;
-                      const videoThumbnail = isVideo ? (post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : post.image_urls?.find((u: string) => !!u && !isMediaVideo(u))) : undefined;
-                      const isCarousel = (post.image_urls?.length || 0) > 1;
-                      return (
-                        <div
-                          id={`profile-post-${post.id}`}
-                          key={post.id}
-                          onClick={() => handleOpenPost(post)}
-                          className="relative aspect-square cursor-pointer group bg-gray-100 overflow-hidden"
-                        >
-                          {isVideo ? (
-                            <>
-                              <video
-                                src={`${videoSrc!}${videoSrc!.includes('#') ? '' : '#t=0.1'}`}
-                                poster={post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : undefined}
-                                className={`w-full h-full object-cover ${
-                                  videoThumbnail ? 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-active:opacity-100 group-active:pointer-events-auto transition-opacity' : ''
-                                }`}
-                                muted
-                                playsInline
-                                loop
-                                preload="metadata"
-                                onMouseOver={(e) => e.currentTarget.play()}
-                                onMouseOut={(e) => {
-                                  e.currentTarget.pause();
-                                  e.currentTarget.currentTime = 0;
-                                }}
-                              />
-                              {videoThumbnail && (
-                                <img
-                                  src={videoThumbnail}
-                                  alt=""
-                                  className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-100 group-hover:opacity-0 group-active:opacity-0 transition-opacity"
-                                />
-                              )}
-                            </>
-                          ) : (
-                            <ImageWithFallback
-                              src={firstImage}
-                              alt={`Post ${post.id}`}
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                          {isVideo && (
-                            <div className="absolute top-2 right-2 p-0.5 bg-black/50 rounded text-white">
-                              <Play className="w-2.5 h-2.5" />
-                            </div>
-                          )}
-                          {!isVideo && isCarousel && (
-                            <div className="absolute top-2 right-2 p-0.5 bg-black/50 rounded text-white">
-                              <GalleryHorizontal className="w-3 h-3" />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="grid grid-cols-3 gap-1">
+                  {[...Array(9)].map((_, i) => (
+                    <div key={i} className="aspect-square bg-gray-200 rounded animate-pulse" />
+                  ))}
+                </div>
               </div>
-            )}
-            {activeTab === 'saved' && (
+            ) : filteredUserPosts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <ImageIcon className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-900 font-medium mb-1">No posts yet</p>
+                {isOwnProfile && <p className="text-gray-500 text-sm max-w-xs mx-auto">Share event photos and videos</p>}
+              </div>
+            ) : (
               <>
-                {savedEvents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 px-6">
-                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                      <Bookmark className="w-8 h-8 text-gray-300" />
-                    </div>
-                    <h3 className="text-gray-900 mb-2">No Saved Events Yet</h3>
-                    <p className="text-gray-600 text-center text-sm max-w-xs leading-relaxed">
-                      Discover amazing events and tap the bookmark icon to save them here
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {savedEvents.map((event) => (
-                      <EventCard
-                        key={event.id}
-                        event={event}
-                        onClick={(e) => setSelectedEvent(e)}
-                        currentUserId={currentUser?.id}
-                        onEditEvent={onEditEvent}
-                        onDeleteEvent={handleDeleteEvent}
-                        className="border border-gray-100 hover:shadow-md transition-all"
-                      />
-                    ))}
+                <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
+                  {filteredUserPosts.map((post) => {
+                    const firstImage = post.image_urls?.[0];
+                    const isMediaVideo = (url?: string) => !!url && (/\.(mp4|webm|ogg|mov)$/i.test(url) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight'));
+                    const videoSrc = post.video_url || (isMediaVideo(firstImage) ? firstImage : undefined);
+                    const isVideo = !!videoSrc;
+                    const videoThumbnail = isVideo ? (post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : post.image_urls?.find((u: string) => !!u && !isMediaVideo(u))) : undefined;
+                    const isCarousel = (post.image_urls?.length || 0) > 1;
+                    return (
+                      <div
+                        id={`profile-post-${post.id}`}
+                        key={post.id}
+                        onClick={() => handleOpenPost(post)}
+                        className="relative aspect-square cursor-pointer group bg-gray-100 overflow-hidden"
+                      >
+                        {isVideo ? (
+                          <>
+                            <video
+                              src={`${videoSrc!}${videoSrc!.includes('#') ? '' : '#t=0.1'}`}
+                              poster={post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : undefined}
+                              className={`w-full h-full object-cover ${
+                                videoThumbnail ? 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-active:opacity-100 group-active:pointer-events-auto transition-opacity' : ''
+                              }`}
+                              muted
+                              playsInline
+                              loop
+                              preload="metadata"
+                              onMouseOver={(e) => e.currentTarget.play()}
+                              onMouseOut={(e) => {
+                                e.currentTarget.pause();
+                                e.currentTarget.currentTime = 0;
+                              }}
+                            />
+                            {videoThumbnail && (
+                              <img
+                                src={videoThumbnail}
+                                alt=""
+                                className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-100 group-hover:opacity-0 group-active:opacity-0 transition-opacity"
+                              />
+                            )}
+                          </>
+                        ) : (
+                          <ImageWithFallback
+                            src={firstImage}
+                            alt={`Post ${post.id}`}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        {isVideo && (
+                          <div className="absolute top-2 right-2 p-0.5 bg-black/50 rounded text-white">
+                            <Play className="w-2.5 h-2.5" />
+                          </div>
+                        )}
+                        {!isVideo && isCarousel && (
+                          <div className="absolute top-2 right-2 p-0.5 bg-black/50 rounded text-white">
+                            <GalleryHorizontal className="w-3 h-3" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {hasMorePosts && (
+                  <div className="pt-4 flex justify-center">
+                    <button
+                      onClick={loadMorePosts}
+                      disabled={isLoadingMorePosts}
+                      className="px-4 py-2 rounded-full border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60"
+                    >
+                      {isLoadingMorePosts ? 'Loading…' : 'Load more'}
+                    </button>
                   </div>
                 )}
               </>
             )}
-            {activeTab === 'upcoming' && (
+          </div>
+        )}
+
+        {activeTab === 'saved' && (
+          <>
+            {isLoadingSavedEvents ? (
               <div className="space-y-4">
-                {publishedEvents.filter(e => new Date(e.date) >= new Date()).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                      <Calendar className="w-8 h-8 text-gray-300" />
-                    </div>
-                    <p className="text-gray-900 font-medium mb-1">No upcoming events</p>
-                    <p className="text-gray-500 text-sm max-w-xs mx-auto">Create an event to see it here</p>
-                    <button 
-                      onClick={onCreateEvent}
-                      className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-full text-sm font-medium hover:bg-purple-700 transition-colors"
-                    >
-                      Create Event
-                    </button>
-                  </div>
-                ) : (
-                  publishedEvents
-                    .filter(e => new Date(e.date) >= new Date())
-                    .map((event) => (
-                      <EventCard
-                        key={event.id}
-                        event={event}
-                        onClick={(e) => setSelectedEvent(e)}
-                        currentUserId={currentUser?.id}
-                        onEditEvent={onEditEvent}
-                        onDeleteEvent={handleDeleteEvent}
-                        className="border border-gray-100 hover:shadow-md transition-all"
-                      />
-                    ))
-                )}
+                <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
+                <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
               </div>
-            )}
-            {activeTab === 'tickets' && (
-              <div>
-                {uniqueTicketGroups.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                      <TicketIcon className="w-8 h-8 text-gray-300" />
-                    </div>
-                    <p className="text-gray-900 font-medium mb-1">No tickets yet</p>
-                    <p className="text-gray-500 text-sm max-w-xs mx-auto mb-4">You haven't purchased any tickets yet. Explore events to get started!</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-1">
-                    {uniqueTicketGroups.map((tickets) => {
-                      const ticket = tickets[0];
-                      return (
-                        <div
-                          key={ticket.event_id}
-                          onClick={() => {
-                            setSelectedEventTickets(tickets);
-                            setShowTicketListModal(true);
-                          }}
-                          className="relative aspect-square cursor-pointer group"
-                        >
-                          <ImageWithFallback
-                            src={ticket.event?.image_url}
-                            alt={`Event ${ticket.event?.title}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
-                            {tickets.length} Ticket{tickets.length > 1 ? 's' : ''}
-                          </div>
-                          <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
-                            <p className="text-white text-[10px] line-clamp-1 font-medium">{ticket.event?.title}</p>
-                          </div>
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
-                              <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+            ) : savedEvents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-6">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Bookmark className="w-8 h-8 text-gray-300" />
+                </div>
+                <h3 className="text-gray-900 mb-2">No Saved Events Yet</h3>
+                <p className="text-gray-600 text-center text-sm max-w-xs leading-relaxed">
+                  Discover amazing events and tap the bookmark icon to save them here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {savedEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={(e) => setSelectedEvent(e)}
+                    currentUserId={currentUser?.id}
+                    onEditEvent={onEditEvent}
+                    onDeleteEvent={handleDeleteEvent}
+                    className="border border-gray-100 hover:shadow-md transition-all"
+                  />
+                ))}
               </div>
             )}
           </>
+        )}
+
+        {activeTab === 'upcoming' && (
+          <div className="space-y-4">
+            {isLoadingOrganizerEvents ? (
+              <div className="space-y-4">
+                <div className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+                <div className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+              </div>
+            ) : publishedEvents.filter(e => new Date(e.date) >= new Date()).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Calendar className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-900 font-medium mb-1">No upcoming events</p>
+                <p className="text-gray-500 text-sm max-w-xs mx-auto">Create an event to see it here</p>
+                <button 
+                  onClick={onCreateEvent}
+                  className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-full text-sm font-medium hover:bg-purple-700 transition-colors"
+                >
+                  Create Event
+                </button>
+              </div>
+            ) : (
+              publishedEvents
+                .filter(e => new Date(e.date) >= new Date())
+                .map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={(e) => setSelectedEvent(e)}
+                    currentUserId={currentUser?.id}
+                    onEditEvent={onEditEvent}
+                    onDeleteEvent={handleDeleteEvent}
+                    className="border border-gray-100 hover:shadow-md transition-all"
+                  />
+                ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'tickets' && (
+          <div>
+            {isLoadingTickets ? (
+              <div className="grid grid-cols-3 gap-1">
+                {[...Array(9)].map((_, i) => (
+                  <div key={i} className="aspect-square bg-gray-200 rounded animate-pulse" />
+                ))}
+              </div>
+            ) : uniqueTicketGroups.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <TicketIcon className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-900 font-medium mb-1">No tickets yet</p>
+                <p className="text-gray-500 text-sm max-w-xs mx-auto mb-4">You haven't purchased any tickets yet. Explore events to get started!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-1">
+                {uniqueTicketGroups.map((tickets) => {
+                  const ticket = tickets[0];
+                  return (
+                    <div
+                      key={ticket.event_id}
+                      onClick={() => {
+                        setSelectedEventTickets(tickets);
+                        setShowTicketListModal(true);
+                      }}
+                      className="relative aspect-square cursor-pointer group"
+                    >
+                      <ImageWithFallback
+                        src={ticket.event?.image_url}
+                        alt={`Event ${ticket.event?.title}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
+                        {tickets.length} Ticket{tickets.length > 1 ? 's' : ''}
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
+                        <p className="text-white text-[10px] line-clamp-1 font-medium">{ticket.event?.title}</p>
+                      </div>
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
+                          <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

@@ -26,7 +26,7 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
       if (!id) return;
       
       try {
-        setLoading(true);
+        if (!post) setLoading(true);
         const fetchedPost = await getPostById(parseInt(id), currentUser?.id);
         
         // Format the post to match component expectations
@@ -86,32 +86,38 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
             }] : undefined,
             mutualFriends: [],
         };
-        
-        // Fetch comments for this post
-        const { data: commentsData } = await supabase
-          .from('post_comments')
-          .select('*, user:profiles(*)')
-          .eq('post_id', fetchedPost.id)
-          .order('created_at', { ascending: true });
-        
-        if (commentsData) {
-             formattedPost.comments = commentsData.map((c: any) => ({
-                 id: c.id,
-                 user: {
-                   name: c.user?.full_name || c.user?.username || 'User',
-                   avatar: c.user?.avatar_url || '',
-                   is_organizer: c.user?.is_organizer || false
-                 },
-                 text: c.text,
-                 timestamp: formatTimeAgo(c.created_at)
-             }));
-        }
 
         setPost(formattedPost);
+
+        (async () => {
+          try {
+            const { data: commentsData } = await supabase
+              .from('post_comments')
+              .select('*, user:profiles(*)')
+              .eq('post_id', fetchedPost.id)
+              .order('created_at', { ascending: true });
+
+            if (commentsData) {
+              const comments = commentsData.map((c: any) => ({
+                id: c.id,
+                user: {
+                  name: c.user?.full_name || c.user?.username || 'User',
+                  avatar: c.user?.avatar_url || '',
+                  is_organizer: c.user?.is_organizer || false
+                },
+                text: c.text,
+                timestamp: formatTimeAgo(c.created_at)
+              }));
+              setPost((prev: any) => prev ? { ...prev, comments } : prev);
+            }
+          } catch (e) {
+            console.error('Error fetching comments:', e);
+          }
+        })();
       } catch (error) {
         console.error('Error fetching post detail:', error);
       } finally {
-        setLoading(false);
+        if (!post) setLoading(false);
       }
     };
 
