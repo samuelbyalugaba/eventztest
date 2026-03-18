@@ -364,9 +364,18 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       {viewMode === 'home' ? (
         <div className="pb-24">
           {/* 3. Search & Events List */}
-          <div className="px-4 pb-8 pt-6">
+          <div className="px-4 pb-8 pt-0">
+            {/* Header */}
+          <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(1rem+env(safe-area-inset-top))] pb-4 -mx-4 px-4 transition-all rounded-b-[32px] shadow-sm border-b border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col">
+                <h1 className="text-gray-900 text-2xl font-bold tracking-tight">EVENTZ</h1>
+                <p className="text-gray-600 text-sm">Discover amazing events happening around you</p>
+              </div>
+            </div>
+
             {/* Search Bar & Filter */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input 
@@ -383,13 +392,16 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               >
                 <Filter className="w-5 h-5 text-gray-600 group-hover:text-[#8A2BE2] transition-colors" />
                 {hasActiveFilters && (
-                  <span className="absolute top-3 right-3 w-2 h-2 bg-[#8A2BE2] rounded-full"></span>
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#8A2BE2] text-white text-[10px] rounded-full flex items-center justify-center shadow-md">
+                    {activeFiltersCount}
+                  </span>
                 )}
               </button>
             </div>
+          </div>
 
             {/* Events List */}
-            <div className="space-y-6">
+            <div className="space-y-6 mt-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-gray-900 font-bold text-lg">Upcoming Events</h3>
                 <button 
@@ -426,47 +438,50 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
         </div>
       ) : (
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 pt-0 pb-6">
         {/* Header */}
-        <div className="mb-1 sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-2 pb-2 -mx-4 px-4 transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setViewMode('home')}
-                className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors"
-              >
-                <ChevronLeft className="w-6 h-6 text-gray-900" />
-              </button>
-              <h1 className="text-gray-900 text-2xl"><strong>Events</strong></h1>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setShowSearchModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-gray-900 rounded-xl border border-gray-200 hover:bg-gray-50 hover:shadow-lg hover:scale-105 transition-all"
-              >
-                <Search className="w-5 h-5" />
-                <span className="text-sm">Search</span>
-              </button>
-              
-              <button 
-                onClick={() => setShowFilters(true)}
-                className="relative w-11 h-11 bg-white rounded-full border border-gray-200 hover:bg-gray-50 hover:border-purple-300 transition-all shadow-sm flex items-center justify-center"
-              >
-                <Filter className="w-5 h-5 text-gray-700" />
-                {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-600 text-white text-xs rounded-full flex items-center justify-center shadow-md">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </button>
+        <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(1rem+env(safe-area-inset-top))] pb-4 -mx-4 px-4 transition-all rounded-b-[32px] shadow-sm border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-4">
+            <button 
+              onClick={() => setViewMode('home')}
+              className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-900" />
+            </button>
+            <div className="flex flex-col">
+              <h1 className="text-gray-900 text-2xl font-bold tracking-tight">EVENTS</h1>
+              <p className="text-gray-600 text-sm">Discover amazing events happening around you</p>
             </div>
           </div>
           
-          <p className="text-gray-600 text-sm">Discover amazing events happening around you</p>
+          {/* Search Bar & Filter */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search events..." 
+                className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#8A2BE2] focus:ring-4 focus:ring-[#8A2BE2]/10 transition-all shadow-sm"
+                onClick={() => setShowSearchModal(true)}
+                readOnly
+              />
+            </div>
+            <button 
+              onClick={() => setShowFilters(true)}
+              className="p-3.5 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-all shadow-sm relative group"
+            >
+              <Filter className="w-5 h-5 text-gray-600 group-hover:text-[#8A2BE2] transition-colors" />
+              {hasActiveFilters && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#8A2BE2] text-white text-[10px] rounded-full flex items-center justify-center shadow-md">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
+        <div className="mt-8">
         {hasActiveFilters && (
           <div className="flex gap-2 mb-4 flex-wrap">
             {selectedLocation !== 'all' && (
@@ -542,8 +557,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             </div>
           </div>
         )}
+        </div>
 
         {/* Upcoming Events Grid - NO SKELETON */}
+        <div className={hasActiveFilters ? "mt-4" : "mt-8"}>
         {upcomingEvents.length > 0 ? (
           <div className="mb-8">
             <h3 className="text-gray-900 font-semibold mb-2 ml-1">Upcoming Events</h3>
@@ -589,6 +606,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
              ))}
            </div>
         )}
+        </div>
       </div>
       )}
 
