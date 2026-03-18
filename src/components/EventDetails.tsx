@@ -42,7 +42,6 @@ interface EventDetailsProps {
 export function EventDetails({ conversations: globalConversations, onStartConversation, onSendMessage }: EventDetailsProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [viewMode, setViewMode] = useState<'home' | 'list'>('home');
   
   // Initialize state directly from store
   const [events, setEvents] = useState<ApiEvent[]>(eventsStore.getEvents());
@@ -361,12 +360,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {viewMode === 'home' ? (
-        <div className="pb-24">
-          {/* 3. Search & Events List */}
-          <div className="px-4 pb-8 pt-0">
-            {/* Header */}
-          <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(1rem+env(safe-area-inset-top))] pb-4 -mx-4 px-4 transition-all rounded-b-[32px] shadow-sm border-b border-gray-100">
+      <div className="pb-24">
+        {/* 3. Search & Events List */}
+        <div className="px-4 pb-8 pt-0">
+          {/* Header */}
+          <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(1rem+env(safe-area-inset-top))] pb-4 -mx-4 px-4 transition-all rounded-b-[32px]">
             <div className="flex items-center justify-between mb-4">
               <div className="flex flex-col">
                 <h1 className="text-gray-900 text-2xl font-bold tracking-tight">EVENTZ</h1>
@@ -400,170 +398,91 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             </div>
           </div>
 
-            {/* Events List */}
-            <div className="space-y-6 mt-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-gray-900 font-bold text-lg">Upcoming Events</h3>
-                <button 
-                  onClick={() => setViewMode('list')}
-                  className="text-[#8A2BE2] text-sm font-semibold hover:bg-purple-50 px-3 py-1 rounded-lg transition-colors"
-                >
-                  See All
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                {upcomingEvents.slice(0, 10).map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onClick={handleEventClick}
-                    currentUserId={currentUserId}
-                    onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
-                    onDeleteEvent={handleDeleteEvent}
-                  />
-                ))}
-              </div>
-
-              {upcomingEvents.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                    <Calendar className="w-8 h-8 text-gray-400" />
+          {/* Filters */}
+          <div className="mt-4">
+            {hasActiveFilters && (
+              <div className="flex gap-2 mb-4 flex-wrap">
+                {selectedLocation !== 'all' && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
+                    <span>{(locations.find(l => l.id === selectedLocation) as any)?.flag || '📍'}</span>
+                    <span>{String((locations.find(l => l.id === selectedLocation) as any)?.name || selectedLocation).split(',')[0]}</span>
+                    <button 
+                      onClick={() => setSelectedLocation('all')}
+                      className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
-                  <h3 className="text-gray-900 font-medium mb-1">No upcoming events</h3>
-                  <p className="text-gray-500 text-sm max-w-[200px]">Check back later or try adjusting your filters</p>
+                )}
+                {selectedSubcategory !== '' ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
+                    <span>🔍</span>
+                    <span>{selectedSubcategory}</span>
+                    <button 
+                      onClick={() => setSelectedSubcategory('')}
+                      className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : selectedCategory !== 'all' && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
+                    <span>{categories.find(c => c.id === selectedCategory)?.icon}</span>
+                    <span>{categories.find(c => c.id === selectedCategory)?.name}</span>
+                    <button 
+                      onClick={() => setSelectedCategory('all')}
+                      className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                <button 
+                  onClick={() => {
+                    setSelectedLocation('all');
+                    setSelectedCategory('all');
+                    setSelectedSubcategory('');
+                  }}
+                  className="px-3 py-1.5 text-purple-600 text-sm hover:bg-purple-50 rounded-lg transition-colors"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
+
+            {selectedCategory !== 'all' && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-gray-900 text-sm">
+                    {categories.find(c => c.id === selectedCategory)?.name} Subcategories:
+                  </span>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-      <div className="max-w-4xl mx-auto px-4 pt-0 pb-6">
-        {/* Header */}
-        <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(1rem+env(safe-area-inset-top))] pb-4 -mx-4 px-4 transition-all rounded-b-[32px] shadow-sm border-b border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <button 
-              onClick={() => setViewMode('home')}
-              className="p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-900" />
-            </button>
-            <div className="flex flex-col">
-              <h1 className="text-gray-900 text-2xl font-bold tracking-tight">EVENTS</h1>
-              <p className="text-gray-600 text-sm">Discover amazing events happening around you</p>
-            </div>
-          </div>
-          
-          {/* Search Bar & Filter */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search events..." 
-                className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#8A2BE2] focus:ring-4 focus:ring-[#8A2BE2]/10 transition-all shadow-sm"
-                onClick={() => setShowSearchModal(true)}
-                readOnly
-              />
-            </div>
-            <button 
-              onClick={() => setShowFilters(true)}
-              className="p-3.5 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-all shadow-sm relative group"
-            >
-              <Filter className="w-5 h-5 text-gray-600 group-hover:text-[#8A2BE2] transition-colors" />
-              {hasActiveFilters && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#8A2BE2] text-white text-[10px] rounded-full flex items-center justify-center shadow-md">
-                  {activeFiltersCount}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="mt-8">
-        {hasActiveFilters && (
-          <div className="flex gap-2 mb-4 flex-wrap">
-            {selectedLocation !== 'all' && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                <span>{(locations.find(l => l.id === selectedLocation) as any)?.flag || '📍'}</span>
-                <span>{String((locations.find(l => l.id === selectedLocation) as any)?.name || selectedLocation).split(',')[0]}</span>
-                <button 
-                  onClick={() => setSelectedLocation('all')}
-                  className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
-                >
-                  <X className="w-3 h-3" />
-                </button>
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {categories
+                    .find(c => c.id === selectedCategory)?.subcategories?.map((subcategory) => (
+                      <button
+                        key={subcategory}
+                        onClick={() => setSelectedSubcategory(selectedSubcategory === subcategory ? '' : subcategory)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm transition-all ${ 
+                          selectedSubcategory === subcategory
+                            ? 'bg-purple-600 text-white shadow-md'
+                            : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                        }`}
+                      >
+                        {subcategory}
+                      </button>
+                    ))}
+                </div>
               </div>
             )}
-            {selectedSubcategory !== '' ? (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                <span>🔍</span>
-                <span>{selectedSubcategory}</span>
-                <button 
-                  onClick={() => setSelectedSubcategory('')}
-                  className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ) : selectedCategory !== 'all' && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                <span>{categories.find(c => c.id === selectedCategory)?.icon}</span>
-                <span>{categories.find(c => c.id === selectedCategory)?.name}</span>
-                <button 
-                  onClick={() => setSelectedCategory('all')}
-                  className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-            <button 
-              onClick={() => {
-                setSelectedLocation('all');
-                setSelectedCategory('all');
-                setSelectedSubcategory('');
-              }}
-              className="px-3 py-1.5 text-purple-600 text-sm hover:bg-purple-50 rounded-lg transition-colors"
-            >
-              Clear all
-            </button>
           </div>
-        )}
 
-        {selectedCategory !== 'all' && (
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-gray-900 text-sm">
-                {categories.find(c => c.id === selectedCategory)?.name} Subcategories:
-              </span>
+          {/* Events List */}
+          <div className={hasActiveFilters ? "space-y-6 mt-4" : "space-y-6 mt-2"}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-gray-900 font-bold text-lg">Upcoming Events</h3>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {categories
-                .find(c => c.id === selectedCategory)?.subcategories?.map((subcategory) => (
-                  <button
-                    key={subcategory}
-                    onClick={() => setSelectedSubcategory(selectedSubcategory === subcategory ? '' : subcategory)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm transition-all ${ 
-                      selectedSubcategory === subcategory
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:bg-purple-50'
-                    }`}
-                  >
-                    {subcategory}
-                  </button>
-                ))}
-            </div>
-          </div>
-        )}
-        </div>
-
-        {/* Upcoming Events Grid - NO SKELETON */}
-        <div className={hasActiveFilters ? "mt-4" : "mt-8"}>
-        {upcomingEvents.length > 0 ? (
-          <div className="mb-8">
-            <h3 className="text-gray-900 font-semibold mb-2 ml-1">Upcoming Events</h3>
+            
             <div className="grid grid-cols-2 gap-3">
               {upcomingEvents.map((event) => (
                 <EventCard
@@ -576,39 +495,41 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 />
               ))}
             </div>
-          </div>
-        ) : isFetching ? (
-          <div className="text-center py-16">
-             <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-             <p className="text-gray-500">Loading...</p>
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Calendar className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-gray-900 mb-2">No events found</h3>
-            <p className="text-gray-600 text-sm">Try selecting different filters</p>
-          </div>
-        )}
 
-        {!isFetching && upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
-           <div className="grid grid-cols-2 gap-3 mb-8">
-             {filteredEvents.map((event) => (
-               <EventCard
-                 key={event.id}
-                 event={event}
-                 onClick={handleEventClick}
-                 currentUserId={currentUserId}
-                 onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
-                 onDeleteEvent={handleDeleteEvent}
-               />
-             ))}
-           </div>
-        )}
+            {upcomingEvents.length === 0 && !isFetching && (
+              <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Calendar className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-gray-900 font-medium mb-1">No upcoming events</h3>
+                <p className="text-gray-500 text-sm max-w-[200px]">Check back later or try adjusting your filters</p>
+              </div>
+            )}
+
+            {isFetching && (
+              <div className="text-center py-16">
+                <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading events...</p>
+              </div>
+            )}
+
+            {!isFetching && upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                {filteredEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={handleEventClick}
+                    currentUserId={currentUserId}
+                    onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
+                    onDeleteEvent={handleDeleteEvent}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      )}
 
       {/* Filter Panel Sheet */}
       {showFilters && (
