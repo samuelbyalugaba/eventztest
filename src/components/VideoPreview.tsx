@@ -12,6 +12,19 @@ export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps)
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isLowInternet, setIsLowInternet] = useState(false);
+
+  useEffect(() => {
+    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    if (connection) {
+      const updateConnection = () => {
+        setIsLowInternet(connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g' || connection.saveData);
+      };
+      connection.addEventListener('change', updateConnection);
+      updateConnection();
+      return () => connection.removeEventListener('change', updateConnection);
+    }
+  }, []);
 
   // Helper to check for YouTube
   const getYoutubeId = (url: string) => {
@@ -64,7 +77,7 @@ export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps)
         muted
         playsInline
         loop
-        preload="metadata"
+        preload={isLowInternet ? "none" : "metadata"}
         onError={() => setImageError(true)}
       />
       

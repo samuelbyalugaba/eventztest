@@ -63,6 +63,19 @@ export const PostCard = React.memo(function PostCard({
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
   const [carouselHeight, setCarouselHeight] = useState<number | null>(null);
+  const [isLowInternet, setIsLowInternet] = useState(false);
+
+  useEffect(() => {
+    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    if (connection) {
+      const updateConnection = () => {
+        setIsLowInternet(connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g' || connection.saveData);
+      };
+      connection.addEventListener('change', updateConnection);
+      updateConnection();
+      return () => connection.removeEventListener('change', updateConnection);
+    }
+  }, []);
 
   const updateCarouselHeight = useCallback(() => {
     if (!api) return;
@@ -183,7 +196,9 @@ export const PostCard = React.memo(function PostCard({
           if (videoRef.current) {
             // Threshold for autoplay - Now starts at 50% visibility
             // Also check if we are explicitly paused (e.g. modal is open)
-            if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && !isPaused) {
+            // If on low internet, we might want to be more conservative with autoplay
+            const canAutoplay = !isLowInternet || entry.intersectionRatio >= 0.8;
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && !isPaused && canAutoplay) {
               if (videoRef.current.paused) {
                 const shouldMute = !audioUnlocked;
                 videoRef.current.muted = shouldMute;
@@ -288,7 +303,9 @@ export const PostCard = React.memo(function PostCard({
   const videoUrl = post.isHighlight && post.highlights?.[0]?.videoUrl;
   const currentMedia = videoUrl || post.content.images?.[carouselIndex] || post.content.image;
   const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
-  const videoPoster = post.isHighlight ? post.content.images?.find((u) => !!u && !isVideo(u)) : undefined;
+  const videoPoster = post.isHighlight 
+    ? (post.highlights?.[0]?.thumbnail || post.content.images?.find((u) => !!u && !isVideo(u)))
+    : post.content.images?.find((u) => !!u && !isVideo(u));
   const currentVideoSrc = currentMedia ? `${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}` : undefined;
   const currentAspectRatio = currentMedia ? (mediaAspectRatios[currentMedia] ?? 1) : 1;
 
@@ -369,17 +386,17 @@ export const PostCard = React.memo(function PostCard({
                       <div data-media-frame="true" className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: mediaAspectRatios[media] ?? 1 }}>
                         {isMediaVideo ? (
                           <div className="absolute inset-0 bg-black">
-                            {isVideoLoading && isActive && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
+                            {isVideoLoading && isActive && !videoPoster && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                             <video
                               id={`video-card-${post.id}-${index}`}
                               ref={isActive ? videoRef : null}
                               src={`${media}${media.includes('#') ? '' : '#t=0.1'}`}
                               poster={videoPoster}
-                              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                              className={`absolute inset-0 w-full h-full object-contain pointer-events-none transition-opacity duration-300 ${isVideoLoading && isActive && !videoPoster ? 'opacity-0' : 'opacity-100'}`}
                               loop
                               muted={isMuted}
                               playsInline
-                              preload="metadata"
+                              preload={isLowInternet ? "none" : "metadata"}
                               controls={false}
                               disablePictureInPicture
                               controlsList="nodownload noplaybackrate noremoteplayback"
@@ -389,9 +406,9 @@ export const PostCard = React.memo(function PostCard({
                                   const next = v.videoWidth / v.videoHeight;
                                   setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
                                 }
+                                setIsVideoLoading(false);
                                 requestAnimationFrame(updateCarouselHeight);
                               }}
-                              onLoadedData={() => setIsVideoLoading(false)}
                             />
                             {/* Video Controls (Show only on active slide) */}
                             {isActive && (
@@ -472,17 +489,17 @@ export const PostCard = React.memo(function PostCard({
              {isCurrentMediaVideo ? (
                 /* ... Existing Video Logic for Single File ... */
                 <div className="relative w-full bg-black overflow-hidden" style={{ aspectRatio: currentAspectRatio }}>
-                  {isVideoLoading && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
+                  {isVideoLoading && !videoPoster && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                   <video
                     id={`video-card-${post.id}`}
                     ref={videoRef}
                     src={currentVideoSrc}
                     poster={videoPoster}
-                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                    className={`absolute inset-0 w-full h-full object-contain pointer-events-none transition-opacity duration-300 ${isVideoLoading && !videoPoster ? 'opacity-0' : 'opacity-100'}`}
                     loop
                     muted={isMuted}
                     playsInline
-                    preload="metadata"
+                    preload={isLowInternet ? "none" : "metadata"}
                     controls={false}
                     disablePictureInPicture
                     controlsList="nodownload noplaybackrate noremoteplayback"
@@ -493,8 +510,8 @@ export const PostCard = React.memo(function PostCard({
                         const next = v.videoWidth / v.videoHeight;
                         setMediaAspectRatios((prev) => (prev[currentMedia] === next ? prev : { ...prev, [currentMedia]: next }));
                       }
+                      setIsVideoLoading(false);
                     }}
-                    onLoadedData={() => setIsVideoLoading(false)}
                   />
                   <div className="absolute bottom-4 left-4 z-10">
                     <button
