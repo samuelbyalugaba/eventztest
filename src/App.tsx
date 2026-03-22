@@ -101,6 +101,8 @@ export default function App() {
   const handleAuthSuccess = (_token: string, user: any) => {
     setCurrentUser(user);
     setIsAuthenticated(true);
+    // When someone signs up/signs in, it opens the /events page
+    navigate('/events', { replace: true });
   };
 
   useEffect(() => {
@@ -723,6 +725,34 @@ export default function App() {
     );
   }
 
+  // Force sign-in globally
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Toaster 
+          position="top-center" 
+          richColors={false}
+          closeButton
+          toastOptions={{
+            className: "font-sans",
+            style: {
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(0, 0, 0, 0.05)',
+              borderRadius: '16px',
+              color: '#1a1a1a',
+              boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
+              padding: '16px',
+              fontSize: '14px',
+              fontWeight: 500,
+            },
+          }}
+        />
+        <AuthScreen onAuthSuccess={handleAuthSuccess} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster 
@@ -805,22 +835,14 @@ export default function App() {
           } />
           <Route path="/profile" element={
              <div className="animate-in fade-in duration-200">
-               {!isAuthenticated ? (
-                  <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Profile</h2>
-                    <p className="text-gray-600 mb-6">Sign in to view your profile and settings</p>
-                    <AuthScreen onAuthSuccess={handleAuthSuccess} embedded={true} />
-                  </div>
-               ) : (
-                 <Profile 
-                   onLogout={handleLogout} 
-                   onCreateEvent={handleCreateEvent}
-                   onEditEvent={handleEditEvent}
-                   onStartOrganizerSetup={handleStartOrganizerSetup}
-                   onViewPost={handleViewPost}
-                   isPaused={!!backgroundLocation}
-                 />
-               )}
+               <Profile 
+                 onLogout={handleLogout} 
+                 onCreateEvent={handleCreateEvent}
+                 onEditEvent={handleEditEvent}
+                 onStartOrganizerSetup={handleStartOrganizerSetup}
+                 onViewPost={handleViewPost}
+                 isPaused={!!backgroundLocation}
+               />
              </div>
           } />
           <Route path="/profile/:userId" element={
