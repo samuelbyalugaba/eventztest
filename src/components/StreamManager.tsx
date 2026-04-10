@@ -195,7 +195,12 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         tracksRef.current = { audio: audioTrack, video: videoTrack };
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
-        videoTrack.play('local-player');
+        const currentCam = cameras.find(c => c.deviceId === cameraId);
+        const isBack = currentCam ? /(back|rear|environment)/i.test(currentCam.label) : false;
+        videoTrack.play('local-player', { fit: 'cover', mirror: !isBack });
+        const container = document.getElementById('local-player');
+        const v = container ? (container.querySelector('video') as HTMLVideoElement | null) : null;
+        if (v && isBack) v.style.transform = 'none';
 
         setCameraEnabled(true);
         setMicEnabled(true);
@@ -254,6 +259,12 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       const nextCamera = cameras[nextIndex];
 
       await localVideoTrack.setDevice(nextCamera.deviceId);
+      localVideoTrack.stop();
+      const isBack = /(back|rear|environment)/i.test(nextCamera.label || '');
+      localVideoTrack.play('local-player', { fit: 'cover', mirror: !isBack });
+      const container = document.getElementById('local-player');
+      const v = container ? (container.querySelector('video') as HTMLVideoElement | null) : null;
+      if (v && isBack) v.style.transform = 'none';
       setCurrentCameraIndex(nextIndex);
     } catch (error) {
       console.error('Failed to switch camera device:', error);
