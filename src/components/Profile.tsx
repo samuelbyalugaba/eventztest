@@ -230,7 +230,15 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
       if (seq !== loadSeqRef.current) return;
 
-      if (profile) setUserProfile(profile);
+      if (profile) {
+        setUserProfile(profile);
+        // Eagerly load organizer stats in parallel with posts
+        if (profile.is_organizer && !organizerStats) {
+          getOrganizerStats(targetUserId).then(stats => {
+            if (seq === loadSeqRef.current) setOrganizerStats(stats);
+          }).catch(e => console.error('Error preloading organizer stats:', e));
+        }
+      }
       setFollowStats({ followers, following });
       setIsFollowing(!!followingFlag);
       setIsLoading(false);
@@ -760,7 +768,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               onClick={handleShowEventsList}
             >
               <div className="text-lg font-bold text-gray-900 leading-none mb-1">
-                  {isOrganizer ? (isLoadingOrganizerStats ? '—' : (organizerStats ? organizerStats.totalEvents : 0)) : (isLoadingTickets ? '—' : attendedEvents.length)}
+                  {isOrganizer ? (organizerStats?.totalEvents ?? 0) : attendedEvents.length}
               </div>
               <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
                   {isOrganizer ? 'Hosted' : 'Attended'}
