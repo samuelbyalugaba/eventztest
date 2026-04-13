@@ -57,7 +57,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
       setMessageText(transcript);
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (_event: any) => {
       setIsListening(false);
       // toast.error('Voice input failed');
     };

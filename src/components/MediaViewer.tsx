@@ -109,7 +109,7 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
             setIsPlaying(true);
             setIsBuffering(false);
           })
-          .catch(err => {
+          .catch(_err => {
             setIsPlaying(false);
           });
       }

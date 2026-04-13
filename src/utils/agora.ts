@@ -33,7 +33,7 @@ export const getAgoraToken = async (channelName: string, uid: string | number, r
     });
 
     if (!res.ok) {
-      const text = await res.text();
+      const _text = await res.text();
       return null;
     }
 

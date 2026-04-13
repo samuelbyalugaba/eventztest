@@ -66,7 +66,7 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
           .then(() => {
             setIsBuffering(false);
           })
-          .catch(err => {
+          .catch(_err => {
             setIsPlaying(false);
           });
       }

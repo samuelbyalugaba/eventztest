@@ -88,7 +88,7 @@ export function PostDetailPage({
           playPromise.then(() => {
             // Dispatch event to pause other videos
             window.dispatchEvent(new CustomEvent('video-play', { detail: { id: post.id } }));
-          }).catch(error => {
+          }).catch(_error => {
           });
         }
       };
