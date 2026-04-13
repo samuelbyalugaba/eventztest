@@ -43,7 +43,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   // Chat state
   const [messages, setMessages] = useState<StreamMessage[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const _messagesEndRef = useRef<HTMLDivElement>(null);
   const [likesAnimation, setLikesAnimation] = useState<FloatingHeart[]>([]);
 
   // Agora state
@@ -62,7 +62,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [monetizationEnabled, setMonetizationEnabled] = useState(false);
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
-  const [analytics, setAnalytics] = useState<any | null>(null);
+  const [_analytics, setAnalytics] = useState<any | null>(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
   const [rtmpUrl, setRtmpUrl] = useState(event.streaming?.ingest_url || '');
   const [streamKey, setStreamKey] = useState(event.streaming?.stream_key || '');
