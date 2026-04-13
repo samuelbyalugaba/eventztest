@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { EventDetails } from './components/EventDetails';
+import { useProfileStore } from './store/profileStore';
 import { LiveFeed } from './components/LiveFeed';
 import { Feed } from './components/Feed';
 import { Profile } from './components/Profile';
@@ -185,13 +186,14 @@ export default function App() {
   }, []);
   // Fetch user profile to determine organizer status
   useEffect(() => {
-        const fetchProfile = async () => {
+    const fetchProfile = async () => {
       if (isAuthenticated && currentUser) {
         try {
           const profile = await getProfile(currentUser.id);
           
           if (profile) {
             setUserProfile(profile);
+            useProfileStore.getState().setProfile(profile);
             // Determine if user is an organizer
             const isOrg = profile.is_organizer || false;
             setIsOrganizer(isOrg);
@@ -243,6 +245,7 @@ export default function App() {
             const created = await getProfile(currentUser.id);
             if (created) {
               setUserProfile(created);
+              useProfileStore.getState().setProfile(created);
               setIsOrganizer(created.is_organizer || false);
             }
           }
@@ -251,6 +254,7 @@ export default function App() {
         }
       } else {
         setUserProfile(null);
+        useProfileStore.getState().clear();
       }
     };
 
@@ -686,6 +690,14 @@ export default function App() {
                                (location.pathname.startsWith('/event/') && !isEventModal);
 
   const backgroundLocation = location.state?.backgroundLocation;
+  
+  // Determine which tab is active for keep-alive rendering
+  const effectiveLocation = backgroundLocation || location;
+  const effectivePath = effectiveLocation.pathname;
+  const isEventsTab = effectivePath === '/events' || effectivePath === '/';
+  const isFeedTab = effectivePath === '/feed';
+  const isLiveTab = effectivePath === '/live';
+  const isOwnProfileTab = effectivePath === '/profile';
 
   useEffect(() => {
     const isModal =
@@ -786,88 +798,85 @@ export default function App() {
       />
       {/* Main Content */}
       <div className={`max-w-7xl mx-auto ${shouldHideBottomNav ? 'pb-20' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'}`}>
+        {/* Always-mounted tab views for instant switching (keep-alive) */}
+        <div style={{ display: isEventsTab ? 'block' : 'none' }}>
+          <EventDetails 
+            conversations={conversations} 
+            onStartConversation={handleStartConversation} 
+            onSendMessage={handleSendMessage} 
+          />
+        </div>
+        <div style={{ display: isFeedTab ? 'block' : 'none' }}>
+          <Feed 
+            conversations={conversations} 
+            onStartConversation={handleStartConversation} 
+            onSendMessage={handleSendMessage} 
+            onMarkAsRead={handleMarkAsRead} 
+            onlineUsers={onlineFriends} 
+            onDeleteConversation={handleDeleteConversation} 
+            currentUser={currentUser}
+            isOrganizer={isOrganizer}
+            onCreateEvent={handleCreateEvent}
+            onViewPost={handleViewPost}
+            isPaused={!isFeedTab || !!backgroundLocation}
+          />
+        </div>
+        <div style={{ display: isLiveTab ? 'block' : 'none' }}>
+          <LiveFeed isPaused={!isLiveTab || !!backgroundLocation} />
+        </div>
+        <div style={{ display: isOwnProfileTab ? 'block' : 'none' }}>
+          <Profile 
+            onLogout={handleLogout} 
+            onCreateEvent={handleCreateEvent}
+            onEditEvent={handleEditEvent}
+            onStartOrganizerSetup={handleStartOrganizerSetup}
+            onViewPost={handleViewPost}
+            isPaused={!isOwnProfileTab || !!backgroundLocation}
+          />
+        </div>
+
+        {/* Non-tab routes */}
         <Routes location={backgroundLocation || location}>
           <Route path="/" element={<Navigate to="/events" replace />} />
-          <Route path="/events" element={
-             <div className="animate-in fade-in duration-200">
-               <EventDetails 
-                 conversations={conversations} 
-                 onStartConversation={handleStartConversation} 
-                 onSendMessage={handleSendMessage} 
-               />
-             </div>
-          } />
-          <Route path="/feed" element={
-            <div className="animate-in fade-in duration-200">
-               <Feed 
-                 conversations={conversations} 
-                 onStartConversation={handleStartConversation} 
-                 onSendMessage={handleSendMessage} 
-                 onMarkAsRead={handleMarkAsRead} 
-                 onlineUsers={onlineFriends} 
-                 onDeleteConversation={handleDeleteConversation} 
-                 currentUser={currentUser}
-                 isOrganizer={isOrganizer}
-                 onCreateEvent={handleCreateEvent}
-                 onViewPost={handleViewPost}
-                 isPaused={!!backgroundLocation}
-               />
-             </div>
-          } />
-          <Route path="/live" element={
-            <div className="animate-in fade-in duration-200">
-              <LiveFeed isPaused={!!backgroundLocation} />
-            </div>
+          <Route path="/events" element={null} />
+          <Route path="/feed" element={null} />
+          <Route path="/live" element={null} />
+          <Route path="/profile" element={null} />
+          <Route path="/profile/:userId" element={
+            <Profile 
+              onLogout={handleLogout} 
+              onCreateEvent={handleCreateEvent}
+              onEditEvent={handleEditEvent}
+              onStartOrganizerSetup={handleStartOrganizerSetup}
+              onViewPost={handleViewPost}
+              isPaused={!!backgroundLocation}
+            />
           } />
           <Route path="/create" element={
-             <CreateEventWrapper 
-                 currentUser={currentUser} 
-                 isAuthenticated={isAuthenticated} 
-                 onAuthSuccess={handleAuthSuccess}
-             />
+            <CreateEventWrapper 
+              currentUser={currentUser} 
+              isAuthenticated={isAuthenticated} 
+              onAuthSuccess={handleAuthSuccess}
+            />
           } />
           <Route path="/edit-event/:id" element={
-             <CreateEventWrapper 
-                 currentUser={currentUser} 
-                 isAuthenticated={isAuthenticated} 
-                 onAuthSuccess={handleAuthSuccess}
-             />
-          } />
-          <Route path="/profile" element={
-             <div className="animate-in fade-in duration-200">
-               <Profile 
-                 onLogout={handleLogout} 
-                 onCreateEvent={handleCreateEvent}
-                 onEditEvent={handleEditEvent}
-                 onStartOrganizerSetup={handleStartOrganizerSetup}
-                 onViewPost={handleViewPost}
-                 isPaused={!!backgroundLocation}
-               />
-             </div>
-          } />
-          <Route path="/profile/:userId" element={
-             <div className="animate-in fade-in duration-200">
-               <Profile 
-                 onLogout={handleLogout} 
-                 onCreateEvent={handleCreateEvent}
-                 onEditEvent={handleEditEvent}
-                 onStartOrganizerSetup={handleStartOrganizerSetup}
-                 onViewPost={handleViewPost}
-                 isPaused={!!backgroundLocation}
-               />
-             </div>
+            <CreateEventWrapper 
+              currentUser={currentUser} 
+              isAuthenticated={isAuthenticated} 
+              onAuthSuccess={handleAuthSuccess}
+            />
           } />
           <Route path="/post/:id" element={
-             <PostDetailWrapper 
-                 currentUser={currentUser}
-                 userProfile={userProfile}
-             />
+            <PostDetailWrapper 
+              currentUser={currentUser}
+              userProfile={userProfile}
+            />
           } />
           <Route path="/event/:id" element={
-             <EventDetailWrapper onStartConversation={handleStartConversation} />
+            <EventDetailWrapper onStartConversation={handleStartConversation} />
           } />
           <Route path="/compose/post" element={
-             <CreatePostPage />
+            <CreatePostPage />
           } />
         </Routes>
       </div>

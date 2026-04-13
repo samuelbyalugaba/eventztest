@@ -1,21 +1,24 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { SettingsModal } from './SettingsModal';
-import { TicketViewer } from './TicketViewer';
-import { EventDetailModal } from './EventDetailModal';
 import { supabase } from '../utils/supabase/client';
 import { deleteEvent, getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getProfilePostsGrid, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, getOrganizerStats, getOrganizerEvents, toggleFollow, checkIsFollowing } from '../utils/supabase/api';
-import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
-import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
 import { Conversation, Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
 import { EventListModal } from './EventListModal';
+import { useProfileStore } from '../store/profileStore';
+
+// Lazy-load heavy modals
+const SettingsModal = lazy(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
+const LiveSetupModal = lazy(() => import('./LiveSetupModal').then(m => ({ default: m.LiveSetupModal })));
+const ProfessionalDashboardModal = lazy(() => import('./ProfessionalDashboardModal').then(m => ({ default: m.ProfessionalDashboardModal })));
+const EventDetailModal = lazy(() => import('./EventDetailModal').then(m => ({ default: m.EventDetailModal })));
+const TicketViewer = lazy(() => import('./TicketViewer').then(m => ({ default: m.TicketViewer })));
 
 import { ProfileHeader } from './profile/ProfileHeader';
 import { ProfileBio } from './profile/ProfileBio';
@@ -54,6 +57,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const { userId: userIdParam } = useParams<{ userId: string }>();
   const userId = userIdProp || userIdParam;
   const navigate = useNavigate();
+  
+  // Read cached profile from global store for instant display
+  const cachedProfile = useProfileStore(s => s.profile);
+  const cachedOrgStats = useProfileStore(s => s.organizerStats);
+  const cachedFollowStats = useProfileStore(s => s.followStats);
+  const isOwnProfileCheck = !userId;
+
   const [activeTab, setActiveTab] = useState<ProfileTab>('media');
   const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -68,8 +78,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [organizerStats, setOrganizerStats] = useState<any>(null);
+  // Initialize from global store for own profile (instant display)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(isOwnProfileCheck && cachedProfile ? cachedProfile : null);
+  const [organizerStats, setOrganizerStats] = useState<any>(isOwnProfileCheck && cachedOrgStats ? cachedOrgStats : null);
   const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
   const [showProfessionalDashboard, setShowProfessionalDashboard] = useState(false);
 
@@ -84,7 +95,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [isLoadingSavedEvents, setIsLoadingSavedEvents] = useState(false);
   const [isLoadingTickets, setIsLoadingTickets] = useState(false);
   const [isLoadingOrganizerEvents, setIsLoadingOrganizerEvents] = useState(false);
-  const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
+  const [followStats, setFollowStats] = useState(isOwnProfileCheck && cachedFollowStats ? cachedFollowStats : { followers: 0, following: 0 });
   const [isFollowing, setIsFollowing] = useState(false);
   const loadSeqRef = useRef(0);
   const lastLoadedProfileIdRef = useRef<string | null>(null);
@@ -225,8 +236,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
       if (seq !== loadSeqRef.current) return;
 
-      if (stats) setOrganizerStats(stats);
-      setFollowStats({ followers, following });
+      if (stats) {
+        setOrganizerStats(stats);
+        if (isOwnProfile) useProfileStore.getState().setOrganizerStats(stats);
+      }
+      const newFollowStats = { followers, following };
+      setFollowStats(newFollowStats);
+      if (isOwnProfile) useProfileStore.getState().setFollowStats(newFollowStats);
       setIsFollowing(!!followingFlag);
       setIsLoading(false);
 
@@ -544,9 +560,23 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         </button>
       )}
 
-      {/* Modals */}
-      {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} initialView={settingsInitialView} />}
-      {showLiveSetupModal && <LiveSetupModal isOpen={showLiveSetupModal} onClose={() => setShowLiveSetupModal(false)} />}
+      {/* Modals - lazy-loaded with Suspense */}
+      <Suspense fallback={null}>
+        {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} initialView={settingsInitialView} />}
+        {showLiveSetupModal && <LiveSetupModal isOpen={showLiveSetupModal} onClose={() => setShowLiveSetupModal(false)} />}
+        {showTicketViewer && selectedTicket && <TicketViewer ticket={selectedTicket} onClose={() => setShowTicketViewer(false)} />}
+        {selectedEvent && (
+          <EventDetailModal
+            event={selectedEvent}
+            onClose={() => setSelectedEvent(null)}
+            onPurchaseTicket={() => toast.info("Please go to Events page to purchase tickets")}
+            onPurchaseNormalTicket={() => toast.info("Please go to Events page to purchase tickets")}
+          />
+        )}
+        {showProfessionalDashboard && (
+          <ProfessionalDashboardModal onClose={() => setShowProfessionalDashboard(false)} organizerProfile={userProfile} onCreateEvent={onCreateEvent || (() => {})} onEditEvent={onEditEvent} />
+        )}
+      </Suspense>
       {showTicketListModal && (
         <TicketListModal
           isOpen={showTicketListModal}
@@ -561,15 +591,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             });
             setShowTicketViewer(true);
           }}
-        />
-      )}
-      {showTicketViewer && selectedTicket && <TicketViewer ticket={selectedTicket} onClose={() => setShowTicketViewer(false)} />}
-      {selectedEvent && (
-        <EventDetailModal
-          event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onPurchaseTicket={() => toast.info("Please go to Events page to purchase tickets")}
-          onPurchaseNormalTicket={() => toast.info("Please go to Events page to purchase tickets")}
         />
       )}
       {showEventListModal && (
@@ -600,9 +621,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             setShowUserProfileModal(false);
           }}
         />
-      )}
-      {showProfessionalDashboard && (
-        <ProfessionalDashboardModal onClose={() => setShowProfessionalDashboard(false)} organizerProfile={userProfile} onCreateEvent={onCreateEvent || (() => {})} onEditEvent={onEditEvent} />
       )}
     </div>
   );
