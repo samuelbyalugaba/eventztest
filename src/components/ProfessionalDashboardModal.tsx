@@ -110,16 +110,17 @@ export function ProfessionalDashboardModal({
     }
   }, [publishedEvents]);
 
-  const _handleStopStream = async (eventId: number) => {
-    try {
-      await updateEventStreamingStatus(eventId, false);
-      toast.success('Stream ended');
-      setSelectedEventForStream(null);
-    } catch (error) {
-      console.error('Error stopping stream:', error);
-      toast.error('Failed to stop stream');
-    }
-  };
+  // Stream stop handler - available for future use
+  // const handleStopStream = async (eventId: number) => {
+  //   try {
+  //     await updateEventStreamingStatus(eventId, false);
+  //     toast.success('Stream ended');
+  //     setSelectedEventForStream(null);
+  //   } catch (error) {
+  //     console.error('Error stopping stream:', error);
+  //     toast.error('Failed to stop stream');
+  //   }
+  // };
 
   const profileImage = organizerProfile?.avatar_url;
 

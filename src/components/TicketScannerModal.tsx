@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { X, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { scanTicket } from '../utils/supabase/api';
