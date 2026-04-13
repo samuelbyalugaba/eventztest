@@ -555,9 +555,23 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         </button>
       )}
 
-      {/* Modals */}
-      {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} initialView={settingsInitialView} />}
-      {showLiveSetupModal && <LiveSetupModal isOpen={showLiveSetupModal} onClose={() => setShowLiveSetupModal(false)} />}
+      {/* Modals - lazy-loaded with Suspense */}
+      <Suspense fallback={null}>
+        {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} initialView={settingsInitialView} />}
+        {showLiveSetupModal && <LiveSetupModal isOpen={showLiveSetupModal} onClose={() => setShowLiveSetupModal(false)} />}
+        {showTicketViewer && selectedTicket && <TicketViewer ticket={selectedTicket} onClose={() => setShowTicketViewer(false)} />}
+        {selectedEvent && (
+          <EventDetailModal
+            event={selectedEvent}
+            onClose={() => setSelectedEvent(null)}
+            onPurchaseTicket={() => toast.info("Please go to Events page to purchase tickets")}
+            onPurchaseNormalTicket={() => toast.info("Please go to Events page to purchase tickets")}
+          />
+        )}
+        {showProfessionalDashboard && (
+          <ProfessionalDashboardModal onClose={() => setShowProfessionalDashboard(false)} organizerProfile={userProfile} onCreateEvent={onCreateEvent || (() => {})} onEditEvent={onEditEvent} />
+        )}
+      </Suspense>
       {showTicketListModal && (
         <TicketListModal
           isOpen={showTicketListModal}
@@ -572,15 +586,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             });
             setShowTicketViewer(true);
           }}
-        />
-      )}
-      {showTicketViewer && selectedTicket && <TicketViewer ticket={selectedTicket} onClose={() => setShowTicketViewer(false)} />}
-      {selectedEvent && (
-        <EventDetailModal
-          event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onPurchaseTicket={() => toast.info("Please go to Events page to purchase tickets")}
-          onPurchaseNormalTicket={() => toast.info("Please go to Events page to purchase tickets")}
         />
       )}
       {showEventListModal && (
@@ -611,9 +616,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             setShowUserProfileModal(false);
           }}
         />
-      )}
-      {showProfessionalDashboard && (
-        <ProfessionalDashboardModal onClose={() => setShowProfessionalDashboard(false)} organizerProfile={userProfile} onCreateEvent={onCreateEvent || (() => {})} onEditEvent={onEditEvent} />
       )}
     </div>
   );
