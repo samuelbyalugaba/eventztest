@@ -1,4 +1,4 @@
-import type { IAgoraRTCClient } from 'agora-rtc-sdk-ng';
+import { supabase } from './supabase/client';
 import { supabase } from './supabase/client';
 
 export const AGORA_APP_ID = 'f5ff5998cbc248459a3c536a9997b970';

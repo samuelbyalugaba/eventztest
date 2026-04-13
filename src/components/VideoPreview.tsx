@@ -60,11 +60,11 @@ export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps)
     <div 
       className={`relative ${className} bg-gray-900 group overflow-hidden`}
       onMouseEnter={() => {
-        setIsHovering(true);
+        _setIsHovering(true);
         videoRef.current?.play().catch(() => {});
       }}
       onMouseLeave={() => {
-        setIsHovering(false);
+        _setIsHovering(false);
         videoRef.current?.pause();
         if (videoRef.current) videoRef.current.currentTime = 0;
       }}

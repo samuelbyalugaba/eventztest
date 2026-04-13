@@ -3,7 +3,7 @@ import { X, MessageCircle, Star, Heart } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 
-interface CommentsSheetComment {
+interface _CommentsSheetComment {
   id: number;
   user: {
     name: string;
