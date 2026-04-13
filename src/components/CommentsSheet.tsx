@@ -1,22 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { X, MessageCircle, Star, Heart } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
-import { toast } from 'sonner';
 
-interface Comment {
-  id: number;
-  user: {
-    name: string;
-    avatar: string;
-    is_organizer: boolean;
-  };
-  text: string;
-  timestamp: string;
-  parent_id?: number;
-  likes_count?: number;
-  is_liked?: boolean;
-}
 
 interface CommentsSheetProps {
   isOpen: boolean;

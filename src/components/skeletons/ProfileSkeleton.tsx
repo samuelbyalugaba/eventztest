@@ -1,10 +1,8 @@
-import { ChevronLeft, Share2 } from 'lucide-react';
-
 interface ProfileSkeletonProps {
   onClose: () => void;
 }
 
-export function ProfileSkeletonContent({ onClose }: ProfileSkeletonProps) {
+export function ProfileSkeletonContent({ onClose: _onClose }: ProfileSkeletonProps) {
   return (
     <div className="w-full min-h-screen bg-white pb-20 pt-6 px-6 animate-pulse">
       

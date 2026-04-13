@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 export const CommentIcon = ({ className = "w-5 h-5", color = "#4b5563" }: { className?: string; color?: string }) => (
   <svg 

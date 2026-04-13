@@ -1,8 +1,8 @@
-import { Users, Zap, TrendingUp, CheckCircle, ArrowRight, Video, DollarSign, BarChart3, Globe, Shield, Headphones, PenTool, Star } from 'lucide-react';
+import { Users, Zap, TrendingUp, CheckCircle, ArrowRight, Video, DollarSign, BarChart3, Globe, Shield, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase/client';
-import { updateProfile, getPlatformStats, getProfile } from '../utils/supabase/api';
+import { getPlatformStats, getProfile } from '../utils/supabase/api';
 
 const isAbortError = (error: any) => {
   if (!error) return false;

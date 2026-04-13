@@ -1002,7 +1002,30 @@ export const hasActiveVirtualTicket = async (userId: string, eventId: number) =>
 };
 
 export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'event'> & { transaction_id?: number }) => {
-  // Use the secure RPC function to purchase tickets (prevents free ticket glitch)
+  // SECURITY: Require a valid transaction_id for paid tickets to prevent free ticket bypass
+  const price = ticket.price ? parseFloat(ticket.price.replace(/[^0-9.]/g, '')) : 0;
+  if (price > 0 && !ticket.transaction_id) {
+    throw new Error('Payment verification required: transaction_id is missing for a paid ticket.');
+  }
+
+  // Verify the transaction exists and is completed before creating ticket
+  if (ticket.transaction_id) {
+    const { data: txn, error: txnError } = await supabase
+      .from('transactions')
+      .select('id, status')
+      .eq('id', ticket.transaction_id)
+      .single();
+
+    if (txnError || !txn) {
+      throw new Error('Payment verification failed: transaction not found.');
+    }
+
+    if (txn.status !== 'completed' && txn.status !== 'success') {
+      throw new Error(`Payment verification failed: transaction status is "${txn.status}".`);
+    }
+  }
+
+  // Use the secure RPC function to purchase tickets
   const { data, error } = await supabase.rpc('purchase_ticket', {
     p_event_id: ticket.event_id,
     p_ticket_type: ticket.ticket_type,

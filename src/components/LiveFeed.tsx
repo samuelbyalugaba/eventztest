@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, MapPin, Search, X, Globe, Eye, Bell, Smartphone, Clock, Video } from 'lucide-react';
+import { Filter, MapPin, Search, Globe, Eye, Bell, Smartphone, Clock, Video } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
@@ -296,7 +296,7 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [remoteLocationOptions, setRemoteLocationOptions] = useState<LocationOption[]>([]);
-  const [isSearchingLocations, setIsSearchingLocations] = useState(false);
+  const [_isSearchingLocations, setIsSearchingLocations] = useState(false);
   const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
 
   // Close stream viewer if background is paused

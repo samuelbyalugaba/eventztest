@@ -10,7 +10,7 @@ interface VideoPreviewProps {
 
 export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
+  const [_isHovering, _setIsHovering] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isLowInternet, setIsLowInternet] = useState(false);
 
@@ -60,11 +60,11 @@ export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps)
     <div 
       className={`relative ${className} bg-gray-900 group overflow-hidden`}
       onMouseEnter={() => {
-        setIsHovering(true);
+        _setIsHovering(true);
         videoRef.current?.play().catch(() => {});
       }}
       onMouseLeave={() => {
-        setIsHovering(false);
+        _setIsHovering(false);
         videoRef.current?.pause();
         if (videoRef.current) videoRef.current.currentTime = 0;
       }}
