@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, RotateCcw, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, Clock, Award } from 'lucide-react';
+import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, RotateCcw, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, Clock, Award, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToEventStreaming } from '../../utils/supabase/api';
+import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToEventStreaming, sendStreamMessage } from '../../utils/supabase/api';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../../utils/agora';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { FloatingChat } from './FloatingChat';
+import { SidebarChat } from './SidebarChat';
 import { HeartAnimations, generateHeart } from './HeartAnimations';
+import { useIsMobile } from '../ui/use-mobile';
 import type { FloatingHeart, StreamStats } from './types';
 
 interface StreamManagerProps {
@@ -18,6 +20,8 @@ interface StreamManagerProps {
 type StreamPhase = 'setup' | 'live' | 'ended';
 
 export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerProps) {
+  const isMobile = useIsMobile();
+
   // Core state
   const [phase, setPhase] = useState<StreamPhase>(event.streaming?.isLive ? 'live' : 'setup');
   const [isLive, setIsLive] = useState(event.streaming?.isLive || false);
@@ -32,7 +36,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [micEnabled, setMicEnabled] = useState(true);
   const [streamHealth, setStreamHealth] = useState<'good' | 'poor' | 'offline'>(isLive ? 'good' : 'offline');
 
-  // Real-time metrics
+  // Real-time metrics — use refs for accurate final capture
   const [viewerCount, setViewerCount] = useState(event.streaming?.liveViewers || 0);
   const [likes, setLikes] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -40,10 +44,13 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const peakViewersRef = useRef(0);
   const totalGiftsRef = useRef(0);
   const newFollowersRef = useRef(0);
+  const likesRef = useRef(0);
+  const revenueRef = useRef(0);
+  const messagesCountRef = useRef(0);
 
   // Chat state
   const [messages, setMessages] = useState<StreamMessage[]>([]);
-  // messagesEndRef removed - not needed for floating chat
+  const [chatMessage, setChatMessage] = useState('');
   const [likesAnimation, setLikesAnimation] = useState<FloatingHeart[]>([]);
 
   // Agora state
@@ -80,9 +87,11 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
   }
 
-  useEffect(() => {
-    tracksRef.current = { audio: localAudioTrack, video: localVideoTrack };
-  }, [localAudioTrack, localVideoTrack]);
+  // Keep refs in sync
+  useEffect(() => { tracksRef.current = { audio: localAudioTrack, video: localVideoTrack }; }, [localAudioTrack, localVideoTrack]);
+  useEffect(() => { likesRef.current = likes; }, [likes]);
+  useEffect(() => { revenueRef.current = totalRevenue; }, [totalRevenue]);
+  useEffect(() => { messagesCountRef.current = messages.length; }, [messages.length]);
 
   // Network quality
   useEffect(() => {
@@ -279,15 +288,15 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     clearStartTimers();
     if (client.current) { try { await client.current.leave(); } catch {} }
     if (isLive) {
-      // Build end stats before resetting
+      // Use refs for accurate final values
       setEndStats({
         peakViewers: peakViewersRef.current,
-        totalLikes: likes,
+        totalLikes: likesRef.current,
         totalGifts: totalGiftsRef.current,
-        totalRevenue,
+        totalRevenue: revenueRef.current,
         duration: elapsedTime,
         newFollowers: newFollowersRef.current,
-        chatMessages: messages.length,
+        chatMessages: messagesCountRef.current,
       });
       setIsLive(false);
       setStreamHealth('offline');
@@ -354,6 +363,15 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     }
   };
 
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!chatMessage.trim()) return;
+    try {
+      await sendStreamMessage(event.id, chatMessage);
+      setChatMessage('');
+    } catch { toast.error('Failed to send message'); }
+  };
+
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied`);
@@ -373,10 +391,10 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     return (
       <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
-          <div className="bg-gradient-to-br from-purple-900/40 to-black border border-white/10 rounded-3xl p-6 backdrop-blur-xl">
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-xl">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <Award className="w-8 h-8 text-white" />
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-primary/20 flex items-center justify-center">
+                <Award className="w-8 h-8 text-primary" />
               </div>
               <h2 className="text-white text-xl font-bold">Stream Ended</h2>
               <p className="text-white/60 text-sm mt-1">Here's how your stream performed</p>
@@ -385,7 +403,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
                 <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-3.5 h-3.5 text-purple-400" />
+                  <Clock className="w-3.5 h-3.5 text-primary" />
                   <span className="text-white/50 text-[10px] uppercase tracking-wider">Duration</span>
                 </div>
                 <span className="text-white text-lg font-bold">{formatTime(endStats.duration)}</span>
@@ -428,7 +446,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
             <button
               onClick={onClose}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm hover:opacity-90 transition-opacity active:scale-[0.98]"
+              className="w-full py-3 rounded-2xl bg-primary text-white font-bold text-sm hover:opacity-90 transition-opacity active:scale-[0.98]"
             >
               Close Studio
             </button>
@@ -446,7 +464,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         <div className="absolute inset-0">
           <div id="local-player" className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`} />
           {!cameraEnabled && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
               <div className="flex flex-col items-center text-white/50">
                 <VideoOff className="w-16 h-16 mb-3" />
                 <span className="text-sm">Camera is off</span>
@@ -506,7 +524,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           <button
             onClick={toggleLive}
             disabled={isStarting}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 to-red-500 text-white font-bold text-base shadow-2xl shadow-red-600/30 hover:shadow-red-600/50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-2xl bg-red-600 text-white font-bold text-base shadow-2xl shadow-red-600/30 hover:shadow-red-600/50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <Radio className="w-5 h-5" />
             {isStarting ? `Going live in ${countdown}...` : 'Go Live'}
@@ -514,57 +532,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         </div>
 
         {/* Settings Modal */}
-        {showSettings && (
-          <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-lg flex items-end md:items-center justify-center" onClick={() => setShowSettings(false)}>
-            <div className="w-full max-w-lg bg-gray-900/95 border border-white/10 rounded-t-3xl md:rounded-3xl p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-bold text-lg">Stream Settings</h3>
-                <button onClick={() => setShowSettings(false)} className="p-2 rounded-xl bg-white/10 text-white/70"><X className="w-4 h-4" /></button>
-              </div>
-              <div className="space-y-4">
-                <div className="relative w-full bg-white/10 rounded-full p-1">
-                  <div className={`absolute top-1 bottom-1 w-1/2 bg-purple-600 rounded-full transition-transform ${streamMethod === 'webcam' ? 'translate-x-0' : 'translate-x-full'}`} />
-                  <div className="relative z-10 flex">
-                    <button onClick={() => setStreamMethod('webcam')} className={`w-1/2 py-2 rounded-full text-sm ${streamMethod === 'webcam' ? 'text-white font-bold' : 'text-white/50'}`}>Webcam</button>
-                    <button onClick={() => setStreamMethod('obs')} className={`w-1/2 py-2 rounded-full text-sm ${streamMethod === 'obs' ? 'text-white font-bold' : 'text-white/50'}`}>OBS / RTMP</button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-white/60 text-xs">Category</label>
-                  <select value={streamCategory} onChange={(e) => setStreamCategory(e.target.value)} className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm">
-                    <option>General</option><option>Music</option><option>Sports</option><option>Gaming</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-white/60 text-xs">Visibility</label>
-                  <select value={visibility} onChange={(e) => setVisibility(e.target.value as any)} className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm">
-                    <option value="public">Public</option><option value="ticket">Ticket holders</option><option value="followers">Followers</option>
-                  </select>
-                </div>
-                {streamMethod === 'obs' && (
-                  <div className="space-y-3 mt-4">
-                    <div className="space-y-1.5">
-                      <label className="text-white/60 text-xs">Stream URL</label>
-                      <div className="flex items-center gap-2 bg-white/5 rounded-xl p-2.5 border border-white/10">
-                        <input type="text" value={rtmpUrl} readOnly className="bg-transparent text-white/70 text-xs flex-1 outline-none font-mono" />
-                        <button onClick={() => handleCopy(rtmpUrl, 'URL')} className="text-white/50 hover:text-white"><Copy className="w-3.5 h-3.5" /></button>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-white/60 text-xs">Stream Key</label>
-                      <div className="flex items-center gap-2 bg-white/5 rounded-xl p-2.5 border border-white/10">
-                        <input type={showKey ? 'text' : 'password'} value={streamKey} readOnly className="bg-transparent text-white/70 text-xs flex-1 outline-none font-mono" />
-                        <button onClick={() => setShowKey(!showKey)} className="text-white/50 hover:text-white">{showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}</button>
-                        <button onClick={() => handleCopy(streamKey, 'Key')} className="text-white/50 hover:text-white"><Copy className="w-3.5 h-3.5" /></button>
-                      </div>
-                    </div>
-                    <p className="text-yellow-400/70 text-[10px]">⚠️ OBS/RTMP streaming requires an RTMP ingest server (coming soon)</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {renderSettingsModal()}
 
         <AlertDialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
           <AlertDialogContent className="z-[70]">
@@ -582,188 +550,245 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     );
   }
 
-  // ===== LIVE PHASE =====
-  return (
-    <div className="fixed inset-0 bg-black z-50 overflow-hidden">
-      {/* Video */}
-      <div className="absolute inset-0">
-        <div id="local-player" className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`} />
-        {!cameraEnabled && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="flex flex-col items-center text-white/50">
-              <VideoOff className="w-12 h-12 mb-3" />
-              <span>Camera off</span>
+  // Settings modal (shared between setup and live)
+  function renderSettingsModal() {
+    if (!showSettings) return null;
+    return (
+      <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-lg flex items-end md:items-center justify-center" onClick={() => setShowSettings(false)}>
+        <div className="w-full max-w-lg bg-gray-900/95 border border-white/10 rounded-t-3xl md:rounded-3xl p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex gap-2">
+              {(['settings', 'monetization', 'analytics'] as const).map((tab) => (
+                <button key={tab} onClick={() => setActiveSettingsTab(tab)} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${activeSettingsTab === tab ? 'bg-primary text-white' : 'bg-white/5 text-white/60'}`}>
+                  {tab === 'settings' ? 'Settings' : tab === 'monetization' ? 'Monetize' : 'Analytics'}
+                </button>
+              ))}
             </div>
+            <button onClick={() => setShowSettings(false)} className="p-2 rounded-xl bg-white/10 text-white/70"><X className="w-4 h-4" /></button>
           </div>
-        )}
-        {countdown > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-50">
-            <div className="text-white text-7xl font-black animate-pulse">{countdown}</div>
-          </div>
-        )}
-      </div>
 
-      {/* HUD Overlay */}
-      <div className="absolute inset-0 pointer-events-none z-40">
-        {/* Top gradient */}
-        <div className="bg-gradient-to-b from-black/80 via-black/30 to-transparent h-32 pointer-events-auto">
-          <div className="px-4 pt-12 flex items-center justify-between">
-            {/* Left: Exit & Info */}
-            <div className="flex items-center gap-3">
-              <button onClick={handleRequestClose} className="p-2 rounded-xl bg-white/10 backdrop-blur-xl text-white border border-white/10">
-                <X className="w-5 h-5" />
-              </button>
-              <div>
-                <h2 className="text-white font-bold text-sm max-w-[140px] truncate">{streamTitle}</h2>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-500/20 border border-red-500/40">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                    <span className="text-red-200 text-[9px] font-black tracking-[0.15em]">LIVE</span>
+          {activeSettingsTab === 'settings' && (
+            <div className="space-y-4">
+              <div className="relative w-full bg-white/10 rounded-full p-1">
+                <div className={`absolute top-1 bottom-1 w-1/2 bg-primary rounded-full transition-transform ${streamMethod === 'webcam' ? 'translate-x-0' : 'translate-x-full'}`} />
+                <div className="relative z-10 flex">
+                  <button onClick={() => setStreamMethod('webcam')} className={`w-1/2 py-2 rounded-full text-sm ${streamMethod === 'webcam' ? 'text-white font-bold' : 'text-white/50'}`}>Webcam</button>
+                  <button onClick={() => setStreamMethod('obs')} className={`w-1/2 py-2 rounded-full text-sm ${streamMethod === 'obs' ? 'text-white font-bold' : 'text-white/50'}`}>OBS / RTMP</button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-white/60 text-xs">Title</label>
+                <input value={streamTitle} onChange={(e) => setStreamTitle(e.target.value)} className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm outline-none" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-white/60 text-xs">Category</label>
+                <select value={streamCategory} onChange={(e) => setStreamCategory(e.target.value)} className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm">
+                  <option>General</option><option>Music</option><option>Sports</option><option>Gaming</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-white/60 text-xs">Visibility</label>
+                <select value={visibility} onChange={(e) => setVisibility(e.target.value as any)} className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm">
+                  <option value="public">Public</option><option value="ticket">Ticket holders</option><option value="followers">Followers</option>
+                </select>
+              </div>
+              {streamMethod === 'obs' && (
+                <div className="space-y-3 mt-4">
+                  <div className="space-y-1.5">
+                    <label className="text-white/60 text-xs">Stream URL</label>
+                    <div className="flex items-center gap-2 bg-white/5 rounded-xl p-2.5 border border-white/10">
+                      <input type="text" value={rtmpUrl} readOnly className="bg-transparent text-white/70 text-xs flex-1 outline-none font-mono" />
+                      <button onClick={() => handleCopy(rtmpUrl, 'URL')} className="text-white/50 hover:text-white"><Copy className="w-3.5 h-3.5" /></button>
+                    </div>
                   </div>
+                  <div className="space-y-1.5">
+                    <label className="text-white/60 text-xs">Stream Key</label>
+                    <div className="flex items-center gap-2 bg-white/5 rounded-xl p-2.5 border border-white/10">
+                      <input type={showKey ? 'text' : 'password'} value={streamKey} readOnly className="bg-transparent text-white/70 text-xs flex-1 outline-none font-mono" />
+                      <button onClick={() => setShowKey(!showKey)} className="text-white/50 hover:text-white">{showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}</button>
+                      <button onClick={() => handleCopy(streamKey, 'Key')} className="text-white/50 hover:text-white"><Copy className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+                  <p className="text-yellow-400/70 text-[10px]">⚠️ OBS/RTMP streaming requires an RTMP ingest server (coming soon)</p>
                 </div>
-              </div>
+              )}
             </div>
+          )}
 
-            {/* Right: Revenue */}
-            <div className="flex items-center gap-2">
-              <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 px-3 py-1.5 rounded-xl backdrop-blur-xl">
-                <span className="text-yellow-400 font-bold text-sm">TZS {totalRevenue.toLocaleString()}</span>
+          {activeSettingsTab === 'monetization' && (
+            <div className="space-y-4 text-white/80">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Enable monetization</span>
+                <button onClick={() => setMonetizationEnabled((m) => !m)} className={`relative w-11 h-6 rounded-full transition-colors ${monetizationEnabled ? 'bg-green-500' : 'bg-white/20'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${monetizationEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                </button>
               </div>
+              {virtualPrice && (
+                <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                  <span className="text-sm font-semibold">Virtual Ticket: {virtualPrice}</span>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Floating HUD pill - center top */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-28 flex items-center gap-3 bg-black/50 backdrop-blur-2xl px-4 py-2 rounded-2xl border border-white/10 shadow-2xl pointer-events-auto">
-          <span className="text-white font-mono text-xs font-bold">{formatTime(elapsedTime)}</span>
-          <div className="w-px h-4 bg-white/20" />
-          <div className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-white/60" />
-            <span className="text-white text-xs font-bold">{viewerCount.toLocaleString()}</span>
-          </div>
-          <div className="w-px h-4 bg-white/20" />
-          <div className={`flex items-center gap-1 text-[10px] font-bold ${streamHealth === 'good' ? 'text-green-400' : streamHealth === 'poor' ? 'text-yellow-400' : 'text-red-400'}`}>
-            <Activity className="w-3.5 h-3.5" />
-            <span>{streamHealth === 'good' ? 'GOOD' : streamHealth === 'poor' ? 'POOR' : 'BAD'}</span>
-          </div>
-        </div>
-
-        {/* Right action rail */}
-        <div className="absolute bottom-32 right-4 flex flex-col items-center gap-3 pointer-events-auto">
-          <button onClick={toggleCameraDevice} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10 active:scale-90 transition-transform">
-            <RotateCcw className="w-5 h-5" />
-          </button>
-          <button onClick={toggleCamera} className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${cameraEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
-            {cameraEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-          </button>
-          <button onClick={toggleMic} className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${micEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
-            {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-          </button>
-          <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10">
-            <Settings className="w-5 h-5" />
-          </button>
-          <button onClick={toggleLive} className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white/20 bg-white text-red-600 active:scale-90 transition-all">
-            <Radio className="w-6 h-6" />
-          </button>
-        </div>
-      </div>
-
-      {/* Chat overlay */}
-      <div className="absolute bottom-28 left-4 w-64 md:w-80 z-20 pointer-events-auto">
-        <FloatingChat messages={chatMessages} maxVisible={3} />
-      </div>
-
-      {/* Hearts */}
-      <HeartAnimations hearts={likesAnimation} />
-
-      {/* Settings panel (reuse) */}
-      {showSettings && (
-        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-lg flex items-end md:items-center justify-center" onClick={() => setShowSettings(false)}>
-          <div className="w-full max-w-lg bg-gray-900/95 border border-white/10 rounded-t-3xl md:rounded-3xl p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex gap-2">
-                {(['settings', 'monetization', 'analytics'] as const).map((tab) => (
-                  <button key={tab} onClick={() => setActiveSettingsTab(tab)} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${activeSettingsTab === tab ? 'bg-purple-600 text-white' : 'bg-white/5 text-white/60'}`}>
-                    {tab === 'settings' ? 'Settings' : tab === 'monetization' ? 'Monetize' : 'Analytics'}
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => setShowSettings(false)} className="p-2 rounded-xl bg-white/10 text-white/70"><X className="w-4 h-4" /></button>
-            </div>
-
-            {activeSettingsTab === 'settings' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-white/60 text-xs">Title</label>
-                  <input value={streamTitle} onChange={(e) => setStreamTitle(e.target.value)} className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm outline-none" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-white/60 text-xs">Category</label>
-                  <select value={streamCategory} onChange={(e) => setStreamCategory(e.target.value)} className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm">
-                    <option>General</option><option>Music</option><option>Sports</option><option>Gaming</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {activeSettingsTab === 'monetization' && (
-              <div className="space-y-4 text-white/80">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Enable monetization</span>
-                  <button onClick={() => setMonetizationEnabled((m) => !m)} className={`relative w-11 h-6 rounded-full transition-colors ${monetizationEnabled ? 'bg-green-500' : 'bg-white/20'}`}>
-                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${monetizationEnabled ? 'right-0.5' : 'left-0.5'}`} />
-                  </button>
-                </div>
-                {virtualPrice && (
+          {activeSettingsTab === 'analytics' && (
+            <div className="space-y-4">
+              {isLoadingAnalytics ? (
+                <p className="text-white/50 text-sm">Loading...</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                    <span className="text-sm font-semibold">Virtual Ticket: {virtualPrice}</span>
+                    <span className="text-white/50 text-[10px] uppercase">Viewers</span>
+                    <p className="text-white text-lg font-bold">{viewerCount.toLocaleString()}</p>
                   </div>
-                )}
-              </div>
-            )}
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <span className="text-white/50 text-[10px] uppercase">Peak</span>
+                    <p className="text-white text-lg font-bold">{peakViewersRef.current}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <span className="text-white/50 text-[10px] uppercase">Likes</span>
+                    <p className="text-white text-lg font-bold">{likes}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                    <span className="text-white/50 text-[10px] uppercase">Revenue</span>
+                    <p className="text-white text-lg font-bold">TZS {totalRevenue.toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-            {activeSettingsTab === 'analytics' && (
-              <div className="space-y-4">
-                {isLoadingAnalytics ? (
-                  <p className="text-white/50 text-sm">Loading...</p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                      <span className="text-white/50 text-[10px] uppercase">Viewers</span>
-                      <p className="text-white text-lg font-bold">{viewerCount.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                      <span className="text-white/50 text-[10px] uppercase">Peak</span>
-                      <p className="text-white text-lg font-bold">{peakViewersRef.current}</p>
-                    </div>
-                    <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                      <span className="text-white/50 text-[10px] uppercase">Likes</span>
-                      <p className="text-white text-lg font-bold">{likes}</p>
-                    </div>
-                    <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                      <span className="text-white/50 text-[10px] uppercase">Revenue</span>
-                      <p className="text-white text-lg font-bold">TZS {totalRevenue.toLocaleString()}</p>
+  // ===== LIVE PHASE =====
+  // Desktop: side-by-side with sidebar chat
+  // Mobile: fullscreen with floating chat
+  return (
+    <div className="fixed inset-0 bg-black z-50 overflow-hidden flex">
+      {/* Video + HUD area */}
+      <div className="flex-1 relative">
+        {/* Video */}
+        <div className="absolute inset-0">
+          <div id="local-player" className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`} />
+          {!cameraEnabled && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center text-white/50">
+                <VideoOff className="w-12 h-12 mb-3" />
+                <span>Camera off</span>
+              </div>
+            </div>
+          )}
+          {countdown > 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-50">
+              <div className="text-white text-7xl font-black animate-pulse">{countdown}</div>
+            </div>
+          )}
+        </div>
+
+        {/* HUD Overlay */}
+        <div className="absolute inset-0 pointer-events-none z-40">
+          {/* Top gradient */}
+          <div className="bg-gradient-to-b from-black/80 via-black/30 to-transparent h-32 pointer-events-auto">
+            <div className="px-4 pt-12 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button onClick={handleRequestClose} className="p-2 rounded-xl bg-white/10 backdrop-blur-xl text-white border border-white/10">
+                  <X className="w-5 h-5" />
+                </button>
+                <div>
+                  <h2 className="text-white font-bold text-sm max-w-[140px] truncate">{streamTitle}</h2>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-500/20 border border-red-500/40">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      <span className="text-red-200 text-[9px] font-black tracking-[0.15em]">LIVE</span>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-            )}
+
+              <div className="flex items-center gap-2">
+                <div className="bg-yellow-500/15 border border-yellow-500/25 px-3 py-1.5 rounded-xl backdrop-blur-xl">
+                  <span className="text-yellow-400 font-bold text-sm">TZS {totalRevenue.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Floating HUD pill */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-28 flex items-center gap-3 bg-black/50 backdrop-blur-2xl px-4 py-2 rounded-2xl border border-white/10 shadow-2xl pointer-events-auto">
+            <span className="text-white font-mono text-xs font-bold">{formatTime(elapsedTime)}</span>
+            <div className="w-px h-4 bg-white/20" />
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-white/60" />
+              <span className="text-white text-xs font-bold">{viewerCount.toLocaleString()}</span>
+            </div>
+            <div className="w-px h-4 bg-white/20" />
+            <div className={`flex items-center gap-1 text-[10px] font-bold ${streamHealth === 'good' ? 'text-green-400' : streamHealth === 'poor' ? 'text-yellow-400' : 'text-red-400'}`}>
+              <Activity className="w-3.5 h-3.5" />
+              <span>{streamHealth === 'good' ? 'GOOD' : streamHealth === 'poor' ? 'POOR' : 'BAD'}</span>
+            </div>
+          </div>
+
+          {/* Right action rail */}
+          <div className="absolute bottom-32 right-4 flex flex-col items-center gap-3 pointer-events-auto">
+            <button onClick={toggleCameraDevice} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10 active:scale-90 transition-transform">
+              <RotateCcw className="w-5 h-5" />
+            </button>
+            <button onClick={toggleCamera} className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${cameraEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
+              {cameraEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+            </button>
+            <button onClick={toggleMic} className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${micEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
+              {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+            </button>
+            <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10">
+              <Settings className="w-5 h-5" />
+            </button>
+            <button onClick={toggleLive} className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white/20 bg-white text-red-600 active:scale-90 transition-all">
+              <Radio className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile: Floating chat overlay */}
+        {isMobile && (
+          <div className="absolute bottom-28 left-4 w-64 z-20 pointer-events-auto">
+            <FloatingChat messages={chatMessages} maxVisible={3} />
+          </div>
+        )}
+
+        {/* Hearts */}
+        <HeartAnimations hearts={likesAnimation} />
+
+        {/* Settings panel */}
+        {renderSettingsModal()}
+
+        <AlertDialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
+          <AlertDialogContent className="z-[70]">
+            <AlertDialogHeader>
+              <AlertDialogTitle>End livestream?</AlertDialogTitle>
+              <AlertDialogDescription>{isInstantStream ? 'This will end and remove the livestream.' : 'This will end the livestream for all viewers.'}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep streaming</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmClose}>End stream</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
+      {/* Desktop: Sidebar chat */}
+      {!isMobile && (
+        <div className="w-[340px] flex-shrink-0">
+          <SidebarChat
+            messages={chatMessages}
+            message={chatMessage}
+            onMessageChange={setChatMessage}
+            onSendMessage={handleSendMessage}
+            viewerCount={viewerCount}
+          />
         </div>
       )}
-
-      <AlertDialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
-        <AlertDialogContent className="z-[70]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>End livestream?</AlertDialogTitle>
-            <AlertDialogDescription>{isInstantStream ? 'This will end and remove the livestream.' : 'This will end the livestream for all viewers.'}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep streaming</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmClose}>End stream</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
