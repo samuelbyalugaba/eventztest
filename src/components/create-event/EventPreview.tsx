@@ -1,5 +1,5 @@
 import { EventCard } from '../EventCard';
-import { ArrowLeft, Eye, Calendar, Tag, BarChart3, Save } from 'lucide-react';
+import { ArrowLeft, Eye, Calendar, Tag, BarChart3 } from 'lucide-react';
 
 interface EventPreviewProps {
   formData: {
