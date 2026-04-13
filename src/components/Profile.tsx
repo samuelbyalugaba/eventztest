@@ -230,7 +230,15 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
       if (seq !== loadSeqRef.current) return;
 
-      if (profile) setUserProfile(profile);
+      if (profile) {
+        setUserProfile(profile);
+        // Eagerly load organizer stats in parallel with posts
+        if (profile.is_organizer && !organizerStats) {
+          getOrganizerStats(targetUserId).then(stats => {
+            if (seq === loadSeqRef.current) setOrganizerStats(stats);
+          }).catch(e => console.error('Error preloading organizer stats:', e));
+        }
+      }
       setFollowStats({ followers, following });
       setIsFollowing(!!followingFlag);
       setIsLoading(false);
