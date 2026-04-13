@@ -4,7 +4,7 @@ import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, B
 import { UserProfileModal } from './UserProfileModal';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
-import { LiveStreamViewer } from './LiveStreamViewer';
+import { LiveStreamViewer } from './livestream/LiveStreamViewerNew';
 import { ShareModal } from './ShareModal';
 import { handleShare } from '../utils/share';
 import { supabase } from '../utils/supabase/client';

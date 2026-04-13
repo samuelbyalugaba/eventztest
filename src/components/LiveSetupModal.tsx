@@ -3,7 +3,7 @@ import { X, Radio, Calendar, MapPin, Tv, Image as ImageIcon } from 'lucide-react
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerEvents, subscribeToEventStreaming, updateEventStreamingStatus, uploadImage } from '../utils/supabase/api';
-import { StreamManager } from './StreamManager';
+import { StreamManager } from './livestream/StreamManagerNew';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 
 interface LiveSetupModalProps {
