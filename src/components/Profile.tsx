@@ -236,8 +236,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
       if (seq !== loadSeqRef.current) return;
 
-      if (stats) setOrganizerStats(stats);
-      setFollowStats({ followers, following });
+      if (stats) {
+        setOrganizerStats(stats);
+        if (isOwnProfile) useProfileStore.getState().setOrganizerStats(stats);
+      }
+      const newFollowStats = { followers, following };
+      setFollowStats(newFollowStats);
+      if (isOwnProfile) useProfileStore.getState().setFollowStats(newFollowStats);
       setIsFollowing(!!followingFlag);
       setIsLoading(false);
 
