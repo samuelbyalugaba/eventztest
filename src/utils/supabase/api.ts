@@ -903,7 +903,7 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
   const isVideo = file.type.startsWith('video/');
   let optimizedFile = file;
   if (!isVideo) {
-    const { optimizeForUpload } = await import('../utils/imageOptimize');
+    const { optimizeForUpload } = await import('../imageOptimize');
     optimizedFile = await optimizeForUpload(file);
   }
 
