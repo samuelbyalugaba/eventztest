@@ -61,7 +61,8 @@
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
             "tailwindcss": "^4.2.2",
-            "vaul": "^1.1.2"
+            "vaul": "^1.1.2",
+            "zustand": "^5.0.12"
       },
       "devDependencies": {
             "@capacitor/assets": "^3.0.5",
