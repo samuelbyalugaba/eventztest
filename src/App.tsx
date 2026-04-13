@@ -798,88 +798,85 @@ export default function App() {
       />
       {/* Main Content */}
       <div className={`max-w-7xl mx-auto ${shouldHideBottomNav ? 'pb-20' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'}`}>
+        {/* Always-mounted tab views for instant switching (keep-alive) */}
+        <div style={{ display: isEventsTab ? 'block' : 'none' }}>
+          <EventDetails 
+            conversations={conversations} 
+            onStartConversation={handleStartConversation} 
+            onSendMessage={handleSendMessage} 
+          />
+        </div>
+        <div style={{ display: isFeedTab ? 'block' : 'none' }}>
+          <Feed 
+            conversations={conversations} 
+            onStartConversation={handleStartConversation} 
+            onSendMessage={handleSendMessage} 
+            onMarkAsRead={handleMarkAsRead} 
+            onlineUsers={onlineFriends} 
+            onDeleteConversation={handleDeleteConversation} 
+            currentUser={currentUser}
+            isOrganizer={isOrganizer}
+            onCreateEvent={handleCreateEvent}
+            onViewPost={handleViewPost}
+            isPaused={!isFeedTab || !!backgroundLocation}
+          />
+        </div>
+        <div style={{ display: isLiveTab ? 'block' : 'none' }}>
+          <LiveFeed isPaused={!isLiveTab || !!backgroundLocation} />
+        </div>
+        <div style={{ display: isOwnProfileTab ? 'block' : 'none' }}>
+          <Profile 
+            onLogout={handleLogout} 
+            onCreateEvent={handleCreateEvent}
+            onEditEvent={handleEditEvent}
+            onStartOrganizerSetup={handleStartOrganizerSetup}
+            onViewPost={handleViewPost}
+            isPaused={!isOwnProfileTab || !!backgroundLocation}
+          />
+        </div>
+
+        {/* Non-tab routes */}
         <Routes location={backgroundLocation || location}>
           <Route path="/" element={<Navigate to="/events" replace />} />
-          <Route path="/events" element={
-             <div className="animate-in fade-in duration-200">
-               <EventDetails 
-                 conversations={conversations} 
-                 onStartConversation={handleStartConversation} 
-                 onSendMessage={handleSendMessage} 
-               />
-             </div>
-          } />
-          <Route path="/feed" element={
-            <div className="animate-in fade-in duration-200">
-               <Feed 
-                 conversations={conversations} 
-                 onStartConversation={handleStartConversation} 
-                 onSendMessage={handleSendMessage} 
-                 onMarkAsRead={handleMarkAsRead} 
-                 onlineUsers={onlineFriends} 
-                 onDeleteConversation={handleDeleteConversation} 
-                 currentUser={currentUser}
-                 isOrganizer={isOrganizer}
-                 onCreateEvent={handleCreateEvent}
-                 onViewPost={handleViewPost}
-                 isPaused={!!backgroundLocation}
-               />
-             </div>
-          } />
-          <Route path="/live" element={
-            <div className="animate-in fade-in duration-200">
-              <LiveFeed isPaused={!!backgroundLocation} />
-            </div>
+          <Route path="/events" element={null} />
+          <Route path="/feed" element={null} />
+          <Route path="/live" element={null} />
+          <Route path="/profile" element={null} />
+          <Route path="/profile/:userId" element={
+            <Profile 
+              onLogout={handleLogout} 
+              onCreateEvent={handleCreateEvent}
+              onEditEvent={handleEditEvent}
+              onStartOrganizerSetup={handleStartOrganizerSetup}
+              onViewPost={handleViewPost}
+              isPaused={!!backgroundLocation}
+            />
           } />
           <Route path="/create" element={
-             <CreateEventWrapper 
-                 currentUser={currentUser} 
-                 isAuthenticated={isAuthenticated} 
-                 onAuthSuccess={handleAuthSuccess}
-             />
+            <CreateEventWrapper 
+              currentUser={currentUser} 
+              isAuthenticated={isAuthenticated} 
+              onAuthSuccess={handleAuthSuccess}
+            />
           } />
           <Route path="/edit-event/:id" element={
-             <CreateEventWrapper 
-                 currentUser={currentUser} 
-                 isAuthenticated={isAuthenticated} 
-                 onAuthSuccess={handleAuthSuccess}
-             />
-          } />
-          <Route path="/profile" element={
-             <div className="animate-in fade-in duration-200">
-               <Profile 
-                 onLogout={handleLogout} 
-                 onCreateEvent={handleCreateEvent}
-                 onEditEvent={handleEditEvent}
-                 onStartOrganizerSetup={handleStartOrganizerSetup}
-                 onViewPost={handleViewPost}
-                 isPaused={!!backgroundLocation}
-               />
-             </div>
-          } />
-          <Route path="/profile/:userId" element={
-             <div className="animate-in fade-in duration-200">
-               <Profile 
-                 onLogout={handleLogout} 
-                 onCreateEvent={handleCreateEvent}
-                 onEditEvent={handleEditEvent}
-                 onStartOrganizerSetup={handleStartOrganizerSetup}
-                 onViewPost={handleViewPost}
-                 isPaused={!!backgroundLocation}
-               />
-             </div>
+            <CreateEventWrapper 
+              currentUser={currentUser} 
+              isAuthenticated={isAuthenticated} 
+              onAuthSuccess={handleAuthSuccess}
+            />
           } />
           <Route path="/post/:id" element={
-             <PostDetailWrapper 
-                 currentUser={currentUser}
-                 userProfile={userProfile}
-             />
+            <PostDetailWrapper 
+              currentUser={currentUser}
+              userProfile={userProfile}
+            />
           } />
           <Route path="/event/:id" element={
-             <EventDetailWrapper onStartConversation={handleStartConversation} />
+            <EventDetailWrapper onStartConversation={handleStartConversation} />
           } />
           <Route path="/compose/post" element={
-             <CreatePostPage />
+            <CreatePostPage />
           } />
         </Routes>
       </div>
