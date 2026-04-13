@@ -19,8 +19,10 @@ import {
   supabase,
 } from '../../utils/supabase/api';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { useIsMobile } from '../ui/use-mobile';
 import { ViewerHeader } from './ViewerHeader';
 import { FloatingChat, useMessageBuffer } from './FloatingChat';
+import { SidebarChat } from './SidebarChat';
 import { ViewerActionBar } from './ViewerActionBar';
 import { GiftPicker } from './GiftPicker';
 import { GiftBannerOverlay } from './GiftBannerOverlay';
@@ -34,6 +36,8 @@ interface LiveStreamViewerProps {
 }
 
 export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) {
+  const isMobile = useIsMobile();
+
   // Core state
   const [isMuted, setIsMuted] = useState(false);
   const [message, setMessage] = useState('');
@@ -43,6 +47,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const [isFollowingHost, setIsFollowingHost] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState(stream.viewers || 0);
+  const [isChatVisible, setIsChatVisible] = useState(true);
 
   // Gift state
   const [showGiftPicker, setShowGiftPicker] = useState(false);
@@ -103,7 +108,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       if (isOwn) return;
       setLikes((p) => Math.max(0, p + delta));
       if (delta > 0) {
-        // Add heart animation for remote likes
         setHearts((p) => [...p, generateHeart()]);
       }
     });
@@ -138,24 +142,17 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       };
       setMessages((prev) => addMessage(prev, newMsg));
 
-      // Check if this is a gift message and show banner
       if (msg.message?.startsWith('🎁')) {
         const giftMatch = GIFT_OPTIONS.find((g) => msg.message.includes(g.amount.toString()));
         if (giftMatch) {
           setGiftBanners((prev) => [
             ...prev.slice(-2),
-            {
-              id: Date.now(),
-              senderName: msg.user?.full_name || 'Someone',
-              gift: giftMatch,
-              timestamp: Date.now(),
-            },
+            { id: Date.now(), senderName: msg.user?.full_name || 'Someone', gift: giftMatch, timestamp: Date.now() },
           ]);
         }
       }
     });
 
-    // Gift tracking via transactions table
     const giftSub = supabase
       .channel(`viewer-gifts:${stream.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions', filter: `event_id=eq.${stream.id}` }, (payload: any) => {
@@ -163,7 +160,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
           const giftAmount = payload.new.amount;
           const giftMatch = GIFT_OPTIONS.find((g) => g.amount === giftAmount);
           if (giftMatch) {
-            // Burst of hearts for gifts
             const newHearts = Array.from({ length: 5 }, () => generateHeart());
             setHearts((p) => [...p, ...newHearts]);
           }
@@ -298,7 +294,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       await sendGift(stream.id, gift.amount, 'TZS');
       toast.success(`Sent ${gift.emoji} ${gift.name}!`);
       setShowGiftPicker(false);
-      // Burst of hearts
       const newHearts = Array.from({ length: 6 }, () => generateHeart());
       setHearts((p) => [...p, ...newHearts]);
     } catch { toast.error('Failed to send gift'); }
@@ -307,11 +302,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/live/${stream.id}`;
-    const shareData = {
-      title: stream.title,
-      text: `Watch "${stream.title}" live on Eventz`,
-      url: shareUrl,
-    };
+    const shareData = { title: stream.title, text: `Watch "${stream.title}" live on Eventz`, url: shareUrl };
     try {
       if (navigator.share) {
         await navigator.share(shareData);
@@ -322,6 +313,110 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     } catch {}
   };
 
+  // ─── RENDER ─────────────────────────────────────────────
+
+  // Desktop: side-by-side layout (video + chat sidebar)
+  // Mobile: full-screen overlay with floating chat
+
+  if (!isMobile) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-black flex">
+        {/* Video area */}
+        <div className="flex-1 relative flex flex-col">
+          {/* Video */}
+          <div className="flex-1 relative" onDoubleClick={handleLike}>
+            {remoteUsers.length > 0 ? (
+              <div className="w-full h-full">
+                {remoteUsers.map((user) => (
+                  <div key={user.uid} id={`remote-player-${user.uid}`} className="w-full h-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="absolute inset-0">
+                <ImageWithFallback src={stream.thumbnail} alt={stream.title} className="w-full h-full object-cover opacity-50" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                  {videoError ? (
+                    <div className="text-center px-6">
+                      <p className="text-red-400 mb-3 text-sm">{videoError}</p>
+                      <button onClick={() => { setVideoError(null); window.location.reload(); }} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold">Retry</button>
+                    </div>
+                  ) : (
+                    <div className="text-center px-6">
+                      <div className="w-12 h-12 mx-auto mb-3 border-3 border-white/20 border-t-purple-500 rounded-full animate-spin" />
+                      <p className="text-white text-base font-bold mb-1">Connecting...</p>
+                      <p className="text-white/50 text-sm">Waiting for host to start streaming</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Gradient overlays */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-black/40" />
+
+            {/* Header overlay */}
+            <div className="absolute top-0 left-0 right-0 p-4">
+              <ViewerHeader
+                host={stream.host}
+                hostAvatar={stream.host_avatar}
+                isLive={true}
+                viewerCount={viewerCount}
+                likes={likes}
+                isLiked={isLiked}
+                isFollowing={isFollowingHost}
+                onFollow={handleFollow}
+                onClose={onClose}
+              />
+            </div>
+
+            {/* Gift banners */}
+            <div className="absolute left-4 top-20">
+              <GiftBannerOverlay banners={giftBanners} />
+            </div>
+
+            {/* Heart animations */}
+            <HeartAnimations hearts={hearts} />
+          </div>
+
+          {/* Bottom action bar */}
+          <div className="p-3 bg-[#0f0f0f] border-t border-white/10">
+            <ViewerActionBar
+              message={message}
+              onMessageChange={setMessage}
+              onSendMessage={handleSendMessage}
+              onShare={handleShare}
+              onLike={handleLike}
+              onGift={() => setShowGiftPicker(true)}
+              onMuteToggle={() => setIsMuted((m) => !m)}
+              onToggleChat={() => setIsChatVisible((v) => !v)}
+              isLiked={isLiked}
+              isMuted={isMuted}
+              isChatVisible={isChatVisible}
+              isDesktop={true}
+            />
+          </div>
+        </div>
+
+        {/* Sidebar chat — YouTube style */}
+        {isChatVisible && (
+          <div className="w-[340px] flex-shrink-0">
+            <SidebarChat
+              messages={messages}
+              message={message}
+              onMessageChange={setMessage}
+              onSendMessage={handleSendMessage}
+              viewerCount={viewerCount}
+            />
+          </div>
+        )}
+
+        {/* Gift picker */}
+        <GiftPicker isOpen={showGiftPicker} onClose={() => setShowGiftPicker(false)} onSendGift={handleGift} isSending={isSendingGift} />
+      </div>
+    );
+  }
+
+  // ─── MOBILE LAYOUT ─────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[100] bg-black">
       {/* Video layer */}
@@ -334,21 +429,12 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
           </div>
         ) : (
           <div className="absolute inset-0">
-            <ImageWithFallback
-              src={stream.thumbnail}
-              alt={stream.title}
-              className="w-full h-full object-cover opacity-50"
-            />
+            <ImageWithFallback src={stream.thumbnail} alt={stream.title} className="w-full h-full object-cover opacity-50" />
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
               {videoError ? (
                 <div className="text-center px-6">
                   <p className="text-red-400 mb-3 text-sm">{videoError}</p>
-                  <button
-                    onClick={() => { setVideoError(null); window.location.reload(); }}
-                    className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold"
-                  >
-                    Retry
-                  </button>
+                  <button onClick={() => { setVideoError(null); window.location.reload(); }} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold">Retry</button>
                 </div>
               ) : (
                 <div className="text-center px-6">
@@ -366,7 +452,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/80 via-transparent to-black/60" />
 
       {/* Content overlay */}
-      <div className="absolute inset-0 flex flex-col justify-between p-3 md:p-4">
+      <div className="absolute inset-0 flex flex-col justify-between p-3">
         {/* Header */}
         <ViewerHeader
           host={stream.host}
@@ -383,15 +469,17 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         {/* Gift banners */}
         <GiftBannerOverlay banners={giftBanners} />
 
-        {/* Main content area - chat + actions */}
+        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Bottom section: Chat + Action bar */}
-        <div className="space-y-3">
-          {/* Floating chat - left side */}
-          <div className="max-w-[75%] md:max-w-[50%]">
-            <FloatingChat messages={messages} maxVisible={5} />
-          </div>
+        {/* Bottom section */}
+        <div className="space-y-2">
+          {/* Floating chat — hideable */}
+          {isChatVisible && (
+            <div className="max-w-[80%]">
+              <FloatingChat messages={messages} maxVisible={4} />
+            </div>
+          )}
 
           {/* Action bar */}
           <ViewerActionBar
@@ -402,8 +490,11 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
             onLike={handleLike}
             onGift={() => setShowGiftPicker(true)}
             onMuteToggle={() => setIsMuted((m) => !m)}
+            onToggleChat={() => setIsChatVisible((v) => !v)}
             isLiked={isLiked}
             isMuted={isMuted}
+            isChatVisible={isChatVisible}
+            isDesktop={false}
           />
         </div>
       </div>
@@ -412,12 +503,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       <HeartAnimations hearts={hearts} />
 
       {/* Gift picker bottom sheet */}
-      <GiftPicker
-        isOpen={showGiftPicker}
-        onClose={() => setShowGiftPicker(false)}
-        onSendGift={handleGift}
-        isSending={isSendingGift}
-      />
+      <GiftPicker isOpen={showGiftPicker} onClose={() => setShowGiftPicker(false)} onSendGift={handleGift} isSending={isSendingGift} />
     </div>
   );
 }
