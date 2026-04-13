@@ -26,9 +26,9 @@ interface FeedContentProps {
   audioUnlocked: boolean;
   isPaused?: boolean;
   onProfileClick: (user: any, e?: React.MouseEvent) => void;
-  onLike: (id: number) => void;
-  onSave: (id: number) => void;
-  onShare: (post: Post) => void;
+  onLike: (id: number) => Promise<void> | void;
+  onSave: (id: number) => Promise<void> | void;
+  onShare: (post: Post) => Promise<void> | void;
   onMessage: (user: any) => void;
   onViewPost: (post: Post, startTime?: number, isMuted?: boolean) => void;
   onViewComments: (post: Post) => void;
