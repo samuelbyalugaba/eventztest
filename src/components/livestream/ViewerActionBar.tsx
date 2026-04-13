@@ -1,5 +1,4 @@
 import { Send, Share2, Heart, Gift, Volume2, VolumeX } from 'lucide-react';
-import { useState } from 'react';
 
 interface ViewerActionBarProps {
   message: string;
