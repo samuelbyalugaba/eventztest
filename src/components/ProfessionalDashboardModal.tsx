@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerStats, getOrganizerEvents, updateEventStreamingStatus, getUserTickets } from '../utils/supabase/api';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
-import { StreamManager } from './StreamManager';
+import { StreamManager } from './livestream/StreamManagerNew';
 import { TicketScannerModal } from './TicketScannerModal';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';

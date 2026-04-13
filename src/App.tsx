@@ -861,6 +861,9 @@ export default function App() {
           <Route path="/event/:id" element={
             <EventDetailWrapper onStartConversation={handleStartConversation} />
           } />
+          <Route path="/live/:id" element={
+            <EventDetailWrapper onStartConversation={handleStartConversation} />
+          } />
           <Route path="/compose/post" element={
             <CreatePostPage />
           } />

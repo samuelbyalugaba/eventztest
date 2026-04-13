@@ -16,7 +16,7 @@ import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
-import { StreamManager } from './StreamManager';
+import { StreamManager } from './livestream/StreamManagerNew';
 import { TicketScannerModal } from './TicketScannerModal';
 
 import {

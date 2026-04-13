@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Filter, MapPin, Video, Smartphone, Clock } from 'lucide-react';
-import { LiveStreamViewer } from './LiveStreamViewer';
+import { LiveStreamViewerNew as LiveStreamViewer } from './livestream/LiveStreamViewerNew';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';
 import { toast } from 'sonner';
