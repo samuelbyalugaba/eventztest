@@ -75,8 +75,9 @@
       },
       "scripts": {
             "dev": "vite",
-            "build": "node scripts/check-env.cjs && vite build",
+            "build": "vite build",
             "build:dev": "vite build --mode development",
+            "check-env": "node scripts/check-env.cjs",
             "preview": "vite preview",
             "generate-icons": "node scripts/generate-icons.cjs",
             "generate-native-assets": "capacitor-assets generate",
