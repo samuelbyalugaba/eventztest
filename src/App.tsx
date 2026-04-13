@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { EventDetails } from './components/EventDetails';
+import { useProfileStore } from './store/profileStore';
 import { LiveFeed } from './components/LiveFeed';
 import { Feed } from './components/Feed';
 import { Profile } from './components/Profile';
@@ -185,13 +186,14 @@ export default function App() {
   }, []);
   // Fetch user profile to determine organizer status
   useEffect(() => {
-        const fetchProfile = async () => {
+    const fetchProfile = async () => {
       if (isAuthenticated && currentUser) {
         try {
           const profile = await getProfile(currentUser.id);
           
           if (profile) {
             setUserProfile(profile);
+            useProfileStore.getState().setProfile(profile);
             // Determine if user is an organizer
             const isOrg = profile.is_organizer || false;
             setIsOrganizer(isOrg);
@@ -243,6 +245,7 @@ export default function App() {
             const created = await getProfile(currentUser.id);
             if (created) {
               setUserProfile(created);
+              useProfileStore.getState().setProfile(created);
               setIsOrganizer(created.is_organizer || false);
             }
           }
@@ -251,6 +254,7 @@ export default function App() {
         }
       } else {
         setUserProfile(null);
+        useProfileStore.getState().clear();
       }
     };
 
