@@ -43,7 +43,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   // Chat state
   const [messages, setMessages] = useState<StreamMessage[]>([]);
-  const _messagesEndRef = useRef<HTMLDivElement>(null);
+  // messagesEndRef removed - not needed for floating chat
   const [likesAnimation, setLikesAnimation] = useState<FloatingHeart[]>([]);
 
   // Agora state
