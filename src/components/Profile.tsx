@@ -1,21 +1,24 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { SettingsModal } from './SettingsModal';
-import { TicketViewer } from './TicketViewer';
-import { EventDetailModal } from './EventDetailModal';
 import { supabase } from '../utils/supabase/client';
 import { deleteEvent, getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getProfilePostsGrid, subscribeToSavedEvents, Profile as UserProfile, Ticket, ApiPost, getFollowers, getFollowing, getOrganizerStats, getOrganizerEvents, toggleFollow, checkIsFollowing } from '../utils/supabase/api';
-import { LiveSetupModal } from './LiveSetupModal';
 import type { Event as AppEvent } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
-import { ProfessionalDashboardModal } from './ProfessionalDashboardModal';
 import { Conversation, Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
 import { EventListModal } from './EventListModal';
+import { useProfileStore } from '../store/profileStore';
+
+// Lazy-load heavy modals
+const SettingsModal = lazy(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
+const LiveSetupModal = lazy(() => import('./LiveSetupModal').then(m => ({ default: m.LiveSetupModal })));
+const ProfessionalDashboardModal = lazy(() => import('./ProfessionalDashboardModal').then(m => ({ default: m.ProfessionalDashboardModal })));
+const EventDetailModal = lazy(() => import('./EventDetailModal').then(m => ({ default: m.EventDetailModal })));
+const TicketViewer = lazy(() => import('./TicketViewer').then(m => ({ default: m.TicketViewer })));
 
 import { ProfileHeader } from './profile/ProfileHeader';
 import { ProfileBio } from './profile/ProfileBio';
