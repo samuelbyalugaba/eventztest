@@ -32,10 +32,10 @@ export function ViewerHeader({
             <ImageWithFallback
               src={hostAvatar}
               alt={host}
-              className="w-9 h-9 rounded-full object-cover ring-2 ring-purple-500/60"
+              className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/60"
             />
           ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold ring-2 ring-purple-500/60">
+            <div className="w-9 h-9 rounded-full bg-primary/80 flex items-center justify-center text-white text-sm font-bold ring-2 ring-primary/60">
               {(host || 'U').charAt(0).toUpperCase()}
             </div>
           )}
@@ -72,7 +72,7 @@ export function ViewerHeader({
           className={`px-4 py-2 rounded-xl text-xs font-bold backdrop-blur-xl transition-all duration-300 ${
             isFollowing
               ? 'bg-white/10 text-white/90 border border-white/20'
-              : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50'
+              : 'bg-primary text-white shadow-lg'
           }`}
         >
           {isFollowing ? 'Following' : 'Follow'}

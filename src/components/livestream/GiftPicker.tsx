@@ -62,7 +62,7 @@ export function GiftPicker({ isOpen, onClose, onSendGift, isSending }: GiftPicke
           disabled={!selectedGift || isSending}
           className={`w-full py-3 rounded-2xl font-bold text-sm transition-all duration-300 ${
             selectedGift
-              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30 active:scale-[0.98]'
+              ? 'bg-primary text-white shadow-lg active:scale-[0.98]'
               : 'bg-white/10 text-white/40 cursor-not-allowed'
           }`}
         >

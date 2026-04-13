@@ -12,7 +12,6 @@ interface ViewerActionBarProps {
   isLiked: boolean;
   isMuted: boolean;
   isChatVisible?: boolean;
-  /** Hide inline chat input on desktop (chat is in sidebar) */
   isDesktop?: boolean;
 }
 
@@ -33,13 +32,11 @@ export function ViewerActionBar({
   return (
     <div className="w-full">
       <form onSubmit={onSendMessage}>
-        {/* Mobile: input row + action icons below */}
-        {/* Desktop: just action icons (chat is in sidebar) */}
         <div className="flex flex-col gap-2">
           {/* Chat input — only on mobile when chat is visible */}
           {!isDesktop && isChatVisible && (
             <div className="flex items-center gap-2">
-              <div className="flex-1 bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 px-3.5 py-2.5 flex items-center gap-2 focus-within:border-purple-500/50 transition-colors">
+              <div className="flex-1 bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 px-3.5 py-2.5 flex items-center gap-2 focus-within:border-primary/50 transition-colors">
                 <input
                   type="text"
                   value={message}
@@ -50,7 +47,7 @@ export function ViewerActionBar({
                 />
                 <button
                   type="submit"
-                  className="text-purple-400 hover:text-purple-300 transition-colors"
+                  className="text-primary hover:text-primary/80 transition-colors"
                   disabled={!message.trim()}
                 >
                   <Send className="w-4 h-4" />
