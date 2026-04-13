@@ -7,7 +7,6 @@ import type { ApiPost, Ticket, Event as AppEvent } from '../../utils/supabase/ap
 interface ProfileContentProps {
   activeTab: ProfileTab;
   isOwnProfile: boolean;
-  isOrganizer: boolean;
   isPaused: boolean;
   // Posts
   isLoadingPosts: boolean;
