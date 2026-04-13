@@ -131,11 +131,9 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         });
         toast.success('Profile photo updated successfully');
       } catch (saveError) {
-        console.warn('Auto-save of avatar failed:', saveError);
         toast.success('Photo uploaded. Please click Save to finish setup.');
       }
     } catch (error: any) {
-      console.error('Error uploading avatar:', error);
       toast.error(error.message || 'Error uploading avatar');
     }
   };
@@ -182,7 +180,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
           }
         }
       } catch (error) {
-        console.error('Error fetching profile:', error);
         toast.error('Failed to load profile settings');
       } finally {
         setLoading(false);
@@ -257,7 +254,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       toast.success('Profile updated successfully! ✅');
       window.dispatchEvent(new CustomEvent('profileUpdated'));
     } catch (error: any) {
-      console.error('Error updating profile:', error);
       const errorMessage = error.message || 'Failed to update profile';
       toast.error(`Failed to update profile: ${errorMessage}`);
     }
@@ -273,7 +269,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       });
       toast.success('Streaming settings updated! 📹');
     } catch (error) {
-      console.error('Error saving streaming settings:', error);
       toast.error('Failed to save streaming settings');
     }
   };
@@ -288,7 +283,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       });
       toast.success('Privacy settings updated! 🔒');
     } catch (error) {
-      console.error('Error saving privacy settings:', error);
       toast.error('Failed to save privacy settings');
     }
   };
@@ -316,7 +310,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       });
       toast.success('Payment information saved securely! 💳');
     } catch (error) {
-      console.error('Error saving payment info:', error);
       toast.error('Failed to save payment information');
     }
   };
@@ -590,7 +583,6 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                               window.location.reload();
                             }
                           } catch (error: any) {
-                            console.error('Error downgrading account:', error);
                             
                             // Handle Auth Session Errors
                             if (error?.message?.includes('Invalid Refresh Token') || error?.message?.includes('Refresh Token Not Found')) {

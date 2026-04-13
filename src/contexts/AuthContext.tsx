@@ -34,7 +34,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setHasOrganizerProfile(isOrg || !!data.organizer_type);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
     }
   };
 
@@ -44,7 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Session check error:', error);
           if (error.message && (error.message.includes("Invalid Refresh Token") || error.message.includes("Refresh Token Not Found"))) {
              await supabase.auth.signOut();
           }
@@ -59,7 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsAuthenticated(false);
         }
       } catch (err) {
-        console.error('Session check failed:', err);
         setUser(null);
         setIsAuthenticated(false);
       } finally {

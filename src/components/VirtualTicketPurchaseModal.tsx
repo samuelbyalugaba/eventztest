@@ -54,7 +54,6 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
             setWalletBalance(0);
           }
         } catch (err) {
-          console.error('Failed to fetch wallet balance', err);
           // Fallback to 0 if API fails. nTZS is the source of truth.
           setWalletBalance(0);
         }
@@ -169,7 +168,6 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
       }
 
     } catch (error: any) {
-      console.error('Purchase error:', error);
       toast.error(`Payment failed: ${error.message || 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);

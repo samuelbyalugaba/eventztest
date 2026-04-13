@@ -311,7 +311,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           const data = await getEventAnalytics(savedEventId);
           setAnalytics(data);
         } catch (error) {
-          console.error('Error fetching analytics:', error);
         }
       };
       fetchAnalytics();
@@ -361,7 +360,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
           setSavedEventId(newEvent.id);
         }
       } catch (error) {
-        console.error('Error auto-saving draft:', error);
       } finally {
         setIsAutoSaving(false);
       }
@@ -452,7 +450,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         handleInputChange('coverImage', publicUrl);
         toast.success('Cover image uploaded! 📸', { id: toastId });
       } catch (error) {
-        console.error('Error uploading image:', error);
         toast.error('Failed to upload image', { id: toastId });
       }
     }
@@ -501,7 +498,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         });
       }
     } catch (error) {
-      console.error('Error saving draft:', error);
       toast.error('Failed to save draft');
     } finally {
       setIsSubmitting(false);
@@ -578,7 +574,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         }
       };
       
-      console.log('Publishing event with data:', eventData);
 
       if (isEditing && savedEventId) {
         // Update existing event
@@ -608,7 +603,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         window.dispatchEvent(new Event('eventsUpdated'));
       }
     } catch (error: any) {
-      console.error('Error publishing event:', error);
       toast.error(`Failed to publish event: ${error.message || 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);

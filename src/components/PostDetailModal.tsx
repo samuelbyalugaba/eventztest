@@ -277,7 +277,6 @@ export function PostDetailModal({
                       toast.success('Caption updated');
                       setIsEditingCaption(false);
                     } catch (e) {
-                      console.error(e);
                       toast.error('Failed to update caption');
                     } finally {
                       setIsSavingCaption(false);

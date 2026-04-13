@@ -58,7 +58,6 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
     };
 
     recognition.onerror = (event: any) => {
-      console.error('Speech recognition error', event.error);
       setIsListening(false);
       // toast.error('Voice input failed');
     };
@@ -128,7 +127,6 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
         scrollToBottom();
       }
     } catch (error) {
-      console.error('Error sending image:', error);
       toast.error('Failed to send image', { id: toastId });
     }
   };
@@ -157,7 +155,6 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
       scrollToBottom();
       inputRef.current?.focus();
     } catch (error: any) {
-      console.error('Failed to send message:', error);
       toast.error('Failed to send message');
       setMessageText(text);
     } finally {
@@ -181,7 +178,6 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
       await deleteMessage(messageId);
       toast.success('Message deleted');
     } catch (error) {
-      console.error('Error deleting message:', error);
       toast.error('Failed to delete message');
       getMessages(conversationId).then(setMessages);
     }

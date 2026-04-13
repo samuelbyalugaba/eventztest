@@ -386,7 +386,6 @@ export const getOrganizerStats = async (userId: string) => {
   });
 
   if (error) {
-    console.error('Error fetching organizer stats:', error);
     throw error;
   }
 
@@ -572,10 +571,8 @@ export const getEvents = async () => {
 
   if (error) {
     if (error.name === 'AbortError') {
-      console.log('Event fetch aborted');
       return []; // Return empty array on abort
     }
-    console.error('Error fetching events:', error);
     throw error;
   }
 
@@ -608,7 +605,6 @@ export const getOrganizerEvents = async (
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching organizer events:', error);
     throw error;
   }
 
@@ -628,7 +624,6 @@ export const incrementEventView = async (eventId: number) => {
   const { error } = await supabase.rpc('increment_event_view', { event_id: eventId });
 
   if (error) {
-    console.warn('RPC increment_event_view failed:', error);
   }
 };
 
@@ -636,7 +631,6 @@ export const incrementPostView = async (postId: number) => {
   const { error } = await supabase.rpc('increment_post_view', { post_id: postId });
 
   if (error) {
-    console.warn('RPC increment_post_view failed:', error);
   }
 };
 
@@ -644,7 +638,6 @@ export const incrementUserMediaView = async (mediaId: number) => {
   const { error } = await supabase.rpc('increment_media_view', { media_id: mediaId });
   
   if (error) {
-    console.warn('RPC increment_media_view failed:', error);
   }
 };
 
@@ -655,7 +648,6 @@ export const getEventAnalytics = async (eventId: number) => {
     });
 
     if (error) {
-      console.error('Error fetching event analytics (RPC):', error);
       // Return mock data on error to prevent UI crash
       return {
         views: { total: 0, change: 0, trend: 'neutral', daily: [] },
@@ -729,7 +721,6 @@ export const getEventAnalytics = async (eventId: number) => {
       }
     };
   } catch (err) {
-    console.warn('Falling back to mock analytics data due to error:', err);
     // Return mock data so the UI doesn't crash
     return {
       views: { total: 0, change: 0, trend: 'neutral', daily: [] },
@@ -753,7 +744,6 @@ export const getEventById = async (id: number) => {
     .single();
 
   if (error) {
-    console.error('Error fetching event by id:', error);
     throw error;
   }
 
@@ -809,7 +799,6 @@ export const createEvent = async (eventData: Omit<Event, 'id' | 'created_at' | '
     .single();
 
   if (error) {
-    console.error('Error creating event:', error);
     throw error;
   }
   return data;
@@ -843,7 +832,6 @@ export const updateEvent = async (eventId: number, eventData: Partial<Event>) =>
     .single();
 
   if (error) {
-    console.error('Error updating event:', error);
     throw error;
   }
   return data;
@@ -863,10 +851,8 @@ export const deleteEvent = async (id: number) => {
   });
 
   if (error) {
-    console.error('Error deleting event via RPC:', error);
     // Fallback for older DB versions or if RPC missing (though this will likely fail with FK violation)
     if (error.code === '42883') { // undefined_function
-      console.warn('RPC delete_event_complete not found, falling back to manual delete...');
       // Try manual cleanup (will fail if RLS blocks deletion of other users' data)
       await supabase.from('stream_chat_messages').delete().eq('event_id', id);
       await supabase.from('saved_events').delete().eq('event_id', id);
@@ -898,10 +884,8 @@ export const deleteFile = async (bucket: 'events' | 'avatars' | 'posts', url: st
       .remove([path]);
 
     if (error) {
-      console.error(`Error deleting file from ${bucket}:`, error);
     }
   } catch (err) {
-    console.error(`Error in deleteFile for ${bucket}:`, err);
   }
 };
 
@@ -1039,7 +1023,6 @@ export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'e
   });
 
   if (error) {
-    console.error('Error creating ticket:', error);
     throw error;
   }
 
@@ -1065,7 +1048,6 @@ export const scanTicket = async (ticketCode: string, eventId: number) => {
   });
 
   if (error) {
-    console.error('Error scanning ticket:', error);
     throw error;
   }
 
@@ -1111,7 +1093,6 @@ export const initiateSnippePayment = async (params: {
   userId: string;
   metadata?: any;
 }) => {
-  console.log('initiateSnippePayment called', params);
 
   // When using --no-verify-jwt, invoke without auth headers/session context if needed, 
   // but supabase-js client handles it.
@@ -1126,26 +1107,18 @@ export const initiateSnippePayment = async (params: {
     }
   });
 
-  console.log('initiateSnippePayment response', {
-    hasData: !!data,
-    data,
-    error,
-  });
 
   if (error) {
-    console.error('Supabase functions.invoke error (snippe-payment)', error);
     throw error;
   }
 
   // Handle successful initiation but logical failure from Snippe
   if (data && !data.success) {
-    console.error('snippe-payment function returned failure', data);
     throw new Error(data.error || 'Payment initiation failed');
   }
 
   // Handle case where Snippe returns success=true but data is missing
   if (data && data.success && !data.data) {
-     console.warn("Snippe returned success but no data payload:", data);
   }
 
   return data;
@@ -1379,7 +1352,6 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
   const { data: posts, error } = await query;
 
   if (error) {
-    console.error('Error fetching posts:', error);
     throw error;
   }
 
@@ -1402,7 +1374,6 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
 
       if (saved) saved.forEach(s => savedPostIds.add(s.post_id));
     } catch (e) {
-      console.warn('Error fetching user interactions:', e);
     }
   }
 
@@ -1727,7 +1698,6 @@ export const updateEventStreamingStatus = async (eventId: number, isLive: boolea
         .delete()
         .eq('event_id', eventId);
     } catch (cleanupError) {
-      console.error('Failed to cleanup stream chat:', cleanupError);
     }
   }
 
@@ -2348,7 +2318,6 @@ export const getNotifications = async (userId: string) => {
       });
     }
   } catch (err) {
-    console.warn('Error fetching ticket sales notifications:', err);
   }
 
   // 4. Fetch Event Reminders (Upcoming events for ticket holders)

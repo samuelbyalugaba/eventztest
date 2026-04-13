@@ -18,7 +18,6 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
         const data = await getEventAnalytics(event.id);
         setAnalytics(data);
       } catch (error) {
-        console.error('Error fetching analytics:', error);
         toast.error('Failed to load analytics');
       } finally {
         setLoading(false);

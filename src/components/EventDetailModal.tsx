@@ -208,7 +208,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
              setOrganizerDisplayName(profile.full_name);
           }
         } catch (e) {
-          console.error('Error fetching profile:', e);
         }
       }
     };
@@ -220,7 +219,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           const posts = await getPosts({ currentUserId: user?.id, eventId: event.id });
           setEventPosts(posts || []);
       } catch (err) {
-          console.error('Error loading event posts:', err);
       }
     };
     loadEventPosts();
@@ -338,7 +336,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       // Dispatch custom event to notify other components
       window.dispatchEvent(new Event('savedEventsUpdated'));
     } catch (error) {
-      console.error('Error toggling save:', error);
       setIsSaved(!isSaved); // Revert on error
       toast.error('Failed to update saved status');
     }

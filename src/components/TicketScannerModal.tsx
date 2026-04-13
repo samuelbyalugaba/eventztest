@@ -57,7 +57,6 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
           onScanFailure
         );
       } catch (err) {
-        console.error("Error starting scanner:", err);
         toast.error("Failed to start camera. Please ensure permissions are granted.");
       }
     };
@@ -100,7 +99,6 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
       }
 
     } catch (error: any) {
-      console.error("Scan processing error:", error);
       setScanResult({
         success: false,
         message: error.message || "Failed to verify ticket"

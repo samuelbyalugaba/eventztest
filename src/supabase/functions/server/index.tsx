@@ -50,7 +50,6 @@ app.post("/make-server-c3c04079/signup", async (c) => {
     });
 
     if (error) {
-      console.error('Signup error:', error);
       return c.json({ error: error.message }, 400);
     }
 
@@ -63,7 +62,6 @@ app.post("/make-server-c3c04079/signup", async (c) => {
       }
     });
   } catch (err) {
-    console.error('Signup error:', err);
     return c.json({ error: 'An error occurred during signup' }, 500);
   }
 });

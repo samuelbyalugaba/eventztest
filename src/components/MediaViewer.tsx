@@ -110,7 +110,6 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
             setIsBuffering(false);
           })
           .catch(err => {
-            console.log('Autoplay prevented:', err);
             setIsPlaying(false);
           });
       }
@@ -169,7 +168,6 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
         try {
           await toggleLikePost(currentMedia.postId, user.id);
         } catch (error) {
-          console.error('Error toggling like:', error);
           // Revert optimistic update
           if (!isLiked) {
             setIsLiked(false);
@@ -194,7 +192,6 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
       window.dispatchEvent(new Event('postsUpdated'));
       onClose();
     } catch (error) {
-      console.error('Error deleting post:', error);
       toast.error('Failed to delete post');
     }
   };

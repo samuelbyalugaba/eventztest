@@ -371,7 +371,6 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
 
       liveFeedCache = { liveStreams: nextLive, upcomingStreams: nextUpcoming, ts: Date.now() };
     } catch (error) {
-      console.error('Error fetching streams:', error);
     } finally {
       setIsLoading(false);
     }
@@ -493,7 +492,6 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
           }
         }
       } catch (error) {
-        console.error('Error loading preferences:', error);
       }
     };
 
@@ -534,7 +532,6 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
         localStorage.setItem('eventz-recent-locations', JSON.stringify(updated));
       }
     } catch (error) {
-      console.error('Error saving preferences:', error);
     }
   };
 

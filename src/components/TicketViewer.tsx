@@ -57,7 +57,6 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
         duration: 2000,
       });
     } catch (err) {
-      console.error(err);
       toast.dismiss(toastId);
       toast.error('Failed to download ticket');
     }
@@ -99,7 +98,6 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
         });
       }
     } catch (err: any) {
-      console.error('Error sharing:', err);
       if (err.name !== 'AbortError') {
          toast.error('Failed to share ticket');
       }

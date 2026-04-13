@@ -58,7 +58,6 @@ export default function App() {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Session check error:', error);
           setIsAuthenticated(false);
           // If refresh token is invalid, ensure we clear local state
           if (error.message && (error.message.includes("Invalid Refresh Token") || error.message.includes("Refresh Token Not Found"))) {
@@ -71,7 +70,6 @@ export default function App() {
           setIsAuthenticated(false);
         }
       } catch (err) {
-        console.error('Session check failed:', err);
         setIsAuthenticated(false);
       } finally {
         setIsCheckingAuth(false);
@@ -179,7 +177,6 @@ export default function App() {
         localStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ posts: mapped, timestamp: Date.now() }));
       } catch (e) {
         // Silent fail: prefetch is best-effort
-        console.warn('Prefetch feed failed', e);
       }
     };
     prefetchFeed();
@@ -250,7 +247,6 @@ export default function App() {
             }
           }
         } catch (error) {
-          console.error('Error fetching profile:', error);
         }
       } else {
         setUserProfile(null);
@@ -297,7 +293,6 @@ export default function App() {
           
           setConversations(formattedConvs);
         } catch (error) {
-          console.error('Error fetching conversations:', error);
         }
       } else {
         setConversations([]);
@@ -316,7 +311,6 @@ export default function App() {
         const streams = await getLiveStreams();
         setHasLiveEvents(streams.length > 0);
       } catch (error) {
-        console.error('Error checking live events:', error);
       }
     };
 
@@ -421,7 +415,6 @@ export default function App() {
           setOnlineFriends(formattedOnline);
         });
       } catch (error) {
-        console.error('Error setting up presence:', error);
       }
     };
 
@@ -439,7 +432,6 @@ export default function App() {
       setIsAuthenticated(false);
       navigate('/events');
     } catch (err) {
-      console.error('Logout error:', err);
     }
   };
 
@@ -488,7 +480,6 @@ export default function App() {
         setConversations([newConversation, ...conversations]);
         return newConversation;
       } catch (error) {
-        console.error('Error starting conversation:', error);
       }
     }
     
@@ -553,7 +544,6 @@ export default function App() {
         }));
       }
     } catch (error) {
-      console.error('Error sending message:', error);
       // Revert on error
       setConversations(prev => prev.map((conv) => {
         if (conv.id === conversationId) {
@@ -590,7 +580,6 @@ export default function App() {
 
       await markMessagesAsRead(conversationId, currentUser.id);
     } catch (error) {
-      console.error('Error marking messages as read:', error);
     }
   };
 
@@ -602,7 +591,6 @@ export default function App() {
       await deleteConversation(conversationId);
       toast.success('Conversation deleted');
     } catch (error) {
-      console.error('Error deleting conversation:', error);
       toast.error('Failed to delete conversation');
       // Refresh to restore state if failed
       if (currentUser) {
@@ -639,7 +627,6 @@ export default function App() {
           }));
           setConversations(formattedConvs);
         } catch (e) {
-          console.error('Failed to reload conversations:', e);
         }
       }
     }
@@ -666,7 +653,6 @@ export default function App() {
       } else {
         // Fallback: if we can't find the user ID, maybe it's the current user? 
         // Or just don't navigate to a broken URL.
-        console.warn('Cannot navigate to profile: User ID is missing', item);
         navigate('/profile', { state: { backgroundLocation: backgroundBase } });
       }
     } else {

@@ -33,7 +33,6 @@ export function CreateEventWrapper({ currentUser, isAuthenticated, onAuthSuccess
             setHasOrganizerProfile(isOrg || !!profile.organizer_type);
           }
         } catch (error) {
-          console.error('Error fetching profile:', error);
         }
       }
       setCheckingProfile(false);
@@ -61,7 +60,6 @@ export function CreateEventWrapper({ currentUser, isAuthenticated, onAuthSuccess
              setEvent(fetchedEvent);
         }
       } catch (error) {
-        console.error('Error fetching event:', error);
         toast.error('Failed to load event');
         navigate('/events');
       } finally {

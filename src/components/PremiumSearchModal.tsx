@@ -33,7 +33,6 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
       try {
         setRecentSearches(JSON.parse(saved));
       } catch (e) {
-        console.error('Error parsing recent searches', e);
       }
     }
 
@@ -43,7 +42,6 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
         const data = await getTrending();
         setTrendingData(data);
       } catch (error) {
-        console.error('Error loading trending data:', error);
       }
     };
     loadTrending();
@@ -72,7 +70,6 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
         const results = await searchProfiles(searchQuery);
         setPeopleResults(results || []);
       } catch (error) {
-        console.error('Error searching profiles:', error);
       } finally {
         setIsSearchingPeople(false);
       }

@@ -49,7 +49,6 @@ export function PWAInstallPrompt() {
           }
         }
       } catch (error) {
-        console.error('Error checking PWA dismissal:', error);
       }
 
       if (dismissed) {
@@ -84,7 +83,6 @@ export function PWAInstallPrompt() {
 
     // Listen for app installed event
     const handleAppInstalled = () => {
-      console.log('PWA installed');
       setIsInstalled(true);
       setShowPrompt(false);
       toast.success('EVENTZ installed successfully! 🎉');
@@ -109,10 +107,8 @@ export function PWAInstallPrompt() {
     const { outcome } = await deferredPrompt.userChoice;
 
     if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
       toast.success('Installing EVENTZ... 📲');
     } else {
-      console.log('User dismissed the install prompt');
     }
 
     // Clear the deferred prompt
@@ -135,7 +131,6 @@ export function PWAInstallPrompt() {
         localStorage.setItem('eventz-pwa-dismissed', dismissedDate);
       }
     } catch (error) {
-      console.error('Error saving dismissal:', error);
       // Fallback
       localStorage.setItem('eventz-pwa-dismissed', dismissedDate);
     }

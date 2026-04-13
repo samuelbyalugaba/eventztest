@@ -36,7 +36,6 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
         const url = await uploadImage(file, 'events', 'event-covers');
         setImageUrl(url);
       } catch (error) {
-        console.error('Thumbnail upload failed:', error);
         toast.error('Failed to upload thumbnail');
       }
     }
@@ -51,7 +50,6 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
         const list = await getOrganizerEvents(user.id, { includeInstant: true });
         setEvents(list || []);
       } catch (e) {
-        console.warn('Failed to load events', e);
       }
     };
     load();
@@ -363,7 +361,6 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                 try {
                   await updateEventStreamingStatus(selectedEvent.id, isLive);
                 } catch (e) {
-                  console.error('Failed to update streaming status', e);
                 }
               }}
             />

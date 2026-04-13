@@ -89,7 +89,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
         setLikes(totalLikes);
 
       } catch (error) {
-        console.error('Failed to load stream state:', error);
       }
     };
     loadState();
@@ -137,7 +136,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
           })));
         }
       } catch (error) {
-        console.error('Failed to load chat:', error);
       }
     };
     loadChat();
@@ -168,7 +166,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
         const token = await getAgoraToken(channelName, viewerUid, 'subscriber');
         if (!token) {
           setVideoError("Failed to join stream: missing Agora token");
-          console.error("Agora subscriber token retrieval returned null for channel:", channelName);
           return;
         }
         
@@ -201,11 +198,9 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
           await updateLiveViewerCount(stream.id, 1);
           viewerCountAdjustedRef.current = true;
         } catch (error) {
-          console.error('Failed to update live viewer count:', error);
         }
 
       } catch (error: any) {
-        console.error("Agora join error:", error);
         setVideoError(`Failed to join stream: ${error.message}`);
       }
     };
@@ -225,7 +220,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
           try {
             await updateLiveViewerCount(stream.id, -1);
           } catch (error) {
-            console.error('Failed to decrement live viewer count:', error);
           }
         })();
       }
@@ -286,7 +280,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
       // Message will appear via subscription
     } catch (error) {
       toast.error('Failed to send message');
-      console.error(error);
     }
   };
 
@@ -306,7 +299,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
         await toggleLikeEvent(stream.id, user.id);
       }
     } catch (error) {
-      console.error('Like error:', error);
       // Revert on error
       setIsLiked(!newIsLiked);
       setLikes(prev => !newIsLiked ? prev + 1 : Math.max(0, prev - 1));
@@ -343,7 +335,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
       // Dispatch event to refresh profile elsewhere
       window.dispatchEvent(new Event('profileUpdated'));
     } catch (error) {
-      console.error('Follow error:', error);
       toast.error("Failed to update follow status");
     }
   };
@@ -361,7 +352,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
       // Trigger a special animation or reaction?
       setReactions(prev => [...prev, Date.now(), Date.now()+100, Date.now()+200]); // Burst of hearts
     } catch (error) {
-      console.error('Gift error:', error);
       toast.error("Failed to send gift");
     }
   };
@@ -383,7 +373,6 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
         toast.success('Stream link copied to clipboard');
       }
     } catch (error) {
-      console.error('Share failed:', error);
     }
   };
 

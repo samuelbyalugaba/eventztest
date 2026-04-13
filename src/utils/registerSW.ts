@@ -9,9 +9,7 @@ export const registerServiceWorker = async () => {
         for (const reg of regs) {
           await reg.unregister();
         }
-        console.log('Service Worker unregistered in development.');
       } catch (e) {
-        console.warn('Failed to unregister Service Worker in dev:', e);
       }
       return;
     }
@@ -20,7 +18,6 @@ export const registerServiceWorker = async () => {
         scope: '/',
       });
 
-      console.log('Service Worker registered successfully:', registration);
 
       // Check for updates every hour
       setInterval(() => {
@@ -49,7 +46,6 @@ export const registerServiceWorker = async () => {
 
       return registration;
     } catch (error) {
-      console.error('Service Worker registration failed:', error);
     }
   }
 };

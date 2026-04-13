@@ -32,7 +32,6 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
         const results = await searchProfiles(term);
         setSearchResults(results);
       } catch (error) {
-        console.error('Search error:', error);
       }
     } else {
       setSearchResults([]);

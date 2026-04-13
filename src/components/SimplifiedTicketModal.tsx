@@ -82,7 +82,6 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             setWalletBalance(0);
           }
         } catch (err) {
-          console.error('Failed to fetch balance', err);
           setWalletBalance(0);
         }
       }
@@ -246,7 +245,6 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
       }
 
     } catch (error: any) {
-      console.error('Purchase error:', error);
       toast.error(error.message || 'Payment failed');
     } finally {
       setIsProcessing(false);

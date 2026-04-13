@@ -93,10 +93,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         eventsStore.setEvents(eventsWithSaved as ApiEvent[]);
       } catch (error: any) {
         if (error.name === 'AbortError') {
-          console.log('Fetch aborted');
           return;
         }
-        console.error('Error fetching events:', error);
       } finally {
         setIsFetching(false);
       }
@@ -310,7 +308,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         toast.error('Could not start conversation', { id: toastId });
       }
     } catch (error) {
-      console.error('Error starting conversation:', error);
       toast.error('Failed to start conversation', { id: toastId });
     }
   };
@@ -325,7 +322,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       eventsStore.setEvents(next);
       toast.success('Event deleted');
     } catch (error: any) {
-      console.error('Failed to delete event', error);
       toast.error(error?.message || 'Failed to delete event');
     }
   };
