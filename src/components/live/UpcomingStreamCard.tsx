@@ -1,6 +1,5 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { MapPin, Bell, Clock } from 'lucide-react';
-import { toast } from 'sonner';
+import { MapPin, Bell } from 'lucide-react';
 
 interface LiveStream {
   id: number;

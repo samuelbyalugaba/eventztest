@@ -1,4 +1,4 @@
-import { Globe, MapPin } from 'lucide-react';
+import { Globe } from 'lucide-react';
 
 export type LocationOption = {
   id: string;

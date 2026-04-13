@@ -1,5 +1,5 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { MapPin, Eye, Video, Smartphone } from 'lucide-react';
+import { MapPin, Eye } from 'lucide-react';
 
 interface LiveStream {
   id: number;
