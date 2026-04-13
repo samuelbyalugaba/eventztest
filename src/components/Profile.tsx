@@ -760,7 +760,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               onClick={handleShowEventsList}
             >
               <div className="text-lg font-bold text-gray-900 leading-none mb-1">
-                  {isOrganizer ? (isLoadingOrganizerStats ? '—' : (organizerStats ? organizerStats.totalEvents : 0)) : (isLoadingTickets ? '—' : attendedEvents.length)}
+                  {isOrganizer ? (organizerStats?.totalEvents ?? 0) : attendedEvents.length}
               </div>
               <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
                   {isOrganizer ? 'Hosted' : 'Attended'}
