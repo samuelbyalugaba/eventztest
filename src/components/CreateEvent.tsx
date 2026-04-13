@@ -3,7 +3,6 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Upload, Calendar, MapPin, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Plus, Trash2, X, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShareModal } from './ShareModal';
-import { handleShare as shareUtil } from '../utils/share';
 import { supabase } from '../utils/supabase/client';
 import { currencies, extractCurrencyFromPrice } from '../utils/currencies';
 import { createEvent, updateEvent, uploadImage, getProfile, getEventAnalytics } from '../utils/supabase/api';
