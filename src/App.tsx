@@ -939,15 +939,6 @@ export default function App() {
                 <span className="text-xs">Events</span>
               </Link>
               <Link
-                to="/feed"
-                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
-                  location.pathname === '/feed' ? 'text-purple-600' : 'text-gray-500'
-                }`}
-              >
-                <Rss className="w-6 h-6" />
-                <span className="text-xs">Feed</span>
-              </Link>
-              <Link
                 to="/live"
                 className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors relative ${
                   location.pathname === '/live' ? 'text-purple-600' : 'text-gray-500'
@@ -955,10 +946,18 @@ export default function App() {
               >
                 <Radio className="w-6 h-6" />
                 <span className="text-xs">Live</span>
-                {/* Live indicator dot */}
                 {hasLiveEvents && (
                   <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                 )}
+              </Link>
+              <Link
+                to="/feed"
+                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
+                  location.pathname === '/feed' ? 'text-purple-600' : 'text-gray-500'
+                }`}
+              >
+                <Rss className="w-6 h-6" />
+                <span className="text-xs">Feed</span>
               </Link>
 
               <Link
