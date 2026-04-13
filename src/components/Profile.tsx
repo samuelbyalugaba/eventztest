@@ -95,7 +95,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [isLoadingSavedEvents, setIsLoadingSavedEvents] = useState(false);
   const [isLoadingTickets, setIsLoadingTickets] = useState(false);
   const [isLoadingOrganizerEvents, setIsLoadingOrganizerEvents] = useState(false);
-  const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
+  const [followStats, setFollowStats] = useState(isOwnProfileCheck && cachedFollowStats ? cachedFollowStats : { followers: 0, following: 0 });
   const [isFollowing, setIsFollowing] = useState(false);
   const loadSeqRef = useRef(0);
   const lastLoadedProfileIdRef = useRef<string | null>(null);
