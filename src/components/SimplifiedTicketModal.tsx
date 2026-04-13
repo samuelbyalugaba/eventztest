@@ -185,7 +185,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             amount: totalPrice,
             currency: currency,
             provider: 'Wallet',
-            status: 'success', // Instant success
+            status: 'pending',
             metadata: {
               type: 'payment',
               customer_name: formData.name,
@@ -195,7 +195,20 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             }
          });
          
-         // Proceed directly to ticket creation
+         // Deduct wallet balance server-side and mark transaction complete
+         const { deductBalance } = await import('../utils/ntzs-api').then(m => ({ deductBalance: m.ntzsApi.deductBalance }));
+         const nUser = await import('../utils/ntzs-api').then(m => m.ntzsApi.getUser(user.id, user.email || ''));
+         if (!nUser?.id) throw new Error('Wallet user not found');
+         await deductBalance(nUser.id, totalPrice);
+
+         // Mark transaction as completed server-side
+         const { data: _updated, error: updateErr } = await supabase
+           .from('transactions')
+           .update({ status: 'completed' })
+           .eq('id', transaction.id)
+           .eq('user_id', user.id);
+         if (updateErr) throw new Error('Failed to verify wallet payment');
+
          await finalizeTicketCreation(user.id, transaction.id);
          
       } else {
