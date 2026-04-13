@@ -53,11 +53,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
            nUser = await ntzsApi.createUser(user.id, user.email || '');
         }
       } catch (err) {
-        console.error('Failed to get nTZS user, creating...', err);
         try {
           nUser = await ntzsApi.createUser(user.id, user.email || '');
         } catch (createErr) {
-          console.error('Failed to create nTZS user:', createErr);
           // If user creation fails, we can't proceed with balance check
           throw createErr;
         }
@@ -70,12 +68,10 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
           setBalance(balanceTzs || 0);
         } catch (err) {
-          console.error('Failed to fetch balance', err);
           // Fallback to 0 or local state if needed
           setBalance(0);
         }
       } else {
-        console.warn('No nTZS user ID available for balance check');
         setBalance(0);
       }
 
@@ -100,7 +96,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       }
 
     } catch (error: any) {
-      console.error('Error loading wallet:', error);
       toast.error(`Failed to load wallet data: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
@@ -144,7 +139,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       setTimeout(loadWalletData, 5000); 
 
     } catch (error: any) {
-      console.error('Deposit error:', error);
       toast.error(error.message || 'Deposit failed');
     } finally {
       setIsProcessing(false);
@@ -187,7 +181,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       loadWalletData();
 
     } catch (error: any) {
-      console.error('Withdrawal error:', error);
       toast.error(error.message || 'Withdrawal failed');
     } finally {
       setIsProcessing(false);

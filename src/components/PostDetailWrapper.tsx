@@ -111,11 +111,9 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
               setPost((prev: any) => prev ? { ...prev, comments } : prev);
             }
           } catch (e) {
-            console.error('Error fetching comments:', e);
           }
         })();
       } catch (error) {
-        console.error('Error fetching post detail:', error);
       } finally {
         if (!post) setLoading(false);
       }
@@ -159,7 +157,6 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
 
       toast.success('Comment posted');
     } catch (error) {
-      console.error('Error posting comment:', error);
       toast.error('Failed to post comment');
     }
   };
@@ -265,7 +262,6 @@ export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrappe
           toast.success('Post deleted');
           navigate('/feed');
         } catch (e) {
-          console.error(e);
           toast.error('Failed to delete post');
         }
       }}

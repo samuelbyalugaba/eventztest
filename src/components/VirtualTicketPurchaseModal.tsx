@@ -54,7 +54,6 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
             setWalletBalance(0);
           }
         } catch (err) {
-          console.error('Failed to fetch wallet balance', err);
           // Fallback to 0 if API fails. nTZS is the source of truth.
           setWalletBalance(0);
         }
@@ -113,16 +112,30 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
             amount: price,
             currency: currency,
             provider: 'Wallet',
-            status: 'success',
-            metadata: {
-              type: 'payment',
-              customer_name: ticketFormData.name,
-              customer_email: ticketFormData.email,
-              ticket_type: 'Virtual'
-            }
-         });
-         
-         await finalizeTicket(user.id, priceString, transaction.id);
+             status: 'pending',
+             metadata: {
+               type: 'payment',
+               customer_name: ticketFormData.name,
+               customer_email: ticketFormData.email,
+               ticket_type: 'Virtual'
+             }
+          });
+          
+          // Deduct wallet balance via nTZS API
+          const { ntzsApi } = await import('../utils/ntzs-api');
+          const nUser = await ntzsApi.getUser(user.id, user.email || '');
+          if (!nUser?.id) throw new Error('Wallet user not found');
+          await ntzsApi.withdraw(nUser.id, price, 'wallet-payment');
+
+          // Mark transaction as completed
+          const { error: updateErr } = await supabase
+            .from('transactions')
+            .update({ status: 'completed' })
+            .eq('id', transaction.id)
+            .eq('user_id', user.id);
+          if (updateErr) throw new Error('Failed to verify wallet payment');
+
+          await finalizeTicket(user.id, priceString, transaction.id);
          
       } else {
           // Mobile Money Flow
@@ -169,7 +182,6 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
       }
 
     } catch (error: any) {
-      console.error('Purchase error:', error);
       toast.error(`Payment failed: ${error.message || 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);

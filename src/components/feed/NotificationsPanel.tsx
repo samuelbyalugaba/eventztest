@@ -33,7 +33,6 @@ export function NotificationsPanel({
                 try {
                   await markNotificationsAsRead(currentUser.id);
                 } catch (error) {
-                  console.error('Error marking notifications as read:', error);
                 }
               }
             }}

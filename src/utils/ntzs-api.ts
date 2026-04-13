@@ -40,7 +40,6 @@ export const ntzsApi = {
     });
 
     if (error) {
-      console.error(`nTZS ${action} error:`, error);
       throw error;
     }
     

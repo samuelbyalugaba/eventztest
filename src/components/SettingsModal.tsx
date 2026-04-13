@@ -62,7 +62,6 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       setLocationSuggestions(data);
       setShowLocationDropdown(true);
     } catch (error) {
-      console.error('Error fetching locations:', error);
       toast.error('Failed to load location suggestions');
     } finally {
       setLoadingLocations(false);
@@ -108,7 +107,6 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       toast.success('Profile photo updated successfully');
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['avatar_url'] } }));
     } catch (error: any) {
-      console.error('Error uploading avatar:', error);
       toast.error(error.message || 'Error uploading avatar');
     }
   };
@@ -206,7 +204,6 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
           if (storedPrivacy) setPrivacy(JSON.parse(storedPrivacy));
         }
       } catch (error) {
-        console.error('Error loading settings:', error);
       }
     };
 
@@ -272,7 +269,6 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       setCurrentView('main');
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','phone','bio','birthdate','avatar_url', ...(isCreatorProfile ? ['location','organizer_type'] : [])] } }));
     } catch (error) {
-      console.error('Error saving profile:', error);
       const message = (error as any)?.message || (error as any)?.error_description || (error as any)?.details || 'Failed to save profile';
       toast.error(message);
     }
@@ -304,7 +300,6 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       setCurrentView('main');
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['privacy_settings'] } }));
     } catch (error) {
-      console.error('Error saving privacy settings:', error);
       toast.error('Failed to save privacy settings');
     }
   };

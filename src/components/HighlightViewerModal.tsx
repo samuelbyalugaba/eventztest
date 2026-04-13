@@ -64,11 +64,9 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
-            console.log('Video playing');
             setIsBuffering(false);
           })
-          .catch(err => {
-            console.log('Autoplay prevented on mobile, adding tap handler:', err);
+          .catch(_err => {
             setIsPlaying(false);
           });
       }
@@ -118,7 +116,6 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
       window.dispatchEvent(new Event('postsUpdated'));
       onClose();
     } catch (error) {
-      console.error('Error deleting post:', error);
       toast.error('Failed to delete post');
     }
   };

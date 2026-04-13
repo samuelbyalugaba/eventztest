@@ -33,23 +33,18 @@ export const getAgoraToken = async (channelName: string, uid: string | number, r
     });
 
     if (!res.ok) {
-      const text = await res.text();
-      console.error('[AgoraToken] HTTP error status:', res.status);
-      console.error('[AgoraToken] HTTP error body:', text);
+      await res.text();
       return null;
     }
 
     const data = await res.json();
 
     if (!data || !(data as any).token) {
-      console.error('[AgoraToken] Response missing token. Full data:', data);
       return null;
     }
 
     return (data as any).token;
   } catch (e: any) {
-    console.error('[AgoraToken] Unexpected error calling Edge Function:', e);
-    console.error('[AgoraToken] error message:', e?.message || e);
     return null;
   }
 };

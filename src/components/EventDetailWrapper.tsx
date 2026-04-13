@@ -34,7 +34,6 @@ export function EventDetailWrapper({
           navigate('/events');
         }
       } catch (error) {
-        console.error('Error fetching event:', error);
         toast.error('Failed to load event');
         navigate('/events');
       } finally {

@@ -13,15 +13,11 @@ const supabaseKey = (() => {
   if (legacyKey && looksLikeJwt(legacyKey)) return legacyKey;
 
   if (anonKey || legacyKey) {
-    console.error(
-      'Invalid Supabase key format. Use the Supabase "anon" key (JWT-looking value with 2 dots) in VITE_SUPABASE_ANON_KEY (preferred) or VITE_SUPABASE_KEY (legacy).'
-    );
   }
   return undefined;
 })();
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables. Please check your .env file or Vercel project settings.');
 }
 
 export const isSupabaseConfigured = () => {

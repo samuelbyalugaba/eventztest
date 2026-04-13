@@ -69,7 +69,6 @@ export function ProfessionalDashboardModal({
           const statsData = await getOrganizerStats(user.id);
           setStats(statsData);
         } catch (err) {
-          console.error("Error loading organizer stats:", err);
         }
 
         // Load user specific stats (tickets purchased, events attended)
@@ -88,7 +87,6 @@ export function ProfessionalDashboardModal({
             });
           }
         } catch (err) {
-          console.error("Error loading user tickets:", err);
         }
 
         // Load events
@@ -97,7 +95,6 @@ export function ProfessionalDashboardModal({
           setPublishedEvents(events.filter(e => e.status === 'published'));
         }
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
       }
     };
 
@@ -367,7 +364,6 @@ export function ProfessionalDashboardModal({
                 toast.info('Event stream ended.');
               }
             } catch (error) {
-              console.error('Failed to update streaming status:', error);
               toast.error('Failed to update stream status');
             }
           }}

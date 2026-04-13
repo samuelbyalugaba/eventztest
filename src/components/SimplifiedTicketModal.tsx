@@ -82,7 +82,6 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             setWalletBalance(0);
           }
         } catch (err) {
-          console.error('Failed to fetch balance', err);
           setWalletBalance(0);
         }
       }
@@ -186,7 +185,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             amount: totalPrice,
             currency: currency,
             provider: 'Wallet',
-            status: 'success', // Instant success
+            status: 'pending',
             metadata: {
               type: 'payment',
               customer_name: formData.name,
@@ -196,7 +195,22 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             }
          });
          
-         // Proceed directly to ticket creation
+         // Deduct wallet balance via nTZS API, then mark transaction complete
+         const { ntzsApi } = await import('../utils/ntzs-api');
+         const nUser = await ntzsApi.getUser(user.id, user.email || '');
+         if (!nUser?.id) throw new Error('Wallet user not found');
+         
+         // Transfer to platform account (organizer settlement happens separately)
+         await ntzsApi.withdraw(nUser.id, totalPrice, 'wallet-payment');
+
+         // Mark transaction as completed
+         const { error: updateErr } = await supabase
+           .from('transactions')
+           .update({ status: 'completed' })
+           .eq('id', transaction.id)
+           .eq('user_id', user.id);
+         if (updateErr) throw new Error('Failed to verify wallet payment');
+
          await finalizeTicketCreation(user.id, transaction.id);
          
       } else {
@@ -246,7 +260,6 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
       }
 
     } catch (error: any) {
-      console.error('Purchase error:', error);
       toast.error(error.message || 'Payment failed');
     } finally {
       setIsProcessing(false);

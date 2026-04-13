@@ -19,7 +19,6 @@ try {
     lastFetchTime = parseInt(storedTime, 10);
   }
 } catch (e) {
-  console.error('Failed to load events from storage', e);
   // Fallback to empty
   cachedEvents = [];
 }
@@ -36,7 +35,6 @@ export const eventsStore = {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
       localStorage.setItem(STORAGE_TIMESTAMP_KEY, lastFetchTime.toString());
     } catch (e) {
-      console.error('Failed to save events to storage', e);
     }
     listeners.forEach(listener => listener());
   },
@@ -52,7 +50,6 @@ export const eventsStore = {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(cachedEvents));
     } catch (e) {
-      console.error('Failed to update event in storage', e);
     }
     listeners.forEach(listener => listener());
   },

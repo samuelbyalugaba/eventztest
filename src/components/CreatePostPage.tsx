@@ -234,7 +234,6 @@ export default function CreatePostPage() {
           const uploadPromises = media.map(m => uploadImage(m.file, 'posts', `user_${user.id}`));
           mediaUrls = await Promise.all(uploadPromises);
         } catch (error) {
-          console.error('Error uploading media:', error);
           throw new Error('Failed to upload media');
         }
       }
@@ -271,7 +270,6 @@ export default function CreatePostPage() {
       window.dispatchEvent(new Event('postsUpdated'));
       navigate('/feed');
     } catch (error) {
-      console.error('Error creating post:', error);
       toast.error('Failed to create post');
     } finally {
       setIsSubmitting(false);

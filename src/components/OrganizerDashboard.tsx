@@ -90,7 +90,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
       const followers = await getFollowers(user.id);
       setFollowersList(followers);
     } catch (err) {
-      console.error('Error fetching followers:', err);
       toast.error('Failed to load followers');
     } finally {
       setLoadingFollowers(false);
@@ -120,7 +119,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             });
           }
         } catch (err) {
-           console.error("Error loading profile", err);
         }
 
         // Load stats
@@ -128,7 +126,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
           const statsData = await getOrganizerStats(user.id);
           setStats(statsData);
         } catch (err) {
-          console.error("Error loading organizer stats:", err);
           // Don't fail completely, just use defaults
         }
 
@@ -149,7 +146,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             setDraftEvents(drafts.map(mapEvent));
           }
         } catch (err) {
-          console.error("Error loading organizer events:", err);
         }
 
         // Load posts (highlights)
@@ -175,11 +171,9 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             })));
           }
         } catch (err) {
-          console.error("Error loading organizer posts:", err);
         }
 
       } catch (error) {
-        console.error('Error loading organizer data:', error);
         // Only show toast if it's a critical auth error
         // toast.error('Failed to load dashboard data'); 
       }
@@ -295,7 +289,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
             toast.success(post.isLiked ? 'Unliked' : 'Liked!');
         }
     } catch (error) {
-        console.error('Error toggling like:', error);
         toast.error('Failed to update like');
         // Revert on error - re-fetch or revert state
     }
@@ -312,7 +305,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
       toast.success('Event deleted successfully');
       setStats(prev => ({ ...prev, totalEvents: prev.totalEvents - 1 }));
     } catch (error: any) {
-      console.error('Error deleting event:', error);
       if (error?.code === '23503') { // Foreign key violation
         toast.error('Cannot delete event: It has active tickets or dependencies. Please contact support.');
       } else {
@@ -891,7 +883,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                 toast.info('Event stream ended.');
               }
             } catch (error) {
-              console.error('Failed to update streaming status:', error);
               toast.error('Failed to update stream status');
               // Revert
               setPublishedEvents(publishedEvents);

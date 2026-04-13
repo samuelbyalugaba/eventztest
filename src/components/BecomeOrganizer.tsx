@@ -32,7 +32,6 @@ export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
         if (isAbortError(error)) {
           return;
         }
-        console.error('Error fetching platform stats:', error);
       }
     };
     fetchStats();
@@ -63,7 +62,6 @@ export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
       // Proceed to setup directly - we don't update profile here due to RLS policies
       onComplete();
     } catch (error: any) {
-      console.error('Error becoming organizer:', error);
       toast.error(error.message || 'Failed to proceed. Please try again.');
     }
   };

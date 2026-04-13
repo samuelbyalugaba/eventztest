@@ -81,7 +81,6 @@ export function ExploreMap() {
             setRecommendedEvents([]);
         }
       } catch (error) {
-        console.error('Error loading events:', error);
         toast.error('Failed to load events');
       } finally {
         setIsLoading(false);

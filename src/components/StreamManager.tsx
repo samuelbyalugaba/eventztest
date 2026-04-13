@@ -205,7 +205,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         setCameraEnabled(true);
         setMicEnabled(true);
       } catch (error) {
-        console.error("Error accessing webcam/mic:", error);
         toast.error("Could not access camera/microphone");
       }
     };
@@ -267,7 +266,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       if (v && isBack) v.style.transform = 'none';
       setCurrentCameraIndex(nextIndex);
     } catch (error) {
-      console.error('Failed to switch camera device:', error);
       toast.error('Failed to switch camera');
     }
   };
@@ -307,7 +305,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         const initialLikes = await getEventLikes(event.id);
         setLikes(initialLikes);
       } catch (error) {
-        console.error('Failed to load chat/likes:', error);
       }
     };
     loadChat();
@@ -367,7 +364,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           setAnalytics(data);
         }
       } catch (error) {
-        console.error('Failed to load event analytics:', error);
       } finally {
         if (!cancelled) {
           setIsLoadingAnalytics(false);
@@ -393,7 +389,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           setStreamKey(streamKey || '');
         }
       } catch (error) {
-        console.error('Failed to generate RTMP keys:', error);
         toast.error('Failed to generate RTMP keys');
       }
     };
@@ -493,7 +488,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             const token = await getAgoraToken(channelName, uid, 'publisher');
             if (!token) {
               toast.error("Failed to start stream: missing Agora token");
-              console.error("Agora token retrieval returned null for channel:", channelName, "uid:", uid);
               setIsStarting(false);
               return;
             }
@@ -523,7 +517,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             await Promise.resolve(onUpdateStatus(true));
             toast.success("You are now LIVE! 🔴");
           } catch (error: any) {
-            console.error("Error starting stream:", error);
             toast.error(`Failed to start stream: ${error.message}`);
             setIsStarting(false);
           }

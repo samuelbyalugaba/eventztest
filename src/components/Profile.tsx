@@ -133,7 +133,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       if (selectedEvent?.id === event.id) setSelectedEvent(null);
       toast.success('Event deleted');
     } catch (error: any) {
-      console.error('Failed to delete event', error);
       toast.error(error?.message || 'Failed to delete event');
     }
   };
@@ -147,7 +146,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       const followers = await getFollowers(targetUserId);
       setFollowList(followers);
     } catch (err) {
-      console.error('Error fetching followers:', err);
       toast.error('Failed to load followers');
     } finally {
       setIsLoadingFollowList(false);
@@ -163,7 +161,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       const following = await getFollowing(targetUserId);
       setFollowList(following);
     } catch (err) {
-      console.error('Error fetching following:', err);
       toast.error('Failed to load following');
     } finally {
       setIsLoadingFollowList(false);
@@ -264,7 +261,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         }));
       } catch {}
     } catch (error) {
-      console.error('Error loading profile:', error);
       setIsLoading(false);
       setIsLoadingPosts(false);
     } finally {
@@ -284,7 +280,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       setPostsOffset(prev => prev + nextPosts.length);
       setHasMorePosts(nextPosts.length === POSTS_PAGE_SIZE);
     } catch (e) {
-      console.error('Error loading more posts:', e);
     } finally {
       setIsLoadingMorePosts(false);
     }
@@ -303,7 +298,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       }
       organizerEventsLoadedRef.current = true;
     } catch (e) {
-      console.error('Error loading organizer events:', e);
     } finally {
       setIsLoadingOrganizerEvents(false);
     }
@@ -319,7 +313,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       if (saved) setSavedEvents(saved as unknown as (AppEvent & { isSaved: boolean; hasReminder: boolean })[]);
       savedEventsLoadedRef.current = true;
     } catch (e) {
-      console.error('Error loading saved events:', e);
     } finally {
       setIsLoadingSavedEvents(false);
     }
@@ -342,7 +335,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       }
       ticketsLoadedRef.current = true;
     } catch (e) {
-      console.error('Error loading tickets:', e);
     } finally {
       setIsLoadingTickets(false);
     }
@@ -450,7 +442,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       setIsFollowing(prev => !prev);
       setFollowStats(prev => ({ ...prev, followers: prev.followers + (isFollowing ? -1 : 1) }));
     } catch (err) {
-      console.error('Error toggling follow:', err);
       toast.error('Failed to update follow status');
     }
   };

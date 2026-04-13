@@ -114,7 +114,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         toast.success('Added to favorites');
       }
     } catch (error) {
-      console.error('Error toggling like:', error);
       toast.error('Failed to update like');
     }
   };
@@ -139,7 +138,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
 
       toast.success(isSaved ? 'Saved to collection' : 'Removed from collection');
     } catch (error) {
-      console.error('Error toggling save:', error);
       toast.error('Failed to update save status');
     }
   };
@@ -153,7 +151,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
       const followers = await getFollowers(user.id);
       setFollowList(followers || []);
     } catch (err) {
-      console.error('Error fetching followers:', err);
       toast.error('Failed to load followers');
     } finally {
       setIsLoadingFollowList(false);
@@ -167,7 +164,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
       const following = await getFollowing(user.id);
       setFollowList(following || []);
     } catch (err) {
-      console.error('Error fetching following:', err);
       toast.error('Failed to load following');
     } finally {
       setIsLoadingFollowList(false);
@@ -203,7 +199,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
           
           setSelectedPost((prev: any) => prev && prev.id === selectedPost.id ? { ...prev, comments: mappedComments } : prev);
         } catch (error) {
-          console.error('Error fetching comments:', error);
         }
       };
       
@@ -262,7 +257,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         loadSecondaryData();
 
       } catch (error) {
-        console.error('Error fetching user profile data:', error);
       } finally {
         setLoading(false);
       }
@@ -298,7 +292,6 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
         onFollow();
       }
     } catch (error) {
-      console.error('Error toggling follow:', error);
       setIsFollowing(!newStatus);
     }
   };

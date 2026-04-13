@@ -38,7 +38,6 @@ export const handleShare = async (data: ShareData): Promise<boolean> => {
         return true; // Return true to prevent modal from showing
       }
       // Other errors - fall through to show custom modal
-      console.log('Native share not available, using custom modal');
     }
   }
   

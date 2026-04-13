@@ -9,7 +9,6 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 try {
   registerServiceWorker();
 } catch (e) {
-  console.error("SW Registration Failed:", e);
 }
 
 // Prevent ReferenceError if any legacy code checks a global flag

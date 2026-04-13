@@ -88,8 +88,7 @@ export function PostDetailPage({
           playPromise.then(() => {
             // Dispatch event to pause other videos
             window.dispatchEvent(new CustomEvent('video-play', { detail: { id: post.id } }));
-          }).catch(error => {
-            console.log("Autoplay was prevented:", error);
+          }).catch(_error => {
           });
         }
       };
@@ -275,7 +274,6 @@ export function PostDetailPage({
                       toast.success('Caption updated');
                       setIsEditingCaption(false);
                     } catch (e) {
-                      console.error(e);
                       toast.error('Failed to update caption');
                     } finally {
                       setIsSavingCaption(false);

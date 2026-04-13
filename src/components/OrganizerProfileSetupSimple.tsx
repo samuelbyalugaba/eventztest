@@ -56,7 +56,6 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
       setLocationSuggestions(data);
       setShowLocationDropdown(true);
     } catch (error) {
-      console.error('Error fetching locations:', error);
       toast.error('Failed to load location suggestions');
     } finally {
       setLoadingLocations(false);
@@ -160,7 +159,6 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
       
       onComplete();
     } catch (error: any) {
-      console.error('Error saving profile:', error);
       toast.error(error?.message || 'Failed to save profile');
     }
   };

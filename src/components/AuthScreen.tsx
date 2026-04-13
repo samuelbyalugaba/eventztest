@@ -158,7 +158,6 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
               ], { onConflict: 'id', ignoreDuplicates: true });
             
             if (profileError) {
-              console.error('Profile creation failed:', profileError);
               // Continue anyway as auth succeeded
             }
 
@@ -173,7 +172,6 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
         }
       }
     } catch (error: any) {
-      console.error('Auth error:', error);
       let message = error.message || 'An unexpected error occurred.';
       if (message.includes('Invalid login credentials')) message = 'Incorrect email or password.';
       if (message.includes('User already registered')) message = 'This email is already registered. Please login.';
