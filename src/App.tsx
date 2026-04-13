@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { EventDetails } from './components/EventDetails';
 import { useProfileStore } from './store/profileStore';
@@ -690,6 +690,14 @@ export default function App() {
                                (location.pathname.startsWith('/event/') && !isEventModal);
 
   const backgroundLocation = location.state?.backgroundLocation;
+  
+  // Determine which tab is active for keep-alive rendering
+  const effectiveLocation = backgroundLocation || location;
+  const effectivePath = effectiveLocation.pathname;
+  const isEventsTab = effectivePath === '/events' || effectivePath === '/';
+  const isFeedTab = effectivePath === '/feed';
+  const isLiveTab = effectivePath === '/live';
+  const isOwnProfileTab = effectivePath === '/profile';
 
   useEffect(() => {
     const isModal =
