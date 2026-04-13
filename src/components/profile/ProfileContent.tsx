@@ -35,7 +35,6 @@ interface ProfileContentProps {
 export function ProfileContent({
   activeTab,
   isOwnProfile,
-  isOrganizer,
   isPaused,
   isLoadingPosts,
   userPosts,
