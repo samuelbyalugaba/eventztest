@@ -1,4 +1,4 @@
-import AgoraRTC, { IAgoraRTCClient } from 'agora-rtc-sdk-ng';
+import type { IAgoraRTCClient } from 'agora-rtc-sdk-ng';
 import { supabase } from './supabase/client';
 
 export const AGORA_APP_ID = 'f5ff5998cbc248459a3c536a9997b970';
@@ -11,7 +11,7 @@ export const AGORA_config = {
   codec: 'vp8',
 };
 
-export const getAgoraToken = async (channelName: string, uid: string | number, role: 'publisher' | 'subscriber'): Promise<string> => {
+export const getAgoraToken = async (channelName: string, uid: string | number, role: 'publisher' | 'subscriber'): Promise<string | null> => {
   try {
     const {
       data: { session }

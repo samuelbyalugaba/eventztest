@@ -19,7 +19,7 @@ import {
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
-import { supabase, getProfile, updateProfile, uploadImage, updateStreamingSettings, updatePrivacySettings, updatePaymentSettings } from '../utils/supabase/api';
+import { supabase, getProfile, updateProfile, uploadImage } from '../utils/supabase/api';
 import { isSafeUrl } from '../utils/sanitize';
 import { CREATOR_CATEGORIES } from '../utils/categories';
 

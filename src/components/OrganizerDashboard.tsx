@@ -18,7 +18,7 @@ import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 import { StreamManager } from './StreamManager';
 import { TicketScannerModal } from './TicketScannerModal';
-import { formatPrice } from '../utils/currencies';
+
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -128,15 +128,7 @@ export function PWAInstallPrompt() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const profile = await getProfile(user.id);
-        const currentPreferences = profile?.preferences || {};
-        
-        // Commented out to avoid PGRST204 error
-        // await updateProfile(user.id, {
-        //   preferences: {
-        //     ...currentPreferences,
-        //     pwaDismissed: dismissedDate
-        //   }
-        // });
+        // Commented out to avoid PGRST204 error — using localStorage fallback
         
         // Fallback to local storage since we can't save to profile
         localStorage.setItem('eventz-pwa-dismissed', dismissedDate);

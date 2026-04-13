@@ -300,7 +300,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
 
                   {tab === 'from_event' && (
                     <div className="px-4 py-4 space-y-4">
-                      {events.filter((e) => !e?.streaming?.isInstant).length === 0 ? (
+                      {events.filter((e) => !(e?.streaming as any)?.isInstant).length === 0 ? (
                     <div className="relative w-full aspect-video h-48 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden group">
                       <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-2">
                         <Tv className="w-6 h-6 text-gray-400" />
@@ -311,7 +311,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                   ) : (
                     <div className="space-y-4">
                       {events
-                        .filter((e) => !e?.streaming?.isInstant)
+                        .filter((e) => !(e?.streaming as any)?.isInstant)
                         .map((ev) => (
                         <button
                           key={ev.id}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Filter, MapPin, Search, X, Globe, Eye, Bell, Smartphone, Clock, Video } from 'lucide-react';
+import { Filter, MapPin, Search, Globe, Eye, Bell, Smartphone, Clock, Video } from 'lucide-react';
 import { LiveStreamViewer } from './LiveStreamViewer';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { EventDetailModal } from './EventDetailModal';

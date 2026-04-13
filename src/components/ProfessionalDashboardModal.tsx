@@ -110,12 +110,9 @@ export function ProfessionalDashboardModal({
     }
   }, [publishedEvents]);
 
-  const handleStopStream = async (eventId: number) => {
+  const _handleStopStream = async (eventId: number) => {
     try {
-      await updateEventStreamingStatus(eventId, {
-        isLive: false,
-        liveViewers: 0
-      });
+      await updateEventStreamingStatus(eventId, false);
       toast.success('Stream ended');
       setSelectedEventForStream(null);
     } catch (error) {

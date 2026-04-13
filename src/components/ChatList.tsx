@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, MessageSquare, ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Search, ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Conversation } from '../types';
 import { searchProfiles } from '../utils/supabase/api';

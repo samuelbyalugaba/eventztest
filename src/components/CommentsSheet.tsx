@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { X, MessageCircle, Star, Heart } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
-import { toast } from 'sonner';
 
-interface Comment {
+interface CommentsSheetComment {
   id: number;
   user: {
     name: string;

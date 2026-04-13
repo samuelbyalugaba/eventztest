@@ -2,7 +2,7 @@ import { X, Search, TrendingUp, Clock, MapPin, Calendar } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
-import { formatPrice } from '../utils/currencies';
+
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
 

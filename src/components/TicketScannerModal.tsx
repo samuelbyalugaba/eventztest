@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { X, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
@@ -52,7 +52,7 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
             fps: 10,
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
-            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
+            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] as any
           },
           onScanSuccess,
           onScanFailure
@@ -109,7 +109,7 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
     }
   };
 
-  const onScanFailure = (error: any) => {
+  const onScanFailure = (_error: any) => {
     // Ignore frame failures, they happen constantly when no QR is in view
     // console.warn(`Code scan error = ${error}`);
   };

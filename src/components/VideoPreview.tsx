@@ -10,7 +10,7 @@ interface VideoPreviewProps {
 
 export function VideoPreview({ src, poster, alt, className }: VideoPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
+  const [_isHovering, _setIsHovering] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isLowInternet, setIsLowInternet] = useState(false);
 
