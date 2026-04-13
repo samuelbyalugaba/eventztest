@@ -57,6 +57,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const { userId: userIdParam } = useParams<{ userId: string }>();
   const userId = userIdProp || userIdParam;
   const navigate = useNavigate();
+  
+  // Read cached profile from global store for instant display
+  const cachedProfile = useProfileStore(s => s.profile);
+  const cachedOrgStats = useProfileStore(s => s.organizerStats);
+  const cachedFollowStats = useProfileStore(s => s.followStats);
+  const isOwnProfileCheck = !userId;
+
   const [activeTab, setActiveTab] = useState<ProfileTab>('media');
   const [savedEvents, setSavedEvents] = useState<(AppEvent & { isSaved: boolean; hasReminder: boolean })[]>([]);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -71,8 +78,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [organizerStats, setOrganizerStats] = useState<any>(null);
+  // Initialize from global store for own profile (instant display)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(isOwnProfileCheck && cachedProfile ? cachedProfile : null);
+  const [organizerStats, setOrganizerStats] = useState<any>(isOwnProfileCheck && cachedOrgStats ? cachedOrgStats : null);
   const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
   const [showProfessionalDashboard, setShowProfessionalDashboard] = useState(false);
 
