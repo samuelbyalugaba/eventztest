@@ -899,15 +899,22 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
     throw new Error('Invalid file type. Only JPEG, PNG, WebP, GIF, MP4, and WebM are allowed.');
   }
 
-  // Validate file size (100MB limit for videos, 10MB for images)
+  // Optimize images before upload (resize large images, compress)
   const isVideo = file.type.startsWith('video/');
+  let optimizedFile = file;
+  if (!isVideo) {
+    const { optimizeForUpload } = await import('../utils/imageOptimize');
+    optimizedFile = await optimizeForUpload(file);
+  }
+
+  // Validate file size (100MB limit for videos, 10MB for images)
   const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
   
-  if (file.size > maxSize) {
+  if (optimizedFile.size > maxSize) {
     throw new Error(`File size too large. Maximum size is ${isVideo ? '100MB' : '10MB'}.`);
   }
 
-  const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+  const fileExt = (optimizedFile.name.split('.').pop() || '').toLowerCase();
   if (isVideo && fileExt === 'mov') {
     throw new Error('MOV videos are not supported. Please upload MP4 (H.264) or WebM.');
   }
