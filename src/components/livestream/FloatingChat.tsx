@@ -15,7 +15,6 @@ interface FloatingChatProps {
 const MAX_MESSAGES = 200;
 
 export function useMessageBuffer() {
-  // Cap messages to prevent memory leak
   const addMessage = (
     prev: ChatMessage[],
     msg: ChatMessage
@@ -45,7 +44,7 @@ export function FloatingChat({ messages, maxVisible = 6 }: FloatingChatProps) {
           key={messages.length - maxVisible + i}
           className={`flex items-start gap-2 backdrop-blur-xl rounded-2xl px-2.5 py-2 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
             m.isGift
-              ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30'
+              ? 'bg-yellow-500/15 border border-yellow-500/25'
               : 'bg-black/40 border border-white/5'
           }`}
           style={{ animationDelay: `${i * 50}ms` }}
@@ -57,7 +56,7 @@ export function FloatingChat({ messages, maxVisible = 6 }: FloatingChatProps) {
               className="w-6 h-6 rounded-full object-cover ring-1 ring-white/20 flex-shrink-0"
             />
           ) : (
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+            <div className="w-6 h-6 rounded-full bg-primary/40 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
               {(m.user || 'U').charAt(0).toUpperCase()}
             </div>
           )}

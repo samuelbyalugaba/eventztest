@@ -70,12 +70,12 @@ export function SidebarChat({
                 className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-0.5"
               />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/60 to-pink-500/60 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+              <div className="w-6 h-6 rounded-full bg-primary/50 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
                 {(m.user || 'U').charAt(0).toUpperCase()}
               </div>
             )}
             <div className="min-w-0">
-              <span className="text-xs font-semibold text-purple-400 mr-1.5">{m.user}</span>
+              <span className="text-xs font-semibold text-primary mr-1.5">{m.user}</span>
               <span className="text-xs text-white/80 break-words">{m.text}</span>
             </div>
           </div>
@@ -90,7 +90,7 @@ export function SidebarChat({
             setAutoScroll(true);
             endRef.current?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="mx-3 mb-1 py-1 text-[11px] text-center text-purple-400 bg-purple-500/10 rounded-lg hover:bg-purple-500/20 transition-colors"
+          className="mx-3 mb-1 py-1 text-[11px] text-center text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
         >
           ↓ New messages
         </button>
@@ -98,7 +98,7 @@ export function SidebarChat({
 
       {/* Input */}
       <form onSubmit={onSendMessage} className="p-3 border-t border-white/10">
-        <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 border border-white/10 focus-within:border-purple-500/50 transition-colors">
+        <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 border border-white/10 focus-within:border-primary/50 transition-colors">
           <input
             type="text"
             value={message}
@@ -110,7 +110,7 @@ export function SidebarChat({
           <button
             type="submit"
             disabled={!message.trim()}
-            className="text-purple-400 hover:text-purple-300 disabled:text-white/20 transition-colors"
+            className="text-primary hover:text-primary/80 disabled:text-white/20 transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>

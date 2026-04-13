@@ -60,7 +60,8 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   // Refs
   const currentUserIdRef = useRef<string | null>(null);
   const viewerCountAdjustedRef = useRef(false);
-  const lastLocalLikeToggleAtRef = useRef(0);
+  const pendingLikeRef = useRef(false); // Track pending like operation
+  const likesRef = useRef(0); // Keep likes in sync via ref
   const { addMessage } = useMessageBuffer();
 
   // Agora
@@ -71,6 +72,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   if (!client.current) {
     client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
   }
+
+  // Keep ref in sync
+  useEffect(() => { likesRef.current = likes; }, [likes]);
 
   // Load initial state
   useEffect(() => {
@@ -101,11 +105,10 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     return () => { channel.unsubscribe(); };
   }, [stream.id]);
 
-  // Real-time likes
+  // Real-time likes — ignore events during pending like operation
   useEffect(() => {
-    const channel = subscribeToEventLikes(stream.id, ({ delta, userId }) => {
-      const isOwn = userId && currentUserIdRef.current && userId === currentUserIdRef.current && Date.now() - lastLocalLikeToggleAtRef.current < 2000;
-      if (isOwn) return;
+    const channel = subscribeToEventLikes(stream.id, ({ delta }) => {
+      if (pendingLikeRef.current) return; // Skip during our own pending operation
       setLikes((p) => Math.max(0, p + delta));
       if (delta > 0) {
         setHearts((p) => [...p, generateHeart()]);
@@ -258,7 +261,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   const handleLike = async () => {
     setHearts((p) => [...p, generateHeart(), generateHeart()]);
-    lastLocalLikeToggleAtRef.current = Date.now();
+    pendingLikeRef.current = true; // Block subscription updates
     const newIsLiked = !isLiked;
     setIsLiked(newIsLiked);
     setLikes((p) => newIsLiked ? p + 1 : Math.max(0, p - 1));
@@ -268,6 +271,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     } catch {
       setIsLiked(!newIsLiked);
       setLikes((p) => !newIsLiked ? p + 1 : Math.max(0, p - 1));
+    } finally {
+      // Unblock after a short delay to let the realtime event pass
+      setTimeout(() => { pendingLikeRef.current = false; }, 3000);
     }
   };
 
@@ -313,48 +319,47 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     } catch {}
   };
 
-  // ─── RENDER ─────────────────────────────────────────────
+  // ─── Video content (shared between layouts) ─────────────
+  const renderVideo = (id?: string) => (
+    <>
+      {remoteUsers.length > 0 ? (
+        <div className="w-full h-full">
+          {remoteUsers.map((user) => (
+            <div key={user.uid} id={id || `remote-player-${user.uid}`} className="w-full h-full" />
+          ))}
+        </div>
+      ) : (
+        <div className="absolute inset-0">
+          <ImageWithFallback src={stream.thumbnail} alt={stream.title} className="w-full h-full object-cover opacity-50" />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            {videoError ? (
+              <div className="text-center px-6">
+                <p className="text-red-400 mb-3 text-sm">{videoError}</p>
+                <button onClick={() => { setVideoError(null); window.location.reload(); }} className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold">Retry</button>
+              </div>
+            ) : (
+              <div className="text-center px-6">
+                <div className="w-12 h-12 mx-auto mb-3 border-3 border-white/20 border-t-primary rounded-full animate-spin" />
+                <p className="text-white text-base font-bold mb-1">Connecting...</p>
+                <p className="text-white/50 text-sm">Waiting for host to start streaming</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
 
-  // Desktop: side-by-side layout (video + chat sidebar)
-  // Mobile: full-screen overlay with floating chat
-
+  // ─── DESKTOP LAYOUT ─────────────────────────────────────
   if (!isMobile) {
     return (
       <div className="fixed inset-0 z-[100] bg-black flex">
         {/* Video area */}
         <div className="flex-1 relative flex flex-col">
-          {/* Video */}
           <div className="flex-1 relative" onDoubleClick={handleLike}>
-            {remoteUsers.length > 0 ? (
-              <div className="w-full h-full">
-                {remoteUsers.map((user) => (
-                  <div key={user.uid} id={`remote-player-${user.uid}`} className="w-full h-full" />
-                ))}
-              </div>
-            ) : (
-              <div className="absolute inset-0">
-                <ImageWithFallback src={stream.thumbnail} alt={stream.title} className="w-full h-full object-cover opacity-50" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                  {videoError ? (
-                    <div className="text-center px-6">
-                      <p className="text-red-400 mb-3 text-sm">{videoError}</p>
-                      <button onClick={() => { setVideoError(null); window.location.reload(); }} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold">Retry</button>
-                    </div>
-                  ) : (
-                    <div className="text-center px-6">
-                      <div className="w-12 h-12 mx-auto mb-3 border-3 border-white/20 border-t-purple-500 rounded-full animate-spin" />
-                      <p className="text-white text-base font-bold mb-1">Connecting...</p>
-                      <p className="text-white/50 text-sm">Waiting for host to start streaming</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Gradient overlays */}
+            {renderVideo()}
             <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-black/40" />
 
-            {/* Header overlay */}
             <div className="absolute top-0 left-0 right-0 p-4">
               <ViewerHeader
                 host={stream.host}
@@ -369,16 +374,13 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
               />
             </div>
 
-            {/* Gift banners */}
             <div className="absolute left-4 top-20">
               <GiftBannerOverlay banners={giftBanners} />
             </div>
 
-            {/* Heart animations */}
             <HeartAnimations hearts={hearts} />
           </div>
 
-          {/* Bottom action bar */}
           <div className="p-3 bg-[#0f0f0f] border-t border-white/10">
             <ViewerActionBar
               message={message}
@@ -410,7 +412,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
           </div>
         )}
 
-        {/* Gift picker */}
         <GiftPicker isOpen={showGiftPicker} onClose={() => setShowGiftPicker(false)} onSendGift={handleGift} isSending={isSendingGift} />
       </div>
     );
@@ -419,41 +420,13 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   // ─── MOBILE LAYOUT ─────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[100] bg-black">
-      {/* Video layer */}
       <div className="absolute inset-0" onDoubleClick={handleLike}>
-        {remoteUsers.length > 0 ? (
-          <div className="w-full h-full">
-            {remoteUsers.map((user) => (
-              <div key={user.uid} id={`remote-player-${user.uid}`} className="w-full h-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="absolute inset-0">
-            <ImageWithFallback src={stream.thumbnail} alt={stream.title} className="w-full h-full object-cover opacity-50" />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-              {videoError ? (
-                <div className="text-center px-6">
-                  <p className="text-red-400 mb-3 text-sm">{videoError}</p>
-                  <button onClick={() => { setVideoError(null); window.location.reload(); }} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold">Retry</button>
-                </div>
-              ) : (
-                <div className="text-center px-6">
-                  <div className="w-12 h-12 mx-auto mb-3 border-3 border-white/20 border-t-purple-500 rounded-full animate-spin" />
-                  <p className="text-white text-base font-bold mb-1">Connecting...</p>
-                  <p className="text-white/50 text-sm">Waiting for host to start streaming</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {renderVideo()}
       </div>
 
-      {/* Gradient overlays */}
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/80 via-transparent to-black/60" />
 
-      {/* Content overlay */}
       <div className="absolute inset-0 flex flex-col justify-between p-3">
-        {/* Header */}
         <ViewerHeader
           host={stream.host}
           hostAvatar={stream.host_avatar}
@@ -466,22 +439,17 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
           onClose={onClose}
         />
 
-        {/* Gift banners */}
         <GiftBannerOverlay banners={giftBanners} />
 
-        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Bottom section */}
         <div className="space-y-2">
-          {/* Floating chat — hideable */}
           {isChatVisible && (
             <div className="max-w-[80%]">
               <FloatingChat messages={messages} maxVisible={4} />
             </div>
           )}
 
-          {/* Action bar */}
           <ViewerActionBar
             message={message}
             onMessageChange={setMessage}
@@ -499,10 +467,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         </div>
       </div>
 
-      {/* Heart animations */}
       <HeartAnimations hearts={hearts} />
-
-      {/* Gift picker bottom sheet */}
       <GiftPicker isOpen={showGiftPicker} onClose={() => setShowGiftPicker(false)} onSendGift={handleGift} isSending={isSendingGift} />
     </div>
   );

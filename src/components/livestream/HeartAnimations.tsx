@@ -13,7 +13,7 @@ const HEART_COLORS = [
 export function generateHeart(): FloatingHeart {
   return {
     id: Date.now() + Math.random(),
-    x: 70 + Math.random() * 25, // right side, 70-95%
+    x: 70 + Math.random() * 25,
     size: 14 + Math.random() * 12,
     color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
     delay: Math.random() * 0.3,

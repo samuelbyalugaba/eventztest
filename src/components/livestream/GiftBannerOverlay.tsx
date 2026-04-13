@@ -12,9 +12,9 @@ export function GiftBannerOverlay({ banners }: GiftBannerOverlayProps) {
       {banners.slice(-3).map((banner) => (
         <div
           key={banner.id}
-          className="flex items-center gap-3 bg-gradient-to-r from-yellow-500/20 via-orange-500/15 to-transparent backdrop-blur-xl rounded-2xl px-3 py-2.5 border border-yellow-500/20 animate-in slide-in-from-left duration-500 shadow-lg"
+          className="flex items-center gap-3 bg-yellow-500/15 backdrop-blur-xl rounded-2xl px-3 py-2.5 border border-yellow-500/20 animate-in slide-in-from-left duration-500 shadow-lg"
         >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-lg shadow-lg shadow-orange-500/30">
+          <div className="w-8 h-8 rounded-full bg-yellow-500/80 flex items-center justify-center text-lg shadow-lg">
             {banner.gift.emoji}
           </div>
           <div className="flex-1 min-w-0">
