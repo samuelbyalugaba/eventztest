@@ -195,14 +195,16 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             }
          });
          
-         // Deduct wallet balance server-side and mark transaction complete
-         const { deductBalance } = await import('../utils/ntzs-api').then(m => ({ deductBalance: m.ntzsApi.deductBalance }));
-         const nUser = await import('../utils/ntzs-api').then(m => m.ntzsApi.getUser(user.id, user.email || ''));
+         // Deduct wallet balance via nTZS API, then mark transaction complete
+         const { ntzsApi } = await import('../utils/ntzs-api');
+         const nUser = await ntzsApi.getUser(user.id, user.email || '');
          if (!nUser?.id) throw new Error('Wallet user not found');
-         await deductBalance(nUser.id, totalPrice);
+         
+         // Transfer to platform account (organizer settlement happens separately)
+         await ntzsApi.withdraw(nUser.id, totalPrice, 'wallet-payment');
 
-         // Mark transaction as completed server-side
-         const { data: _updated, error: updateErr } = await supabase
+         // Mark transaction as completed
+         const { error: updateErr } = await supabase
            .from('transactions')
            .update({ status: 'completed' })
            .eq('id', transaction.id)
