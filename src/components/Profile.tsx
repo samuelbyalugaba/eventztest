@@ -74,6 +74,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
   const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   const [showTicketListModal, setShowTicketListModal] = useState(false);
   const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);

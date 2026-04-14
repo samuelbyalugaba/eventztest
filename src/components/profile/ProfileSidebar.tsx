@@ -1,6 +1,7 @@
 import { Menu, Wallet, User, BarChart3, Settings, LogOut, ChevronRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '../ui/sheet';
 import { UserAvatar } from '../UserAvatar';
+import { toast } from 'sonner';
 
 interface ProfileSidebarProps {
   isOpen: boolean;
