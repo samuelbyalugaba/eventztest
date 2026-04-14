@@ -62,6 +62,22 @@ export default defineConfig({
       target: ['es2015', 'edge88', 'firefox78', 'chrome87', 'safari14'],
       outDir: 'dist',
       cssMinify: true,
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              // Keep react + react-dom + scheduler together to avoid circular deps
+              if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/scheduler/')) return 'react-core';
+              if (id.includes('recharts') || id.includes('d3-')) return 'charts';
+              if (id.includes('@radix-ui')) return 'radix';
+              if (id.includes('@supabase')) return 'supabase';
+              if (id.includes('lucide-react')) return 'icons';
+              if (id.includes('agora-rtc')) return 'agora';
+              if (id.includes('hls.js')) return 'hls';
+            }
+          },
+        },
+      },
     },
     server: {
       port: 3000,
