@@ -185,37 +185,41 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
       const viewerId = user?.id || null;
       const cacheKey = viewerId ? `eventz_profile_cache_${viewerId}_${targetUserId}` : `eventz_profile_cache_${targetUserId}`;
+      let cachedData: any = null;
+
       try {
         const cachedRaw = sessionStorage.getItem(cacheKey);
         if (cachedRaw) {
           const cached = JSON.parse(cachedRaw);
           if (cached?.ts && Date.now() - cached.ts < PROFILE_CACHE_TTL_MS) {
-            if (cached.profile) setUserProfile(cached.profile);
-            if (cached.followStats) setFollowStats(cached.followStats);
-            if (typeof cached.isFollowing === 'boolean') setIsFollowing(cached.isFollowing);
-            if (cached.organizerStats) setOrganizerStats(cached.organizerStats);
-            if (Array.isArray(cached.posts)) {
-              setUserPosts(cached.posts);
-              setPostsOffset(cached.posts.length);
-              setHasMorePosts(cached.posts.length === POSTS_PAGE_SIZE);
-              setIsLoadingPosts(false);
-            }
-            setIsLoading(false);
+            cachedData = cached;
           }
         }
       } catch {}
 
       if (lastLoadedProfileIdRef.current !== targetUserId) {
-        setOrganizerStats(null);
+        setUserProfile(cachedData?.profile ?? null);
+        setFollowStats(cachedData?.followStats ?? { followers: 0, following: 0 });
+        setIsFollowing(typeof cachedData?.isFollowing === 'boolean' ? cachedData.isFollowing : false);
+        setOrganizerStats(cachedData?.organizerStats ?? null);
         setPublishedEvents([]);
         setSavedEvents([]);
         setTicketEvents([]);
         setAttendedEvents([]);
-        setUserPosts([]);
+        setUserPosts(Array.isArray(cachedData?.posts) ? cachedData.posts : []);
         savedEventsLoadedRef.current = false;
         ticketsLoadedRef.current = false;
         organizerEventsLoadedRef.current = false;
         lastLoadedProfileIdRef.current = targetUserId;
+      }
+
+      if (cachedData) {
+        if (Array.isArray(cachedData.posts)) {
+          setPostsOffset(cachedData.posts.length);
+          setHasMorePosts(cachedData.posts.length === POSTS_PAGE_SIZE);
+          setIsLoadingPosts(false);
+        }
+        setIsLoading(false);
       }
 
       // Fetch profile first to know if organizer
