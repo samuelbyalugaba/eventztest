@@ -5,6 +5,7 @@ import { supabase } from '../utils/supabase/client';
 import { extractCurrencyFromPrice, currencies, formatPrice } from '../utils/currencies';
 import { createTransaction, initiateSnippePayment, waitForTransactionCompletion, createTicket } from '../utils/supabase/api';
 import { ntzsApi } from '../utils/ntzs-api';
+import { getMobileMoneyMinimumMessage, isBelowMobileMoneyMinimum, MOBILE_MONEY_MINIMUM_TZS } from '../utils/paymentLimits';
 
 interface TicketTier {
   name: string;
@@ -119,6 +120,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
   };
 
   const currencySymbol = getCurrencySymbol(tiers[0]?.price || '');
+  const isMobilePaymentBlocked = isBelowMobileMoneyMinimum(totalPrice, selectedProvider);
 
   const handlePurchase = async () => {
     if (totalTickets === 0 || !formData.name || !formData.email) {
@@ -173,6 +175,12 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
       
       if (selectedProvider === 'Wallet' && walletBalance < totalPrice) {
         toast.error('Insufficient wallet balance');
+        setIsProcessing(false);
+        return;
+      }
+
+      if (isBelowMobileMoneyMinimum(totalPrice, selectedProvider)) {
+        toast.error(getMobileMoneyMinimumMessage(totalPrice));
         setIsProcessing(false);
         return;
       }
@@ -434,13 +442,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                     {['Wallet', 'Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map(p => (
                       <button
                         key={p}
-                        onClick={() => {
-                          if (p === 'Wallet') {
-                            toast.info('Wallet coming soon');
-                            return;
-                          }
-                          setSelectedProvider(p);
-                        }}
+                        onClick={() => setSelectedProvider(p)}
                         className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all flex flex-col items-center justify-center gap-1 ${
                           selectedProvider === p 
                             ? 'border-[#8A2BE2] bg-purple-50 text-purple-700' 
@@ -464,15 +466,22 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                         )}
                      </div>
                   ) : (
-                      <div className="relative">
-                        <Smartphone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                        <input
-                          type="tel"
-                          placeholder="255 7XX XXX XXX"
-                          value={paymentPhone}
-                          onChange={(e) => setPaymentPhone(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
-                        />
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Smartphone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                          <input
+                            type="tel"
+                            placeholder="255 7XX XXX XXX"
+                            value={paymentPhone}
+                            onChange={(e) => setPaymentPhone(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                          />
+                        </div>
+                        {totalPrice > 0 && totalPrice < MOBILE_MONEY_MINIMUM_TZS && (
+                          <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-foreground">
+                            Mobile money starts at TSh {MOBILE_MONEY_MINIMUM_TZS.toLocaleString()}. Add more tickets or switch to Wallet.
+                          </p>
+                        )}
                       </div>
                   )}
                 </div>
@@ -537,9 +546,9 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
               </button>
               <button
                 onClick={handlePurchase}
-                disabled={isProcessing}
+                disabled={isProcessing || isMobilePaymentBlocked}
                 className={`flex-1 bg-gradient-to-r from-[#8A2BE2] to-purple-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 ${
-                  isProcessing ? 'opacity-70 cursor-not-allowed' : ''
+                  isProcessing || isMobilePaymentBlocked ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >
                 {isProcessing ? (
@@ -551,6 +560,11 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                   <>
                     <span>Get Free Tickets</span>
                     <Ticket className="w-4 h-4" />
+                  </>
+                ) : isMobilePaymentBlocked ? (
+                  <>
+                    <span>Use Wallet or add tickets</span>
+                    <Wallet className="w-4 h-4" />
                   </>
                 ) : (
                   <>

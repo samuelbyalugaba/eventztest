@@ -1116,6 +1116,21 @@ export const initiateSnippePayment = async (params: {
 
 
   if (error) {
+    const response = (error as { context?: Response }).context;
+
+    if (response instanceof Response) {
+      const payload = await response.clone().json().catch(async () => {
+        const text = await response.text().catch(() => '');
+        return text ? { error: text } : null;
+      });
+
+      const message = payload && typeof payload === 'object'
+        ? ('error' in payload && typeof payload.error === 'string' ? payload.error : 'message' in payload && typeof payload.message === 'string' ? payload.message : null)
+        : null;
+
+      throw new Error(message || error.message);
+    }
+
     throw error;
   }
 

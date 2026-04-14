@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
 import { extractCurrencyFromPrice, formatPrice } from '../utils/currencies';
+import { getMobileMoneyMinimumMessage, isBelowMobileMoneyMinimum, MOBILE_MONEY_MINIMUM_TZS } from '../utils/paymentLimits';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 import { ntzsApi } from '../utils/ntzs-api';
 
@@ -94,6 +95,12 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
       if (price <= 0) {
         // Free ticket logic
         await finalizeTicket(user.id, 'Free', 0);
+        return;
+      }
+
+      if (isBelowMobileMoneyMinimum(price, selectedProvider)) {
+        toast.error(getMobileMoneyMinimumMessage(price));
+        setIsSubmitting(false);
         return;
       }
 
@@ -223,6 +230,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
   const priceString = event.streaming?.virtualPrice || event.price_range || '0';
   const price = parseFloat(priceString.replace(/[^0-9.]/g, '')) || 0;
   const isFreeVirtual = price <= 0;
+  const isMobilePaymentBlocked = isBelowMobileMoneyMinimum(price, selectedProvider);
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -310,15 +318,22 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                           )}
                        </div>
                     ) : (
-                        <div className="relative">
-                            <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                            <input
-                                type="tel"
-                                placeholder="255 7XX XXX XXX"
-                                value={ticketFormData.phone}
-                                onChange={(e) => setTicketFormData({ ...ticketFormData, phone: e.target.value })}
-                                className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
-                            />
+                        <div className="space-y-2">
+                            <div className="relative">
+                                <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="tel"
+                                    placeholder="255 7XX XXX XXX"
+                                    value={ticketFormData.phone}
+                                    onChange={(e) => setTicketFormData({ ...ticketFormData, phone: e.target.value })}
+                                    className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+                                />
+                            </div>
+                            {price > 0 && price < MOBILE_MONEY_MINIMUM_TZS && (
+                              <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-foreground">
+                                Mobile money starts at TSh {MOBILE_MONEY_MINIMUM_TZS.toLocaleString()}. Use Wallet for this ticket.
+                              </p>
+                            )}
                         </div>
                     )}
                 </div>
@@ -326,16 +341,22 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
 
                 <button
                     onClick={handleTicketSubmit}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isMobilePaymentBlocked}
                     className={`w-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-purple-200 flex items-center justify-center gap-2 transition-all ${
-                        isSubmitting ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.02] hover:shadow-xl'
+                        isSubmitting || isMobilePaymentBlocked ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.02] hover:shadow-xl'
                     }`}
                 >
                     {isSubmitting ? (
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                         <>
-                            <span>{isFreeVirtual ? 'Get Free Access' : `Pay ${event.streaming?.virtualPrice}`}</span>
+                            <span>
+                              {isFreeVirtual
+                                ? 'Get Free Access'
+                                : isMobilePaymentBlocked
+                                  ? 'Use Wallet for this ticket'
+                                  : `Pay ${event.streaming?.virtualPrice}`}
+                            </span>
                             <ArrowRight className="w-4 h-4" />
                         </>
                     )}
