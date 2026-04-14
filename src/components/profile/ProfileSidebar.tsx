@@ -13,6 +13,7 @@ interface ProfileSidebarProps {
   onEditProfile: () => void;
   onSettings: () => void;
   onDashboard: () => void;
+  onWallet?: () => void;
   onLogout?: () => Promise<void>;
 }
 
