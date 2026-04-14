@@ -880,7 +880,6 @@ export default function App() {
           } />
           <Route path="/compose/post" element={
             <Suspense fallback={<RouteFallback />}><CreatePostPage /></Suspense>
-            <CreatePostPage />
           } />
         </Routes>
       </div>
