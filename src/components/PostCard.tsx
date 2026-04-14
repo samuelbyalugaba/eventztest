@@ -445,8 +445,7 @@ export const PostCard = React.memo(function PostCard({
                             className="absolute inset-0 w-full h-full object-contain"
                             fallbackType="image"
                             loading={index === 0 ? "eager" : "lazy"}
-                            width={600}
-                            height={600}
+                            displayWidth={600}
                             quality={80}
                             resize="cover"
                             onLoad={(e) => {
@@ -544,7 +543,7 @@ export const PostCard = React.memo(function PostCard({
                     className="absolute inset-0 w-full h-full object-contain"
                     fallbackType="image"
                     loading="lazy"
-                    width={800}
+                    displayWidth={800}
                     quality={85}
                     onLoad={(e) => {
                       if (!currentMedia) return;
