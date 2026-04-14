@@ -19,6 +19,7 @@ const LiveSetupModal = lazy(() => import('./LiveSetupModal').then(m => ({ defaul
 const ProfessionalDashboardModal = lazy(() => import('./ProfessionalDashboardModal').then(m => ({ default: m.ProfessionalDashboardModal })));
 const EventDetailModal = lazy(() => import('./EventDetailModal').then(m => ({ default: m.EventDetailModal })));
 const TicketViewer = lazy(() => import('./TicketViewer').then(m => ({ default: m.TicketViewer })));
+const WalletModal = lazy(() => import('./WalletModal').then(m => ({ default: m.WalletModal })));
 
 import { ProfileHeader } from './profile/ProfileHeader';
 import { ProfileBio } from './profile/ProfileBio';
