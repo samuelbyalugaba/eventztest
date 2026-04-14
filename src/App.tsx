@@ -847,32 +847,39 @@ export default function App() {
             />
           } />
           <Route path="/create" element={
-            <CreateEventWrapper 
-              currentUser={currentUser} 
-              isAuthenticated={isAuthenticated} 
-              onAuthSuccess={handleAuthSuccess}
-            />
+            <Suspense fallback={<RouteFallback />}>
+              <CreateEventWrapper 
+                currentUser={currentUser} 
+                isAuthenticated={isAuthenticated} 
+                onAuthSuccess={handleAuthSuccess}
+              />
+            </Suspense>
           } />
           <Route path="/edit-event/:id" element={
-            <CreateEventWrapper 
-              currentUser={currentUser} 
-              isAuthenticated={isAuthenticated} 
-              onAuthSuccess={handleAuthSuccess}
-            />
+            <Suspense fallback={<RouteFallback />}>
+              <CreateEventWrapper 
+                currentUser={currentUser} 
+                isAuthenticated={isAuthenticated} 
+                onAuthSuccess={handleAuthSuccess}
+              />
+            </Suspense>
           } />
           <Route path="/post/:id" element={
-            <PostDetailWrapper 
-              currentUser={currentUser}
-              userProfile={userProfile}
-            />
+            <Suspense fallback={<RouteFallback />}>
+              <PostDetailWrapper 
+                currentUser={currentUser}
+                userProfile={userProfile}
+              />
+            </Suspense>
           } />
           <Route path="/event/:id" element={
-            <EventDetailWrapper onStartConversation={handleStartConversation} />
+            <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
           } />
           <Route path="/live/:id" element={
-            <EventDetailWrapper onStartConversation={handleStartConversation} />
+            <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
           } />
           <Route path="/compose/post" element={
+            <Suspense fallback={<RouteFallback />}><CreatePostPage /></Suspense>
             <CreatePostPage />
           } />
         </Routes>
