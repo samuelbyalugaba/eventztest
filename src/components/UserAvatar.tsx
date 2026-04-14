@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-
+import { getOptimizedImageUrl } from '../utils/supabaseImage';
 interface UserAvatarProps {
   src?: string | null;
   name?: string | null;
@@ -22,6 +22,15 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
     '2xl': 'w-16 h-16 text-[20px]',
     '3xl': 'w-20 h-20 text-[24px]',
   };
+
+  const sizePx: Record<string, number> = {
+    'xs': 24, 'sm': 32, 'md': 40, 'lg': 48, 'xl': 56, '2xl': 64, '3xl': 80,
+  };
+
+  const optimizedSrc = useMemo(() => {
+    if (!src || src.trim() === '' || src === 'null') return src;
+    return getOptimizedImageUrl(src, { width: sizePx[size] || 40, quality: 80 });
+  }, [src, size]);
 
   const initials = useMemo(() => {
     if (!safeName) return '';
@@ -70,9 +79,11 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
           <span className="text-white font-medium">{initials}</span>
         </div>
         <img 
-          src={src} 
+          src={optimizedSrc || src} 
           alt={safeName || 'User'} 
           className={`relative z-10 ${hasRoundedClass ? '' : 'rounded-full'} object-cover object-top w-full h-full`}
+          loading="lazy"
+          decoding="async"
           onError={() => setImageError(true)}
         />
       </div>
