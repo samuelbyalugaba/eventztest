@@ -78,7 +78,7 @@ serve(async (req) => {
         break;
       case 'get_balance':
         if (!payload?.userId) return jsonResponse({ error: 'Missing payload.userId' }, 400);
-        endpoint = `/users/${payload.userId}/balance`;
+        endpoint = `/users/${payload.userId}`;
         break;
       case 'deposit':
         endpoint = '/deposits';
