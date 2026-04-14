@@ -503,11 +503,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </div>
             )}
 
-            {isFetching && (
-              <div className="text-center py-16">
-                <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-500">Loading events...</p>
-              </div>
+            {isFetching && events.length === 0 && (
+              <EventGridSkeleton count={6} />
             )}
 
             {!isFetching && upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
