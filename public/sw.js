@@ -1,5 +1,7 @@
-const CACHE_NAME = 'eventz-v2';
-const RUNTIME_CACHE = 'eventz-runtime-v2';
+const CACHE_NAME = 'eventz-v3';
+const RUNTIME_CACHE = 'eventz-runtime-v3';
+const IMAGE_CACHE = 'eventz-images-v1';
+const IMAGE_CACHE_MAX = 200;
 
 // Assets to cache on install
 const STATIC_CACHE_URLS = [
