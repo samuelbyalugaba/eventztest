@@ -1,4 +1,4 @@
-import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon } from 'lucide-react';
+import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon, History } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { EventCard } from '../EventCard';
 import type { ProfileTab } from './ProfileTabs';
@@ -90,6 +90,17 @@ export function ProfileContent({
           onEditEvent={onEditEvent}
           onDeleteEvent={onDeleteEvent}
           onCreateEvent={onCreateEvent}
+        />
+      )}
+
+      {activeTab === 'hosted' && (
+        <HostedTab
+          isLoading={isLoadingOrganizerEvents}
+          events={publishedEvents}
+          onEventClick={onEventClick}
+          currentUserId={currentUserId}
+          onEditEvent={onEditEvent}
+          onDeleteEvent={onDeleteEvent}
         />
       )}
 
@@ -269,6 +280,50 @@ function UpcomingTab({ isLoading, events, onEventClick, currentUserId, onEditEve
   return (
     <div className="space-y-4">
       {upcoming.map((event) => (
+        <EventCard
+          key={event.id}
+          event={event}
+          onClick={(e) => onEventClick(e)}
+          currentUserId={currentUserId}
+          onEditEvent={onEditEvent}
+          onDeleteEvent={onDeleteEvent}
+          className="border border-gray-100 hover:shadow-md transition-all"
+        />
+      ))}
+    </div>
+  );
+}
+
+function HostedTab({ isLoading, events, onEventClick, currentUserId, onEditEvent, onDeleteEvent }: {
+  isLoading: boolean; events: any[]; onEventClick: (e: AppEvent) => void;
+  currentUserId?: string; onEditEvent?: (e: any) => void; onDeleteEvent: (e: AppEvent) => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+        <div className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  const past = events.filter(e => new Date(e.date) < new Date());
+
+  if (past.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+          <History className="w-8 h-8 text-gray-300" />
+        </div>
+        <p className="text-gray-900 font-medium mb-1">No past events</p>
+        <p className="text-gray-500 text-sm max-w-xs mx-auto">Your hosted events will appear here after their date</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {past.map((event) => (
         <EventCard
           key={event.id}
           event={event}
