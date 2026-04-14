@@ -2310,30 +2310,32 @@ export const getNotifications = async (userId: string) => {
       .from('tickets')
       .select(`
         id,
+        created_at,
         ticket_type,
         event:events!inner(id, title, organizer_id),
         user:profiles(id, full_name, avatar_url)
       `)
       .eq('event.organizer_id', userId)
+      .order('created_at', { ascending: false })
       .limit(20);
 
     if (ticketSales) {
       ticketSales.forEach((ticket: any) => {
-        // Use profile if available, otherwise fallback to "Guest"
         const buyerName = ticket.user?.full_name || 'Guest User';
         const buyerAvatar = ticket.user?.avatar_url || '';
+        const ticketTime = ticket.created_at || new Date().toISOString();
         
         notifications.push({
           id: `sale-${ticket.id}`,
-          type: 'event', // reusing 'event' type for sales
+          type: 'event',
           user: { 
             name: buyerName, 
             avatar: buyerAvatar
           },
           content: `bought a ${ticket.ticket_type} ticket for "${ticket.event?.title || 'Event'}"`,
-          time: new Date().toISOString(),
-          read: false,
-          created_at: new Date().toISOString()
+          time: ticketTime,
+          read: new Date(ticketTime).getTime() <= lastReadTime,
+          created_at: ticketTime
         });
       });
     }
