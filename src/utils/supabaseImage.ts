@@ -1,13 +1,11 @@
 /**
- * Supabase Storage image transform utility.
+ * Image optimization utility using wsrv.nl (free image CDN proxy).
  *
- * Rewrites public object URLs to use the /render/image endpoint,
- * which serves resized, WebP-converted images on-the-fly.
+ * Rewrites any image URL to go through wsrv.nl, which serves
+ * resized, WebP-converted images on-the-fly — no Supabase Pro plan needed.
  *
  * Before: https://<ref>.supabase.co/storage/v1/object/public/<bucket>/<path>
- * After:  https://<ref>.supabase.co/storage/v1/render/image/public/<bucket>/<path>?width=W&quality=Q&format=origin (or resize=...)
- *
- * If the URL is not a Supabase storage URL, it is returned unchanged.
+ * After:  https://wsrv.nl/?url=<encoded-url>&w=W&q=Q&output=webp
  */
 
 interface TransformOptions {
@@ -23,33 +21,48 @@ interface TransformOptions {
   dpr?: number;
 }
 
-// const SUPABASE_STORAGE_OBJECT = '/storage/v1/object/public/';
-// const SUPABASE_STORAGE_RENDER = '/storage/v1/render/image/public/';
-
 export function getOptimizedImageUrl(
   url: string | undefined | null,
-  _options: TransformOptions = {}
+  options: TransformOptions = {}
 ): string {
   if (!url) return '';
 
-  // Image transforms require Supabase Pro plan.
-  // On free tier, return the original URL unchanged.
-  return url;
+  // Don't double-proxy
+  if (url.includes('wsrv.nl')) return url;
+
+  // Only proxy http(s) URLs
+  if (!url.startsWith('http')) return url;
+
+  const {
+    width,
+    height,
+    quality = 75,
+    resize = 'cover',
+    dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1,
+  } = options;
+
+  const params = new URLSearchParams();
+  params.set('url', url);
+  if (width) params.set('w', String(Math.round(width * dpr)));
+  if (height) params.set('h', String(Math.round(height * dpr)));
+  params.set('q', String(quality));
+  params.set('output', 'webp');
+
+  // Map resize mode to wsrv.nl fit parameter
+  if (resize === 'cover') params.set('fit', 'cover');
+  else if (resize === 'contain') params.set('fit', 'contain');
+  else if (resize === 'fill') params.set('fit', 'fill');
+
+  return `https://wsrv.nl/?${params.toString()}`;
 }
 
 /**
  * Preset sizes for common use cases.
- * Returns the optimal width for a given context.
  */
 export const IMAGE_SIZES = {
-  /** Avatar / profile picture */
   avatar: 80,
-  /** Small card thumbnail */
   thumbnail: 300,
-  /** Feed card image */
   card: 600,
-  /** Full-width hero / detail */
   hero: 1200,
-  /** Event card in grid */
   eventCard: 400,
 } as const;

@@ -924,8 +924,8 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
   const tryUpload = async (targetBucket: 'events' | 'avatars' | 'posts') => {
     const { error: uploadError } = await supabase.storage
       .from(targetBucket)
-      .upload(filePath, file, {
-        contentType: file.type,
+      .upload(filePath, optimizedFile, {
+        contentType: optimizedFile.type,
         upsert: false
       });
 

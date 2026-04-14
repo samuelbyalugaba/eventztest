@@ -112,13 +112,11 @@ export async function optimizeForUpload(file: File): Promise<File> {
   // Skip SVGs and GIFs (can't/shouldn't rasterize)
   if (file.type === 'image/svg+xml' || file.type === 'image/gif') return file;
 
-  // If already small enough (<500KB), skip
-  if (file.size < 500 * 1024) return file;
-
+  // Always compress — cap at 1200px and quality 0.75 for fast uploads & smaller storage
   return resizeImage(file, {
-    maxWidth: 1920,
-    maxHeight: 1920,
-    quality: 0.85,
-    format: file.type === 'image/png' ? 'image/jpeg' : 'image/jpeg',
+    maxWidth: 1200,
+    maxHeight: 1200,
+    quality: 0.75,
+    format: 'image/jpeg',
   });
 }
