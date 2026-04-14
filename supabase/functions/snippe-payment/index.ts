@@ -127,10 +127,7 @@ serve(async (req) => {
       // Or just fail. Let's fail for now to enforce proper setup, or return a specific error.
     }
 
-    // Initialize Supabase Admin Client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Supabase client already initialized above
 
     // Format phone number to 255xxxxxxxxx
     let formattedPhone = phoneNumber.replace(/\D/g, ''); // Remove non-digits
