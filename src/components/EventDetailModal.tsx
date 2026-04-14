@@ -22,11 +22,11 @@ export interface EventDetailModalProps {
 }
 
 const locations = [
-  { id: 'all', name: 'All Locations', flag: '🌍' },
-  { id: 'atlanta', name: 'Atlanta, USA', flag: '🇺🇸' },
-  { id: 'dar', name: 'Dar es Salaam, Tanzania', flag: '🇹🇿' },
-  { id: 'zanzibar', name: 'Zanzibar, Tanzania', flag: '🇹🇿' },
-  { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
+  { id: 'all', name: 'All Locations', flag: '' },
+  { id: 'atlanta', name: 'Atlanta, USA', flag: '' },
+  { id: 'dar', name: 'Dar es Salaam, Tanzania', flag: '' },
+  { id: 'zanzibar', name: 'Zanzibar, Tanzania', flag: '' },
+  { id: 'newyork', name: 'New York, USA', flag: '' },
 ];
 
 export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation, onTierSelect }: EventDetailModalProps) {
