@@ -2310,13 +2310,11 @@ export const getNotifications = async (userId: string) => {
       .from('tickets')
       .select(`
         id,
-        created_at,
         ticket_type,
         event:events!inner(id, title, organizer_id),
         user:profiles(id, full_name, avatar_url)
       `)
       .eq('event.organizer_id', userId)
-      .order('created_at', { ascending: false })
       .limit(20);
 
     if (ticketSales) {
@@ -2333,9 +2331,9 @@ export const getNotifications = async (userId: string) => {
             avatar: buyerAvatar
           },
           content: `bought a ${ticket.ticket_type} ticket for "${ticket.event?.title || 'Event'}"`,
-          time: ticket.created_at,
-          read: new Date(ticket.created_at).getTime() <= lastReadTime,
-          created_at: ticket.created_at
+          time: new Date().toISOString(),
+          read: false,
+          created_at: new Date().toISOString()
         });
       });
     }
