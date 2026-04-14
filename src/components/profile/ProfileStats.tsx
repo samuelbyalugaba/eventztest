@@ -43,7 +43,7 @@ export function ProfileStats({
         onClick={onHostedClick}
       >
         <div className="text-lg font-bold text-gray-900 leading-none mb-1">
-          {isOrganizer ? (hostedCount ?? <span className="inline-block w-4 h-4 bg-gray-200 rounded animate-pulse align-middle" />) : attendedCount}
+          {isOrganizer ? (hostedCount ?? 0) : attendedCount}
         </div>
         <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
           {isOrganizer ? 'Hosted' : 'Attended'}
