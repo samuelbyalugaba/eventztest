@@ -49,7 +49,10 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isSameOrigin = url.origin === self.location.origin;
   const isSupabaseStorage = url.hostname.endsWith('.supabase.co') && url.pathname.includes('/storage/');
-  if (!isSameOrigin && !isSupabaseStorage) {
+  const isWsrvCdn = url.hostname === 'wsrv.nl';
+  const isImageProxy = isSupabaseStorage || isWsrvCdn;
+
+  if (!isSameOrigin && !isImageProxy) {
     return;
   }
 
