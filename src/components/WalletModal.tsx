@@ -104,7 +104,13 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         .limit(50);
 
       if (transactions) {
-        setTxs(transactions as unknown as Tx[]);
+        // Only show wallet transactions (deposit, top-up, withdrawal, transfer, gift)
+        const walletTypes = ['deposit', 'top-up', 'withdrawal', 'transfer', 'gift'];
+        const walletTxs = (transactions as unknown as Tx[]).filter(t => {
+          const metaType = t.metadata?.type;
+          return typeof metaType === 'string' && walletTypes.includes(metaType.trim());
+        });
+        setTxs(walletTxs);
       }
 
     } catch (error: any) {
@@ -237,15 +243,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           <div className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-gradient-to-br from-purple-50 to-white">
             <div>
               <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-                {ntzsAvailable ? 'Available Balance' : 'Estimated Balance'}
+                Available Balance
               </p>
               <p className="text-2xl font-bold text-gray-900 mt-1">TSh {balance.toLocaleString()}</p>
-              {!ntzsAvailable && (
-                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Wallet service connecting…
-                </p>
-              )}
             </div>
             <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
               <Wallet className="w-5 h-5" />
