@@ -483,7 +483,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       />
 
       <ProfileStats
-        isLoading={isLoading}
+        
         isOrganizer={isOrganizer}
         hostedCount={organizerStats?.totalEvents ?? null}
         attendedCount={attendedEvents.length}
