@@ -2331,9 +2331,9 @@ export const getNotifications = async (userId: string) => {
             avatar: buyerAvatar
           },
           content: `bought a ${ticket.ticket_type} ticket for "${ticket.event?.title || 'Event'}"`,
-          time: ticket.created_at,
-          read: new Date(ticket.created_at).getTime() <= lastReadTime,
-          created_at: ticket.created_at
+          time: new Date().toISOString(),
+          read: false,
+          created_at: new Date().toISOString()
         });
       });
     }
