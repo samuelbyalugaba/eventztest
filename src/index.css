@@ -10,6 +10,20 @@
     overflow-x: hidden;
   }
 
+  /* Force Agora video containers to fill their parent */
+  #local-player > div,
+  #remote-player > div {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+  }
+  #local-player video,
+  #remote-player video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
