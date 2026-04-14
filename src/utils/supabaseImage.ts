@@ -23,37 +23,11 @@ interface TransformOptions {
 
 export function getOptimizedImageUrl(
   url: string | undefined | null,
-  options: TransformOptions = {}
+  _options: TransformOptions = {}
 ): string {
+  // Bypass wsrv.nl proxy — return original URL directly
   if (!url) return '';
-
-  // Don't double-proxy
-  if (url.includes('wsrv.nl')) return url;
-
-  // Only proxy http(s) URLs
-  if (!url.startsWith('http')) return url;
-
-  const {
-    width,
-    height,
-    quality = 75,
-    resize = 'cover',
-    dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1,
-  } = options;
-
-  const params = new URLSearchParams();
-  params.set('url', url);
-  if (width) params.set('w', String(Math.round(width * dpr)));
-  if (height) params.set('h', String(Math.round(height * dpr)));
-  params.set('q', String(quality));
-  params.set('output', 'webp');
-
-  // Map resize mode to wsrv.nl fit parameter
-  if (resize === 'cover') params.set('fit', 'cover');
-  else if (resize === 'contain') params.set('fit', 'contain');
-  else if (resize === 'fill') params.set('fit', 'fill');
-
-  return `https://wsrv.nl/?${params.toString()}`;
+  return url;
 }
 
 /**
