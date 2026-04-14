@@ -265,7 +265,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       } else {
         localStorage.setItem('eventz-user-profile', JSON.stringify(profileData));
       }
-      toast.success('Profile updated successfully! ✅');
+      toast.success('Profile updated successfully');
       setCurrentView('main');
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','phone','bio','birthdate','avatar_url', ...(isCreatorProfile ? ['location','organizer_type'] : [])] } }));
     } catch (error) {

@@ -152,7 +152,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
         contact_email: user.email || undefined
       });
 
-      toast.success('Your Creator profile is ready! 🎉');
+      toast.success('Your Creator profile is ready');
       
       // Dispatch event to refresh profile across the app
       window.dispatchEvent(new Event('profileUpdated'));

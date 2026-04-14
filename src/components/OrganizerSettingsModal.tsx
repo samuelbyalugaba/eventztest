@@ -251,7 +251,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         is_organizer: true // Ensure they are marked as organizer
       });
       
-      toast.success('Profile updated successfully! ✅');
+      toast.success('Profile updated successfully');
       window.dispatchEvent(new CustomEvent('profileUpdated'));
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to update profile';

@@ -79,7 +79,7 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
     onLike(highlight.id);
     
     if (!isLiked) {
-      toast.success('Added to favorites! ❤️', { duration: 2000 });
+      toast.success('Added to favorites', { duration: 2000 });
     }
   };
 

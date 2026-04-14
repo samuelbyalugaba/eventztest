@@ -266,7 +266,7 @@ export default function CreatePostPage() {
         } as any);
       }
 
-      toast.success('Post created successfully! 🎉');
+      toast.success('Post created successfully');
       window.dispatchEvent(new Event('postsUpdated'));
       navigate('/feed');
     } catch (error) {

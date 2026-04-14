@@ -311,7 +311,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         const newEvent = await createEvent(eventData);
         setSavedEventId(newEvent.id);
         setCurrentStatus('published');
-        toast.success('Event published successfully! 🎉', { description: 'Your event is now live on EVENTZ' });
+        toast.success('Event published successfully', { description: 'Your event is now live on EVENTZ' });
         setShowSuccessScreen(true);
         window.dispatchEvent(new Event('eventsUpdated'));
       }

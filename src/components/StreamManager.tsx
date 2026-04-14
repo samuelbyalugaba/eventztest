@@ -515,7 +515,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             setStreamHealth('good');
             setIsStarting(false);
             await Promise.resolve(onUpdateStatus(true));
-            toast.success("You are now LIVE! 🔴");
+            toast.success("You are now LIVE");
           } catch (error: any) {
             toast.error(`Failed to start stream: ${error.message}`);
             setIsStarting(false);

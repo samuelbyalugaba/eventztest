@@ -85,7 +85,7 @@ export function PWAInstallPrompt() {
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setShowPrompt(false);
-      toast.success('EVENTZ installed successfully! 🎉');
+      toast.success('EVENTZ installed successfully');
     };
 
     window.addEventListener('appinstalled', handleAppInstalled);
