@@ -61,10 +61,19 @@ export default defineConfig({
     build: {
       target: ['es2015', 'edge88', 'firefox78', 'chrome87', 'safari14'],
       outDir: 'dist',
+      cssMinify: true,
       rollupOptions: {
         output: {
           manualChunks: (id) => {
             if (id.includes('node_modules')) {
+              if (id.includes('react-dom')) return 'react-dom';
+              if (id.includes('recharts') || id.includes('d3-')) return 'charts';
+              if (id.includes('@radix-ui')) return 'radix';
+              if (id.includes('@supabase')) return 'supabase';
+              if (id.includes('lucide-react')) return 'icons';
+              if (id.includes('agora-rtc')) return 'agora';
+              if (id.includes('hls.js')) return 'hls';
+              if (id.includes('framer-motion')) return 'motion';
               return 'vendor';
             }
           },

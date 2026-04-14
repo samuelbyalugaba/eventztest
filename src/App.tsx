@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { EventDetails } from './components/EventDetails';
 import { useProfileStore } from './store/profileStore';
@@ -6,12 +6,20 @@ import { LiveFeed } from './components/LiveFeed';
 import { Feed } from './components/Feed';
 import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
-import { CreateEventWrapper } from './components/CreateEventWrapper';
-import { PostDetailWrapper } from './components/PostDetailWrapper';
-import { ProfileModalWrapper } from './components/ProfileModalWrapper';
-import { EventDetailWrapper } from './components/EventDetailWrapper';
-import CreatePostPage from './components/CreatePostPage';
 import { Calendar, Radio, User, Rss } from 'lucide-react';
+
+// Lazy-loaded route components (not needed on initial load)
+const CreateEventWrapper = lazy(() => import('./components/CreateEventWrapper').then(m => ({ default: m.CreateEventWrapper })));
+const PostDetailWrapper = lazy(() => import('./components/PostDetailWrapper').then(m => ({ default: m.PostDetailWrapper })));
+const ProfileModalWrapper = lazy(() => import('./components/ProfileModalWrapper').then(m => ({ default: m.ProfileModalWrapper })));
+const EventDetailWrapper = lazy(() => import('./components/EventDetailWrapper').then(m => ({ default: m.EventDetailWrapper })));
+const CreatePostPage = lazy(() => import('./components/CreatePostPage'));
+
+const RouteFallback = () => (
+  <div className="flex items-center justify-center min-h-[40vh]">
+    <div className="w-8 h-8 border-3 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+  </div>
+);
 import { Toaster, toast } from 'sonner';
 import { supabase } from './utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
