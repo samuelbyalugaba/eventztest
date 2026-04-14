@@ -1,7 +1,6 @@
 interface ProfileStatsProps {
   isOrganizer: boolean;
   hostedCount: number | null;
-  hostedCount: number | null;
   attendedCount: number;
   followers: number;
   following: number;
