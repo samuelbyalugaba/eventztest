@@ -1,5 +1,4 @@
 interface ProfileStatsProps {
-  isLoading: boolean;
   isOrganizer: boolean;
   hostedCount: number | null;
   attendedCount: number;
@@ -11,7 +10,6 @@ interface ProfileStatsProps {
 }
 
 export function ProfileStats({
-  isLoading,
   isOrganizer,
   hostedCount,
   attendedCount,
@@ -21,20 +19,7 @@ export function ProfileStats({
   onFollowersClick,
   onFollowingClick,
 }: ProfileStatsProps) {
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-between px-6 mb-6">
-        <div className="flex w-full justify-between">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex-1 px-2">
-              <div className="h-6 w-12 bg-gray-200 rounded mx-auto mb-1 animate-pulse" />
-              <div className="h-3 w-16 bg-gray-100 rounded mx-auto animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // No skeleton - show numbers immediately (defaults to 0, updates when data arrives)
 
   return (
     <div className="flex items-center justify-between px-6 mb-6">
