@@ -672,14 +672,34 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               </div>
 
               {/* Virtual Ticket CTA */}
-              <button 
-                onClick={() => !isEventPast && onPurchaseTicket(event)}
-                disabled={isEventPast}
-                className={`w-full bg-gray-900 text-white py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`}
-              >
-                <Tv className="w-4 h-4" />
-                <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : 'Get Access'}</span>
-              </button>
+              {requiresVirtualAccess ? (
+                <button 
+                  onClick={() => !isEventPast && onPurchaseTicket(event)}
+                  disabled={isEventPast}
+                  className={`w-full bg-gray-900 text-white py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`}
+                >
+                  <Tv className="w-4 h-4" />
+                  <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : hasVirtualAccess ? 'Access Granted' : 'Get Access'}</span>
+                </button>
+              ) : (
+                <button 
+                  onClick={() => {
+                    if (!isEventPast) {
+                      setHasVirtualAccess(true);
+                      if (event.streaming?.isLive) {
+                        setShowLiveStream(true);
+                      } else {
+                        toast.success('Free virtual access granted!');
+                      }
+                    }
+                  }}
+                  disabled={isEventPast}
+                  className={`w-full bg-gray-900 text-white py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`}
+                >
+                  <Tv className="w-4 h-4" />
+                  <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : event.streaming?.isLive ? 'Watch Live' : 'Free Access'}</span>
+                </button>
+              )}
             </div>
           )}
 
