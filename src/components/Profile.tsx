@@ -474,6 +474,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             onEditProfile={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
             onSettings={() => { setSettingsInitialView('main'); setShowSettingsModal(true); }}
             onDashboard={() => setShowProfessionalDashboard(true)}
+            onWallet={() => setShowWalletModal(true)}
             onLogout={onLogout}
           />
         }
@@ -572,6 +573,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         )}
         {showProfessionalDashboard && (
           <ProfessionalDashboardModal onClose={() => setShowProfessionalDashboard(false)} organizerProfile={userProfile} onCreateEvent={onCreateEvent || (() => {})} onEditEvent={onEditEvent} />
+        )}
+        {showWalletModal && (
+          <WalletModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} />
         )}
       </Suspense>
       {showTicketListModal && (
