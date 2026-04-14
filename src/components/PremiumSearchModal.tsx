@@ -158,10 +158,10 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
     (searchCategory === 'venues' && filteredVenues.length === 0);
 
   const categories = [
-    { id: 'all', name: 'All', icon: '🔍' },
-    { id: 'events', name: 'Events', icon: '🎉' },
-    { id: 'venues', name: 'Venues', icon: '📍' },
-    { id: 'people', name: 'People', icon: '👥' },
+    { id: 'all', name: 'All', icon: '' },
+    { id: 'events', name: 'Events', icon: '' },
+    { id: 'venues', name: 'Venues', icon: '' },
+    { id: 'people', name: 'People', icon: '' },
   ];
 
   return (

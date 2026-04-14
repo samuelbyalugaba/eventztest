@@ -155,7 +155,7 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
     if (!isLiked) {
       setIsLiked(true);
       setLikes(likes + 1);
-      toast.success('Liked! ❤️', { duration: 1500 });
+      toast.success('Liked', { duration: 1500 });
     } else {
       setIsLiked(false);
       setLikes(likes - 1);

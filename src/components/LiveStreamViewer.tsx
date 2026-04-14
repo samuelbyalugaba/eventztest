@@ -347,7 +347,7 @@ export function LiveStreamViewer({ stream, onClose }: LiveStreamViewerProps) {
       const amount = amounts[Math.floor(Math.random() * amounts.length)];
       
       await sendGift(stream.id, amount, 'TZS');
-      toast.success(`Sent a gift of TZS ${amount}! 🎁`);
+      toast.success(`Sent a gift of TZS ${amount}`);
       
       // Trigger a special animation or reaction?
       setReactions(prev => [...prev, Date.now(), Date.now()+100, Date.now()+200]); // Burst of hearts

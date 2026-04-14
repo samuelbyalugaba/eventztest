@@ -31,7 +31,7 @@ export function EventSuccessScreen({ formData, analytics, onBack }: EventSuccess
             <Sparkles className="w-8 h-8 text-yellow-400 absolute -top-2 -right-2 animate-bounce" />
             <Sparkles className="w-6 h-6 text-pink-400 absolute -bottom-1 -left-1 animate-pulse" />
           </div>
-          <h1 className="text-gray-900 text-4xl mb-3">Event Published! 🎉</h1>
+          <h1 className="text-gray-900 text-4xl mb-3">Event Published!</h1>
           <p className="text-gray-600 text-lg">Your event is now live on EVENTZ</p>
         </div>
 

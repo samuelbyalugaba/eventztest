@@ -80,14 +80,14 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
             title: `Ticket: ${ticket.name}`,
             text: `Here is my ticket for ${ticket.name}!`,
           });
-          toast.success('Shared successfully! 🎉');
+          toast.success('Shared successfully');
         } else {
            await navigator.share({
             title: `Ticket: ${ticket.name}`,
             text: `I'm going to ${ticket.name}! Join me!`,
             url: window.location.origin
           });
-          toast.success('Shared successfully! 🎉');
+          toast.success('Shared successfully');
         }
       } else {
         // Fallback to clipboard

@@ -120,7 +120,7 @@ export function ExploreMap() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-gray-900 mb-1">EVENTZ</h1>
-            <p className="text-gray-700">Hello George 👋</p>
+            <p className="text-gray-700">Hello George</p>
           </div>
           <button className="p-3 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 transition-colors">
             <Search className="w-6 h-6 text-gray-600" />

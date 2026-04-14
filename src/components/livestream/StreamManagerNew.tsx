@@ -354,7 +354,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             setIsStarting(false);
             setPhase('live');
             await Promise.resolve(onUpdateStatus(true));
-            toast.success("You are now LIVE! 🔴");
+            toast.success("You are now LIVE");
           } catch (e: any) { toast.error(`Failed: ${e.message}`); setIsStarting(false); }
         }, 3000);
       }
@@ -668,24 +668,22 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   return (
     <div className="fixed inset-0 bg-black z-50 overflow-hidden flex">
       {/* Video + HUD area */}
-      <div className="flex-1 relative">
-        {/* Video */}
-        <div className="absolute inset-0">
-          <div id="local-player" className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`} />
-          {!cameraEnabled && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex flex-col items-center text-white/50">
-                <VideoOff className="w-12 h-12 mb-3" />
-                <span>Camera off</span>
-              </div>
+      <div className="flex-1 relative min-h-0">
+        {/* Video — fill entire area, no extra wrapper */}
+        <div id="local-player" className={`absolute inset-0 w-full h-full [&>div]:!w-full [&>div]:!h-full [&>div]:!position-relative [&_video]:!w-full [&_video]:!h-full [&_video]:!object-cover ${!cameraEnabled ? 'invisible' : ''}`} />
+        {!cameraEnabled && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+            <div className="flex flex-col items-center text-white/50">
+              <VideoOff className="w-12 h-12 mb-3" />
+              <span>Camera off</span>
             </div>
-          )}
-          {countdown > 0 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-50">
-              <div className="text-white text-7xl font-black animate-pulse">{countdown}</div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
+        {countdown > 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-50">
+            <div className="text-white text-7xl font-black animate-pulse">{countdown}</div>
+          </div>
+        )}
 
         {/* HUD Overlay */}
         <div className="absolute inset-0 pointer-events-none z-40">

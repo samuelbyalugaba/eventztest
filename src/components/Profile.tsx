@@ -347,7 +347,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   }, [userId, isOwnProfile]);
 
   useEffect(() => {
-    if (activeTab === 'upcoming') loadOrganizerEventsIfNeeded();
+    if (activeTab === 'upcoming' || activeTab === 'hosted') loadOrganizerEventsIfNeeded();
   }, [activeTab, userProfile?.is_organizer, currentUser?.id, userId]);
 
   useEffect(() => {

@@ -22,11 +22,11 @@ export interface EventDetailModalProps {
 }
 
 const locations = [
-  { id: 'all', name: 'All Locations', flag: '🌍' },
-  { id: 'atlanta', name: 'Atlanta, USA', flag: '🇺🇸' },
-  { id: 'dar', name: 'Dar es Salaam, Tanzania', flag: '🇹🇿' },
-  { id: 'zanzibar', name: 'Zanzibar, Tanzania', flag: '🇹🇿' },
-  { id: 'newyork', name: 'New York, USA', flag: '🇺🇸' },
+  { id: 'all', name: 'All Locations', flag: '' },
+  { id: 'atlanta', name: 'Atlanta, USA', flag: '' },
+  { id: 'dar', name: 'Dar es Salaam, Tanzania', flag: '' },
+  { id: 'zanzibar', name: 'Zanzibar, Tanzania', flag: '' },
+  { id: 'newyork', name: 'New York, USA', flag: '' },
 ];
 
 export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation, onTierSelect }: EventDetailModalProps) {
@@ -423,7 +423,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               }}
               onClose={() => setShowOrganizerProfile(false)}
               onFollow={() => {
-                toast.success(`Following ${organizerDisplayName}! 🎉`);
+                toast.success(`Following ${organizerDisplayName}`);
               }}
               onMessage={() => {
                 onStartConversation?.({
@@ -688,7 +688,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-900">Get Tickets</h3>
                 {(event as any).ticketsSold && (event as any).ticketsSold > 100 && (
-                  <span className="text-orange-500 text-sm font-medium animate-pulse">Selling fast! 🔥</span>
+                  <span className="text-orange-500 text-sm font-medium animate-pulse">Selling fast</span>
                 )}
               </div>
               
