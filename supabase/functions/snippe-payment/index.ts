@@ -58,11 +58,11 @@ serve(async (req) => {
     }
 
     // Determine the authoritative price from the database
-    let serverPrice = amount; // fallback to client amount only if we can't determine
+    // Priority: 1) Match ticket_type to virtualPrice or tier, 2) Any available price
+    let serverPrice = 0;
     const ticketType = metadata?.ticket_type;
     
     if (ticketType === 'Virtual' && eventData.streaming?.virtualPrice) {
-      // Extract numeric price from virtualPrice string (e.g., "TSh 5,000" -> 5000)
       serverPrice = parseFloat(String(eventData.streaming.virtualPrice).replace(/[^0-9.]/g, '')) || 0;
     } else if (ticketType && eventData.ticket_tiers && Array.isArray(eventData.ticket_tiers)) {
       // Find matching tier
@@ -70,13 +70,31 @@ serve(async (req) => {
       if (tier) {
         serverPrice = tier.priceNumeric || parseFloat(String(tier.price).replace(/[^0-9.]/g, '')) || 0;
       }
-    } else if (eventData.price_range) {
+    }
+    
+    // Fallback: if no specific match, try all price sources
+    if (serverPrice <= 0 && eventData.streaming?.virtualPrice) {
+      serverPrice = parseFloat(String(eventData.streaming.virtualPrice).replace(/[^0-9.]/g, '')) || 0;
+    }
+    if (serverPrice <= 0 && eventData.ticket_tiers?.length > 0) {
+      // Use the first tier's price as reference
+      const firstTier = eventData.ticket_tiers[0];
+      serverPrice = firstTier.priceNumeric || parseFloat(String(firstTier.price).replace(/[^0-9.]/g, '')) || 0;
+    }
+    if (serverPrice <= 0 && eventData.price_range) {
       serverPrice = parseFloat(String(eventData.price_range).replace(/[^0-9.]/g, '')) || 0;
+    }
+    
+    // Final safety: if server price is still 0 but client sent a positive amount, use client amount
+    // (covers edge cases where price is stored differently)
+    if (serverPrice <= 0 && amount > 0) {
+      console.warn(`Could not determine server price, falling back to client amount: ${amount}`);
+      serverPrice = amount;
     }
 
     console.log(`Server price: ${serverPrice}, Client amount: ${amount}, Ticket type: ${ticketType}`);
 
-    // Use server-determined price (prevents client-side price manipulation)
+    // Use server-determined price
     const trustedAmount = serverPrice;
 
     // Currency Conversion Logic

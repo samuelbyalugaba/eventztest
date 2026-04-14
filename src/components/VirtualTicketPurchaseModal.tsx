@@ -170,7 +170,8 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
             metadata: { 
               transactionId: transaction.id,
               customer_name: ticketFormData.name,
-              customer_email: ticketFormData.email
+              customer_email: ticketFormData.email,
+              ticket_type: 'Virtual'
             }
           });
 
