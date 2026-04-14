@@ -119,12 +119,9 @@ serve(async (req) => {
       throw new Error(`Payment amount (${finalAmount} TZS) is below the minimum of ${SNIPPE_MINIMUM_TZS} TZS. Please check the event pricing.`);
     }
 
-    const apiKey = Deno.env.get("SNIPPE_API_KEY") || "snp_0af9b516c248f7b62a1d82d130d174f0ddacd92b7241870b06251fb200a4d2bf";
+    const apiKey = Deno.env.get("SNIPPE_API_KEY");
     if (!apiKey) {
-      console.warn("SNIPPE_API_KEY is not set. Using mock mode if configured or failing.");
-      // throw new Error("Server configuration error: Missing Snippe API Key"); 
-      // For development, if key is missing, maybe we simulate success? 
-      // Or just fail. Let's fail for now to enforce proper setup, or return a specific error.
+      console.warn("SNIPPE_API_KEY is not set.");
     }
 
     // Supabase client already initialized above
