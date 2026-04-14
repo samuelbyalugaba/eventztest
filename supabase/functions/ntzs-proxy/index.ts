@@ -1,13 +1,14 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const NTZS_API_KEY = Deno.env.get('NTZS_API_KEY');
 const NTZS_BASE_URL = 'https://api.ntzs.co/api/v1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-}
+};
 
 function jsonResponse(body: object, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -32,6 +33,19 @@ serve(async (req) => {
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
+    // Validate JWT
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return jsonResponse({ error: 'Invalid or expired token' }, 401);
+    }
+    const authenticatedUserId = claimsData.claims.sub;
+
     let bodyData;
     try {
       bodyData = await req.json();
@@ -41,6 +55,11 @@ serve(async (req) => {
 
     const { action, payload } = bodyData;
     if (!action) return jsonResponse({ error: 'Missing action' }, 400);
+
+    // For create_user, enforce the externalId matches the authenticated user
+    if (action === 'create_user' && payload?.externalId && payload.externalId !== authenticatedUserId) {
+      return jsonResponse({ error: 'Cannot create user for a different account' }, 403);
+    }
 
     // Route to nTZS API endpoint
     let endpoint = '';
@@ -104,8 +123,10 @@ serve(async (req) => {
       const text = await ntzsResponse.text();
       console.error(`[ntzs-proxy] Non-JSON response (${ntzsResponse.status}):`, text.substring(0, 300));
       return jsonResponse({
-        error: `nTZS API returned ${ntzsResponse.status}`,
+        error: `nTZS API Error: ${ntzsResponse.status} Not Found`,
         details: text.substring(0, 500),
+        url: endpoint,
+        apiUnavailable: true,
       }, 502);
     }
 
@@ -115,13 +136,14 @@ serve(async (req) => {
         error: data.message || `nTZS API Error: ${ntzsResponse.status}`,
         details: data,
         statusCode: ntzsResponse.status,
-      });
+        apiUnavailable: ntzsResponse.status === 404,
+      }, ntzsResponse.status >= 500 ? 502 : 400);
     }
 
     return jsonResponse(data);
 
   } catch (error) {
     console.error('[ntzs-proxy] Internal Error:', error);
-    return jsonResponse({ error: error.message || 'Internal Server Error' }, 500);
+    return jsonResponse({ error: error.message || 'Internal Server Error', apiUnavailable: true }, 500);
   }
-})
+});
