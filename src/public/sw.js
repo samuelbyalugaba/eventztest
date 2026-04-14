@@ -1,7 +1,9 @@
-const CACHE_NAME = 'eventz-v2';
-const RUNTIME_CACHE = 'eventz-runtime-v2';
+const STATIC_CACHE = 'eventz-static-v4';
+const RUNTIME_CACHE = 'eventz-runtime-v4';
+const IMAGE_CACHE = 'eventz-images-v4';
+const IMAGE_CACHE_MAX = 200;
+const CURRENT_CACHES = [STATIC_CACHE, RUNTIME_CACHE, IMAGE_CACHE];
 
-// Assets to cache on install
 const STATIC_CACHE_URLS = [
   '/',
   '/manifest.json',
@@ -9,138 +11,128 @@ const STATIC_CACHE_URLS = [
   '/icons/icon-512x512.png',
 ];
 
-// Install event - cache static assets
+const isCacheableResponse = (response) => {
+  return !!response && (response.ok || response.type === 'opaque');
+};
+
+const isSameOriginRequest = (url) => url.origin === self.location.origin;
+const isSupabaseStorageRequest = (url) => url.hostname.endsWith('.supabase.co') && url.pathname.includes('/storage/');
+const isWsrvRequest = (url) => url.hostname === 'wsrv.nl';
+const isImageRequest = (request) => {
+  const accept = request.headers.get('accept') || '';
+  return request.destination === 'image' || accept.includes('image/');
+};
+
+const pruneImageCache = async () => {
+  const cache = await caches.open(IMAGE_CACHE);
+  const keys = await cache.keys();
+
+  if (keys.length <= IMAGE_CACHE_MAX) return;
+
+  await Promise.all(
+    keys.slice(0, keys.length - IMAGE_CACHE_MAX).map((key) => cache.delete(key))
+  );
+};
+
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[ServiceWorker] Caching static assets');
-      return cache.addAll(STATIC_CACHE_URLS);
-    })
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_CACHE_URLS))
   );
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    caches.keys().then((cacheNames) =>
+      Promise.all(
         cacheNames
-          .filter((cacheName) => {
-            return cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE;
-          })
-          .map((cacheName) => {
-            console.log('[ServiceWorker] Removing old cache:', cacheName);
-            return caches.delete(cacheName);
-          })
-      );
-    })
+          .filter((cacheName) => cacheName.startsWith('eventz-') && !CURRENT_CACHES.includes(cacheName))
+          .map((cacheName) => caches.delete(cacheName))
+      )
+    )
   );
   self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
 self.addEventListener('fetch', (event) => {
-  // Bypass non-GET requests (e.g., POST to APIs/functions)
-  if (event.request.method !== 'GET') {
+  if (event.request.method !== 'GET') return;
+  if (event.request.url.startsWith('chrome-extension://')) return;
+
+  const url = new URL(event.request.url);
+  const isSameOrigin = isSameOriginRequest(url);
+  const isRemoteImage = isSupabaseStorageRequest(url) || isWsrvRequest(url);
+  const shouldHandleImage = isImageRequest(event.request) && (isSameOrigin || isRemoteImage);
+
+  if (isSameOrigin && (url.pathname.includes('/api/') || url.pathname.includes('/functions/v1/'))) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
-
-  // Skip Chrome extensions
-  if (event.request.url.startsWith('chrome-extension://')) {
-    return;
-  }
-
-  // Bypass API and Edge Functions calls to avoid caching/interference
-  if (event.request.url.includes('/api/') || event.request.url.includes('/functions/v1/')) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
-
-  // Navigation requests: network-first so users get fresh builds (important on iOS PWAs)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const responseToCache = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          if (isCacheableResponse(response)) {
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => cache.put(event.request, responseToCache));
+          }
           return response;
         })
-        .catch(() => caches.match(event.request).then((r) => r || caches.match('/')))
+        .catch(() => caches.match(event.request).then((response) => response || caches.match('/')))
     );
     return;
   }
 
+  if (shouldHandleImage) {
+    event.respondWith(
+      caches.open(IMAGE_CACHE).then(async (cache) => {
+        const cachedResponse = await cache.match(event.request);
+        if (cachedResponse) return cachedResponse;
+
+        try {
+          const response = await fetch(event.request);
+          if (isCacheableResponse(response)) {
+            cache.put(event.request, response.clone());
+            void pruneImageCache();
+          }
+          return response;
+        } catch {
+          return new Response('', { status: 504, statusText: 'Image unavailable' });
+        }
+      })
+    );
+    return;
+  }
+
+  if (!isSameOrigin) return;
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
+      const networkFetch = fetch(event.request)
+        .then((response) => {
+          if (isCacheableResponse(response)) {
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => cache.put(event.request, responseToCache));
+          }
+          return response;
+        });
+
       if (cachedResponse) {
-        // Return cached response and update cache in background
-        fetch(event.request)
-          .then((response) => {
-            if (response && response.status === 200) {
-              caches.open(RUNTIME_CACHE).then((cache) => {
-                cache.put(event.request, response.clone());
-              });
-            }
-          })
-          .catch(() => {
-            // Network failed, cached response is all we have
-          });
+        event.waitUntil(networkFetch.catch(() => undefined));
         return cachedResponse;
       }
 
-      // Not in cache, fetch from network
-      return fetch(event.request)
-        .then((response) => {
-          // Don't cache if not a success response
-          if (!response || response.status !== 200 || response.type === 'error') {
-            return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          // Cache the fetched response
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
-          return response;
-        })
-        .catch(() => {
-          // Network request failed, return offline page if available
-          return caches.match('/').then((response) => {
-            return response || new Response('Offline - Please check your connection');
-          });
-        });
+      return networkFetch.catch(() => new Response('Offline - Please check your connection', { status: 503 }));
     })
   );
 });
 
-// Background sync event (for offline functionality)
 self.addEventListener('sync', (event) => {
-  console.log('[ServiceWorker] Background sync');
   if (event.tag === 'sync-events') {
     event.waitUntil(
-      // Sync data when back online
       fetch('/api/sync')
         .then((response) => response.json())
-        .then((data) => {
-          console.log('[ServiceWorker] Synced:', data);
-        })
-        .catch((error) => {
-          console.log('[ServiceWorker] Sync failed:', error);
-        })
+        .catch(() => undefined)
     );
   }
 });

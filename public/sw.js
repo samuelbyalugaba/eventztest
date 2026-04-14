@@ -1,9 +1,9 @@
-const CACHE_NAME = 'eventz-v3';
-const RUNTIME_CACHE = 'eventz-runtime-v3';
-const IMAGE_CACHE = 'eventz-images-v1';
+const STATIC_CACHE = 'eventz-static-v4';
+const RUNTIME_CACHE = 'eventz-runtime-v4';
+const IMAGE_CACHE = 'eventz-images-v4';
 const IMAGE_CACHE_MAX = 200;
+const CURRENT_CACHES = [STATIC_CACHE, RUNTIME_CACHE, IMAGE_CACHE];
 
-// Assets to cache on install
 const STATIC_CACHE_URLS = [
   '/',
   '/manifest.json',
@@ -11,212 +11,128 @@ const STATIC_CACHE_URLS = [
   '/icons/icon-512x512.png',
 ];
 
-// Install event - cache static assets
+const isCacheableResponse = (response) => {
+  return !!response && (response.ok || response.type === 'opaque');
+};
+
+const isSameOriginRequest = (url) => url.origin === self.location.origin;
+const isSupabaseStorageRequest = (url) => url.hostname.endsWith('.supabase.co') && url.pathname.includes('/storage/');
+const isWsrvRequest = (url) => url.hostname === 'wsrv.nl';
+const isImageRequest = (request) => {
+  const accept = request.headers.get('accept') || '';
+  return request.destination === 'image' || accept.includes('image/');
+};
+
+const pruneImageCache = async () => {
+  const cache = await caches.open(IMAGE_CACHE);
+  const keys = await cache.keys();
+
+  if (keys.length <= IMAGE_CACHE_MAX) return;
+
+  await Promise.all(
+    keys.slice(0, keys.length - IMAGE_CACHE_MAX).map((key) => cache.delete(key))
+  );
+};
+
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[ServiceWorker] Caching static assets');
-      return cache.addAll(STATIC_CACHE_URLS);
-    })
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_CACHE_URLS))
   );
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    caches.keys().then((cacheNames) =>
+      Promise.all(
         cacheNames
-          .filter((cacheName) => {
-            return cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE;
-          })
-          .map((cacheName) => {
-            console.log('[ServiceWorker] Removing old cache:', cacheName);
-            return caches.delete(cacheName);
-          })
-      );
-    })
+          .filter((cacheName) => cacheName.startsWith('eventz-') && !CURRENT_CACHES.includes(cacheName))
+          .map((cacheName) => caches.delete(cacheName))
+      )
+    )
   );
   self.clients.claim();
 });
 
-// Fetch event
 self.addEventListener('fetch', (event) => {
-  // Skip cross-origin requests
+  if (event.request.method !== 'GET') return;
+  if (event.request.url.startsWith('chrome-extension://')) return;
+
   const url = new URL(event.request.url);
-  const isSameOrigin = url.origin === self.location.origin;
-  const isSupabaseStorage = url.hostname.endsWith('.supabase.co') && url.pathname.includes('/storage/');
-  const isWsrvCdn = url.hostname === 'wsrv.nl';
-  const isImageProxy = isSupabaseStorage || isWsrvCdn;
+  const isSameOrigin = isSameOriginRequest(url);
+  const isRemoteImage = isSupabaseStorageRequest(url) || isWsrvRequest(url);
+  const shouldHandleImage = isImageRequest(event.request) && (isSameOrigin || isRemoteImage);
 
-  if (!isSameOrigin && !isImageProxy) {
+  if (isSameOrigin && (url.pathname.includes('/api/') || url.pathname.includes('/functions/v1/'))) {
+    event.respondWith(fetch(event.request));
     return;
   }
 
-  // Skip Chrome extensions
-  if (event.request.url.startsWith('chrome-extension://')) {
-    return;
-  }
-
-  // 1. Navigation Requests (HTML pages) - Network First, Fallback to Cache
-  // This ensures users always get the latest version of the app shell
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Check if valid response
-          if (!response || response.status !== 200 || response.type === 'error') {
-            return response;
+          if (isCacheableResponse(response)) {
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => cache.put(event.request, responseToCache));
           }
-          
-          // Cache the latest version
-          const responseToCache = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-          
           return response;
         })
-        .catch(() => {
-          // Network failed, try cache
-          return caches.match(event.request).then((response) => {
-            return response || caches.match('/'); // Fallback to root if specific page fails
-          });
-        })
+        .catch(() => caches.match(event.request).then((response) => response || caches.match('/')))
     );
     return;
   }
 
-  // 2. Static Assets (JS, CSS, Images) - Stale-While-Revalidate (same-origin)
-  // Serve from cache immediately for speed, then update in background
-  if (isSameOrigin) {
+  if (shouldHandleImage) {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          fetch(event.request)
-            .then((response) => {
-              if (response && response.status === 200) {
-                caches.open(RUNTIME_CACHE).then((cache) => {
-                  cache.put(event.request, response.clone());
-                });
-              }
-            })
-            .catch(() => {});
-          return cachedResponse;
+      caches.open(IMAGE_CACHE).then(async (cache) => {
+        const cachedResponse = await cache.match(event.request);
+        if (cachedResponse) return cachedResponse;
+
+        try {
+          const response = await fetch(event.request);
+          if (isCacheableResponse(response)) {
+            cache.put(event.request, response.clone());
+            void pruneImageCache();
+          }
+          return response;
+        } catch {
+          return new Response('', { status: 504, statusText: 'Image unavailable' });
         }
-        return fetch(event.request)
-          .then((response) => {
-            if (!response || response.status !== 200 || response.type === 'error') {
-              return response;
-            }
-            const responseToCache = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-            return response;
-          })
-          .catch(() => {
-            if (event.request.headers.get('accept').includes('image')) {
-            }
-          });
       })
     );
     return;
   }
 
-  // 3. Image CDN / Supabase Storage (cross-origin images) - Cache First with size limit
-  if (isImageProxy && event.request.method === 'GET') {
-    event.respondWith(
-      caches.open(IMAGE_CACHE).then((cache) =>
-        cache.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-
-          return fetch(event.request, { mode: 'cors' })
-            .then((response) => {
-              if (!response || !response.ok) {
-                // Fallback to no-cors for Supabase direct URLs
-                return fetch(event.request, { mode: 'no-cors' }).then((opaqueRes) => {
-                  if (opaqueRes) cache.put(event.request, opaqueRes.clone());
-                  return opaqueRes;
-                });
-              }
-              cache.put(event.request, response.clone());
-              // Prune cache if over limit
-              cache.keys().then((keys) => {
-                if (keys.length > IMAGE_CACHE_MAX) {
-                  cache.delete(keys[0]);
-                }
-              });
-              return response;
-            })
-            .catch(() => caches.match('/icons/icon-192x192.png'));
-        })
-      )
-    );
-    return;
-  }
+  if (!isSameOrigin) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
+      const networkFetch = fetch(event.request)
+        .then((response) => {
+          if (isCacheableResponse(response)) {
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => cache.put(event.request, responseToCache));
+          }
+          return response;
+        });
+
       if (cachedResponse) {
-        // Return cached response immediately
-        // Update cache in background
-        fetch(event.request)
-          .then((response) => {
-            if (response && response.status === 200) {
-              caches.open(RUNTIME_CACHE).then((cache) => {
-                cache.put(event.request, response.clone());
-              });
-            }
-          })
-          .catch(() => {
-            // Network failed, nothing to update
-          });
-          
+        event.waitUntil(networkFetch.catch(() => undefined));
         return cachedResponse;
       }
 
-      // Not in cache, fetch from network
-      return fetch(event.request)
-        .then((response) => {
-          if (!response || response.status !== 200 || response.type === 'error') {
-            return response;
-          }
-
-          const responseToCache = response.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
-          return response;
-        })
-        .catch(() => {
-          // Network request failed
-          if (event.request.headers.get('accept').includes('image')) {
-            // Could return a placeholder image here
-          }
-        });
+      return networkFetch.catch(() => new Response('Offline - Please check your connection', { status: 503 }));
     })
   );
 });
 
-// Background sync event (for offline functionality)
 self.addEventListener('sync', (event) => {
-  console.log('[ServiceWorker] Background sync');
   if (event.tag === 'sync-events') {
     event.waitUntil(
-      // Sync data when back online
       fetch('/api/sync')
         .then((response) => response.json())
-        .then((data) => {
-          console.log('[ServiceWorker] Synced:', data);
-        })
-        .catch((error) => {
-          console.log('[ServiceWorker] Sync failed:', error);
-        })
+        .catch(() => undefined)
     );
   }
 });
