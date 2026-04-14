@@ -23,8 +23,8 @@ interface TransformOptions {
   dpr?: number;
 }
 
-const SUPABASE_STORAGE_OBJECT = '/storage/v1/object/public/';
-const SUPABASE_STORAGE_RENDER = '/storage/v1/render/image/public/';
+// const SUPABASE_STORAGE_OBJECT = '/storage/v1/object/public/';
+// const SUPABASE_STORAGE_RENDER = '/storage/v1/render/image/public/';
 
 export function getOptimizedImageUrl(
   url: string | undefined | null,
