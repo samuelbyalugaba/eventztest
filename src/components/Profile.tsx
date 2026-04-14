@@ -487,12 +487,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       />
 
       <ProfileStats
-        
         isOrganizer={isOrganizer}
         hostedCount={organizerStats?.totalEvents ?? null}
         attendedCount={attendedEvents.length}
         followers={followStats.followers}
         following={followStats.following}
+        dataReady={!isLoading}
         onHostedClick={() => setShowEventListModal(true)}
         onFollowersClick={handleShowFollowers}
         onFollowingClick={handleShowFollowing}
