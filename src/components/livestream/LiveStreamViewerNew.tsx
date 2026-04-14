@@ -419,38 +419,35 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   // ─── MOBILE LAYOUT ─────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[100] bg-black">
-      <div className="absolute inset-0" onDoubleClick={handleLike}>
+    <div className="fixed inset-0 z-[100] bg-black h-[100dvh] overflow-hidden overscroll-none">
+      <div className="absolute inset-0 h-full" onDoubleClick={handleLike}>
         {renderVideo()}
       </div>
 
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/80 via-transparent to-black/60" />
 
-      <div className="absolute inset-0 flex flex-col justify-between p-3">
-        <ViewerHeader
-          host={stream.host}
-          hostAvatar={stream.host_avatar}
-          isLive={true}
-          viewerCount={viewerCount}
-          likes={likes}
-          isLiked={isLiked}
-          isFollowing={isFollowingHost}
-          onFollow={handleFollow}
-          onClose={onClose}
-        />
+      {/* Fixed header overlay */}
+      <div className="absolute top-0 left-0 right-0 p-3 pointer-events-none">
+        <div className="pointer-events-auto">
+          <ViewerHeader
+            host={stream.host}
+            hostAvatar={stream.host_avatar}
+            isLive={true}
+            viewerCount={viewerCount}
+            likes={likes}
+            isLiked={isLiked}
+            isFollowing={isFollowingHost}
+            onFollow={handleFollow}
+            onClose={onClose}
+          />
+        </div>
+      </div>
 
-        <GiftBannerOverlay banners={giftBanners} />
+      <GiftBannerOverlay banners={giftBanners} />
 
-        <div className="flex-1" />
-
-        <div className="space-y-2">
-          {isChatVisible && (
-            <div className="max-w-[80%]">
-              <FloatingChat messages={messages} maxVisible={4} />
-            </div>
-          )}
-
-          <ViewerActionBar
+      {/* Fixed bottom overlay - always at bottom, never pushes video */}
+      <div className="absolute bottom-0 left-0 right-0 p-3">
+        <ViewerActionBar
             message={message}
             onMessageChange={setMessage}
             onSendMessage={handleSendMessage}
@@ -464,7 +461,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
             isChatVisible={isChatVisible}
             isDesktop={false}
           />
-        </div>
       </div>
 
       <HeartAnimations hearts={hearts} />
