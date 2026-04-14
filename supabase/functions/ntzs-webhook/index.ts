@@ -1,11 +1,23 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-// Webhook endpoint for nTZS deposit/withdrawal/transfer status updates
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const WEBHOOK_SECRET = Deno.env.get('NTZS_WEBHOOK_SECRET');
+
+async function verifySignature(body: string, signature: string | null): Promise<boolean> {
+  if (!WEBHOOK_SECRET || !signature) return !WEBHOOK_SECRET; // skip if no secret configured
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw', encoder.encode(WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+  const expected = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return expected === signature;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -18,8 +30,20 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    console.log('[ntzs-webhook] Received:', JSON.stringify(body, null, 2));
+    const rawBody = await req.text();
+    console.log('[ntzs-webhook] Received:', rawBody);
+
+    // Verify HMAC signature
+    const signature = req.headers.get('x-ntzs-signature');
+    if (!(await verifySignature(rawBody, signature))) {
+      console.error('[ntzs-webhook] Invalid signature');
+      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = JSON.parse(rawBody);
 
     const eventType = body.type || body.event;
     if (!eventType) {

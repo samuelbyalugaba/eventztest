@@ -96,7 +96,7 @@ export const ntzsApi = {
   },
 
   async deposit(ntzsUserId: string, amountTzs: number, phone: string): Promise<NtzsDeposit> {
-    return this._call('deposit', { userId: ntzsUserId, amountTzs, phone });
+    return this._call('deposit', { userId: ntzsUserId, amountTzs, paymentMethod: 'mobile_money', phoneNumber: phone });
   },
 
   async getDepositStatus(depositId: string): Promise<NtzsDeposit> {
@@ -108,7 +108,7 @@ export const ntzsApi = {
   },
 
   async withdraw(ntzsUserId: string, amountTzs: number, phone: string): Promise<NtzsWithdrawal> {
-    return this._call('withdraw', { userId: ntzsUserId, amountTzs, phone });
+    return this._call('withdraw', { userId: ntzsUserId, amountTzs, phoneNumber: phone });
   },
 };
 
