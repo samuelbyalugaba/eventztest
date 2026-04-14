@@ -890,38 +890,44 @@ export default function App() {
           <Route 
             path="/post/:id" 
             element={
-              <PostDetailWrapper 
-                currentUser={currentUser}
-                userProfile={userProfile}
-              />
+              <Suspense fallback={<RouteFallback />}>
+                <PostDetailWrapper 
+                  currentUser={currentUser}
+                  userProfile={userProfile}
+                />
+              </Suspense>
             } 
           />
           <Route
             path="/event/:id"
-            element={<EventDetailWrapper onStartConversation={handleStartConversation} />}
+            element={<Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>}
           />
           <Route
             path="/profile"
             element={
-              <ProfileModalWrapper
-                onLogout={handleLogout}
-                onCreateEvent={handleCreateEvent}
-                onEditEvent={handleEditEvent}
-                onStartOrganizerSetup={handleStartOrganizerSetup}
-                onViewPost={handleViewPost}
-              />
+              <Suspense fallback={<RouteFallback />}>
+                <ProfileModalWrapper
+                  onLogout={handleLogout}
+                  onCreateEvent={handleCreateEvent}
+                  onEditEvent={handleEditEvent}
+                  onStartOrganizerSetup={handleStartOrganizerSetup}
+                  onViewPost={handleViewPost}
+                />
+              </Suspense>
             }
           />
           <Route
             path="/profile/:userId"
             element={
-              <ProfileModalWrapper
-                onLogout={handleLogout}
-                onCreateEvent={handleCreateEvent}
-                onEditEvent={handleEditEvent}
-                onStartOrganizerSetup={handleStartOrganizerSetup}
-                onViewPost={handleViewPost}
-              />
+              <Suspense fallback={<RouteFallback />}>
+                <ProfileModalWrapper
+                  onLogout={handleLogout}
+                  onCreateEvent={handleCreateEvent}
+                  onEditEvent={handleEditEvent}
+                  onStartOrganizerSetup={handleStartOrganizerSetup}
+                  onViewPost={handleViewPost}
+                />
+              </Suspense>
             }
           />
         </Routes>
