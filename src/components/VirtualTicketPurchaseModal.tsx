@@ -208,7 +208,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
 
       window.dispatchEvent(new CustomEvent('virtualAccessPurchased', { detail: { eventId: event.id } }));
       setPaymentStep('success');
-      toast.success('Virtual Access Granted! 🎥');
+      toast.success('Virtual Access Granted');
       setTimeout(() => {
         onClose();
         setPaymentStep('details');
@@ -221,6 +221,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
   // Calculate price for display
   const priceString = event.streaming?.virtualPrice || event.price_range || '0';
   const price = parseFloat(priceString.replace(/[^0-9.]/g, '')) || 0;
+  const isFreeVirtual = price <= 0;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -248,7 +249,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900 text-sm line-clamp-1">{event.title}</h3>
-                        <p className="text-purple-700 font-bold text-sm">{formatPrice(event.streaming?.virtualPrice || event.price_range)}</p>
+                        <p className="text-purple-700 font-bold text-sm">{isFreeVirtual ? 'Free' : formatPrice(event.streaming?.virtualPrice || event.price_range)}</p>
                     </div>
                 </div>
 
@@ -276,7 +277,8 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                     </div>
                 </div>
 
-                {/* Payment */}
+                {/* Payment — only show if not free */}
+                {!isFreeVirtual && (
                 <div className="space-y-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
                     <div className="grid grid-cols-4 gap-2">
@@ -319,6 +321,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                         </div>
                     )}
                 </div>
+                )}
 
                 <button
                     onClick={handleTicketSubmit}
@@ -331,7 +334,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                         <>
-                            <span>Pay {event.streaming?.virtualPrice}</span>
+                            <span>{isFreeVirtual ? 'Get Free Access' : `Pay ${event.streaming?.virtualPrice}`}</span>
                             <ArrowRight className="w-4 h-4" />
                         </>
                     )}
@@ -342,7 +345,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <CheckCircle2 className="w-8 h-8 text-green-600" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">You're In! 🎥</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">You're In!</h3>
                     <p className="text-gray-600 text-sm">Access details sent to your email.</p>
                 </div>
             )}
