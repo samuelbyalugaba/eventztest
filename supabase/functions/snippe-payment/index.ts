@@ -36,9 +36,51 @@ serve(async (req) => {
     if (!amount || !phoneNumber) {
       throw new Error("Amount and Phone Number are required");
     }
+    if (!eventId) {
+      throw new Error("Event ID is required");
+    }
+
+    // Initialize Supabase Admin Client (moved up to validate price server-side)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // SERVER-SIDE PRICE VALIDATION: Fetch the real price from the database
+    // Never trust client-supplied amounts for payment processing
+    const { data: eventData, error: eventError } = await supabase
+      .from('events')
+      .select('streaming, price_range, ticket_tiers')
+      .eq('id', eventId)
+      .single();
+
+    if (eventError || !eventData) {
+      throw new Error("Event not found or could not be verified");
+    }
+
+    // Determine the authoritative price from the database
+    let serverPrice = amount; // fallback to client amount only if we can't determine
+    const ticketType = metadata?.ticket_type;
+    
+    if (ticketType === 'Virtual' && eventData.streaming?.virtualPrice) {
+      // Extract numeric price from virtualPrice string (e.g., "TSh 5,000" -> 5000)
+      serverPrice = parseFloat(String(eventData.streaming.virtualPrice).replace(/[^0-9.]/g, '')) || 0;
+    } else if (ticketType && eventData.ticket_tiers && Array.isArray(eventData.ticket_tiers)) {
+      // Find matching tier
+      const tier = eventData.ticket_tiers.find((t: any) => t.name === ticketType);
+      if (tier) {
+        serverPrice = tier.priceNumeric || parseFloat(String(tier.price).replace(/[^0-9.]/g, '')) || 0;
+      }
+    } else if (eventData.price_range) {
+      serverPrice = parseFloat(String(eventData.price_range).replace(/[^0-9.]/g, '')) || 0;
+    }
+
+    console.log(`Server price: ${serverPrice}, Client amount: ${amount}, Ticket type: ${ticketType}`);
+
+    // Use server-determined price (prevents client-side price manipulation)
+    const trustedAmount = serverPrice;
 
     // Currency Conversion Logic
-    let finalAmount = amount;
+    let finalAmount = trustedAmount;
     const originalCurrency = currency.toUpperCase();
     
     if (originalCurrency !== 'TZS') {
@@ -65,24 +107,24 @@ serve(async (req) => {
       // Final fallback if both static and API fail
       rate = rate || 2600; 
 
-      finalAmount = Math.ceil(amount * rate);
-      console.log(`Converting ${amount} ${originalCurrency} to ${finalAmount} TZS (Rate: ${rate})`);
+      finalAmount = Math.ceil(trustedAmount * rate);
+      console.log(`Converting ${trustedAmount} ${originalCurrency} to ${finalAmount} TZS (Rate: ${rate})`);
     } else {
-      finalAmount = Math.ceil(amount); // Ensure integer for TZS
+      finalAmount = Math.ceil(trustedAmount); // Ensure integer for TZS
     }
 
-    const apiKey = Deno.env.get("SNIPPE_API_KEY") || "snp_0af9b516c248f7b62a1d82d130d174f0ddacd92b7241870b06251fb200a4d2bf";
+    // Enforce Snippe minimum amount (500 TZS)
+    const SNIPPE_MINIMUM_TZS = 500;
+    if (finalAmount < SNIPPE_MINIMUM_TZS) {
+      throw new Error(`Payment amount (${finalAmount} TZS) is below the minimum of ${SNIPPE_MINIMUM_TZS} TZS. Please check the event pricing.`);
+    }
+
+    const apiKey = Deno.env.get("SNIPPE_API_KEY");
     if (!apiKey) {
-      console.warn("SNIPPE_API_KEY is not set. Using mock mode if configured or failing.");
-      // throw new Error("Server configuration error: Missing Snippe API Key"); 
-      // For development, if key is missing, maybe we simulate success? 
-      // Or just fail. Let's fail for now to enforce proper setup, or return a specific error.
+      console.warn("SNIPPE_API_KEY is not set.");
     }
 
-    // Initialize Supabase Admin Client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Supabase client already initialized above
 
     // Format phone number to 255xxxxxxxxx
     let formattedPhone = phoneNumber.replace(/\D/g, ''); // Remove non-digits
