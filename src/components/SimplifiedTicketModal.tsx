@@ -247,7 +247,9 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             metadata: { 
               transactionId: transaction.id,
               customer_name: formData.name,
-              customer_email: formData.email
+              customer_email: formData.email,
+              ticket_type: Object.keys(selections).join(', '),
+              selections: JSON.stringify(selections)
             }
           });
 
