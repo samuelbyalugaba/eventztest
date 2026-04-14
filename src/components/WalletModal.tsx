@@ -175,6 +175,10 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       toast.error('Please enter a valid amount');
       return;
     }
+    if (Number(amount) < 5000) {
+      toast.error('Minimum withdrawal amount is TSh 5,000');
+      return;
+    }
     if (Number(amount) > balance) {
         toast.error('Insufficient balance');
         return;
