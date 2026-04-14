@@ -392,7 +392,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
 
                 <div className="pt-6 border-t border-gray-100">
                   <p className="text-center text-gray-400 text-xs font-medium">
-                    EVENTZ v1.0.0 • Made with ❤️ in Tanzania
+                    EVENTZ v1.0.0 • Made with love in Tanzania
                   </p>
                 </div>
               </div>
@@ -830,7 +830,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
               <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-5 border border-purple-200 text-center">
                 <p className="text-gray-700 font-medium mb-2">EVENTZ</p>
                 <p className="text-gray-600 text-sm mb-1">Version 1.0.0</p>
-                <p className="text-gray-500 text-xs">Made with ❤️ in Tanzania</p>
+                <p className="text-gray-500 text-xs">Made with love in Tanzania</p>
               </div>
             </div>
           )}
