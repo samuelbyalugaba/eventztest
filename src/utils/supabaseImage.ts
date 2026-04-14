@@ -28,34 +28,13 @@ const SUPABASE_STORAGE_RENDER = '/storage/v1/render/image/public/';
 
 export function getOptimizedImageUrl(
   url: string | undefined | null,
-  options: TransformOptions = {}
+  _options: TransformOptions = {}
 ): string {
   if (!url) return '';
 
-  // Only transform Supabase storage public URLs
-  const idx = url.indexOf(SUPABASE_STORAGE_OBJECT);
-  if (idx === -1) return url;
-
-  const {
-    width,
-    height,
-    quality = 75,
-    resize = 'cover',
-    dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1,
-  } = options;
-
-  // Build render URL
-  const base = url.substring(0, idx);
-  const objectPath = url.substring(idx + SUPABASE_STORAGE_OBJECT.length);
-  const renderUrl = `${base}${SUPABASE_STORAGE_RENDER}${objectPath}`;
-
-  const params = new URLSearchParams();
-  if (width) params.set('width', String(Math.round(width * dpr)));
-  if (height) params.set('height', String(Math.round(height * dpr)));
-  params.set('quality', String(quality));
-  params.set('resize', resize);
-
-  return `${renderUrl}?${params.toString()}`;
+  // Image transforms require Supabase Pro plan.
+  // On free tier, return the original URL unchanged.
+  return url;
 }
 
 /**
