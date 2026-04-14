@@ -1,5 +1,7 @@
-const CACHE_NAME = 'eventz-v2';
-const RUNTIME_CACHE = 'eventz-runtime-v2';
+const CACHE_NAME = 'eventz-v3';
+const RUNTIME_CACHE = 'eventz-runtime-v3';
+const IMAGE_CACHE = 'eventz-images-v1';
+const IMAGE_CACHE_MAX = 200;
 
 // Assets to cache on install
 const STATIC_CACHE_URLS = [
@@ -47,7 +49,10 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isSameOrigin = url.origin === self.location.origin;
   const isSupabaseStorage = url.hostname.endsWith('.supabase.co') && url.pathname.includes('/storage/');
-  if (!isSameOrigin && !isSupabaseStorage) {
+  const isWsrvCdn = url.hostname === 'wsrv.nl';
+  const isImageProxy = isSupabaseStorage || isWsrvCdn;
+
+  if (!isSameOrigin && !isImageProxy) {
     return;
   }
 
@@ -122,26 +127,34 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Supabase Storage (cross-origin images/videos) - Cache First
-  if (isSupabaseStorage && event.request.method === 'GET') {
+  // 3. Image CDN / Supabase Storage (cross-origin images) - Cache First with size limit
+  if (isImageProxy && event.request.method === 'GET') {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(event.request, { mode: 'no-cors' })
-          .then((response) => {
-            if (!response) return response;
-            const responseToCache = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-            return response;
-          })
-          .catch(() => {
-            return caches.match('/icons/icon-192x192.png');
-          });
-      })
+      caches.open(IMAGE_CACHE).then((cache) =>
+        cache.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+
+          return fetch(event.request, { mode: 'cors' })
+            .then((response) => {
+              if (!response || !response.ok) {
+                // Fallback to no-cors for Supabase direct URLs
+                return fetch(event.request, { mode: 'no-cors' }).then((opaqueRes) => {
+                  if (opaqueRes) cache.put(event.request, opaqueRes.clone());
+                  return opaqueRes;
+                });
+              }
+              cache.put(event.request, response.clone());
+              // Prune cache if over limit
+              cache.keys().then((keys) => {
+                if (keys.length > IMAGE_CACHE_MAX) {
+                  cache.delete(keys[0]);
+                }
+              });
+              return response;
+            })
+            .catch(() => caches.match('/icons/icon-192x192.png'));
+        })
+      )
     );
     return;
   }
