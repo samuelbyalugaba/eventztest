@@ -19,6 +19,7 @@ const LiveSetupModal = lazy(() => import('./LiveSetupModal').then(m => ({ defaul
 const ProfessionalDashboardModal = lazy(() => import('./ProfessionalDashboardModal').then(m => ({ default: m.ProfessionalDashboardModal })));
 const EventDetailModal = lazy(() => import('./EventDetailModal').then(m => ({ default: m.EventDetailModal })));
 const TicketViewer = lazy(() => import('./TicketViewer').then(m => ({ default: m.TicketViewer })));
+const WalletModal = lazy(() => import('./WalletModal').then(m => ({ default: m.WalletModal })));
 
 import { ProfileHeader } from './profile/ProfileHeader';
 import { ProfileBio } from './profile/ProfileBio';
@@ -73,6 +74,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
   const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   const [showTicketListModal, setShowTicketListModal] = useState(false);
   const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);
@@ -472,6 +474,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             onEditProfile={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
             onSettings={() => { setSettingsInitialView('main'); setShowSettingsModal(true); }}
             onDashboard={() => setShowProfessionalDashboard(true)}
+            onWallet={() => setShowWalletModal(true)}
             onLogout={onLogout}
           />
         }
@@ -570,6 +573,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         )}
         {showProfessionalDashboard && (
           <ProfessionalDashboardModal onClose={() => setShowProfessionalDashboard(false)} organizerProfile={userProfile} onCreateEvent={onCreateEvent || (() => {})} onEditEvent={onEditEvent} />
+        )}
+        {showWalletModal && (
+          <WalletModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} />
         )}
       </Suspense>
       {showTicketListModal && (

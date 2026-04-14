@@ -13,6 +13,7 @@ interface ProfileSidebarProps {
   onEditProfile: () => void;
   onSettings: () => void;
   onDashboard: () => void;
+  onWallet?: () => void;
   onLogout?: () => Promise<void>;
 }
 
@@ -26,6 +27,7 @@ export function ProfileSidebar({
   onEditProfile,
   onSettings,
   onDashboard,
+  onWallet,
   onLogout,
 }: ProfileSidebarProps) {
   return (
@@ -58,7 +60,7 @@ export function ProfileSidebar({
           </div>
 
           <div className="flex-1 overflow-y-auto py-2">
-            <SidebarButton icon={<Wallet className="w-5 h-5 stroke-[1.5]" />} label="Wallet" onClick={() => { toast.info('Wallet coming soon'); onOpenChange(false); }} />
+            <SidebarButton icon={<Wallet className="w-5 h-5 stroke-[1.5]" />} label="Wallet" onClick={() => { onWallet?.(); onOpenChange(false); }} />
             <SidebarButton icon={<User className="w-5 h-5 stroke-[1.5]" />} label="Edit Profile" onClick={() => { onEditProfile(); onOpenChange(false); }} />
             {isOrganizer && (
               <SidebarButton icon={<BarChart3 className="w-5 h-5 stroke-[1.5]" />} label="Professional Dashboard" onClick={() => { onDashboard(); onOpenChange(false); }} />
