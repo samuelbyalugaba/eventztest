@@ -2310,13 +2310,11 @@ export const getNotifications = async (userId: string) => {
       .from('tickets')
       .select(`
         id,
-        created_at,
         ticket_type,
         event:events!inner(id, title, organizer_id),
         user:profiles(id, full_name, avatar_url)
       `)
       .eq('event.organizer_id', userId)
-      .order('created_at', { ascending: false })
       .limit(20);
 
     if (ticketSales) {
