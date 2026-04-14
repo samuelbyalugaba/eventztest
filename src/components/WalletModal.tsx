@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { X, Wallet, ArrowDownToLine, Plus, ArrowUpRight, ArrowUpRight as WithdrawIcon, Smartphone } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { X, Wallet, ArrowDownToLine, Plus, ArrowUpRight, ArrowUpRight as WithdrawIcon, Smartphone, AlertCircle } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { toast } from 'sonner';
-import { ntzsApi, NtzsUser } from '../utils/ntzs-api';
+import { ntzsApi, getLocalWalletBalance } from '../utils/ntzs-api';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -29,6 +29,8 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
   const [phone, setPhone] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [balance, setBalance] = useState(0);
+  const [ntzsAvailable, setNtzsAvailable] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -36,52 +38,61 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     }
   }, [isOpen]);
 
-  const loadWalletData = async () => {
+  // Subscribe to transaction changes for real-time balance updates
+  useEffect(() => {
+    if (!isOpen || !currentUserId) return;
+
+    const channel = supabase
+      .channel(`wallet-txs-${currentUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        () => {
+          // Refresh wallet data when any transaction changes
+          loadWalletData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, currentUserId]);
+
+  const loadWalletData = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setCurrentUserId(user.id);
 
-      // 1. Get or Create nTZS User
-      // We use the Supabase User ID as the external ID
-      let nUser: NtzsUser;
+      // 1. Try nTZS balance first, fall back to local
+      let ntzsBalance: number | null = null;
       try {
-        // Pass email to getUser so it can be used for create if needed
-        nUser = await ntzsApi.getUser(user.id, user.email || '');
-        // If not found (shouldn't happen if we use create as get), create it
-        if (!nUser || !nUser.id) {
-           nUser = await ntzsApi.createUser(user.id, user.email || '');
-        }
-      } catch (err) {
-        try {
-          nUser = await ntzsApi.createUser(user.id, user.email || '');
-        } catch (createErr) {
-          // If user creation fails, we can't proceed with balance check
-          throw createErr;
-        }
-      }
-
-      // 2. Get Real Balance from nTZS
-      // Use the nTZS internal user ID (nUser.id), not the Supabase external ID
-      if (nUser && nUser.id) {
-        try {
+        const nUser = await ntzsApi.getUser(user.id, user.email || '');
+        if (nUser?.id) {
           const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
-          setBalance(balanceTzs || 0);
-        } catch (err) {
-          // Fallback to 0 or local state if needed
-          setBalance(0);
+          ntzsBalance = balanceTzs || 0;
+          setNtzsAvailable(true);
         }
-      } else {
-        setBalance(0);
+      } catch (err: any) {
+        if (err?.apiUnavailable) {
+          setNtzsAvailable(false);
+        } else {
+          setNtzsAvailable(false);
+        }
       }
 
-      // 3. Load Transactions (For now, we might still rely on local DB if we sync them, 
-      //    or we should add an endpoint to fetch nTZS history. 
-      //    Let's keep the existing local DB logic for now but maybe we should sync?)
-      //    Ideally, we should fetch from nTZS API if available.
-      //    For this MVP, we will stick to what's in the Supabase 'transactions' table 
-      //    assuming we record them there too upon success.
-      
+      // 2. Always compute local balance as fallback
+      const localBalance = await getLocalWalletBalance(user.id);
+      setBalance(ntzsBalance !== null ? ntzsBalance : localBalance);
+
+      // 3. Load transaction history
       const { data: transactions } = await supabase
         .from('transactions')
         .select(`
@@ -89,18 +100,22 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           event:events(id, title)
         `)
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (transactions) {
         setTxs(transactions as unknown as Tx[]);
       }
 
     } catch (error: any) {
-      toast.error(`Failed to load wallet data: ${error.message || 'Unknown error'}`);
+      // Don't show error toast for API unavailable — we handle it in UI
+      if (!error?.apiUnavailable) {
+        toast.error(`Failed to load wallet data: ${error.message || 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleDeposit = async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
@@ -110,6 +125,10 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     if (!phone) {
         toast.error('Please enter your phone number');
         return;
+    }
+    if (!ntzsAvailable) {
+      toast.error('Wallet service is temporarily unavailable. Please try again later.');
+      return;
     }
 
     try {
@@ -157,6 +176,10 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     if (!phone) {
         toast.error('Please enter your phone number');
         return;
+    }
+    if (!ntzsAvailable) {
+      toast.error('Wallet service is temporarily unavailable. Please try again later.');
+      return;
     }
 
     try {
@@ -213,8 +236,16 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           {/* Balance Card */}
           <div className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-gradient-to-br from-purple-50 to-white">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Available Balance</p>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                {ntzsAvailable ? 'Available Balance' : 'Estimated Balance'}
+              </p>
               <p className="text-2xl font-bold text-gray-900 mt-1">TSh {balance.toLocaleString()}</p>
+              {!ntzsAvailable && (
+                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Wallet service connecting…
+                </p>
+              )}
             </div>
             <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
               <Wallet className="w-5 h-5" />
