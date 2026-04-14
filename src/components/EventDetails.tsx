@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { EventGridSkeleton } from './skeletons/EventCardSkeleton';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, MessageCircle, Music, Trophy, Globe } from 'lucide-react';
