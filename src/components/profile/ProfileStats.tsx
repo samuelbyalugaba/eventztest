@@ -1,6 +1,6 @@
 interface ProfileStatsProps {
-  isLoading: boolean;
   isOrganizer: boolean;
+  hostedCount: number | null;
   hostedCount: number | null;
   attendedCount: number;
   followers: number;
@@ -11,7 +11,6 @@ interface ProfileStatsProps {
 }
 
 export function ProfileStats({
-  isLoading,
   isOrganizer,
   hostedCount,
   attendedCount,
