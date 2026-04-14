@@ -40,6 +40,7 @@ export function EventCard({ event, onClick, className = '', currentUserId, onEdi
         <ImageWithFallback
           src={event.image_url}
           alt={event.title}
+          displayWidth={400}
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
         />
         {canManage && (
