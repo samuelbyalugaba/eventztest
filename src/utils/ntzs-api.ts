@@ -135,9 +135,10 @@ export async function getLocalWalletBalance(userId: string): Promise<number> {
     } else if (type === 'payment') {
       balance -= tx.amount || 0;
     }
-    // gift-sent = outflow, gift-received = inflow
     else if (type === 'gift') {
       balance -= tx.amount || 0;
+    } else if (type === 'gift-received') {
+      balance += tx.amount || 0;
     }
   }
   return Math.max(0, balance);

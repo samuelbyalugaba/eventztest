@@ -302,7 +302,14 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       setShowGiftPicker(false);
       const newHearts = Array.from({ length: 6 }, () => generateHeart());
       setHearts((p) => [...p, ...newHearts]);
-    } catch { toast.error('Failed to send gift'); }
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to send gift';
+      if (msg.includes('Insufficient balance')) {
+        toast.error(msg);
+      } else {
+        toast.error(msg);
+      }
+    }
     finally { setIsSendingGift(false); }
   };
 
