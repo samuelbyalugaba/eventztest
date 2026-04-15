@@ -92,7 +92,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       const localBalance = await getLocalWalletBalance(user.id);
       setBalance(ntzsBalance !== null ? ntzsBalance : localBalance);
 
-      // 3. Load transaction history
+      // 3. Load transaction history (include pending for deposit tracking)
       const { data: transactions } = await supabase
         .from('transactions')
         .select(`
@@ -150,18 +150,23 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
       // 2. Initiate nTZS Deposit
       await ntzsApi.deposit(nUser.id, Number(amount), phone);
+
+      // 3. Record deposit in local transactions for history
+      await supabase.from('transactions').insert([{
+        user_id: user.id,
+        amount: Number(amount),
+        currency: 'TZS',
+        provider: 'M-Pesa',
+        status: 'pending',
+        metadata: { type: 'deposit', phone }
+      }]);
       
-      // 2. Record intent in local DB (optional but good for UI immediate feedback)
-      // We can assume 'pending' status.
       toast.info('STK Push sent! Please check your phone to complete payment.');
-      
-      // Ideally, we listen for the webhook or poll for status.
-      // For MVP, we can tell the user to wait.
       setShowDeposit(false);
       setAmount('');
+      setPhone('');
       
-      // Refresh after a delay to see if balance updated (or wait for webhook)
-      setTimeout(loadWalletData, 5000); 
+      setTimeout(loadWalletData, 5000);
 
     } catch (error: any) {
       toast.error(error.message || 'Deposit failed');
@@ -205,12 +210,22 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
       // 2. Initiate nTZS Withdrawal
       await ntzsApi.withdraw(nUser.id, Number(amount), phone);
+
+      // 3. Record withdrawal in local transactions for history
+      await supabase.from('transactions').insert([{
+        user_id: user.id,
+        amount: Number(amount),
+        currency: 'TZS',
+        provider: 'M-Pesa',
+        status: 'completed',
+        metadata: { type: 'withdrawal', phone }
+      }]);
       
       toast.success('Withdrawal initiated! Funds will be sent to your M-Pesa.');
       setShowWithdraw(false);
       setAmount('');
+      setPhone('');
       
-      // Refresh balance immediately as funds should be deducted
       loadWalletData();
 
     } catch (error: any) {
@@ -227,6 +242,21 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     if (typeof metaType === 'string' && metaType.trim()) return metaType.trim();
     if (t.event) return 'payment';
     return 'payment';
+  };
+
+  const isOutflow = (kind: string) => ['payment', 'withdrawal', 'gift'].includes(kind);
+
+  const getTxLabel = (t: Tx) => {
+    const kind = getTxKind(t);
+    switch (kind) {
+      case 'deposit': return t.status === 'pending' ? 'Deposit (Pending)' : 'Deposit';
+      case 'top-up': return 'Top Up';
+      case 'withdrawal': return 'Withdrawal';
+      case 'gift': return '🎁 Gift Sent';
+      case 'transfer': return 'Transfer';
+      case 'payment': return 'Payment';
+      default: return 'Transaction';
+    }
   };
 
   return (
@@ -375,7 +405,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                     <div className="flex items-center gap-3">
                       {(() => {
                         const kind = getTxKind(t);
-                        const isOut = kind === 'payment' || kind === 'withdrawal';
+                        const isOut = isOutflow(kind);
                         return (
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                             isOut ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
@@ -385,19 +415,20 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                         );
                       })()}
                       <div>
-                        <p className="text-sm text-gray-900 font-medium capitalize">
-                          {getTxKind(t) || 'Transaction'}
+                        <p className="text-sm text-gray-900 font-medium">
+                          {getTxLabel(t)}
                         </p>
                         <p className="text-xs text-gray-500">
                           {new Date(t.created_at).toLocaleDateString()} • {t.provider}
+                          {t.status === 'pending' && ' • ⏳'}
                         </p>
                       </div>
                     </div>
                     {(() => {
                       const kind = getTxKind(t);
-                      const isOut = kind === 'payment' || kind === 'withdrawal';
+                      const isOut = isOutflow(kind);
                       return (
-                        <span className={`text-sm font-semibold ${isOut ? 'text-gray-900' : 'text-green-600'}`}>
+                        <span className={`text-sm font-semibold ${isOut ? 'text-red-600' : 'text-green-600'}`}>
                           {isOut ? '-' : '+'}
                           {t.currency || 'TZS'} {t.amount.toLocaleString()}
                         </span>
