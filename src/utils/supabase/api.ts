@@ -1774,7 +1774,7 @@ export const sendGift = async (eventId: number, amount: number, currency: string
   if (!user) throw new Error('User not authenticated');
 
   // 1. Check sender's wallet balance
-  const { getLocalWalletBalance } = await import('../utils/ntzs-api');
+  const { getLocalWalletBalance } = await import('../ntzs-api');
   const balance = await getLocalWalletBalance(user.id);
   if (balance < amount) {
     throw new Error(`Insufficient balance. You have TSh ${balance.toLocaleString()} but need TSh ${amount.toLocaleString()}.`);
