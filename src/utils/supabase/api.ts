@@ -1770,12 +1770,29 @@ export const hasUserLikedEvent = async (eventId: number, userId: string) => {
 };
 
 export const sendGift = async (eventId: number, amount: number, currency: string = 'TZS') => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
+  // Ensure auth session is fully restored before proceeding
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('User not authenticated');
+  const user = session.user;
 
-  // 1. Check sender's wallet balance
-  const { getLocalWalletBalance } = await import('../ntzs-api');
-  const balance = await getLocalWalletBalance(user.id);
+  // 1. Check sender's wallet balance (try nTZS first, fall back to local)
+  const { ntzsApi, getLocalWalletBalance } = await import('../ntzs-api');
+  let balance = 0;
+  try {
+    const nUser = await ntzsApi.getUser(user.id, user.email || '');
+    if (nUser?.id) {
+      const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
+      balance = balanceTzs || 0;
+    }
+  } catch {
+    // Fall back to local balance
+    balance = await getLocalWalletBalance(user.id);
+  }
+  // If nTZS wasn't available, ensure we have local balance
+  if (balance === 0) {
+    balance = await getLocalWalletBalance(user.id);
+  }
+
   if (balance < amount) {
     throw new Error(`Insufficient balance. You have TSh ${balance.toLocaleString()} but need TSh ${amount.toLocaleString()}.`);
   }
