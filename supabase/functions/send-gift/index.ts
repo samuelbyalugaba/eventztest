@@ -1,24 +1,69 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+const NTZS_API_KEY = Deno.env.get("NTZS_API_KEY");
+const NTZS_BASE_URL = "https://www.ntzs.co.tz/api/v1";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-Deno.serve(async (req) => {
+const jsonResponse = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+async function ntzsRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  if (!NTZS_API_KEY) {
+    throw new Error("Missing NTZS_API_KEY");
+  }
+
+  const response = await fetch(`${NTZS_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${NTZS_API_KEY}`,
+      "Content-Type": "application/json",
+      ...(init.headers || {}),
+    },
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const body = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    const error: Error & { status?: number; details?: unknown } = new Error(
+      (typeof body === "object" && body && (body.message || body.error)) ||
+        `nTZS API Error: ${response.status}`
+    );
+    error.status = response.status;
+    error.details = body;
+    throw error;
+  }
+
+  return body as T;
+}
+
+async function getOrCreateNtzsUser(externalId: string, email: string) {
+  return await ntzsRequest<{ id: string; email?: string }>("/users", {
+    method: "POST",
+    body: JSON.stringify({ externalId, email }),
+  });
+}
+
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Verify the caller's JWT using getClaims (supports ES256)
     const authHeader = req.headers.get("authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -31,65 +76,25 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+    if (claimsError || !claimsData?.claims?.sub) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    const user = { id: claimsData.claims.sub as string, email: (claimsData.claims.email as string) || "" };
+    const userId = claimsData.claims.sub as string;
+    const userEmail = (claimsData.claims.email as string) || "";
 
-    const { eventId, amount, currency = "TZS" } = await req.json();
+    const body = await req.json();
+    const eventId = Number(body?.eventId);
+    const amount = Number(body?.amount);
+    const currency = typeof body?.currency === "string" ? body.currency : "TZS";
 
-    if (!eventId || !amount || amount <= 0) {
-      return new Response(
-        JSON.stringify({ error: "Invalid eventId or amount" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    if (!Number.isFinite(eventId) || !Number.isFinite(amount) || amount <= 0) {
+      return jsonResponse({ error: "Invalid eventId or amount" }, 400);
     }
 
-    // Service role client to bypass RLS
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // 1. Check sender balance from completed transactions
-    const { data: txs } = await admin
-      .from("transactions")
-      .select("amount, metadata, status")
-      .eq("user_id", user.id)
-      .in("status", ["completed", "success"]);
-
-    let balance = 0;
-    for (const tx of txs || []) {
-      const type = tx.metadata?.type;
-      if (type === "deposit" || type === "top-up" || type === "gift-received") {
-        balance += tx.amount || 0;
-      } else if (
-        type === "withdrawal" ||
-        type === "payment" ||
-        type === "gift"
-      ) {
-        balance -= tx.amount || 0;
-      }
-    }
-    balance = Math.max(0, balance);
-
-    if (balance < amount) {
-      return new Response(
-        JSON.stringify({
-          error: `Insufficient balance. You have TSh ${balance.toLocaleString()} but need TSh ${amount.toLocaleString()}.`,
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // 2. Get event organizer
     const { data: event, error: eventError } = await admin
       .from("events")
       .select("organizer_id")
@@ -97,73 +102,106 @@ Deno.serve(async (req) => {
       .single();
 
     if (eventError || !event?.organizer_id) {
-      return new Response(
-        JSON.stringify({ error: "Could not find stream organizer" }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return jsonResponse({ error: "Could not find stream organizer" }, 404);
     }
 
-    if (event.organizer_id === user.id) {
-      return new Response(
-        JSON.stringify({ error: "You cannot send a gift to yourself" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    if (event.organizer_id === userId) {
+      return jsonResponse({ error: "You cannot send a gift to yourself" }, 400);
     }
 
-    // 3. Debit sender
-    const { data: debit, error: debitErr } = await admin
-      .from("transactions")
-      .insert({
-        user_id: user.id,
-        event_id: eventId,
-        amount,
-        currency,
-        provider: "Wallet",
-        status: "completed",
-        metadata: {
-          type: "gift",
-          direction: "sent",
-          recipientId: event.organizer_id,
+    const { data: organizerProfile } = await admin
+      .from("profiles")
+      .select("email")
+      .eq("id", event.organizer_id)
+      .maybeSingle();
+
+    const senderNtzsUser = await getOrCreateNtzsUser(userId, userEmail);
+    const recipientNtzsUser = await getOrCreateNtzsUser(
+      event.organizer_id,
+      organizerProfile?.email || ""
+    );
+
+    const senderWallet = await ntzsRequest<{ balanceTzs?: number; balance?: number }>(
+      `/users/${senderNtzsUser.id}`
+    );
+    const balance = Number(senderWallet.balanceTzs ?? senderWallet.balance ?? 0);
+
+    if (balance < amount) {
+      return jsonResponse(
+        {
+          error: `Insufficient balance. You have TSh ${balance.toLocaleString()} but need TSh ${amount.toLocaleString()}.`,
         },
-      })
-      .select()
-      .single();
+        400
+      );
+    }
 
-    if (debitErr) throw debitErr;
-
-    // 4. Credit organizer
-    const { error: creditErr } = await admin.from("transactions").insert({
-      user_id: event.organizer_id,
-      event_id: eventId,
-      amount,
-      currency,
-      provider: "Wallet",
-      status: "completed",
-      metadata: {
-        type: "gift-received",
-        direction: "received",
-        senderId: user.id,
-      },
-    });
-
-    if (creditErr) throw creditErr;
-
-    return new Response(JSON.stringify(debit), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err: any) {
-    return new Response(
-      JSON.stringify({ error: err.message || "Internal error" }),
+    const transfer = await ntzsRequest<{ id?: string; txHash?: string; status?: string }>(
+      "/transfers",
       {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        method: "POST",
+        body: JSON.stringify({
+          fromUserId: senderNtzsUser.id,
+          toUserId: recipientNtzsUser.id,
+          amountTzs: amount,
+        }),
       }
+    );
+
+    const transactionMetadata = {
+      source: "ntzs-transfer",
+      ntzsTransferId: transfer.id ?? null,
+      txHash: transfer.txHash ?? null,
+    };
+
+    const { data: insertedTransactions, error: txError } = await admin
+      .from("transactions")
+      .insert([
+        {
+          user_id: userId,
+          event_id: eventId,
+          amount,
+          currency,
+          provider: "Wallet",
+          status: "completed",
+          metadata: {
+            ...transactionMetadata,
+            type: "gift",
+            direction: "sent",
+            recipientId: event.organizer_id,
+          },
+        },
+        {
+          user_id: event.organizer_id,
+          event_id: eventId,
+          amount,
+          currency,
+          provider: "Wallet",
+          status: "completed",
+          metadata: {
+            ...transactionMetadata,
+            type: "gift-received",
+            direction: "received",
+            senderId: userId,
+          },
+        },
+      ])
+      .select();
+
+    if (txError) throw txError;
+
+    const debit = insertedTransactions?.find(
+      (tx: any) => tx.user_id === userId && tx.metadata?.type === "gift"
+    );
+
+    return jsonResponse(debit || { success: true, transfer });
+  } catch (err: any) {
+    const status = typeof err?.status === "number" ? (err.status >= 500 ? 502 : 400) : 500;
+    return jsonResponse(
+      {
+        error: err?.message || "Internal error",
+        ...(err?.details ? { details: err.details } : {}),
+      },
+      status
     );
   }
 });
