@@ -253,6 +253,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       case 'top-up': return 'Top Up';
       case 'withdrawal': return 'Withdrawal';
       case 'gift': return '🎁 Gift Sent';
+      case 'gift-received': return '🎁 Gift Received';
       case 'transfer': return 'Transfer';
       case 'payment': return 'Payment';
       default: return 'Transaction';
