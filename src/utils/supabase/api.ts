@@ -1773,7 +1773,29 @@ export const sendGift = async (eventId: number, amount: number, currency: string
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
-  // 1. Create a transaction record as completed so it affects wallet balance
+  // 1. Check sender's wallet balance
+  const { getLocalWalletBalance } = await import('../utils/ntzs-api');
+  const balance = await getLocalWalletBalance(user.id);
+  if (balance < amount) {
+    throw new Error(`Insufficient balance. You have TSh ${balance.toLocaleString()} but need TSh ${amount.toLocaleString()}.`);
+  }
+
+  // 2. Find the stream organizer (recipient)
+  const { data: event, error: eventError } = await supabase
+    .from('events')
+    .select('organizer_id')
+    .eq('id', eventId)
+    .single();
+
+  if (eventError || !event?.organizer_id) {
+    throw new Error('Could not find stream organizer');
+  }
+
+  if (event.organizer_id === user.id) {
+    throw new Error('You cannot send a gift to yourself');
+  }
+
+  // 3. Debit sender (gift sent)
   const transaction = await createTransaction({
     user_id: user.id,
     event_id: eventId,
@@ -1781,11 +1803,22 @@ export const sendGift = async (eventId: number, amount: number, currency: string
     currency,
     provider: 'Wallet',
     status: 'completed',
-    metadata: { type: 'gift', direction: 'sent', message: 'Sent a gift' }
+    metadata: { type: 'gift', direction: 'sent', recipientId: event.organizer_id, message: 'Sent a gift' }
   });
 
-  // 2. Send a special chat message
-  await sendStreamMessage(eventId, `🎁 Sent a gift of ${currency} ${amount}!`);
+  // 4. Credit organizer (gift received)
+  await createTransaction({
+    user_id: event.organizer_id,
+    event_id: eventId,
+    amount,
+    currency,
+    provider: 'Wallet',
+    status: 'completed',
+    metadata: { type: 'gift-received', direction: 'received', senderId: user.id, message: 'Received a gift' }
+  });
+
+  // 5. Send a special chat message
+  await sendStreamMessage(eventId, `🎁 Sent a gift of ${currency} ${amount.toLocaleString()}!`);
 
   return transaction;
 };
