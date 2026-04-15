@@ -92,7 +92,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       const localBalance = await getLocalWalletBalance(user.id);
       setBalance(ntzsBalance !== null ? ntzsBalance : localBalance);
 
-      // 3. Load transaction history
+      // 3. Load transaction history (include pending for deposit tracking)
       const { data: transactions } = await supabase
         .from('transactions')
         .select(`
