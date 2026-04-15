@@ -405,7 +405,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                     <div className="flex items-center gap-3">
                       {(() => {
                         const kind = getTxKind(t);
-                        const isOut = kind === 'payment' || kind === 'withdrawal';
+                        const isOut = isOutflow(kind);
                         return (
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                             isOut ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
@@ -415,19 +415,20 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                         );
                       })()}
                       <div>
-                        <p className="text-sm text-gray-900 font-medium capitalize">
-                          {getTxKind(t) || 'Transaction'}
+                        <p className="text-sm text-gray-900 font-medium">
+                          {getTxLabel(t)}
                         </p>
                         <p className="text-xs text-gray-500">
                           {new Date(t.created_at).toLocaleDateString()} • {t.provider}
+                          {t.status === 'pending' && ' • ⏳'}
                         </p>
                       </div>
                     </div>
                     {(() => {
                       const kind = getTxKind(t);
-                      const isOut = kind === 'payment' || kind === 'withdrawal';
+                      const isOut = isOutflow(kind);
                       return (
-                        <span className={`text-sm font-semibold ${isOut ? 'text-gray-900' : 'text-green-600'}`}>
+                        <span className={`text-sm font-semibold ${isOut ? 'text-red-600' : 'text-green-600'}`}>
                           {isOut ? '-' : '+'}
                           {t.currency || 'TZS'} {t.amount.toLocaleString()}
                         </span>
