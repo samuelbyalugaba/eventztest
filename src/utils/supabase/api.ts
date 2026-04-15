@@ -1770,74 +1770,33 @@ export const hasUserLikedEvent = async (eventId: number, userId: string) => {
 };
 
 export const sendGift = async (eventId: number, amount: number, currency: string = 'TZS') => {
-  // Ensure auth session is fully restored before proceeding
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) throw new Error('User not authenticated');
-  const user = session.user;
+  // Use edge function to handle gift (bypasses RLS for organizer credit)
+  const { data, error } = await supabase.functions.invoke('send-gift', {
+    body: { eventId, amount, currency },
+  });
 
-  // 1. Check sender's wallet balance (try nTZS first, fall back to local)
-  const { ntzsApi, getLocalWalletBalance } = await import('../ntzs-api');
-  let balance = 0;
-  try {
-    const nUser = await ntzsApi.getUser(user.id, user.email || '');
-    if (nUser?.id) {
-      const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
-      balance = balanceTzs || 0;
+  if (error) {
+    // Try to extract error message from response
+    const ctx = (error as any)?.context;
+    if (ctx instanceof Response) {
+      try {
+        const body = await ctx.clone().json();
+        throw new Error(body?.error || 'Gift failed');
+      } catch (e: any) {
+        if (e.message !== 'Gift failed' && e.message) throw e;
+      }
     }
-  } catch {
-    // Fall back to local balance
-    balance = await getLocalWalletBalance(user.id);
-  }
-  // If nTZS wasn't available, ensure we have local balance
-  if (balance === 0) {
-    balance = await getLocalWalletBalance(user.id);
+    throw new Error(error.message || 'Gift failed');
   }
 
-  if (balance < amount) {
-    throw new Error(`Insufficient balance. You have TSh ${balance.toLocaleString()} but need TSh ${amount.toLocaleString()}.`);
+  if (data?.error) {
+    throw new Error(data.error);
   }
 
-  // 2. Find the stream organizer (recipient)
-  const { data: event, error: eventError } = await supabase
-    .from('events')
-    .select('organizer_id')
-    .eq('id', eventId)
-    .single();
-
-  if (eventError || !event?.organizer_id) {
-    throw new Error('Could not find stream organizer');
-  }
-
-  if (event.organizer_id === user.id) {
-    throw new Error('You cannot send a gift to yourself');
-  }
-
-  // 3. Debit sender (gift sent)
-  const transaction = await createTransaction({
-    user_id: user.id,
-    event_id: eventId,
-    amount,
-    currency,
-    provider: 'Wallet',
-    status: 'completed',
-    metadata: { type: 'gift', direction: 'sent', recipientId: event.organizer_id, message: 'Sent a gift' }
-  });
-
-  // 4. Credit organizer (gift received)
-  await createTransaction({
-    user_id: event.organizer_id,
-    event_id: eventId,
-    amount,
-    currency,
-    provider: 'Wallet',
-    status: 'completed',
-    metadata: { type: 'gift-received', direction: 'received', senderId: user.id, message: 'Received a gift' }
-  });
-
-  // 5. Send a special chat message
+  // Send a special chat message
   await sendStreamMessage(eventId, `🎁 Sent a gift of ${currency} ${amount.toLocaleString()}!`);
 
-  return transaction;
+  return data;
 };
 
 export const updateLiveViewerCount = async (eventId: number, delta: number) => {
