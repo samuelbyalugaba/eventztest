@@ -1773,15 +1773,15 @@ export const sendGift = async (eventId: number, amount: number, currency: string
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
-  // 1. Create a transaction record (pending)
+  // 1. Create a transaction record as completed so it affects wallet balance
   const transaction = await createTransaction({
     user_id: user.id,
     event_id: eventId,
     amount,
     currency,
-    provider: 'System', // Internal gift
-    status: 'pending', // Must be pending to pass RLS policy
-    metadata: { type: 'gift', message: 'Sent a gift' }
+    provider: 'Wallet',
+    status: 'completed',
+    metadata: { type: 'gift', direction: 'sent', message: 'Sent a gift' }
   });
 
   // 2. Send a special chat message

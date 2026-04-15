@@ -150,18 +150,23 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
       // 2. Initiate nTZS Deposit
       await ntzsApi.deposit(nUser.id, Number(amount), phone);
+
+      // 3. Record deposit in local transactions for history
+      await supabase.from('transactions').insert([{
+        user_id: user.id,
+        amount: Number(amount),
+        currency: 'TZS',
+        provider: 'M-Pesa',
+        status: 'pending',
+        metadata: { type: 'deposit', phone }
+      }]);
       
-      // 2. Record intent in local DB (optional but good for UI immediate feedback)
-      // We can assume 'pending' status.
       toast.info('STK Push sent! Please check your phone to complete payment.');
-      
-      // Ideally, we listen for the webhook or poll for status.
-      // For MVP, we can tell the user to wait.
       setShowDeposit(false);
       setAmount('');
+      setPhone('');
       
-      // Refresh after a delay to see if balance updated (or wait for webhook)
-      setTimeout(loadWalletData, 5000); 
+      setTimeout(loadWalletData, 5000);
 
     } catch (error: any) {
       toast.error(error.message || 'Deposit failed');
@@ -205,12 +210,22 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
       // 2. Initiate nTZS Withdrawal
       await ntzsApi.withdraw(nUser.id, Number(amount), phone);
+
+      // 3. Record withdrawal in local transactions for history
+      await supabase.from('transactions').insert([{
+        user_id: user.id,
+        amount: Number(amount),
+        currency: 'TZS',
+        provider: 'M-Pesa',
+        status: 'completed',
+        metadata: { type: 'withdrawal', phone }
+      }]);
       
       toast.success('Withdrawal initiated! Funds will be sent to your M-Pesa.');
       setShowWithdraw(false);
       setAmount('');
+      setPhone('');
       
-      // Refresh balance immediately as funds should be deducted
       loadWalletData();
 
     } catch (error: any) {
