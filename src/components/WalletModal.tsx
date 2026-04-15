@@ -244,6 +244,21 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     return 'payment';
   };
 
+  const isOutflow = (kind: string) => ['payment', 'withdrawal', 'gift'].includes(kind);
+
+  const getTxLabel = (t: Tx) => {
+    const kind = getTxKind(t);
+    switch (kind) {
+      case 'deposit': return t.status === 'pending' ? 'Deposit (Pending)' : 'Deposit';
+      case 'top-up': return 'Top Up';
+      case 'withdrawal': return 'Withdrawal';
+      case 'gift': return '🎁 Gift Sent';
+      case 'transfer': return 'Transfer';
+      case 'payment': return 'Payment';
+      default: return 'Transaction';
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
       <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl sm:shadow-xl sm:border sm:border-gray-200">
