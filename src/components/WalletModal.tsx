@@ -123,7 +123,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     }
   }, []);
 
-  const pollDepositStatus = useCallback(async (depositId: string, userId: string) => {
+  const pollDepositStatus = useCallback(async (depositId: string, _userId: string) => {
     // Poll every 3s for up to 60s to check if webhook updated the pending deposit
     let attempts = 0;
     const maxAttempts = 20;
