@@ -15,7 +15,7 @@ export interface NtzsUser {
 
 export interface NtzsDeposit {
   id: string;
-  status: 'pending' | 'minted' | 'failed';
+  status: 'pending' | 'minted' | 'failed' | 'completed' | 'confirmed' | 'success';
   amountTzs: number;
 }
 
@@ -29,6 +29,13 @@ export interface NtzsWithdrawal {
   id: string;
   status: 'pending' | 'completed' | 'failed';
   amountTzs: number;
+}
+
+export interface NtzsReconcileResult {
+  updatedTransactionIds?: Array<string | number>;
+  providerBalance?: number;
+  localBalance?: number;
+  remainingUnreconciledAmount?: number;
 }
 
 /**
@@ -101,6 +108,10 @@ export const ntzsApi = {
 
   async getDepositStatus(depositId: string): Promise<NtzsDeposit> {
     return this._call('get_deposit', { depositId });
+  },
+
+  async reconcilePendingDeposits(): Promise<NtzsReconcileResult> {
+    return this._call('reconcile_pending_deposits');
   },
 
   async transfer(fromUserId: string, toUserId: string, amountTzs: number): Promise<NtzsTransfer> {

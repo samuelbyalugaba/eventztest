@@ -10,10 +10,11 @@ interface WalletModalProps {
 }
 
 type Tx = {
-  id: string;
+  id: string | number;
   amount: number;
   currency: string;
   provider: string;
+  provider_transaction_id?: string | null;
   status: string;
   created_at: string;
   event?: { id: number; title: string } | null;
@@ -92,13 +93,15 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       const localBalance = await getLocalWalletBalance(user.id);
       setBalance(ntzsBalance !== null ? ntzsBalance : localBalance);
 
+      const transactionSelect = `
+          id, amount, currency, provider, provider_transaction_id, status, created_at, metadata,
+          event:events(id, title)
+        `;
+
       // 3. Load transaction history (include pending for deposit tracking)
       const { data: transactions } = await supabase
         .from('transactions')
-        .select(`
-          id, amount, currency, provider, status, created_at, metadata,
-          event:events(id, title)
-        `)
+        .select(transactionSelect)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -110,6 +113,38 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           const metaType = t.metadata?.type;
           return typeof metaType === 'string' && walletTypes.includes(metaType.trim());
         });
+
+        const hasPendingDeposits = walletTxs.some(
+          (tx) => tx.status === 'pending' && tx.metadata?.type === 'deposit'
+        );
+
+        if (ntzsBalance !== null && hasPendingDeposits && ntzsBalance > localBalance) {
+          try {
+            const reconciliation = await ntzsApi.reconcilePendingDeposits();
+
+            if (reconciliation?.updatedTransactionIds?.length) {
+              const { data: refreshedTransactions } = await supabase
+                .from('transactions')
+                .select(transactionSelect)
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+              if (refreshedTransactions) {
+                const refreshedWalletTxs = (refreshedTransactions as unknown as Tx[]).filter(t => {
+                  const metaType = t.metadata?.type;
+                  return typeof metaType === 'string' && walletTypes.includes(metaType.trim());
+                });
+
+                setTxs(refreshedWalletTxs);
+                return;
+              }
+            }
+          } catch {
+            // Reconciliation is best-effort; keep current transaction list if it fails.
+          }
+        }
+
         setTxs(walletTxs);
       }
 
@@ -123,37 +158,50 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     }
   }, []);
 
-  const pollDepositStatus = useCallback(async (depositId: string, _userId: string) => {
+  const pollDepositStatus = useCallback(async (depositId: string | number, _userId: string) => {
     // Poll every 3s for up to 60s to check if webhook updated the pending deposit
     let attempts = 0;
     const maxAttempts = 20;
     const interval = 3000;
+
+    const checkResolvedTransaction = async () => {
+      const { data } = await supabase
+        .from('transactions')
+        .select('id, status')
+        .eq('id', depositId)
+        .single();
+
+      if (data && data.status !== 'pending') {
+        if (data.status === 'success' || data.status === 'completed') {
+          toast.success('Deposit completed successfully!');
+        } else if (data.status === 'failed') {
+          toast.error('Deposit failed. Please try again.');
+        }
+        await loadWalletData();
+        return true;
+      }
+
+      return false;
+    };
 
     const poll = async () => {
       if (attempts >= maxAttempts) return;
       attempts++;
 
       try {
-        // Check if our pending deposit has been updated
-        const { data } = await supabase
-          .from('transactions')
-          .select('id, status')
-          .eq('id', depositId)
-          .single();
-
-        if (data && data.status !== 'pending') {
-          if (data.status === 'success' || data.status === 'completed') {
-            toast.success('Deposit completed successfully!');
-          } else if (data.status === 'failed') {
-            toast.error('Deposit failed. Please try again.');
-          }
-          loadWalletData();
+        if (await checkResolvedTransaction()) {
           return;
         }
 
-        // Also try checking via nTZS API balance change
+        if (attempts === 1 || attempts % 2 === 0) {
+          const reconciliation = await ntzsApi.reconcilePendingDeposits();
+          if (reconciliation?.updatedTransactionIds?.length && await checkResolvedTransaction()) {
+            return;
+          }
+        }
+
         if (attempts % 3 === 0) {
-          loadWalletData();
+          await loadWalletData();
         }
       } catch {
         // ignore polling errors
@@ -191,7 +239,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       }
 
       // 2. Initiate nTZS Deposit
-      await ntzsApi.deposit(nUser.id, Number(amount), phone);
+      const deposit = await ntzsApi.deposit(nUser.id, Number(amount), phone);
 
       // 3. Record deposit in local transactions for history
       const { data: insertedTx } = await supabase.from('transactions').insert([{
@@ -199,8 +247,14 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         amount: Number(amount),
         currency: 'TZS',
         provider: 'M-Pesa',
+        provider_transaction_id: deposit.id,
         status: 'pending',
-        metadata: { type: 'deposit', phone }
+        metadata: {
+          type: 'deposit',
+          phone,
+          ntzsDepositId: deposit.id,
+          providerStatus: deposit.status,
+        }
       }]).select().single();
       
       toast.info('STK Push sent! Please check your phone to complete payment.');
