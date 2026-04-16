@@ -122,28 +122,34 @@ serve(async (req) => {
     } else {
       const text = await ntzsResponse.text();
       console.error(`[ntzs-proxy] Non-JSON response (${ntzsResponse.status}):`, text.substring(0, 300));
+      // Return 200 with fallback flag so client doesn't get a hard error
       return jsonResponse({
-        error: `nTZS API Error: ${ntzsResponse.status} Not Found`,
+        error: `nTZS API Error: ${ntzsResponse.status}`,
         details: text.substring(0, 500),
         url: endpoint,
         apiUnavailable: true,
-      }, 502);
+        fallback: true,
+      }, 200);
     }
 
     if (!ntzsResponse.ok) {
       console.error(`[ntzs-proxy] nTZS error ${ntzsResponse.status}:`, data);
+      const isFallbackable = ntzsResponse.status >= 500;
+      // Return 200 for server errors to prevent client-side "non-2xx" crashes
       return jsonResponse({
         error: data.message || `nTZS API Error: ${ntzsResponse.status}`,
         details: data,
         statusCode: ntzsResponse.status,
-        apiUnavailable: ntzsResponse.status === 404,
-      }, ntzsResponse.status >= 500 ? 502 : 400);
+        apiUnavailable: isFallbackable,
+        fallback: isFallbackable,
+      }, isFallbackable ? 200 : 400);
     }
 
     return jsonResponse(data);
 
   } catch (error) {
     console.error('[ntzs-proxy] Internal Error:', error);
-    return jsonResponse({ error: error.message || 'Internal Server Error', apiUnavailable: true }, 500);
+    // Return 200 with fallback flag to prevent client crash
+    return jsonResponse({ error: error.message || 'Internal Server Error', apiUnavailable: true, fallback: true }, 200);
   }
 });
