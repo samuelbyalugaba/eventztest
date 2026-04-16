@@ -123,6 +123,48 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     }
   }, []);
 
+  const pollDepositStatus = useCallback(async (depositId: string, _userId: string) => {
+    // Poll every 3s for up to 60s to check if webhook updated the pending deposit
+    let attempts = 0;
+    const maxAttempts = 20;
+    const interval = 3000;
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) return;
+      attempts++;
+
+      try {
+        // Check if our pending deposit has been updated
+        const { data } = await supabase
+          .from('transactions')
+          .select('id, status')
+          .eq('id', depositId)
+          .single();
+
+        if (data && data.status !== 'pending') {
+          if (data.status === 'success' || data.status === 'completed') {
+            toast.success('Deposit completed successfully!');
+          } else if (data.status === 'failed') {
+            toast.error('Deposit failed. Please try again.');
+          }
+          loadWalletData();
+          return;
+        }
+
+        // Also try checking via nTZS API balance change
+        if (attempts % 3 === 0) {
+          loadWalletData();
+        }
+      } catch {
+        // ignore polling errors
+      }
+
+      setTimeout(poll, interval);
+    };
+
+    setTimeout(poll, interval);
+  }, [loadWalletData]);
+
   const handleDeposit = async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       toast.error('Please enter a valid amount');
@@ -152,24 +194,35 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       await ntzsApi.deposit(nUser.id, Number(amount), phone);
 
       // 3. Record deposit in local transactions for history
-      await supabase.from('transactions').insert([{
+      const { data: insertedTx } = await supabase.from('transactions').insert([{
         user_id: user.id,
         amount: Number(amount),
         currency: 'TZS',
         provider: 'M-Pesa',
         status: 'pending',
         metadata: { type: 'deposit', phone }
-      }]);
+      }]).select().single();
       
       toast.info('STK Push sent! Please check your phone to complete payment.');
       setShowDeposit(false);
       setAmount('');
       setPhone('');
       
-      setTimeout(loadWalletData, 5000);
+      // Start polling for status update
+      if (insertedTx?.id) {
+        pollDepositStatus(insertedTx.id, user.id);
+      } else {
+        setTimeout(loadWalletData, 5000);
+      }
 
     } catch (error: any) {
-      toast.error(error.message || 'Deposit failed');
+      // Handle graceful fallback errors from the proxy
+      const msg = error?.message || 'Deposit failed';
+      if (msg.includes('API') || msg.includes('unavailable')) {
+        toast.error('Wallet service is temporarily unavailable. Please try again later.');
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setIsProcessing(false);
     }

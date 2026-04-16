@@ -84,26 +84,77 @@ serve(async (req) => {
     // Record in transactions table if we have a user reference
     if (externalId && txStatus !== 'pending') {
       // externalId is the Supabase user UUID we used when creating the nTZS user
-      const { error: insertError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: externalId,
-          amount: amount,
-          currency: 'TZS',
-          provider: 'nTZS',
-          status: txStatus === 'completed' ? 'success' : txStatus,
-          metadata: {
-            type: txType === 'deposit' ? 'top-up' : txType,
-            source: 'ntzs-webhook',
-            txHash,
-            rawEvent: eventType,
-          },
-        });
 
-      if (insertError) {
-        console.error('[ntzs-webhook] DB insert error:', insertError);
+      // For deposits: try to UPDATE the existing 'pending' deposit first
+      if (txType === 'deposit') {
+        const finalStatus = txStatus === 'completed' ? 'success' : txStatus;
+        const { data: updated, error: updateError } = await supabase
+          .from('transactions')
+          .update({
+            status: finalStatus,
+            provider: 'nTZS',
+            metadata: {
+              type: 'deposit',
+              source: 'ntzs-webhook',
+              txHash,
+              rawEvent: eventType,
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', externalId)
+          .eq('status', 'pending')
+          .ilike('metadata->>type', 'deposit')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .select();
+
+        if (updated && updated.length > 0) {
+          console.log(`[ntzs-webhook] Updated pending deposit to ${finalStatus} for user ${externalId}`);
+        } else {
+          // No pending deposit found — insert a new record as fallback
+          console.log(`[ntzs-webhook] No pending deposit found, inserting new record`);
+          if (updateError) console.error('[ntzs-webhook] Update error:', updateError);
+          
+          const { error: insertError } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: externalId,
+              amount: amount,
+              currency: 'TZS',
+              provider: 'nTZS',
+              status: finalStatus,
+              metadata: {
+                type: 'deposit',
+                source: 'ntzs-webhook',
+                txHash,
+                rawEvent: eventType,
+              },
+            });
+          if (insertError) console.error('[ntzs-webhook] Insert error:', insertError);
+        }
       } else {
-        console.log(`[ntzs-webhook] Recorded ${txType} (${txStatus}) for user ${externalId}`);
+        // For withdrawals/transfers, insert as before
+        const { error: insertError } = await supabase
+          .from('transactions')
+          .insert({
+            user_id: externalId,
+            amount: amount,
+            currency: 'TZS',
+            provider: 'nTZS',
+            status: txStatus === 'completed' ? 'success' : txStatus,
+            metadata: {
+              type: txType,
+              source: 'ntzs-webhook',
+              txHash,
+              rawEvent: eventType,
+            },
+          });
+
+        if (insertError) {
+          console.error('[ntzs-webhook] DB insert error:', insertError);
+        } else {
+          console.log(`[ntzs-webhook] Recorded ${txType} (${txStatus}) for user ${externalId}`);
+        }
       }
     }
 
