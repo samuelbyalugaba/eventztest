@@ -65,12 +65,20 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const likesRef = useRef(0); // Keep likes in sync via ref
   const { addMessage } = useMessageBuffer();
 
-  // Agora
+  // Playback mode: HLS (Cloudflare/OBS) when playback_url present, else Agora WebRTC
+  const isHlsMode = Boolean(stream.playback_url);
+
+  // Agora (only used when no HLS playback url)
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
   const client = useRef<ReturnType<typeof AgoraRTC.createClient> | null>(null);
   const [viewerUid] = useState(() => `viewer-${Math.random().toString(36).slice(2, 11)}`);
 
-  if (!client.current) {
+  // HLS
+  const hlsVideoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const [hlsReady, setHlsReady] = useState(false);
+
+  if (!isHlsMode && !client.current) {
     client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
   }
 
