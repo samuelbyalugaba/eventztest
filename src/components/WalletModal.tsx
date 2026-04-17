@@ -247,12 +247,13 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         user_id: user.id,
         amount: Number(amount),
         currency: 'TZS',
-        provider: 'M-Pesa',
+        provider: provider,
         provider_transaction_id: deposit.id,
         status: 'pending',
         metadata: {
           type: 'deposit',
           phone,
+          provider,
           ntzsDepositId: deposit.id,
           providerStatus: deposit.status,
         }
@@ -324,9 +325,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         user_id: user.id,
         amount: Number(amount),
         currency: 'TZS',
-        provider: 'M-Pesa',
+        provider: provider,
         status: 'completed',
-        metadata: { type: 'withdrawal', phone }
+        metadata: { type: 'withdrawal', phone, provider }
       }]);
       
       toast.success('Withdrawal initiated! Funds will be sent to your M-Pesa.');
