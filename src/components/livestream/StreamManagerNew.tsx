@@ -477,7 +477,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/60 pointer-events-none" />
 
         {/* Top bar */}
-        <div className="absolute top-0 left-0 right-0 z-10 px-4 pt-12 pb-4">
+        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-4">
           <div className="flex items-center justify-between">
             <button onClick={handleRequestClose} className="p-2.5 rounded-xl bg-white/10 backdrop-blur-xl text-white border border-white/10">
               <X className="w-5 h-5" />
@@ -492,8 +492,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         </div>
 
         {/* Center controls */}
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="flex items-center gap-6">
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="flex items-center gap-6 pointer-events-auto">
             <button onClick={toggleCameraDevice} className="p-3 rounded-2xl bg-white/10 backdrop-blur-xl text-white border border-white/10 active:scale-90 transition-transform">
               <RotateCcw className="w-6 h-6" />
             </button>
