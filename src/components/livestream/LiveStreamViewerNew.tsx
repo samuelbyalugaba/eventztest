@@ -390,26 +390,41 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   };
 
   // ─── Video content (shared between layouts) ─────────────
+  const hasMedia = isHlsMode ? hlsReady : remoteUsers.length > 0;
+
   const renderVideo = (id?: string) => (
     <>
-      {remoteUsers.length > 0 ? (
+      {isHlsMode ? (
+        <div className="w-full h-full">
+          <video
+            ref={hlsVideoRef}
+            id={id || 'hls-player'}
+            className="w-full h-full object-contain bg-black"
+            playsInline
+            autoPlay
+            controls={false}
+          />
+        </div>
+      ) : remoteUsers.length > 0 ? (
         <div className="w-full h-full">
           {remoteUsers.map((user) => (
             <div key={user.uid} id={id || `remote-player-${user.uid}`} className="w-full h-full" />
           ))}
         </div>
-      ) : (
+      ) : null}
+
+      {!hasMedia && (
         <div className="absolute inset-0">
           <ImageWithFallback src={stream.thumbnail} alt={stream.title} className="w-full h-full object-cover opacity-50" />
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             {videoError ? (
               <div className="text-center px-6">
-                <p className="text-red-400 mb-3 text-sm">{videoError}</p>
-                <button onClick={() => { setVideoError(null); window.location.reload(); }} className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold">Retry</button>
+                <p className="text-destructive mb-3 text-sm">{videoError}</p>
+                <button onClick={() => { setVideoError(null); window.location.reload(); }} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold">Retry</button>
               </div>
             ) : (
               <div className="text-center px-6">
-                <div className="w-12 h-12 mx-auto mb-3 border-3 border-white/20 border-t-primary rounded-full animate-spin" />
+                <div className="w-12 h-12 mx-auto mb-3 border-[3px] border-white/20 border-t-primary rounded-full animate-spin" />
                 <p className="text-white text-base font-bold mb-1">Connecting...</p>
                 <p className="text-white/50 text-sm">Waiting for host to start streaming</p>
               </div>
