@@ -1860,31 +1860,29 @@ export const subscribeToEventLikes = (
     .subscribe();
 };
 
+// Provisions an OBS-compatible RTMPS ingest via Cloudflare Stream Live.
+// Returns the ingest URL + stream key the host enters in OBS, plus an HLS
+// playback URL viewers can watch.
 export const generateStreamKeys = async (eventId: number) => {
-  const channelName = `event-${eventId}`;
-  const streamKey = channelName;
-  const ingestUrl = "rtmp://rtmp.eventz-bridge.local/live";
-  const playbackUrl = null;
+  const { data, error } = await supabase.functions.invoke(
+    'cloudflare-stream-create',
+    { body: { eventId } }
+  );
 
-  const updates = {
-    stream_key: streamKey,
-    ingest_url: ingestUrl,
-    playback_url: playbackUrl,
-    provider: 'agora-rtmp',
-    channel: channelName
+  if (error) {
+    const msg = (error as any)?.message || 'Failed to provision stream';
+    throw new Error(msg);
+  }
+  if (!data || (data as any).error) {
+    throw new Error((data as any)?.error || 'Failed to provision stream');
+  }
+
+  const { ingestUrl, streamKey, playbackUrl } = data as {
+    ingestUrl: string;
+    streamKey: string;
+    playbackUrl: string | null;
   };
 
-  const { data: currentEvent } = await supabase.from('events').select('streaming').eq('id', eventId).single();
-  const newStreaming = { ...(currentEvent?.streaming || {}), ...updates };
-
-  const { error } = await supabase
-    .from('events')
-    .update({ streaming: newStreaming })
-    .eq('id', eventId)
-    .select()
-    .single();
-
-  if (error) throw error;
   return { streamKey, ingestUrl, playbackUrl };
 };
 
