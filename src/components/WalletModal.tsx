@@ -439,8 +439,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                     <option value="M-Pesa">M-Pesa (Vodacom)</option>
                     <option value="Tigo Pesa">Mixx by Yas (Tigo Pesa)</option>
                     <option value="Airtel Money">Airtel Money</option>
-                    <option value="Halopesa">HaloPesa</option>
-                    <option value="Azampesa">Azam Pesa</option>
                   </select>
                 </div>
                 <div>
@@ -492,8 +490,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                     <option value="M-Pesa">M-Pesa (Vodacom)</option>
                     <option value="Tigo Pesa">Mixx by Yas (Tigo Pesa)</option>
                     <option value="Airtel Money">Airtel Money</option>
-                    <option value="Halopesa">HaloPesa</option>
-                    <option value="Azampesa">Azam Pesa</option>
                   </select>
                 </div>
                 <div>
