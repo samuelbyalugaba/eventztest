@@ -427,8 +427,22 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           {/* Deposit Form */}
           {showDeposit && (
             <div className="p-4 bg-purple-50 rounded-xl border border-purple-100 animate-in fade-in slide-in-from-top-2">
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">Deposit via M-Pesa</h4>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">Deposit via Mobile Money</h4>
               <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Mobile Money Provider</label>
+                  <select
+                    value={provider}
+                    onChange={(e) => setProvider(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm bg-white"
+                  >
+                    <option value="M-Pesa">M-Pesa (Vodacom)</option>
+                    <option value="Tigo Pesa">Mixx by Yas (Tigo Pesa)</option>
+                    <option value="Airtel Money">Airtel Money</option>
+                    <option value="Halopesa">HaloPesa</option>
+                    <option value="Azampesa">Azam Pesa</option>
+                  </select>
+                </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Amount (TZS)</label>
                   <input
