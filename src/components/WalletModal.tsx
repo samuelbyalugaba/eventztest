@@ -28,6 +28,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState('');
+  const [provider, setProvider] = useState('M-Pesa');
   const [isProcessing, setIsProcessing] = useState(false);
   const [balance, setBalance] = useState(0);
   const [ntzsAvailable, setNtzsAvailable] = useState(true);
