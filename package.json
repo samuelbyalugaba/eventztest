@@ -42,7 +42,7 @@
             "cmdk": "^1.1.1",
             "dotenv": "^17.3.1",
             "embla-carousel-react": "^8.6.0",
-            "hls.js": "^1.6.15",
+            "hls.js": "^1.5.15",
             "hono": "*",
             "html-to-image": "^1.11.13",
             "html5-qrcode": "^2.3.8",

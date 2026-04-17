@@ -1,0 +1,10 @@
+project_id = "lovable"
+
+[functions.cloudflare-stream-webhook]
+verify_jwt = false
+
+[functions.ntzs-webhook]
+verify_jwt = false
+
+[functions.snippe-webhook]
+verify_jwt = false

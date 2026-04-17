@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import Hls from 'hls.js';
 import AgoraRTC, { IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../../utils/agora';
 import {
@@ -64,12 +65,20 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const likesRef = useRef(0); // Keep likes in sync via ref
   const { addMessage } = useMessageBuffer();
 
-  // Agora
+  // Playback mode: HLS (Cloudflare/OBS) when playback_url present, else Agora WebRTC
+  const isHlsMode = Boolean(stream.playback_url);
+
+  // Agora (only used when no HLS playback url)
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
   const client = useRef<ReturnType<typeof AgoraRTC.createClient> | null>(null);
   const [viewerUid] = useState(() => `viewer-${Math.random().toString(36).slice(2, 11)}`);
 
-  if (!client.current) {
+  // HLS
+  const hlsVideoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const [hlsReady, setHlsReady] = useState(false);
+
+  if (!isHlsMode && !client.current) {
     client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
   }
 
@@ -173,8 +182,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     return () => { sub.unsubscribe(); giftSub.unsubscribe(); };
   }, [stream.id]);
 
-  // Agora
+  // Agora (skipped when streaming via Cloudflare HLS / OBS)
   useEffect(() => {
+    if (isHlsMode) return;
     const channelName = `event-${stream.id}`;
     const init = async () => {
       try {
@@ -210,10 +220,11 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         updateLiveViewerCount(stream.id, -1).catch(() => {});
       }
     };
-  }, [stream.id]);
+  }, [stream.id, isHlsMode]);
 
-  // Play remote video
+  // Play remote Agora video tracks
   useEffect(() => {
+    if (isHlsMode) return;
     remoteUsers.forEach((user) => {
       const el = document.getElementById(`remote-player-${user.uid}`);
       if (el && user.videoTrack) {
@@ -222,14 +233,66 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         if (v) v.style.transform = 'none';
       }
     });
-  }, [remoteUsers]);
+  }, [remoteUsers, isHlsMode]);
 
-  // Mute control
+  // Agora mute control
   useEffect(() => {
+    if (isHlsMode) return;
     remoteUsers.forEach((user) => {
       if (user.audioTrack) user.audioTrack.setVolume(isMuted ? 0 : 100);
     });
-  }, [isMuted, remoteUsers]);
+  }, [isMuted, remoteUsers, isHlsMode]);
+
+  // ─── HLS playback (Cloudflare Stream / OBS) ─────────────
+  useEffect(() => {
+    if (!isHlsMode || !stream.playback_url) return;
+    const video = hlsVideoRef.current;
+    if (!video) return;
+
+    let hls: Hls | null = null;
+    const url = stream.playback_url;
+
+    const onPlay = () => setHlsReady(true);
+    video.addEventListener('playing', onPlay);
+
+    if (Hls.isSupported()) {
+      hls = new Hls({ lowLatencyMode: true, liveSyncDuration: 2 });
+      hlsRef.current = hls;
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, (_e, data) => {
+        if (data.fatal) setVideoError(`Stream error: ${data.details}`);
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+    } else {
+      setVideoError('HLS playback not supported in this browser');
+      return;
+    }
+
+    video.muted = isMuted;
+    video.play().catch(() => { /* autoplay blocked; user can tap */ });
+
+    updateLiveViewerCount(stream.id, 1)
+      .then(() => { viewerCountAdjustedRef.current = true; })
+      .catch(() => {});
+
+    return () => {
+      video.removeEventListener('playing', onPlay);
+      if (hls) { hls.destroy(); hlsRef.current = null; }
+      if (viewerCountAdjustedRef.current) {
+        viewerCountAdjustedRef.current = false;
+        updateLiveViewerCount(stream.id, -1).catch(() => {});
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHlsMode, stream.playback_url, stream.id]);
+
+  // HLS mute control
+  useEffect(() => {
+    if (!isHlsMode) return;
+    if (hlsVideoRef.current) hlsVideoRef.current.muted = isMuted;
+  }, [isMuted, isHlsMode]);
 
   // Cleanup hearts
   useEffect(() => {
@@ -327,26 +390,41 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   };
 
   // ─── Video content (shared between layouts) ─────────────
+  const hasMedia = isHlsMode ? hlsReady : remoteUsers.length > 0;
+
   const renderVideo = (id?: string) => (
     <>
-      {remoteUsers.length > 0 ? (
+      {isHlsMode ? (
+        <div className="w-full h-full">
+          <video
+            ref={hlsVideoRef}
+            id={id || 'hls-player'}
+            className="w-full h-full object-contain bg-black"
+            playsInline
+            autoPlay
+            controls={false}
+          />
+        </div>
+      ) : remoteUsers.length > 0 ? (
         <div className="w-full h-full">
           {remoteUsers.map((user) => (
             <div key={user.uid} id={id || `remote-player-${user.uid}`} className="w-full h-full" />
           ))}
         </div>
-      ) : (
+      ) : null}
+
+      {!hasMedia && (
         <div className="absolute inset-0">
           <ImageWithFallback src={stream.thumbnail} alt={stream.title} className="w-full h-full object-cover opacity-50" />
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             {videoError ? (
               <div className="text-center px-6">
-                <p className="text-red-400 mb-3 text-sm">{videoError}</p>
-                <button onClick={() => { setVideoError(null); window.location.reload(); }} className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold">Retry</button>
+                <p className="text-destructive mb-3 text-sm">{videoError}</p>
+                <button onClick={() => { setVideoError(null); window.location.reload(); }} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold">Retry</button>
               </div>
             ) : (
               <div className="text-center px-6">
-                <div className="w-12 h-12 mx-auto mb-3 border-3 border-white/20 border-t-primary rounded-full animate-spin" />
+                <div className="w-12 h-12 mx-auto mb-3 border-[3px] border-white/20 border-t-primary rounded-full animate-spin" />
                 <p className="text-white text-base font-bold mb-1">Connecting...</p>
                 <p className="text-white/50 text-sm">Waiting for host to start streaming</p>
               </div>
