@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import Hls from 'hls.js';
 import AgoraRTC, { IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../../utils/agora';
 import {
