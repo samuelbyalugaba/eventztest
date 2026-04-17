@@ -459,7 +459,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   // Pre-stream setup screen
   if (phase === 'setup' && !isLive) {
     return (
-      <div className="fixed inset-0 bg-black z-50 overflow-hidden">
+      <div className="fixed inset-0 bg-black z-[80] overflow-hidden">
         {/* Camera preview */}
         <div className="absolute inset-0">
           <div id="local-player" className={`w-full h-full ${!cameraEnabled ? 'hidden' : ''}`} />
@@ -666,7 +666,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   // Desktop: side-by-side with sidebar chat
   // Mobile: fullscreen with floating chat
   return (
-    <div className="fixed inset-0 bg-black z-50 overflow-hidden flex">
+    <div className="fixed inset-0 bg-black z-[80] overflow-hidden flex">
       {/* Video + HUD area */}
       <div className="flex-1 relative min-h-0">
         {/* Video — fill entire area, no extra wrapper */}
