@@ -389,7 +389,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   // Post-stream summary screen
   if (phase === 'ended' && endStats) {
     return (
-      <div className="fixed inset-0 bg-black z-50 flex items-center justify-center p-6">
+      <div className="fixed inset-0 bg-black z-[80] flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-xl">
             <div className="text-center mb-6">
