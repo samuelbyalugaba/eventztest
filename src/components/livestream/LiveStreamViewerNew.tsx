@@ -182,8 +182,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     return () => { sub.unsubscribe(); giftSub.unsubscribe(); };
   }, [stream.id]);
 
-  // Agora
+  // Agora (skipped when streaming via Cloudflare HLS / OBS)
   useEffect(() => {
+    if (isHlsMode) return;
     const channelName = `event-${stream.id}`;
     const init = async () => {
       try {
@@ -219,10 +220,11 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         updateLiveViewerCount(stream.id, -1).catch(() => {});
       }
     };
-  }, [stream.id]);
+  }, [stream.id, isHlsMode]);
 
-  // Play remote video
+  // Play remote Agora video tracks
   useEffect(() => {
+    if (isHlsMode) return;
     remoteUsers.forEach((user) => {
       const el = document.getElementById(`remote-player-${user.uid}`);
       if (el && user.videoTrack) {
@@ -231,14 +233,66 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         if (v) v.style.transform = 'none';
       }
     });
-  }, [remoteUsers]);
+  }, [remoteUsers, isHlsMode]);
 
-  // Mute control
+  // Agora mute control
   useEffect(() => {
+    if (isHlsMode) return;
     remoteUsers.forEach((user) => {
       if (user.audioTrack) user.audioTrack.setVolume(isMuted ? 0 : 100);
     });
-  }, [isMuted, remoteUsers]);
+  }, [isMuted, remoteUsers, isHlsMode]);
+
+  // ─── HLS playback (Cloudflare Stream / OBS) ─────────────
+  useEffect(() => {
+    if (!isHlsMode || !stream.playback_url) return;
+    const video = hlsVideoRef.current;
+    if (!video) return;
+
+    let hls: Hls | null = null;
+    const url = stream.playback_url;
+
+    const onPlay = () => setHlsReady(true);
+    video.addEventListener('playing', onPlay);
+
+    if (Hls.isSupported()) {
+      hls = new Hls({ lowLatencyMode: true, liveSyncDuration: 2 });
+      hlsRef.current = hls;
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, (_e, data) => {
+        if (data.fatal) setVideoError(`Stream error: ${data.details}`);
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+    } else {
+      setVideoError('HLS playback not supported in this browser');
+      return;
+    }
+
+    video.muted = isMuted;
+    video.play().catch(() => { /* autoplay blocked; user can tap */ });
+
+    updateLiveViewerCount(stream.id, 1)
+      .then(() => { viewerCountAdjustedRef.current = true; })
+      .catch(() => {});
+
+    return () => {
+      video.removeEventListener('playing', onPlay);
+      if (hls) { hls.destroy(); hlsRef.current = null; }
+      if (viewerCountAdjustedRef.current) {
+        viewerCountAdjustedRef.current = false;
+        updateLiveViewerCount(stream.id, -1).catch(() => {});
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHlsMode, stream.playback_url, stream.id]);
+
+  // HLS mute control
+  useEffect(() => {
+    if (!isHlsMode) return;
+    if (hlsVideoRef.current) hlsVideoRef.current.muted = isMuted;
+  }, [isMuted, isHlsMode]);
 
   // Cleanup hearts
   useEffect(() => {
