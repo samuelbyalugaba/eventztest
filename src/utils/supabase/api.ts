@@ -2,6 +2,28 @@
 import { supabase } from './client';
 export { supabase };
 
+const normalizeEnv = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+const supabaseFunctionUrl = (name: string) => {
+  const baseUrl = normalizeEnv(import.meta.env.VITE_SUPABASE_URL);
+  if (!baseUrl) {
+    throw new Error('Streaming backend is not configured');
+  }
+
+  return `${baseUrl}/functions/v1/${name}`;
+};
+
+const getSupabaseAnonKey = () => {
+  const anonKey = normalizeEnv(import.meta.env.VITE_SUPABASE_ANON_KEY);
+  const legacyKey = normalizeEnv(import.meta.env.VITE_SUPABASE_KEY);
+  const key = anonKey || legacyKey;
+
+  if (!key) {
+    throw new Error('Streaming backend is not configured');
+  }
+
+  return key;
+};
+
 export type Profile = {
   id: string;
   username: string;
@@ -1864,17 +1886,27 @@ export const subscribeToEventLikes = (
 // Returns the ingest URL + stream key the host enters in OBS, plus an HLS
 // playback URL viewers can watch.
 export const generateStreamKeys = async (eventId: number) => {
-  const { data, error } = await supabase.functions.invoke(
-    'cloudflare-stream-create',
-    { body: { eventId } }
-  );
-
-  if (error) {
-    const msg = (error as any)?.message || 'Failed to provision stream';
-    throw new Error(msg);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Please sign in again to generate RTMP keys');
   }
-  if (!data || (data as any).error) {
-    throw new Error((data as any)?.error || 'Failed to provision stream');
+
+  const response = await fetch(supabaseFunctionUrl('cloudflare-stream-create'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: getSupabaseAnonKey(),
+    },
+    body: JSON.stringify({ eventId }),
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data || (data as any).error) {
+    throw new Error(
+      (data as any)?.error || `Failed to provision stream (${response.status})`
+    );
   }
 
   const { ingestUrl, streamKey, playbackUrl } = data as {
