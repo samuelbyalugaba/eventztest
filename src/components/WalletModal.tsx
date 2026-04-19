@@ -503,20 +503,12 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                   />
                   <button
                     type="button"
-                    onClick={() => setAmount(String(maxWithdrawable))}
+                    onClick={() => setAmount(String(balance))}
                     className="text-xs text-purple-600 mt-1 hover:underline"
                   >
-                    Max withdrawable: TSh {maxWithdrawable.toLocaleString()}
+                    Max: TSh {balance.toLocaleString()}
                   </button>
                 </div>
-                {amount && Number(amount) >= 5000 && (
-                  <div className="text-xs bg-white border border-gray-200 rounded-lg p-2.5 space-y-1">
-                    <div className="flex justify-between text-gray-600"><span>You receive</span><span>TSh {Number(amount).toLocaleString()}</span></div>
-                    <div className="flex justify-between text-gray-600"><span>Snippe fee</span><span>TSh {calcFees(Number(amount)).snippeFee.toLocaleString()}</span></div>
-                    <div className="flex justify-between text-gray-600"><span>Platform fee</span><span>TSh {calcFees(Number(amount)).platformFee.toLocaleString()}</span></div>
-                    <div className="flex justify-between font-semibold text-gray-900 pt-1 border-t"><span>Total deducted</span><span>TSh {calcFees(Number(amount)).total.toLocaleString()}</span></div>
-                  </div>
-                )}
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Phone Number</label>
                   <div className="relative">
