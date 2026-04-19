@@ -284,6 +284,15 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     }
   };
 
+  // Withdrawal fees: 1500 TZS flat (Snippe) + 0.6% platform fee
+  const SNIPPE_FEE = 1500;
+  const PLATFORM_FEE_RATE = 0.006;
+  const calcFees = (receiveAmount: number) => {
+    const platformFee = Math.ceil(receiveAmount * PLATFORM_FEE_RATE);
+    return { snippeFee: SNIPPE_FEE, platformFee, total: receiveAmount + SNIPPE_FEE + platformFee };
+  };
+  const maxWithdrawable = Math.max(0, Math.floor((balance - SNIPPE_FEE) / (1 + PLATFORM_FEE_RATE)));
+
   const handleWithdraw = async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       toast.error('Please enter a valid amount');
@@ -293,8 +302,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       toast.error('Minimum withdrawal amount is TSh 5,000');
       return;
     }
-    if (Number(amount) > balance) {
-        toast.error('Insufficient balance');
+    const fees = calcFees(Number(amount));
+    if (fees.total > balance) {
+        toast.error(`Insufficient balance. Need TSh ${fees.total.toLocaleString()} (incl. TSh ${(fees.snippeFee + fees.platformFee).toLocaleString()} fees). Max withdrawable: TSh ${maxWithdrawable.toLocaleString()}`);
         return;
     }
     if (!phone) {
