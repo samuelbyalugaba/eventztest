@@ -364,17 +364,18 @@ serve(async (req) => {
     return jsonResponse(data);
 
   } catch (error: any) {
-    // Log the full technical error server-side for debugging
+    // Log full technical error server-side for debugging
     console.error('[ntzs-proxy] Internal Error:', error);
     const statusCode = typeof error?.status === 'number' ? error.status : 500;
     const isFallbackable = statusCode >= 500;
 
-    // Return a generic, non-technical message to the client
+    // Always return 200 so the client can read the body without throwing.
+    // The client checks the `error` field to decide what to show.
     return jsonResponse({
       error: 'Internal error.',
       statusCode,
       apiUnavailable: isFallbackable,
       fallback: isFallbackable,
-    }, isFallbackable ? 200 : 400);
+    }, 200);
   }
 });
