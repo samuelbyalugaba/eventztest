@@ -259,7 +259,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         }
       }]).select().single();
       
-      toast.info('STK Push sent! Please check your phone to complete payment.');
+      toast.success('Confirm PIN in your mobile');
       setShowDeposit(false);
       setAmount('');
       setPhone('');
@@ -272,13 +272,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       }
 
     } catch (error: any) {
-      // Handle graceful fallback errors from the proxy
-      const msg = error?.message || 'Deposit failed';
-      if (msg.includes('API') || msg.includes('unavailable')) {
-        toast.error('Wallet service is temporarily unavailable. Please try again later.');
-      } else {
-        toast.error(msg);
-      }
+      toast.error('Internal error.');
     } finally {
       setIsProcessing(false);
     }
@@ -330,7 +324,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         metadata: { type: 'withdrawal', phone, provider }
       }]);
       
-      toast.success('Withdrawal initiated! Funds will be sent to your M-Pesa.');
+      toast.success('Confirm PIN in your mobile');
       setShowWithdraw(false);
       setAmount('');
       setPhone('');
@@ -338,7 +332,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       loadWalletData();
 
     } catch (error: any) {
-      toast.error(error.message || 'Withdrawal failed');
+      toast.error('Internal error.');
     } finally {
       setIsProcessing(false);
     }
