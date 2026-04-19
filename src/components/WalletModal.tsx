@@ -284,17 +284,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     }
   };
 
-  // Withdrawal fees: 1500 TZS flat (Snippe) + ~1% platform fee buffer
-  // Server uses a slightly higher rate than 0.6%, so we over-estimate to avoid 400s.
-  const SNIPPE_FEE = 1500;
-  const PLATFORM_FEE_RATE = 0.01;
-  const calcFees = (receiveAmount: number) => {
-    const platformFee = Math.ceil(receiveAmount * PLATFORM_FEE_RATE);
-    return { snippeFee: SNIPPE_FEE, platformFee, total: receiveAmount + SNIPPE_FEE + platformFee };
-  };
-  // Subtract 10 TZS safety buffer for server-side rounding differences
-  const maxWithdrawable = Math.max(0, Math.floor((balance - SNIPPE_FEE - 10) / (1 + PLATFORM_FEE_RATE)));
-
   const handleWithdraw = async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       toast.error('Please enter a valid amount');
@@ -304,10 +293,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       toast.error('Minimum withdrawal amount is TSh 5,000');
       return;
     }
-    const fees = calcFees(Number(amount));
-    if (fees.total > balance) {
-        toast.error(`Insufficient balance. Need TSh ${fees.total.toLocaleString()} (incl. TSh ${(fees.snippeFee + fees.platformFee).toLocaleString()} fees). Max withdrawable: TSh ${maxWithdrawable.toLocaleString()}`);
-        return;
+    if (Number(amount) > balance) {
+      toast.error(`Insufficient balance. Available: TSh ${balance.toLocaleString()}`);
+      return;
     }
     if (!phone) {
         toast.error('Please enter your phone number');
@@ -515,20 +503,12 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                   />
                   <button
                     type="button"
-                    onClick={() => setAmount(String(maxWithdrawable))}
+                    onClick={() => setAmount(String(balance))}
                     className="text-xs text-purple-600 mt-1 hover:underline"
                   >
-                    Max withdrawable: TSh {maxWithdrawable.toLocaleString()}
+                    Max: TSh {balance.toLocaleString()}
                   </button>
                 </div>
-                {amount && Number(amount) >= 5000 && (
-                  <div className="text-xs bg-white border border-gray-200 rounded-lg p-2.5 space-y-1">
-                    <div className="flex justify-between text-gray-600"><span>You receive</span><span>TSh {Number(amount).toLocaleString()}</span></div>
-                    <div className="flex justify-between text-gray-600"><span>Snippe fee</span><span>TSh {calcFees(Number(amount)).snippeFee.toLocaleString()}</span></div>
-                    <div className="flex justify-between text-gray-600"><span>Platform fee</span><span>TSh {calcFees(Number(amount)).platformFee.toLocaleString()}</span></div>
-                    <div className="flex justify-between font-semibold text-gray-900 pt-1 border-t"><span>Total deducted</span><span>TSh {calcFees(Number(amount)).total.toLocaleString()}</span></div>
-                  </div>
-                )}
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Phone Number</label>
                   <div className="relative">
