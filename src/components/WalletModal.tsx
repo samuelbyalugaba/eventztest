@@ -332,7 +332,15 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       loadWalletData();
 
     } catch (error: any) {
-      toast.error('Internal error.');
+      if (error?.code === 'amount_too_high') {
+        const suggestedAmount = Number(error?.suggestedAmount || 0);
+        if (suggestedAmount >= 5000) {
+          setAmount(String(suggestedAmount));
+        }
+        toast.error(suggestedAmount >= 5000 ? `Amount too high. Try TSh ${suggestedAmount.toLocaleString()} or less.` : 'Amount too high. Try a smaller amount.');
+      } else {
+        toast.error('Internal error.');
+      }
     } finally {
       setIsProcessing(false);
     }

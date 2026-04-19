@@ -364,13 +364,29 @@ serve(async (req) => {
     return jsonResponse(data);
 
   } catch (error: any) {
-    // Log full technical error server-side for debugging
     console.error('[ntzs-proxy] Internal Error:', error);
     const statusCode = typeof error?.status === 'number' ? error.status : 500;
     const isFallbackable = statusCode >= 500;
+    const details = error?.details as any;
+    const providerError = details?.error;
+    const providerDetails = details?.details;
 
-    // Always return 200 so the client can read the body without throwing.
-    // The client checks the `error` field to decide what to show.
+    if (providerError === 'insufficient_balance' && providerDetails) {
+      const available = Number(providerDetails.available ?? 0);
+      const requested = Number(providerDetails.receiveAmountTzs ?? 0);
+      const shortfall = Math.max(0, Number(providerDetails.required ?? 0) - available);
+      const suggestedAmount = Math.max(0, Math.floor(requested - shortfall));
+
+      return jsonResponse({
+        error: 'Amount too high. Try a smaller amount.',
+        code: 'amount_too_high',
+        suggestedAmount,
+        statusCode,
+        apiUnavailable: false,
+        fallback: false,
+      }, 200);
+    }
+
     return jsonResponse({
       error: 'Internal error.',
       statusCode,
