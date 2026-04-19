@@ -284,14 +284,16 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     }
   };
 
-  // Withdrawal fees: 1500 TZS flat (Snippe) + 0.6% platform fee
+  // Withdrawal fees: 1500 TZS flat (Snippe) + ~1% platform fee buffer
+  // Server uses a slightly higher rate than 0.6%, so we over-estimate to avoid 400s.
   const SNIPPE_FEE = 1500;
-  const PLATFORM_FEE_RATE = 0.006;
+  const PLATFORM_FEE_RATE = 0.01;
   const calcFees = (receiveAmount: number) => {
     const platformFee = Math.ceil(receiveAmount * PLATFORM_FEE_RATE);
     return { snippeFee: SNIPPE_FEE, platformFee, total: receiveAmount + SNIPPE_FEE + platformFee };
   };
-  const maxWithdrawable = Math.max(0, Math.floor((balance - SNIPPE_FEE) / (1 + PLATFORM_FEE_RATE)));
+  // Subtract 10 TZS safety buffer for server-side rounding differences
+  const maxWithdrawable = Math.max(0, Math.floor((balance - SNIPPE_FEE - 10) / (1 + PLATFORM_FEE_RATE)));
 
   const handleWithdraw = async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
