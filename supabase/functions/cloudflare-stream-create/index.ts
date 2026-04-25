@@ -80,6 +80,13 @@ Deno.serve(async (req) => {
     }
 
     // Create a new Live Input on Cloudflare Stream
+    const cfPayload = {
+      meta: { name: `event-${eventId}` },
+      recording: { mode: "automatic", requireSignedURLs: false },
+      defaultCreator: userId,
+    };
+    console.log("Cloudflare request payload:", JSON.stringify(cfPayload));
+
     const cfRes = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/live_inputs`,
       {
@@ -88,10 +95,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${CF_STREAM_TOKEN}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          meta: { name: `event-${eventId}` },
-          recording: { mode: "automatic" },
-        }),
+        body: JSON.stringify(cfPayload),
       },
     );
 
