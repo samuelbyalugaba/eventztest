@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const NTZS_API_KEY = Deno.env.get('NTZS_API_KEY');
 const NTZS_BASE_URL = 'https://www.ntzs.co.tz/api/v1';
@@ -91,7 +91,7 @@ function computeLocalWalletBalance(transactions: TransactionRow[]) {
 }
 
 async function reconcileDepositByProviderData(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   authenticatedUserId: string,
   deposit: any
 ) {
@@ -163,7 +163,7 @@ async function reconcileDepositByProviderData(
 }
 
 async function reconcilePendingDepositsFromBalance(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   authenticatedUserId: string,
   email: string
 ) {
@@ -268,12 +268,12 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user?.id) {
       return jsonResponse({ error: 'Invalid or expired token' }, 401);
     }
-    const authenticatedUserId = claimsData.claims.sub;
-    const authenticatedEmail = String(claimsData.claims.email || '');
+    const authenticatedUserId = userData.user.id;
+    const authenticatedEmail = String(userData.user.email || '');
 
     let bodyData;
     try {

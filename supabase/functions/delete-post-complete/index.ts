@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import jwtDecode from "npm:jwt-decode";
-import { createClient } from "npm:@supabase/supabase-js";
+import { jwtDecode } from "https://esm.sh/jwt-decode@4.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

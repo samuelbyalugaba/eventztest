@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { RtcTokenBuilder, RtcRole } from "npm:agora-access-token";
+import { RtcTokenBuilder, RtcRole } from "https://esm.sh/agora-access-token@2.0.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
