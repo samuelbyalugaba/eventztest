@@ -89,14 +89,8 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          meta: {
-            name: `event-${eventId}`,
-            eventId,
-            title: event.title,
-          },
-          recording: { mode: "automatic", requireSignedURLs: false },
-          // 30s default Cloudflare latency; "low" enables LL-HLS
-          // deliveryMode: 'live',
+          meta: { name: `event-${eventId}` },
+          recording: { mode: "automatic" },
         }),
       },
     );
