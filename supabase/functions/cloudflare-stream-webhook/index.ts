@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     );
     const isDisconnect = /disconnect|stopped|ended/i.test(String(status));
 
-    let updated = { ...streaming, last_cf_status: status };
+    let updated: Record<string, unknown> = { ...streaming, last_cf_status: status };
     if (isConnect) updated = { ...updated, isLive: true, startedAt: Date.now() };
     if (isDisconnect) updated = { ...updated, isLive: false };
 
