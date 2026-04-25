@@ -609,7 +609,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
                       <button onClick={() => handleCopy(streamKey, 'Key')} className="text-white/50 hover:text-white"><Copy className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
-                  <p className="text-yellow-400/70 text-[10px]">⚠️ OBS/RTMP streaming requires an RTMP ingest server (coming soon)</p>
+                  
                 </div>
               )}
             </div>
