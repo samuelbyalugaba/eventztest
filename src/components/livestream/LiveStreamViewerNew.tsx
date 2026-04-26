@@ -59,7 +59,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   // Refs
   const currentUserIdRef = useRef<string | null>(null);
-  const viewerCountAdjustedRef = useRef(false);
   const pendingLikeRef = useRef(false); // Track pending like operation
   const likesRef = useRef(0); // Keep likes in sync via ref
   const { addMessage } = useMessageBuffer();
