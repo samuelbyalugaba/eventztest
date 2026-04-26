@@ -340,7 +340,10 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
   const handleStreamClick = async (stream: any) => {
     if (stream.isLive) {
       try {
-        const priceString = stream?.streaming?.virtualPrice || stream?.price_range || '0';
+        // Only the virtual access price gates a live stream — never fall back to the
+        // in-person ticket price (price_range), or free streams attached to paid events
+        // would be incorrectly gated.
+        const priceString = stream?.streaming?.virtualPrice ?? '';
         const priceNumber = parseFloat(String(priceString).replace(/[^0-9.]/g, '')) || 0;
         if (priceNumber <= 0) { setSelectedStream(stream); return; }
         const { data: { user } } = await supabase.auth.getUser();
