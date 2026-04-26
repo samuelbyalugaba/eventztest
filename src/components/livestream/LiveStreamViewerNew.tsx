@@ -446,8 +446,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
                 hostAvatar={stream.host_avatar}
                 isLive={true}
                 viewerCount={viewerCount}
-                likes={likes}
-                isLiked={isLiked}
                 isFollowing={isFollowingHost}
                 onFollow={handleFollow}
                 onClose={onClose}
@@ -514,8 +512,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
             hostAvatar={stream.host_avatar}
             isLive={true}
             viewerCount={viewerCount}
-            likes={likes}
-            isLiked={isLiked}
             isFollowing={isFollowingHost}
             onFollow={handleFollow}
             onClose={onClose}
