@@ -1687,11 +1687,13 @@ export const getLiveStreams = async () => {
   const { data, error } = await supabase
     .from('events')
     .select(`
-      *,
-      organizer:profiles(*)
+      id, title, description, date, time, location, city, category, image_url,
+      price, price_range, attendees, views, status, streaming, organizer_id,
+      organizer:profiles(id, full_name, username, avatar_url, location, is_organizer, verified)
     `)
     .eq('status', 'published')
-    .contains('streaming', { available: true, isLive: true });
+    .contains('streaming', { available: true, isLive: true })
+    .limit(50);
 
   if (error) throw error;
   return data;
@@ -1701,19 +1703,18 @@ export const getUpcomingStreams = async () => {
   const { data, error } = await supabase
     .from('events')
     .select(`
-      *,
-      organizer:profiles(*)
+      id, title, description, date, time, location, city, category, image_url,
+      price, price_range, attendees, views, status, streaming, organizer_id,
+      organizer:profiles(id, full_name, username, avatar_url, location, is_organizer, verified)
     `)
     .eq('status', 'published')
     .contains('streaming', { available: true })
-    .gte('date', new Date().toISOString().split('T')[0]);
+    .gte('date', new Date().toISOString().split('T')[0])
+    .limit(50);
 
   if (error) throw error;
 
-  // Filter for NOT live (since we can't easily do "not contains" or "value is false" mixed with other JSON checks efficiently without complex syntax,
-  // but usually "upcoming" means date is future, so checking isLive might be redundant if date > today.
-  // However, strict check:
-  return data.filter((e: any) => !e.streaming?.isLive);
+  return (data || []).filter((e: any) => !e.streaming?.isLive);
 };
 
 export const updateEventStreamingStatus = async (eventId: number, isLive: boolean) => {
