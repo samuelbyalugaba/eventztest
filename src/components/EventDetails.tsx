@@ -47,8 +47,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   // Initialize state directly from store
   const [events, setEvents] = useState<ApiEvent[]>(eventsStore.getEvents());
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  // We track loading for internal logic but NOT for blocking the UI with skeletons
-  const [isFetching, setIsFetching] = useState(false);
+  const [isFetching, setIsFetching] = useState(eventsStore.getEvents().length === 0);
+  const [hasLoadedEvents, setHasLoadedEvents] = useState(eventsStore.getEvents().length > 0);
 
   // Sync with store updates
   useEffect(() => {
@@ -69,29 +69,36 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
       // If we have data and it's fresh enough, and not forced, skip
       if (!force && hasData && !shouldFetch) {
+        setHasLoadedEvents(true);
+        setIsFetching(false);
         return;
       }
       
       try {
         setIsFetching(true);
-        const [allEvents, savedEvents] = await Promise.all([
-          getEvents(),
-          (async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setCurrentUserId(user?.id ?? null);
-            if (user) return getSavedEvents(user.id);
-            return [];
-          })()
-        ]);
-        
-        // Map saved status
-        const savedIds = new Set((savedEvents as any[]).map(e => e.id));
-        const eventsWithSaved = (allEvents as any[]).map(e => ({
-          ...e,
-          isSaved: savedIds.has(e.id)
-        }));
-        
-        eventsStore.setEvents(eventsWithSaved as ApiEvent[]);
+        const allEvents = await getEvents();
+        eventsStore.setEvents((allEvents as any[]).map(e => ({ ...e, isSaved: false })) as ApiEvent[]);
+        setHasLoadedEvents(true);
+
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          setCurrentUserId(user?.id ?? null);
+
+          if (!user) {
+            return;
+          }
+
+          const savedEvents = await getSavedEvents(user.id);
+          const savedIds = new Set((savedEvents as any[]).map(e => e.id));
+          const eventsWithSaved = (allEvents as any[]).map(e => ({
+            ...e,
+            isSaved: savedIds.has(e.id)
+          }));
+
+          eventsStore.setEvents(eventsWithSaved as ApiEvent[]);
+        } catch (_savedEventsError) {
+          // Saved-event hydration is best-effort; keep the public events list visible.
+        }
       } catch (error: any) {
         if (error.name === 'AbortError') {
           return;
@@ -493,7 +500,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               ))}
             </div>
 
-            {upcomingEvents.length === 0 && !isFetching && (
+            {upcomingEvents.length === 0 && hasLoadedEvents && !isFetching && (
               <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                   <Calendar className="w-8 h-8 text-gray-400" />
@@ -503,7 +510,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </div>
             )}
 
-            {isFetching && events.length === 0 && (
+            {events.length === 0 && (!hasLoadedEvents || isFetching) && (
               <EventGridSkeleton count={6} />
             )}
 

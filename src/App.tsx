@@ -25,7 +25,6 @@ import { supabase } from './utils/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
   getProfile, 
-  checkUsernameUnique,
   getConversations, 
   getMessages, 
   sendMessage, 
@@ -40,6 +39,26 @@ import {
 import { Message, Conversation } from './types';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
+
+const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
+const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
+const isVideoAsset = (url?: string) => {
+  if (!url) return false;
+  const cleaned = url.split('#')[0].split('?')[0];
+  return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
+};
+
+const slugifyUsername = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+const buildUsernameCandidates = (seed: string) => {
+  const base = slugifyUsername(seed) || 'user';
+  const suffix = Date.now().toString(36).slice(-4);
+  return [
+    base,
+    `${base}${suffix}`,
+    `${base}${Math.floor(Math.random() * 9000) + 1000}`,
+    `user${Date.now().toString().slice(-6)}`
+  ];
+};
 
 export default function App() {
   const navigate = useNavigate();
@@ -113,13 +132,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
-    const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
-    const isVideo = (url?: string) => {
-      if (!url) return false;
-      const cleaned = url.split('#')[0].split('?')[0];
-      return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
-    };
+    if (!isAuthenticated) {
+      return;
+    }
+
     const prefetchFeed = async () => {
       try {
         const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
@@ -129,8 +145,8 @@ export default function App() {
             return;
           }
         }
-        const { data: { user } } = await supabase.auth.getUser();
-        const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: 0 });
+
+        const fresh = await getPosts({ currentUserId: currentUser?.id, limit: 20, offset: 0 });
         const mapped = (fresh || []).map((p: any) => {
           const isOrganizerPage = !!p.posted_as_organizer;
           const displayName = p.user?.full_name || p.user?.username || 'Unknown User';
@@ -173,7 +189,7 @@ export default function App() {
             isHighlight: !!p.video_url,
             highlights: p.video_url ? [{
               id: p.id,
-              thumbnail: (p.image_urls?.find((url: string) => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
+              thumbnail: (p.image_urls?.find((url: string) => !isVideoAsset(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
               duration: p.duration || '',
               title: p.content || 'Video Highlight',
               videoUrl: p.video_url,
@@ -183,12 +199,34 @@ export default function App() {
           };
         });
         localStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ posts: mapped, timestamp: Date.now() }));
-      } catch (e) {
+      } catch (_e) {
         // Silent fail: prefetch is best-effort
       }
     };
-    prefetchFeed();
-  }, []);
+
+    const schedulePrefetch = () => {
+      if ('requestIdleCallback' in window) {
+        const idleHandle = window.requestIdleCallback(() => {
+          void prefetchFeed();
+        }, { timeout: 5000 });
+        return { type: 'idle' as const, handle: idleHandle };
+      }
+
+      const timeoutHandle = window.setTimeout(() => {
+        void prefetchFeed();
+      }, 3000);
+      return { type: 'timeout' as const, handle: timeoutHandle };
+    };
+
+    const scheduled = schedulePrefetch();
+    return () => {
+      if (scheduled.type === 'timeout') {
+        window.clearTimeout(scheduled.handle);
+      } else {
+        window.cancelIdleCallback(scheduled.handle);
+      }
+    };
+  }, [isAuthenticated, currentUser?.id]);
   // Fetch user profile to determine organizer status
   useEffect(() => {
     const fetchProfile = async () => {
@@ -209,43 +247,29 @@ export default function App() {
               meta.name ||
               (typeof currentUser.email === 'string' ? currentUser.email.split('@')[0] : null) ||
               'User';
-
-            const baseUsername = String(nameCandidate).toLowerCase().replace(/[^a-z0-9]/g, '');
-            let finalUsername = baseUsername || `user${Math.floor(Date.now() % 10000)}`;
-            let isUnique = await checkUsernameUnique(finalUsername);
-
-            if (!isUnique) {
-              let counter = 1;
-              while (counter <= 10) {
-                const candidate = `${finalUsername}${counter}`;
-                if (await checkUsernameUnique(candidate)) {
-                  finalUsername = candidate;
-                  isUnique = true;
-                  break;
-                }
-                counter++;
-              }
-              if (!isUnique) {
-                finalUsername = `${finalUsername}${Math.floor(Date.now() % 10000)}`;
-              }
-            }
-
             const avatarCandidate = meta.avatar_url || meta.picture || null;
 
-            await supabase
-              .from('profiles')
-              .upsert(
-                [
-                  {
-                    id: currentUser.id,
-                    email: currentUser.email,
-                    full_name: nameCandidate,
-                    username: finalUsername,
-                    avatar_url: avatarCandidate,
-                  },
-                ],
-                { onConflict: 'id', ignoreDuplicates: true }
-              );
+            const usernameCandidates = buildUsernameCandidates(String(nameCandidate));
+            for (const username of usernameCandidates) {
+              const { error } = await supabase
+                .from('profiles')
+                .upsert(
+                  [
+                    {
+                      id: currentUser.id,
+                      email: currentUser.email,
+                      full_name: nameCandidate,
+                      username,
+                      avatar_url: avatarCandidate,
+                    },
+                  ],
+                  { onConflict: 'id', ignoreDuplicates: true }
+                );
+
+              if (!error) {
+                break;
+              }
+            }
 
             const created = await getProfile(currentUser.id);
             if (created) {

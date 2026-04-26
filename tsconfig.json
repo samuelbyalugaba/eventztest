@@ -19,7 +19,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["vite/client"]
+    "types": []
   },
   "include": ["src"],
   "exclude": ["src/supabase/functions/server"]
