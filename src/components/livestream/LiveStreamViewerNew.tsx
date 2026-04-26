@@ -22,7 +22,7 @@ import {
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { useIsMobile } from '../ui/use-mobile';
 import { ViewerHeader } from './ViewerHeader';
-import { useMessageBuffer } from './FloatingChat';
+import { FloatingChat, useMessageBuffer } from './FloatingChat';
 import { SidebarChat } from './SidebarChat';
 import { ViewerActionBar } from './ViewerActionBar';
 import { GiftPicker } from './GiftPicker';
