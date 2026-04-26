@@ -7,12 +7,11 @@ import {
   getStreamMessages,
   sendStreamMessage,
   subscribeToStreamMessages,
-  updateLiveViewerCount,
   toggleLikeEvent,
   getEventLikes,
   hasUserLikedEvent,
   subscribeToEventLikes,
-  subscribeToEventStreaming,
+  subscribeToStreamPresence,
   sendGift,
   followUser,
   unfollowUser,
@@ -106,13 +105,23 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     loadState();
   }, [stream.id, stream.organizer_id]);
 
-  // Real-time viewer count
+  // Real-time viewer count via Supabase Presence (instant + accurate, no DB writes)
   useEffect(() => {
-    const channel = subscribeToEventStreaming(stream.id, (streaming) => {
-      setViewerCount(streaming?.liveViewers ?? 0);
-    });
-    return () => { channel.unsubscribe(); };
-  }, [stream.id]);
+    let cancelled = false;
+    let channel: ReturnType<typeof subscribeToStreamPresence> | null = null;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
+      const userId = user?.id || `anon-${viewerUid}`;
+      channel = subscribeToStreamPresence(stream.id, { userId, role: 'viewer' }, (count) => {
+        setViewerCount(count);
+      });
+    })();
+    return () => {
+      cancelled = true;
+      channel?.unsubscribe();
+    };
+  }, [stream.id, viewerUid]);
 
   // Real-time likes — ignore events during pending like operation
   useEffect(() => {
