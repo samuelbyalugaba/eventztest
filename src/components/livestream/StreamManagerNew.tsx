@@ -61,6 +61,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   // Settings panel
   const [showSettings, setShowSettings] = useState(false);
+  const [isChatVisible, setIsChatVisible] = useState(true);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'settings' | 'monetization' | 'analytics'>('settings');
   const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>('webcam');
   const [streamTitle, setStreamTitle] = useState(event.title || '');
