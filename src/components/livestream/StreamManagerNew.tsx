@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, RotateCcw, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, Clock, Award } from 'lucide-react';
+import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, RotateCcw, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award } from 'lucide-react';
 import { toast } from 'sonner';
-import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToEventStreaming, sendStreamMessage } from '../../utils/supabase/api';
+import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToStreamPresence, sendStreamMessage } from '../../utils/supabase/api';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../../utils/agora';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
@@ -106,15 +106,24 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     return () => { client.current?.off('network-quality', handleQuality); };
   }, []);
 
-  // Real-time viewer count subscription
+  // Real-time viewer count via Supabase Presence (instant + accurate)
   useEffect(() => {
-    const channel = subscribeToEventStreaming(event.id, (streaming) => {
-      const count = streaming?.liveViewers ?? 0;
-      setViewerCount(count);
-      if (count > peakViewersRef.current) peakViewersRef.current = count;
-    });
-    return () => { channel.unsubscribe(); };
-  }, [event.id]);
+    let cancelled = false;
+    let channel: ReturnType<typeof subscribeToStreamPresence> | null = null;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
+      const userId = user?.id || event.organizer_id;
+      channel = subscribeToStreamPresence(event.id, { userId, role: 'host' }, (count) => {
+        setViewerCount(count);
+        if (count > peakViewersRef.current) peakViewersRef.current = count;
+      });
+    })();
+    return () => {
+      cancelled = true;
+      channel?.unsubscribe();
+    };
+  }, [event.id, event.organizer_id]);
 
   // Timer
   useEffect(() => {
