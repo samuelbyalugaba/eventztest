@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, RotateCcw, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, Clock, Award } from 'lucide-react';
+import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, RotateCcw, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award } from 'lucide-react';
 import { toast } from 'sonner';
-import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToEventStreaming, sendStreamMessage } from '../../utils/supabase/api';
+import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToStreamPresence, sendStreamMessage } from '../../utils/supabase/api';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../../utils/agora';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
@@ -61,6 +61,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   // Settings panel
   const [showSettings, setShowSettings] = useState(false);
+  const [isChatVisible, setIsChatVisible] = useState(true);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'settings' | 'monetization' | 'analytics'>('settings');
   const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>('webcam');
   const [streamTitle, setStreamTitle] = useState(event.title || '');
@@ -106,15 +107,24 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     return () => { client.current?.off('network-quality', handleQuality); };
   }, []);
 
-  // Real-time viewer count subscription
+  // Real-time viewer count via Supabase Presence (instant + accurate)
   useEffect(() => {
-    const channel = subscribeToEventStreaming(event.id, (streaming) => {
-      const count = streaming?.liveViewers ?? 0;
-      setViewerCount(count);
-      if (count > peakViewersRef.current) peakViewersRef.current = count;
-    });
-    return () => { channel.unsubscribe(); };
-  }, [event.id]);
+    let cancelled = false;
+    let channel: ReturnType<typeof subscribeToStreamPresence> | null = null;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
+      const userId = user?.id || event.organizer_id;
+      channel = subscribeToStreamPresence(event.id, { userId, role: 'host' }, (count) => {
+        setViewerCount(count);
+        if (count > peakViewersRef.current) peakViewersRef.current = count;
+      });
+    })();
+    return () => {
+      cancelled = true;
+      channel?.unsubscribe();
+    };
+  }, [event.id, event.organizer_id]);
 
   // Timer
   useEffect(() => {
@@ -739,6 +749,13 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             <button onClick={toggleMic} className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${micEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
               {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
             </button>
+            <button
+              onClick={() => setIsChatVisible((v) => !v)}
+              title={isChatVisible ? 'Hide chat' : 'Show chat'}
+              className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${isChatVisible ? 'bg-black/40 text-white' : 'bg-white text-black'}`}
+            >
+              {isChatVisible ? <MessageCircle className="w-5 h-5" /> : <MessageCircleOff className="w-5 h-5" />}
+            </button>
             <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10">
               <Settings className="w-5 h-5" />
             </button>
@@ -749,7 +766,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         </div>
 
         {/* Mobile: Floating chat overlay */}
-        {isMobile && (
+        {isMobile && isChatVisible && (
           <div className="absolute bottom-28 left-4 w-64 z-20 pointer-events-auto">
             <FloatingChat messages={chatMessages} maxVisible={3} />
           </div>
@@ -776,7 +793,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       </div>
 
       {/* Desktop: Sidebar chat */}
-      {!isMobile && (
+      {!isMobile && isChatVisible && (
         <div className="w-[340px] flex-shrink-0">
           <SidebarChat
             messages={chatMessages}

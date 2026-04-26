@@ -7,12 +7,11 @@ import {
   getStreamMessages,
   sendStreamMessage,
   subscribeToStreamMessages,
-  updateLiveViewerCount,
   toggleLikeEvent,
   getEventLikes,
   hasUserLikedEvent,
   subscribeToEventLikes,
-  subscribeToEventStreaming,
+  subscribeToStreamPresence,
   sendGift,
   followUser,
   unfollowUser,
@@ -60,7 +59,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   // Refs
   const currentUserIdRef = useRef<string | null>(null);
-  const viewerCountAdjustedRef = useRef(false);
   const pendingLikeRef = useRef(false); // Track pending like operation
   const likesRef = useRef(0); // Keep likes in sync via ref
   const { addMessage } = useMessageBuffer();
@@ -106,13 +104,23 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     loadState();
   }, [stream.id, stream.organizer_id]);
 
-  // Real-time viewer count
+  // Real-time viewer count via Supabase Presence (instant + accurate, no DB writes)
   useEffect(() => {
-    const channel = subscribeToEventStreaming(stream.id, (streaming) => {
-      setViewerCount(streaming?.liveViewers ?? 0);
-    });
-    return () => { channel.unsubscribe(); };
-  }, [stream.id]);
+    let cancelled = false;
+    let channel: ReturnType<typeof subscribeToStreamPresence> | null = null;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
+      const userId = user?.id || `anon-${viewerUid}`;
+      channel = subscribeToStreamPresence(stream.id, { userId, role: 'viewer' }, (count) => {
+        setViewerCount(count);
+      });
+    })();
+    return () => {
+      cancelled = true;
+      channel?.unsubscribe();
+    };
+  }, [stream.id, viewerUid]);
 
   // Real-time likes — ignore events during pending like operation
   useEffect(() => {
@@ -208,17 +216,12 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         await client.current.setClientRole('audience');
         await client.current.join(AGORA_APP_ID, channelName, token, viewerUid);
 
-        try { await updateLiveViewerCount(stream.id, 1); viewerCountAdjustedRef.current = true; } catch {}
       } catch (e: any) { setVideoError(`Failed to join: ${e.message}`); }
     };
     init();
 
     return () => {
       if (client.current) { client.current.leave(); client.current.removeAllListeners(); }
-      if (viewerCountAdjustedRef.current) {
-        viewerCountAdjustedRef.current = false;
-        updateLiveViewerCount(stream.id, -1).catch(() => {});
-      }
     };
   }, [stream.id, isHlsMode]);
 
@@ -273,17 +276,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     video.muted = isMuted;
     video.play().catch(() => { /* autoplay blocked; user can tap */ });
 
-    updateLiveViewerCount(stream.id, 1)
-      .then(() => { viewerCountAdjustedRef.current = true; })
-      .catch(() => {});
-
     return () => {
       video.removeEventListener('playing', onPlay);
       if (hls) { hls.destroy(); hlsRef.current = null; }
-      if (viewerCountAdjustedRef.current) {
-        viewerCountAdjustedRef.current = false;
-        updateLiveViewerCount(stream.id, -1).catch(() => {});
-      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHlsMode, stream.playback_url, stream.id]);
@@ -451,8 +446,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
                 hostAvatar={stream.host_avatar}
                 isLive={true}
                 viewerCount={viewerCount}
-                likes={likes}
-                isLiked={isLiked}
                 isFollowing={isFollowingHost}
                 onFollow={handleFollow}
                 onClose={onClose}
@@ -519,8 +512,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
             hostAvatar={stream.host_avatar}
             isLive={true}
             viewerCount={viewerCount}
-            likes={likes}
-            isLiked={isLiked}
             isFollowing={isFollowingHost}
             onFollow={handleFollow}
             onClose={onClose}

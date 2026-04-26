@@ -1,4 +1,4 @@
-import { X, Users, Heart, Shield } from 'lucide-react';
+import { X, Users, Shield } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
 interface ViewerHeaderProps {
@@ -6,8 +6,6 @@ interface ViewerHeaderProps {
   hostAvatar?: string;
   isLive: boolean;
   viewerCount: number;
-  likes: number;
-  isLiked: boolean;
   isFollowing: boolean;
   onFollow: () => void;
   onClose: () => void;
@@ -18,8 +16,6 @@ export function ViewerHeader({
   hostAvatar,
   isLive,
   viewerCount,
-  likes,
-  isLiked,
   isFollowing,
   onFollow,
   onClose,
@@ -49,18 +45,12 @@ export function ViewerHeader({
             <Shield className="w-3.5 h-3.5 text-blue-400" />
           </div>
           <div className="flex items-center gap-2 text-[10px]">
-            <span className="flex items-center gap-1 text-white/70">
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-600/90 text-[8px] font-black tracking-[0.15em] text-white">
-                LIVE
-              </span>
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-600/90 text-[8px] font-black tracking-[0.15em] text-white">
+              LIVE
             </span>
             <span className="flex items-center gap-1 text-white/70">
               <Users className="w-3 h-3" />
               {viewerCount.toLocaleString()}
-            </span>
-            <span className="flex items-center gap-1 text-white/70">
-              <Heart className={`w-3 h-3 ${isLiked ? 'text-pink-500 fill-pink-500' : ''}`} />
-              {likes.toLocaleString()}
             </span>
           </div>
         </div>

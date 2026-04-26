@@ -1871,6 +1871,49 @@ export const subscribeToEventStreaming = (
     .subscribe();
 };
 
+/**
+ * Realtime presence-based viewer counter for live streams.
+ * Far faster and more accurate than the jsonb counter approach (no DB writes,
+ * no race conditions, instant updates, auto-cleanup on disconnect).
+ *
+ * @param eventId   stream/event id
+ * @param meta      presence metadata (role: 'viewer' | 'host')
+ * @param onCount   called whenever total viewer count changes
+ * @returns         channel — call `.unsubscribe()` to leave
+ */
+export const subscribeToStreamPresence = (
+  eventId: number,
+  meta: { userId: string; role: 'viewer' | 'host' },
+  onCount: (count: number) => void
+) => {
+  const channel = supabase.channel(`stream-presence-${eventId}`, {
+    config: { presence: { key: meta.userId } },
+  });
+
+  const recompute = () => {
+    const state = channel.presenceState() as Record<string, Array<{ role: string }>>;
+    let viewers = 0;
+    for (const key in state) {
+      const entries = state[key];
+      // Count unique presence keys whose first entry is a viewer (exclude host)
+      if (entries?.[0]?.role === 'viewer') viewers += 1;
+    }
+    onCount(viewers);
+  };
+
+  channel
+    .on('presence', { event: 'sync' }, recompute)
+    .on('presence', { event: 'join' }, recompute)
+    .on('presence', { event: 'leave' }, recompute)
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ role: meta.role, joinedAt: Date.now() });
+      }
+    });
+
+  return channel;
+};
+
 export const subscribeToEventLikes = (
   eventId: number,
   onChange: (change: { delta: number; userId?: string }) => void
