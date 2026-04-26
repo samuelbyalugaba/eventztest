@@ -530,6 +530,15 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
       <GiftBannerOverlay banners={giftBanners} />
 
+      {/* Floating chat overlay above the action bar (mobile) */}
+      {isChatVisible && (
+        <div className="absolute left-3 right-3 bottom-20 pointer-events-none">
+          <div className="pointer-events-auto">
+            <FloatingChat messages={messages} maxVisible={5} />
+          </div>
+        </div>
+      )}
+
       {/* Fixed bottom overlay - always at bottom, never pushes video */}
       <div className="absolute bottom-0 left-0 right-0 p-3">
         <ViewerActionBar
