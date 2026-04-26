@@ -217,17 +217,12 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         await client.current.setClientRole('audience');
         await client.current.join(AGORA_APP_ID, channelName, token, viewerUid);
 
-        try { await updateLiveViewerCount(stream.id, 1); viewerCountAdjustedRef.current = true; } catch {}
       } catch (e: any) { setVideoError(`Failed to join: ${e.message}`); }
     };
     init();
 
     return () => {
       if (client.current) { client.current.leave(); client.current.removeAllListeners(); }
-      if (viewerCountAdjustedRef.current) {
-        viewerCountAdjustedRef.current = false;
-        updateLiveViewerCount(stream.id, -1).catch(() => {});
-      }
     };
   }, [stream.id, isHlsMode]);
 
@@ -282,17 +277,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     video.muted = isMuted;
     video.play().catch(() => { /* autoplay blocked; user can tap */ });
 
-    updateLiveViewerCount(stream.id, 1)
-      .then(() => { viewerCountAdjustedRef.current = true; })
-      .catch(() => {});
-
     return () => {
       video.removeEventListener('playing', onPlay);
       if (hls) { hls.destroy(); hlsRef.current = null; }
-      if (viewerCountAdjustedRef.current) {
-        viewerCountAdjustedRef.current = false;
-        updateLiveViewerCount(stream.id, -1).catch(() => {});
-      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHlsMode, stream.playback_url, stream.id]);
