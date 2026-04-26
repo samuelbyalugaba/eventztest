@@ -581,32 +581,40 @@ export const subscribeToOnlineUsers = (userId: string, callback: (onlineUserIds:
 
 // --- EVENTS ---
 
-export const getEvents = async () => {
-  const { data, error } = await supabase
+// Slim event-card payload — avoids fetching heavy organizer bios/descriptions
+// and irrelevant past events. Used for the discovery feed.
+const EVENT_CARD_COLUMNS = `
+  id, title, description, date, time, location, city, category, subcategory,
+  price, price_range, image_url, attendees, views, status, streaming,
+  ticket_tiers, organizer_id, created_at, updated_at,
+  organizer:profiles(id, full_name, username, avatar_url, location, is_organizer, verified)
+`;
+
+export const getEvents = async (options?: { limit?: number; includePast?: boolean }) => {
+  const limit = options?.limit ?? 100;
+  const today = new Date().toISOString().split('T')[0];
+
+  let query = supabase
     .from('events')
-    .select(`
-      *,
-      organizer:profiles(*),
-      tickets(count)
-    `)
-    .order('date', { ascending: true });
+    .select(EVENT_CARD_COLUMNS)
+    .order('date', { ascending: true })
+    .limit(limit);
+
+  if (!options?.includePast) {
+    query = query.gte('date', today);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
-    if (error.name === 'AbortError') {
-      return []; // Return empty array on abort
-    }
+    if (error.name === 'AbortError') return [];
     throw error;
   }
 
-  // Calculate attendees from tickets count
-  // Prioritize using the 'attendees' column from the events table if it exists and is not null
-  // Otherwise fall back to counting tickets (which may be limited by RLS)
   const visibleEvents = (data || []).filter((event: any) => !event?.streaming?.isInstant);
   return visibleEvents.map((event: any) => ({
     ...event,
-    attendees: (event.attendees !== undefined && event.attendees !== null) 
-      ? event.attendees 
-      : (event.tickets?.[0]?.count || 0)
+    attendees: event.attendees ?? 0,
   }));
 };
 
@@ -1679,11 +1687,13 @@ export const getLiveStreams = async () => {
   const { data, error } = await supabase
     .from('events')
     .select(`
-      *,
-      organizer:profiles(*)
+      id, title, description, date, time, location, city, category, image_url,
+      price, price_range, attendees, views, status, streaming, organizer_id,
+      organizer:profiles(id, full_name, username, avatar_url, location, is_organizer, verified)
     `)
     .eq('status', 'published')
-    .contains('streaming', { available: true, isLive: true });
+    .contains('streaming', { available: true, isLive: true })
+    .limit(50);
 
   if (error) throw error;
   return data;
@@ -1693,19 +1703,18 @@ export const getUpcomingStreams = async () => {
   const { data, error } = await supabase
     .from('events')
     .select(`
-      *,
-      organizer:profiles(*)
+      id, title, description, date, time, location, city, category, image_url,
+      price, price_range, attendees, views, status, streaming, organizer_id,
+      organizer:profiles(id, full_name, username, avatar_url, location, is_organizer, verified)
     `)
     .eq('status', 'published')
     .contains('streaming', { available: true })
-    .gte('date', new Date().toISOString().split('T')[0]);
+    .gte('date', new Date().toISOString().split('T')[0])
+    .limit(50);
 
   if (error) throw error;
 
-  // Filter for NOT live (since we can't easily do "not contains" or "value is false" mixed with other JSON checks efficiently without complex syntax,
-  // but usually "upcoming" means date is future, so checking isLive might be redundant if date > today.
-  // However, strict check:
-  return data.filter((e: any) => !e.streaming?.isLive);
+  return (data || []).filter((e: any) => !e.streaming?.isLive);
 };
 
 export const updateEventStreamingStatus = async (eventId: number, isLive: boolean) => {
