@@ -749,6 +749,13 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             <button onClick={toggleMic} className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${micEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
               {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
             </button>
+            <button
+              onClick={() => setIsChatVisible((v) => !v)}
+              title={isChatVisible ? 'Hide chat' : 'Show chat'}
+              className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${isChatVisible ? 'bg-black/40 text-white' : 'bg-white text-black'}`}
+            >
+              {isChatVisible ? <MessageCircle className="w-5 h-5" /> : <MessageCircleOff className="w-5 h-5" />}
+            </button>
             <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10">
               <Settings className="w-5 h-5" />
             </button>
@@ -759,7 +766,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         </div>
 
         {/* Mobile: Floating chat overlay */}
-        {isMobile && (
+        {isMobile && isChatVisible && (
           <div className="absolute bottom-28 left-4 w-64 z-20 pointer-events-auto">
             <FloatingChat messages={chatMessages} maxVisible={3} />
           </div>
@@ -786,7 +793,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       </div>
 
       {/* Desktop: Sidebar chat */}
-      {!isMobile && (
+      {!isMobile && isChatVisible && (
         <div className="w-[340px] flex-shrink-0">
           <SidebarChat
             messages={chatMessages}
