@@ -53,12 +53,11 @@ export function ProfileActions({
           className="group mb-8 rounded-2xl p-3 flex items-center justify-between cursor-pointer border border-gray-100 bg-gradient-to-br from-white to-purple-50/40 hover:to-purple-50/70 hover:border-purple-200/60 hover:shadow-md transition-all active:scale-[0.99]"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-[#A855F7] via-[#8A2BE2] to-[#5B21B6] ring-1 ring-white/40 relative overflow-hidden transition-all duration-300 group-hover:scale-[1.08]">
-              <span className="absolute -top-3 -left-3 w-8 h-8 bg-white/30 blur-xl rounded-full transition-transform duration-500 group-hover:translate-x-2 group-hover:translate-y-2" />
+            <div className="w-10 h-10 flex items-center justify-center transition-all duration-300 group-hover:scale-[1.08]">
               <img
                 src={verifiedBadge}
                 alt="Creator badge"
-                className="w-5 h-5 object-contain drop-shadow-[0_2px_10px_rgba(255,255,255,0.25)] transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105"
+                className="w-8 h-8 object-contain transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105"
               />
             </div>
             <div>
