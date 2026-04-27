@@ -205,8 +205,12 @@ export default function App() {
     };
 
     const schedulePrefetch = () => {
-      if ('requestIdleCallback' in window) {
-        const idleHandle = window.requestIdleCallback(() => {
+      const w = window as Window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        cancelIdleCallback?: (handle: number) => void;
+      };
+      if (typeof w.requestIdleCallback === 'function') {
+        const idleHandle = w.requestIdleCallback(() => {
           void prefetchFeed();
         }, { timeout: 5000 });
         return { type: 'idle' as const, handle: idleHandle };
@@ -215,7 +219,7 @@ export default function App() {
       const timeoutHandle = window.setTimeout(() => {
         void prefetchFeed();
       }, 3000);
-      return { type: 'timeout' as const, handle: timeoutHandle };
+      return { type: 'timeout' as const, handle: timeoutHandle as unknown as number };
     };
 
     const scheduled = schedulePrefetch();
@@ -223,7 +227,7 @@ export default function App() {
       if (scheduled.type === 'timeout') {
         window.clearTimeout(scheduled.handle);
       } else {
-        window.cancelIdleCallback(scheduled.handle);
+        (window as any).cancelIdleCallback?.(scheduled.handle);
       }
     };
   }, [isAuthenticated, currentUser?.id]);
