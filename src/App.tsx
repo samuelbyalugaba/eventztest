@@ -53,7 +53,6 @@ export default function App() {
   const prevWasModalRef = useRef(false);
   const {
     user: currentUser,
-    profile: userProfile,
     isAuthenticated,
     isLoading: isCheckingAuth,
     isOrganizer,
