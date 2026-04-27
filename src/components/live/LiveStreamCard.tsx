@@ -112,7 +112,7 @@ export const LiveStreamCard = memo(function LiveStreamCard({ stream, variant, on
       </div>
     </div>
   );
-}
+});
 
 interface StreamSectionHeaderProps {
   icon: React.ReactNode;
