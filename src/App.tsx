@@ -205,8 +205,12 @@ export default function App() {
     };
 
     const schedulePrefetch = () => {
-      if ('requestIdleCallback' in window) {
-        const idleHandle = window.requestIdleCallback(() => {
+      const w = window as Window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        cancelIdleCallback?: (handle: number) => void;
+      };
+      if (typeof w.requestIdleCallback === 'function') {
+        const idleHandle = w.requestIdleCallback(() => {
           void prefetchFeed();
         }, { timeout: 5000 });
         return { type: 'idle' as const, handle: idleHandle };
