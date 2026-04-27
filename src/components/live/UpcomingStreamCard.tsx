@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { MapPin, Bell } from 'lucide-react';
 
@@ -17,7 +18,7 @@ interface UpcomingStreamCardProps {
   onClick: (stream: LiveStream) => void;
 }
 
-export function UpcomingStreamCard({ stream, isReminderSet, onToggleReminder, onClick }: UpcomingStreamCardProps) {
+export const UpcomingStreamCard = memo(function UpcomingStreamCard({ stream, isReminderSet, onToggleReminder, onClick }: UpcomingStreamCardProps) {
   return (
     <div
       onClick={() => onClick(stream)}
@@ -70,4 +71,4 @@ export function UpcomingStreamCard({ stream, isReminderSet, onToggleReminder, on
       </button>
     </div>
   );
-}
+});

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { getOptimizedImageUrl } from '../utils/supabaseImage';
+import verifiedBadge from '../assets/verified-badge.png';
 interface UserAvatarProps {
   src?: string | null;
   name?: string | null;
@@ -94,13 +95,13 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
     <div className={`relative inline-flex flex-shrink-0 items-center justify-center ${className.includes('w-full') ? 'w-full' : ''} ${className.includes('h-full') ? 'h-full' : ''}`}>
       {renderAvatar()}
       {verified && (
-        <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-0.5 shadow-sm">
-          <div className="bg-blue-500 rounded-full w-3.5 h-3.5 flex items-center justify-center">
-            <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-            </svg>
-          </div>
-        </div>
+        <img
+          src={verifiedBadge}
+          alt="Verified"
+          className="absolute -bottom-0.5 -right-0.5 w-4 h-4 drop-shadow-sm pointer-events-none select-none"
+          loading="lazy"
+          decoding="async"
+        />
       )}
     </div>
   );
