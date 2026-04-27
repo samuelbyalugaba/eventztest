@@ -3,11 +3,11 @@ import { Post } from '../types';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { CommentIcon } from './icons/CommentIcon';
+import verifiedBadge from '../assets/verified-badge.png';
 import { 
   MessageSquare, Share2, Bookmark, 
   Volume2, VolumeX, Maximize,
-  ThumbsUp,
-  Star
+  ThumbsUp
 } from 'lucide-react';
 import {
   Carousel,
@@ -340,7 +340,11 @@ export const PostCard = React.memo(function PostCard({
                 {displayProfile.name}
               </span>
               {(displayProfile.isOrganizer || post.user.isOrganizerPage) && (
-                <Star className="w-3.5 h-3.5 text-purple-600 fill-purple-600" />
+                <img
+                  src={verifiedBadge}
+                  alt="Creator badge"
+                  className="w-3.5 h-3.5 object-contain"
+                />
               )}
             </div>
             <span className="text-xs text-gray-400">

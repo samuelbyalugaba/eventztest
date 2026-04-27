@@ -1,4 +1,5 @@
-import { Plus, BarChart3, Star, ChevronRight } from 'lucide-react';
+import { Plus, BarChart3, ChevronRight } from 'lucide-react';
+import verifiedBadge from '../../assets/verified-badge.png';
 
 interface ProfileActionsProps {
   isOwnProfile: boolean;
@@ -54,7 +55,11 @@ export function ProfileActions({
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-[#A855F7] via-[#8A2BE2] to-[#5B21B6] ring-1 ring-white/40 relative overflow-hidden transition-all duration-300 group-hover:scale-[1.08]">
               <span className="absolute -top-3 -left-3 w-8 h-8 bg-white/30 blur-xl rounded-full transition-transform duration-500 group-hover:translate-x-2 group-hover:translate-y-2" />
-              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400 drop-shadow-[0_2px_10px_rgba(250,204,21,0.35)] transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105" />
+              <img
+                src={verifiedBadge}
+                alt="Creator badge"
+                className="w-5 h-5 object-contain drop-shadow-[0_2px_10px_rgba(255,255,255,0.25)] transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105"
+              />
             </div>
             <div>
               <h3 className="text-gray-900 font-bold text-sm">Become a Creator</h3>

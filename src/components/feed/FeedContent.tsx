@@ -2,7 +2,7 @@ import { MessageCircle } from 'lucide-react';
 import { PostCard } from '../PostCard';
 import { PostSkeleton } from '../PostSkeleton';
 import { UserAvatar } from '../UserAvatar';
-import { Star } from 'lucide-react';
+import verifiedBadge from '../../assets/verified-badge.png';
 import { Post } from '../../types';
 
 interface ProfileSearchResult {
@@ -87,7 +87,11 @@ export function FeedContent({
                   />
                   {profile.is_organizer && (
                     <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm z-10">
-                      <Star className="w-3.5 h-3.5 text-purple-600 fill-current" />
+                      <img
+                        src={verifiedBadge}
+                        alt="Creator badge"
+                        className="w-3.5 h-3.5 object-contain"
+                      />
                     </div>
                   )}
                 </div>
