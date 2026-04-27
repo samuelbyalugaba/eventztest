@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { supabase } from '../utils/supabase/client';
+
 import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getProfilePostsGrid, subscribeToSavedEvents, getOrganizerStats, getOrganizerEvents, checkIsFollowing } from '../utils/supabase/api';
 import type { ApiPost, Profile as UserProfile, Ticket, Event as AppEvent } from '../utils/supabase/api';
 import { useProfileStore } from '../store/profileStore';
