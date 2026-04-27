@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import verifiedBadge from '../assets/verified-badge.png';
 import { 
   Carousel,
   CarouselContent,
@@ -524,11 +525,7 @@ export function PostDetailPage({
                     <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
                   )}
                   {post.user.verified && !post.user.isOrganizer && (
-                    <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
-                      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                      </svg>
-                    </div>
+                    <img src={verifiedBadge} alt="Verified" className="w-4 h-4 select-none" loading="lazy" decoding="async" />
                   )}
                 </div>
                 <span className="text-gray-500 text-sm">{post.timestamp || 'Just now'}</span>
