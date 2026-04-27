@@ -227,7 +227,7 @@ export default function App() {
       if (scheduled.type === 'timeout') {
         window.clearTimeout(scheduled.handle);
       } else {
-        window.cancelIdleCallback(scheduled.handle);
+        (window as any).cancelIdleCallback?.(scheduled.handle);
       }
     };
   }, [isAuthenticated, currentUser?.id]);
