@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { MapPin, Eye } from 'lucide-react';
 
@@ -22,7 +23,7 @@ interface LiveStreamCardProps {
   onClick: (stream: LiveStream) => void;
 }
 
-export function LiveStreamCard({ stream, variant, onClick }: LiveStreamCardProps) {
+export const LiveStreamCard = memo(function LiveStreamCard({ stream, variant, onClick }: LiveStreamCardProps) {
   if (variant === 'featured') {
     return (
       <div
