@@ -215,7 +215,7 @@ export default function App() {
       const timeoutHandle = window.setTimeout(() => {
         void prefetchFeed();
       }, 3000);
-      return { type: 'timeout' as const, handle: timeoutHandle };
+      return { type: 'timeout' as const, handle: timeoutHandle as unknown as number };
     };
 
     const scheduled = schedulePrefetch();
