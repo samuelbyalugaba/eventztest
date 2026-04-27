@@ -71,4 +71,4 @@ export const UpcomingStreamCard = memo(function UpcomingStreamCard({ stream, isR
       </button>
     </div>
   );
-}
+});
