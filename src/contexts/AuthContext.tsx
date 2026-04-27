@@ -52,45 +52,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const ensureProfile = async (sessionUser: SupabaseUser) => {
-    const existing = await getProfile(sessionUser.id);
-    if (existing) {
-      syncProfileState(existing);
-      return existing;
-    }
-
-    const meta: any = sessionUser.user_metadata || {};
-    const nameCandidate =
-      meta.full_name ||
-      meta.name ||
-      (typeof sessionUser.email === 'string' ? sessionUser.email.split('@')[0] : null) ||
-      'User';
-    const avatarCandidate = meta.avatar_url || meta.picture || null;
-    const usernameCandidates = buildUsernameCandidates(String(nameCandidate));
-
-    for (const username of usernameCandidates) {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert(
-          [
-            {
-              id: sessionUser.id,
-              email: sessionUser.email,
-              full_name: nameCandidate,
-              username,
-              avatar_url: avatarCandidate,
-            },
-          ],
-          { onConflict: 'id', ignoreDuplicates: true }
-        );
-
-      if (!error) {
-        break;
+    try {
+      const existing = await getProfile(sessionUser.id);
+      if (existing) {
+        syncProfileState(existing);
+        return existing;
       }
-    }
 
-    const created = await getProfile(sessionUser.id);
-    syncProfileState(created || null);
-    return created;
+      const meta: any = sessionUser.user_metadata || {};
+      const nameCandidate =
+        meta.full_name ||
+        meta.name ||
+        (typeof sessionUser.email === 'string' ? sessionUser.email.split('@')[0] : null) ||
+        'User';
+      const avatarCandidate = meta.avatar_url || meta.picture || null;
+      const usernameCandidates = buildUsernameCandidates(String(nameCandidate));
+
+      for (const username of usernameCandidates) {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert(
+            [
+              {
+                id: sessionUser.id,
+                email: sessionUser.email,
+                full_name: nameCandidate,
+                username,
+                avatar_url: avatarCandidate,
+              },
+            ],
+            { onConflict: 'id', ignoreDuplicates: true }
+          );
+
+        if (!error) {
+          break;
+        }
+      }
+
+      const created = await getProfile(sessionUser.id);
+      syncProfileState(created || null);
+      return created;
+    } catch (_error) {
+      return null;
+    }
   };
 
   const fetchProfile = async (userId: string) => {
@@ -115,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (session?.user) {
           setUser(session.user);
           setIsAuthenticated(true);
-          await ensureProfile(session.user);
+          void ensureProfile(session.user);
         } else {
           setUser(null);
           setIsAuthenticated(false);
@@ -136,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' && session) {
         setUser(session.user);
         setIsAuthenticated(true);
-        await ensureProfile(session.user);
+        void ensureProfile(session.user);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAuthenticated(false);
@@ -146,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAuthenticated(true);
       } else if (event === 'USER_UPDATED' && session) {
         setUser(session.user);
-        await ensureProfile(session.user);
+        void ensureProfile(session.user);
       }
     });
 
