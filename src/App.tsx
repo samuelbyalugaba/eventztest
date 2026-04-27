@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { EventDetails } from './components/EventDetails';
-import { useProfileStore } from './store/profileStore';
 import { LiveFeed } from './components/LiveFeed';
 import { Feed } from './components/Feed';
 import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
 import { Calendar, Radio, User, Rss } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
 
 // Lazy-loaded route components (not needed on initial load)
 const CreateEventWrapper = lazy(() => import('./components/CreateEventWrapper').then(m => ({ default: m.CreateEventWrapper })));
@@ -22,9 +22,7 @@ const RouteFallback = () => (
 );
 import { Toaster, toast } from 'sonner';
 import { supabase } from './utils/supabase/client';
-import { User as SupabaseUser } from '@supabase/supabase-js';
 import { 
-  getProfile, 
   getConversations, 
   getMessages, 
   sendMessage, 
@@ -48,85 +46,25 @@ const isVideoAsset = (url?: string) => {
   return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
 };
 
-const slugifyUsername = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
-const buildUsernameCandidates = (seed: string) => {
-  const base = slugifyUsername(seed) || 'user';
-  const suffix = Date.now().toString(36).slice(-4);
-  return [
-    base,
-    `${base}${suffix}`,
-    `${base}${Math.floor(Math.random() * 9000) + 1000}`,
-    `user${Date.now().toString().slice(-6)}`
-  ];
-};
-
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const prevTabPathRef = useRef<string | null>(null);
   const prevWasModalRef = useRef(false);
-  const [isOrganizer, setIsOrganizer] = useState(false);
-  
-  // Auth state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<any>(null); // Store full profile data
+  const {
+    user: currentUser,
+    profile: userProfile,
+    isAuthenticated,
+    isLoading: isCheckingAuth,
+    isOrganizer,
+  } = useAuth();
 
   // Global messaging state
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [hasLiveEvents, setHasLiveEvents] = useState(false);
   const [onlineFriends, setOnlineFriends] = useState<any[]>([]);
 
-  // Check for existing session on mount
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          setIsAuthenticated(false);
-          // If refresh token is invalid, ensure we clear local state
-          if (error.message && (error.message.includes("Invalid Refresh Token") || error.message.includes("Refresh Token Not Found"))) {
-             await supabase.auth.signOut();
-          }
-        } else if (session?.access_token) {
-          setCurrentUser(session.user);
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
-      } catch (err) {
-        setIsAuthenticated(false);
-      } finally {
-        setIsCheckingAuth(false);
-      }
-    };
-
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        setCurrentUser(session.user);
-        setIsAuthenticated(true);
-      } else if (event === 'SIGNED_OUT') {
-        setCurrentUser(null);
-        setIsAuthenticated(false);
-        setIsOrganizer(false);
-      } else if (event === 'TOKEN_REFRESHED' && session) {
-        setCurrentUser(session.user);
-        setIsAuthenticated(true);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const handleAuthSuccess = (_token: string, user: any) => {
-    setCurrentUser(user);
-    setIsAuthenticated(true);
+  const handleAuthSuccess = (_token: string, _user: any) => {
     // When someone signs up/signs in, it opens the /events page
     navigate('/events', { replace: true });
   };
@@ -231,71 +169,6 @@ export default function App() {
       }
     };
   }, [isAuthenticated, currentUser?.id]);
-  // Fetch user profile to determine organizer status
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (isAuthenticated && currentUser) {
-        try {
-          const profile = await getProfile(currentUser.id);
-          
-          if (profile) {
-            setUserProfile(profile);
-            useProfileStore.getState().setProfile(profile);
-            // Determine if user is an organizer
-            const isOrg = profile.is_organizer || false;
-            setIsOrganizer(isOrg);
-          } else {
-            const meta: any = currentUser.user_metadata || {};
-            const nameCandidate =
-              meta.full_name ||
-              meta.name ||
-              (typeof currentUser.email === 'string' ? currentUser.email.split('@')[0] : null) ||
-              'User';
-            const avatarCandidate = meta.avatar_url || meta.picture || null;
-
-            const usernameCandidates = buildUsernameCandidates(String(nameCandidate));
-            for (const username of usernameCandidates) {
-              const { error } = await supabase
-                .from('profiles')
-                .upsert(
-                  [
-                    {
-                      id: currentUser.id,
-                      email: currentUser.email,
-                      full_name: nameCandidate,
-                      username,
-                      avatar_url: avatarCandidate,
-                    },
-                  ],
-                  { onConflict: 'id', ignoreDuplicates: true }
-                );
-
-              if (!error) {
-                break;
-              }
-            }
-
-            const created = await getProfile(currentUser.id);
-            if (created) {
-              setUserProfile(created);
-              useProfileStore.getState().setProfile(created);
-              setIsOrganizer(created.is_organizer || false);
-            }
-          }
-        } catch (error) {
-        }
-      } else {
-        setUserProfile(null);
-        useProfileStore.getState().clear();
-      }
-    };
-
-    fetchProfile();
-
-    // Listen for manual profile updates from other components
-    window.addEventListener('profileUpdated', fetchProfile);
-    return () => window.removeEventListener('profileUpdated', fetchProfile);
-  }, [isAuthenticated, currentUser]);
 
   // Fetch conversations when authenticated
   useEffect(() => {
@@ -464,8 +337,6 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      setCurrentUser(null);
-      setIsAuthenticated(false);
       navigate('/events');
     } catch (err) {
     }
@@ -673,7 +544,6 @@ export default function App() {
   };
 
   const handleStartOrganizerSetup = () => {
-    setIsOrganizer(false);
     navigate('/create');
   };
 
@@ -876,28 +746,17 @@ export default function App() {
           } />
           <Route path="/create" element={
             <Suspense fallback={<RouteFallback />}>
-              <CreateEventWrapper 
-                currentUser={currentUser} 
-                isAuthenticated={isAuthenticated} 
-                onAuthSuccess={handleAuthSuccess}
-              />
+              <CreateEventWrapper />
             </Suspense>
           } />
           <Route path="/edit-event/:id" element={
             <Suspense fallback={<RouteFallback />}>
-              <CreateEventWrapper 
-                currentUser={currentUser} 
-                isAuthenticated={isAuthenticated} 
-                onAuthSuccess={handleAuthSuccess}
-              />
+              <CreateEventWrapper />
             </Suspense>
           } />
           <Route path="/post/:id" element={
             <Suspense fallback={<RouteFallback />}>
-              <PostDetailWrapper 
-                currentUser={currentUser}
-                userProfile={userProfile}
-              />
+              <PostDetailWrapper />
             </Suspense>
           } />
           <Route path="/event/:id" element={
@@ -919,10 +778,7 @@ export default function App() {
             path="/post/:id" 
             element={
               <Suspense fallback={<RouteFallback />}>
-                <PostDetailWrapper 
-                  currentUser={currentUser}
-                  userProfile={userProfile}
-                />
+                <PostDetailWrapper />
               </Suspense>
             } 
           />

@@ -5,6 +5,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { registerServiceWorker } from "./utils/registerSW";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { AuthProvider } from "./contexts/AuthContext";
 
 try {
   registerServiceWorker();
@@ -17,9 +18,11 @@ try {
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <App />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <App />
+      </BrowserRouter>
+    </AuthProvider>
   </ErrorBoundary>
 );
 

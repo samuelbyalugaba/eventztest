@@ -19,15 +19,18 @@ import {
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
-import { supabase, getProfile, updateProfile, uploadImage } from '../utils/supabase/api';
+import { supabase, getProfile, updateProfile } from '../utils/supabase/api';
 import { isSafeUrl } from '../utils/sanitize';
 import { CREATOR_CATEGORIES } from '../utils/categories';
+import { useAuth } from '../contexts/AuthContext';
+import { DEFAULT_PRIVACY_SETTINGS, mapOrganizerProfileToSettingsForm, uploadProfileAvatar, validateProfileImageFile } from './settings/profileSettingsShared';
 
 interface OrganizerSettingsModalProps {
   onClose: () => void;
 }
 
 export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps) {
+  const { user, profile, refreshProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'streaming' | 'payments' | 'privacy' | 'account'>('profile');
 
   const [profileData, setProfileData] = useState({
@@ -54,10 +57,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
   });
 
   const [privacySettings, setPrivacySettings] = useState({
-    profileVisibility: 'public',
-    showEmail: false,
-    showPhone: false,
-    allowMessages: true,
+    ...DEFAULT_PRIVACY_SETTINGS,
     showFollowers: true,
     showStats: true,
   });
@@ -103,24 +103,15 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         return;
       }
       const file = event.target.files[0];
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size must be less than 5MB');
+      const validationError = validateProfileImageFile(file);
+      if (validationError) {
+        toast.error(validationError);
         return;
       }
 
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('File must be an image');
-        return;
-      }
-
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Use organizer-specific path
-      const publicUrl = await uploadImage(file, 'avatars', `organizers/${user.id}`);
+      const publicUrl = await uploadProfileAvatar({ file, userId: user.id, scope: 'organizers' });
 
       setProfileData({ ...profileData, avatarUrl: publicUrl });
       
@@ -129,6 +120,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         await updateProfile(user.id, {
           avatar_url: publicUrl
         });
+        await refreshProfile();
         toast.success('Profile photo updated successfully');
       } catch (saveError) {
         toast.success('Photo uploaded. Please click Save to finish setup.');
@@ -145,38 +137,24 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const profile = await getProfile(user.id);
+          const currentProfile = profile || await getProfile(user.id);
 
-          if (profile) {
-            let type = profile.organizer_type || '';
-            const orgName = profile.full_name || profile.username || '';
+          if (currentProfile) {
+            let type = currentProfile.organizer_type || '';
 
-            setProfileData({
-              username: profile.username || '',
-              organizerName: orgName, 
-              organizerType: type,
-              venueSubType: '', // Deprecated
-              email: profile.contact_email || user.email || '',
-              phone: profile.phone || '',
-              location: profile.location || '',
-              bio: profile.bio || '',
-              website: profile.website || '',
-              avatarUrl: profile.avatar_url || '',
-              birthdate: profile.birthdate || '',
-            });
+            setProfileData(mapOrganizerProfileToSettingsForm(currentProfile, user.email || ''));
 
             setCategorySearch(type);
 
-            if (!profile.is_organizer) {
+            if (!currentProfile.is_organizer) {
                // Hint to user that they are setting up a creator account
                toast.info('Set up your Creator details');
-            }
+             }
 
-            if (profile.streaming_settings) setStreamingSettings(profile.streaming_settings);
-            if (profile.privacy_settings) setPrivacySettings(profile.privacy_settings);
-            if (profile.payment_settings) setPaymentData(profile.payment_settings);
+            if (currentProfile.streaming_settings) setStreamingSettings(currentProfile.streaming_settings);
+            if (currentProfile.privacy_settings) setPrivacySettings({ ...DEFAULT_PRIVACY_SETTINGS, ...currentProfile.privacy_settings });
+            if (currentProfile.payment_settings) setPaymentData(currentProfile.payment_settings);
           }
         }
       } catch (error) {
@@ -186,11 +164,10 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       }
     };
     fetchProfile();
-  }, []);
+  }, [profile, user]);
 
-    const handleSaveProfile = async () => {
+  const handleSaveProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       // Validation: Check if sub-type is selected for types that require it
@@ -250,6 +227,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         birthdate: profileData.birthdate,
         is_organizer: true // Ensure they are marked as organizer
       });
+      await refreshProfile();
       
       toast.success('Profile updated successfully');
       window.dispatchEvent(new CustomEvent('profileUpdated'));
@@ -261,12 +239,12 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
   const handleSaveStreaming = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       await updateProfile(user.id, {
         streaming_settings: streamingSettings
       });
+      await refreshProfile();
       toast.success('Streaming settings updated! 📹');
     } catch (error) {
       toast.error('Failed to save streaming settings');
@@ -275,12 +253,12 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
   const handleSavePrivacy = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       await updateProfile(user.id, {
         privacy_settings: privacySettings
       });
+      await refreshProfile();
       toast.success('Privacy settings updated! 🔒');
     } catch (error) {
       toast.error('Failed to save privacy settings');
@@ -302,12 +280,12 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         }
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       await updateProfile(user.id, {
         payment_settings: paymentData
       });
+      await refreshProfile();
       toast.success('Payment information saved securely! 💳');
     } catch (error) {
       toast.error('Failed to save payment information');

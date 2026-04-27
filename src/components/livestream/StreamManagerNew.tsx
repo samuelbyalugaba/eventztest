@@ -10,6 +10,7 @@ import { SidebarChat } from './SidebarChat';
 import { HeartAnimations, generateHeart } from './HeartAnimations';
 import { useIsMobile } from '../ui/use-mobile';
 import type { FloatingHeart, StreamStats } from './types';
+import { createStreamClient, formatStreamElapsedTime, initializeLocalTracks, playLocalPreview, switchLocalCamera } from './sessionUtils';
 
 interface StreamManagerProps {
   event: Event;
@@ -85,7 +86,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   // Initialize Agora
   if (!client.current) {
-    client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+    client.current = createStreamClient();
   }
 
   // Keep refs in sync
@@ -135,32 +136,21 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     return () => clearInterval(interval);
   }, [isLive]);
 
-  const formatTime = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    if (hrs > 0) return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const formatTime = formatStreamElapsedTime;
 
   // Init local tracks
   useEffect(() => {
     let mounted = true;
     const init = async () => {
       try {
-        const cameras = await AgoraRTC.getCameras();
+        const { cameras, audioTrack, videoTrack, initialCamera } = await initializeLocalTracks();
         if (!mounted) return;
         setAvailableCameras(cameras);
-        const cameraId = cameras[0]?.deviceId;
-        const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks({}, cameraId ? { cameraId } : {});
         if (!mounted) { audioTrack.close(); videoTrack.close(); return; }
         tracksRef.current = { audio: audioTrack, video: videoTrack };
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
-        const isBack = cameras[0] ? /(back|rear|environment)/i.test(cameras[0].label) : false;
-        videoTrack.play('local-player', { fit: 'cover', mirror: !isBack });
-        const v = document.getElementById('local-player')?.querySelector('video') as HTMLVideoElement | null;
-        if (v && isBack) v.style.transform = 'none';
+        playLocalPreview(videoTrack, initialCamera, 'local-player');
       } catch {
         toast.error('Could not access camera/microphone');
       }
@@ -269,18 +259,17 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const toggleCameraDevice = async () => {
     if (!localVideoTrack) return;
     try {
-      const cameras = availableCameras.length ? availableCameras : await AgoraRTC.getCameras();
-      if (cameras.length < 2) { toast.error('No secondary camera'); return; }
+      const { cameras, nextIndex } = await switchLocalCamera({
+        localVideoTrack,
+        availableCameras,
+        currentCameraIndex,
+        elementId: 'local-player',
+      });
       if (!availableCameras.length) setAvailableCameras(cameras);
-      const next = (currentCameraIndex + 1) % cameras.length;
-      await localVideoTrack.setDevice(cameras[next].deviceId);
-      localVideoTrack.stop();
-      const isBack = /(back|rear|environment)/i.test(cameras[next].label || '');
-      localVideoTrack.play('local-player', { fit: 'cover', mirror: !isBack });
-      const v = document.getElementById('local-player')?.querySelector('video') as HTMLVideoElement | null;
-      if (v && isBack) v.style.transform = 'none';
-      setCurrentCameraIndex(next);
-    } catch { toast.error('Failed to switch camera'); }
+      setCurrentCameraIndex(nextIndex);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to switch camera');
+    }
   };
 
   const toggleMic = async () => {

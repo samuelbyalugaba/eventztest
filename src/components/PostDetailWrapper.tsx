@@ -6,13 +6,10 @@ import { handleShare } from '../utils/share';
 import { toast } from 'sonner';
 import { formatTimeAgo } from '../utils/format';
 import { supabase } from '../utils/supabase/client';
+import { useAuth } from '../contexts/AuthContext';
 
-interface PostDetailWrapperProps {
-  currentUser: any;
-  userProfile?: any;
-}
-
-export function PostDetailWrapper({ currentUser, userProfile }: PostDetailWrapperProps) {
+export function PostDetailWrapper() {
+  const { user: currentUser, profile: userProfile } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();

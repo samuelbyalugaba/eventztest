@@ -2,12 +2,13 @@ import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { getPosts, toggleLikePost, toggleSavePost, createPostComment, getFollowedUserIds, incrementPostView, getNotifications, Notification, deletePost, getPostComments, getProfile, getMessages, toggleLikeComment, updatePostCaption, searchProfiles } from '../utils/supabase/api';
+import { toggleLikePost, toggleSavePost, createPostComment, incrementPostView, deletePost, getPostComments, toggleLikeComment, updatePostCaption, searchProfiles } from '../utils/supabase/api';
 import { formatTimeAgo } from '../utils/format';
 import { Post, HighlightClip, Conversation } from '../types';
 import { PostDetailModal } from './PostDetailModal';
 import { handleShare } from '../utils/share';
-import { mapPostsToViewModel } from '../utils/postMapper';
+import { useFeedData } from '../hooks/useFeedData';
+import { useFeedConversationState } from '../hooks/useFeedConversationState';
 
 import { ChatList } from './ChatList';
 import { ChatDetail } from './ChatDetail';
@@ -39,8 +40,6 @@ interface FeedProps {
   isPaused?: boolean;
 }
 
-let feedCacheMemory: { posts: any[]; timestamp: number } | null = null;
-
 export function Feed({ 
   conversations: globalConversations, 
   onStartConversation, 
@@ -54,26 +53,15 @@ export function Feed({
   const location = useLocation();
   const navigate = useNavigate();
   const handledNavKeyRef = useRef<string | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
-  const [currentUser, setCurrentUser] = useState<any>(propCurrentUser || null);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
-  const [showMessages, setShowMessages] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; type?: string } | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ title: string; text: string; url?: string } | null>(null);
   const [likeAnimation, setLikeAnimation] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
-  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -89,6 +77,33 @@ export function Feed({
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const feedScrollRef = useRef<HTMLDivElement>(null);
   const [feedScrollContainer, setFeedScrollContainer] = useState<HTMLDivElement | null>(null);
+
+  const {
+    posts,
+    setPosts,
+    hasMore,
+    isLoadingMore,
+    currentUser,
+    isLoading,
+    followingIds,
+    notifications,
+    notificationsLoading,
+    currentUserProfile,
+    handleLoadMore,
+    setNotifications,
+    setNotificationsLoading,
+  } = useFeedData(propCurrentUser);
+
+  const {
+    showMessages,
+    setShowMessages,
+    activeConversation,
+    setActiveConversation,
+  } = useFeedConversationState({
+    globalConversations,
+    currentUserId: currentUser?.id,
+    onMarkAsRead,
+  });
 
   // Force pause highlight player if background is paused
   useEffect(() => {
@@ -264,106 +279,6 @@ export function Feed({
     }
   }, [playingVideo?.clipIndex, playingVideo?.clips]);
 
-  const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
-  const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
-
-  const loadPosts = async (useCacheFirst: boolean) => {
-    setIsLoading(true);
-    try {
-      if (useCacheFirst && feedCacheMemory && (Date.now() - feedCacheMemory.timestamp < FEED_CACHE_TTL_MS)) {
-        setPosts(feedCacheMemory.posts as Post[]);
-        setIsLoading(false);
-      }
-      if (useCacheFirst) {
-        const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
-        if (cachedRaw) {
-          const cached = JSON.parse(cachedRaw);
-          if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS && Array.isArray(cached.posts)) {
-            setPosts(cached.posts);
-            setIsLoading(false);
-          }
-        }
-      }
-
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
-      if (user) {
-        try { const profile = await getProfile(user.id); setCurrentUserProfile(profile || null); } catch { setCurrentUserProfile(null); }
-        try { const following = await getFollowedUserIds(user.id); setFollowingIds(new Set(following)); } catch (e) { console.error('Error loading following:', e); }
-      }
-
-      const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: 0 });
-      setHasMore(!fresh || fresh.length >= 20);
-      const mapped = fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [];
-
-      setPosts(prev => {
-        if (sessionStorage.getItem('feedScrollPos') && prev.length > mapped.length) {
-          const merged = [...prev];
-          mapped.forEach((post, i) => { merged[i] = post; });
-          return merged;
-        }
-        return mapped;
-      });
-
-      const payload = { posts: mapped, timestamp: Date.now() };
-      feedCacheMemory = payload;
-      localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(payload));
-    } catch (error) { console.error('Error loading posts:', error); toast.error('Failed to load posts'); }
-    finally { setIsLoading(false); }
-  };
-
-  const handleLoadMore = async () => {
-    if (isLoadingMore || !hasMore) return;
-    setIsLoadingMore(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: posts.length });
-      if (!fresh || fresh.length < 20) setHasMore(false);
-      if (fresh && fresh.length > 0) {
-        const mapped = mapPostsToViewModel(fresh);
-        setPosts(prev => {
-          const existingIds = new Set(prev.map(p => p.id));
-          return [...prev, ...mapped.filter(p => !existingIds.has(p.id))];
-        });
-      }
-    } catch (error) { console.error('Error loading more posts:', error); }
-    finally { setIsLoadingMore(false); }
-  };
-
-  useEffect(() => {
-    loadPosts(true);
-    const handlePostsUpdated = () => loadPosts(false);
-    window.addEventListener('postsUpdated', handlePostsUpdated);
-    return () => { window.removeEventListener('postsUpdated', handlePostsUpdated); };
-  }, []);
-
-  useEffect(() => {
-    if (activeConversation) {
-      const updatedConv = globalConversations?.find(c => c.id === activeConversation.id);
-      if (updatedConv) {
-        if ((updatedConv.messages?.length || 0) === 0 && updatedConv.lastMessage?.text !== 'Start a conversation...') {
-          const loadMsgs = async () => {
-            try {
-              const msgs = await getMessages(updatedConv.id);
-              const formattedMsgs = msgs.map((m: any) => ({
-                id: m.id,
-                senderId: m.sender_id === currentUser?.id ? 0 : parseInt(m.sender_id) || 1,
-                text: m.content,
-                timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                read: m.is_read
-              }));
-              setActiveConversation({ ...updatedConv, messages: formattedMsgs });
-            } catch (e) { console.error(e); }
-          };
-          loadMsgs();
-        } else if (updatedConv !== activeConversation) {
-          setActiveConversation(updatedConv);
-        }
-        if (updatedConv.unreadCount && updatedConv.unreadCount > 0 && onMarkAsRead) onMarkAsRead(updatedConv.id);
-      }
-    }
-  }, [activeConversation?.id, globalConversations, onMarkAsRead, currentUser?.id]);
-
   useEffect(() => {
     if (selectedPost && (!selectedPost.comments || selectedPost.comments.length === 0) && (selectedPost.comments_count || 0) > 0) {
       const fetchComments = async () => {
@@ -405,13 +320,17 @@ export function Feed({
     if (currentUser) {
       const fetchNotifications = async () => {
         setNotificationsLoading(true);
-        try { const data = await getNotifications(currentUser.id); setNotifications(data); }
+        try {
+          const { getNotifications } = await import('../utils/supabase/api');
+          const data = await getNotifications(currentUser.id);
+          setNotifications(data);
+        }
         catch (error) { console.error('Error fetching notifications:', error); }
         finally { setNotificationsLoading(false); }
       };
-      fetchNotifications();
+      void fetchNotifications();
       let interval: ReturnType<typeof setInterval>;
-      if (showNotifications) interval = setInterval(fetchNotifications, 60000);
+      if (showNotifications) interval = setInterval(() => { void fetchNotifications(); }, 60000);
       return () => { if (interval) clearInterval(interval); };
     }
   }, [currentUser, showNotifications]);

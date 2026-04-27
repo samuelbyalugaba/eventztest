@@ -1,10 +1,12 @@
 import { X, User, Shield, HelpCircle, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar, Search, ChevronDown, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { supabase, getProfile, updateProfile, checkUsernameUnique, uploadImage } from '../utils/supabase/api';
+import { supabase, getProfile, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
 import { searchNominatim } from '../utils/nominatim';
 import { Sheet, SheetContent, SheetClose, SheetTitle, SheetDescription } from "./ui/sheet";
 import { CREATOR_CATEGORIES } from '../utils/categories';
+import { useAuth } from '../contexts/AuthContext';
+import { DEFAULT_PRIVACY_SETTINGS, mapUserProfileToSettingsForm, uploadProfileAvatar, validateProfileImageFile } from './settings/profileSettingsShared';
 
 type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
 
@@ -14,6 +16,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalProps) {
+  const { user, profile, refreshProfile } = useAuth();
   const [currentView, setCurrentView] = useState<SettingsView>(initialView);
   const [isOpen, setIsOpen] = useState(true);
 
@@ -80,30 +83,22 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
         return;
       }
       const file = event.target.files[0];
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size must be less than 5MB');
+      const validationError = validateProfileImageFile(file);
+      if (validationError) {
+        toast.error(validationError);
         return;
       }
 
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('File must be an image');
-        return;
-      }
-
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('You must be logged in to update your profile photo');
         return;
       }
 
-      // Use user-specific path to separate from organizer photos
-      const publicUrl = await uploadImage(file, 'avatars', `users/${user.id}`);
+      const publicUrl = await uploadProfileAvatar({ file, userId: user.id, scope: 'users' });
 
       setProfileData(prev => ({ ...prev, avatarUrl: publicUrl }));
       await updateProfile(user.id, { avatar_url: publicUrl });
+      await refreshProfile();
       toast.success('Profile photo updated successfully');
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['avatar_url'] } }));
     } catch (error: any) {
@@ -113,30 +108,21 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
 
 
 
-  const [privacy, setPrivacy] = useState({
-    profileVisibility: 'public',
-    showFollowers: true,
-    showStats: true,
-    showEmail: false,
-    showPhone: false,
-    allowMessages: true,
-    showActivity: true,
-  });
+  const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY_SETTINGS);
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const profile = await getProfile(user.id);
-          if (profile) {
-            setIsCreatorProfile(!!profile.is_organizer);
+          const currentProfile = profile || await getProfile(user.id);
+          if (currentProfile) {
+            setIsCreatorProfile(!!currentProfile.is_organizer);
             // Profile Data Migration
             const localProfile = localStorage.getItem('eventz-user-profile');
             let profileUpdates: any = {};
             let hasUpdates = false;
 
-            if (localProfile && !profile.full_name && !profile.phone) {
+            if (localProfile && !currentProfile.full_name && !currentProfile.phone) {
               // Assume if name and phone are missing, we might want to migrate
               const parsed = JSON.parse(localProfile);
               setProfileData(parsed);
@@ -150,31 +136,21 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
               hasUpdates = true;
               localStorage.removeItem('eventz-user-profile');
             } else {
-              setProfileData({
-                username: profile.username || '',
-                name: profile.full_name || '',
-                email: profile.contact_email || user.email || '',
-                phone: profile.phone || '',
-                bio: profile.bio || '',
-                birthdate: profile.birthdate || '',
-                avatarUrl: profile.avatar_url || '',
-                location: profile.location || '',
-                category: profile.organizer_type || '',
-              });
-              setCategorySearch(profile.organizer_type || '');
+              setProfileData(mapUserProfileToSettingsForm(currentProfile, user.email || ''));
+              setCategorySearch(currentProfile.organizer_type || '');
               if (localProfile) localStorage.removeItem('eventz-user-profile');
             }
 
             // Privacy Settings Migration
             const localPrivacy = localStorage.getItem('eventz-privacy');
-            if (profile.privacy_settings) {
+            if (currentProfile.privacy_settings) {
               setPrivacy(prev => ({
                 ...prev,
-                profileVisibility: profile.privacy_settings?.profileVisibility || prev.profileVisibility,
-                showEmail: profile.privacy_settings?.showEmail ?? prev.showEmail,
-                showPhone: profile.privacy_settings?.showPhone ?? prev.showPhone,
-                allowMessages: profile.privacy_settings?.allowMessages ?? prev.allowMessages,
-                showActivity: profile.privacy_settings?.showActivity ?? prev.showActivity,
+                profileVisibility: currentProfile.privacy_settings?.profileVisibility || prev.profileVisibility,
+                showEmail: currentProfile.privacy_settings?.showEmail ?? prev.showEmail,
+                showPhone: currentProfile.privacy_settings?.showPhone ?? prev.showPhone,
+                allowMessages: currentProfile.privacy_settings?.allowMessages ?? prev.allowMessages,
+                showActivity: currentProfile.privacy_settings?.showActivity ?? prev.showActivity,
               }));
               if (localPrivacy) localStorage.removeItem('eventz-privacy');
             } else if (localPrivacy) {
@@ -217,7 +193,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [profile, user]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -234,7 +210,6 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
 
   const handleSaveProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         // Check if username changed and is unique
         const currentProfile = await getProfile(user.id);
@@ -262,6 +237,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
           avatar_url: profileData.avatarUrl,
           ...(isCreatorProfile ? { location: profileData.location, organizer_type: profileData.category } : {}),
         });
+        await refreshProfile();
       } else {
         localStorage.setItem('eventz-user-profile', JSON.stringify(profileData));
       }
@@ -279,7 +255,6 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
 
   const handleSavePrivacy = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const profile = await getProfile(user.id);
         const currentSettings = profile?.privacy_settings || {};
@@ -293,6 +268,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
             showStats: currentSettings.showStats ?? true,
           }
         });
+        await refreshProfile();
       } else {
         localStorage.setItem('eventz-privacy', JSON.stringify(privacy));
       }

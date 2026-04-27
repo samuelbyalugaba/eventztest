@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabase/client';
 import { getProfile } from '../utils/supabase/api';
+import { useProfileStore } from '../store/profileStore';
 
 interface AuthContextType {
   user: SupabaseUser | null;
@@ -16,6 +17,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const slugifyUsername = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+const buildUsernameCandidates = (seed: string) => {
+  const base = slugifyUsername(seed) || 'user';
+  const suffix = Date.now().toString(36).slice(-4);
+  return [
+    base,
+    `${base}${suffix}`,
+    `${base}${Math.floor(Math.random() * 9000) + 1000}`,
+    `user${Date.now().toString().slice(-6)}`
+  ];
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
@@ -24,15 +37,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [hasOrganizerProfile, setHasOrganizerProfile] = useState(false);
 
+  const syncProfileState = (data: any | null) => {
+    setProfile(data);
+    if (data) {
+      const isOrg = data.is_organizer || false;
+      setIsOrganizer(isOrg);
+      setHasOrganizerProfile(isOrg || !!data.organizer_type);
+      useProfileStore.getState().setProfile(data);
+    } else {
+      setIsOrganizer(false);
+      setHasOrganizerProfile(false);
+      useProfileStore.getState().clear();
+    }
+  };
+
+  const ensureProfile = async (sessionUser: SupabaseUser) => {
+    const existing = await getProfile(sessionUser.id);
+    if (existing) {
+      syncProfileState(existing);
+      return existing;
+    }
+
+    const meta: any = sessionUser.user_metadata || {};
+    const nameCandidate =
+      meta.full_name ||
+      meta.name ||
+      (typeof sessionUser.email === 'string' ? sessionUser.email.split('@')[0] : null) ||
+      'User';
+    const avatarCandidate = meta.avatar_url || meta.picture || null;
+    const usernameCandidates = buildUsernameCandidates(String(nameCandidate));
+
+    for (const username of usernameCandidates) {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert(
+          [
+            {
+              id: sessionUser.id,
+              email: sessionUser.email,
+              full_name: nameCandidate,
+              username,
+              avatar_url: avatarCandidate,
+            },
+          ],
+          { onConflict: 'id', ignoreDuplicates: true }
+        );
+
+      if (!error) {
+        break;
+      }
+    }
+
+    const created = await getProfile(sessionUser.id);
+    syncProfileState(created || null);
+    return created;
+  };
+
   const fetchProfile = async (userId: string) => {
     try {
       const data = await getProfile(userId);
-      if (data) {
-        setProfile(data);
-        const isOrg = data.is_organizer || false;
-        setIsOrganizer(isOrg);
-        setHasOrganizerProfile(isOrg || !!data.organizer_type);
-      }
+      syncProfileState(data || null);
     } catch (error) {
     }
   };
@@ -51,14 +115,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (session?.user) {
           setUser(session.user);
           setIsAuthenticated(true);
-          await fetchProfile(session.user.id);
+          await ensureProfile(session.user);
         } else {
           setUser(null);
           setIsAuthenticated(false);
+          syncProfileState(null);
         }
       } catch (err) {
         setUser(null);
         setIsAuthenticated(false);
+        syncProfileState(null);
       } finally {
         setIsLoading(false);
       }
@@ -70,19 +136,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' && session) {
         setUser(session.user);
         setIsAuthenticated(true);
-        await fetchProfile(session.user.id);
+        await ensureProfile(session.user);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
-        setProfile(null);
         setIsAuthenticated(false);
-        setIsOrganizer(false);
-        setHasOrganizerProfile(false);
+        syncProfileState(null);
       } else if (event === 'TOKEN_REFRESHED' && session) {
         setUser(session.user);
         setIsAuthenticated(true);
       } else if (event === 'USER_UPDATED' && session) {
         setUser(session.user);
-        await fetchProfile(session.user.id);
+        await ensureProfile(session.user);
       }
     });
 
