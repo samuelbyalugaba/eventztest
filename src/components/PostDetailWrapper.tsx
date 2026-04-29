@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { PostDetailPage } from './PostDetailPage';
+import { UserProfileModal } from './UserProfileModal';
 import { getPostById, toggleLikePost, toggleSavePost, deletePost, createPostComment, toggleLikeComment, updatePostCaption } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
 import { toast } from 'sonner';
@@ -17,6 +18,7 @@ export function PostDetailWrapper() {
   const startTime = location.state?.startTime || 0;
   const initialMuted = location.state?.isMuted !== undefined ? location.state.isMuted : false;
   const [loading, setLoading] = useState(!post);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -211,6 +213,7 @@ export function PostDetailWrapper() {
   if (!post) return null;
 
   return (
+    <>
     <PostDetailPage
       post={post}
       currentUser={currentUser}
@@ -264,8 +267,15 @@ export function PostDetailWrapper() {
       }}
       onProfileClick={(user) => {
         if (user && user.id) {
-          const backgroundBase = (location.state as any)?.backgroundLocation || location;
-          navigate(`/profile/${user.id}`, { state: { backgroundLocation: backgroundBase } });
+          setSelectedUserProfile({
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            avatar: user.avatar,
+            verified: user.verified,
+            isOrganizer: user.isOrganizer,
+            type: user.isOrganizer ? 'Organizer' : 'Attendee',
+          });
         } else {
           toast.error('Could not find user profile');
         }
@@ -275,5 +285,19 @@ export function PostDetailWrapper() {
       startTime={startTime}
       initialMuted={initialMuted}
     />
+    {selectedUserProfile && (
+      <UserProfileModal
+        user={{
+          id: selectedUserProfile.id,
+          name: selectedUserProfile.name,
+          type: selectedUserProfile.type ?? (selectedUserProfile.isOrganizer ? 'Organizer' : 'Attendee'),
+          avatar: selectedUserProfile.avatar,
+          verified: selectedUserProfile.verified,
+        }}
+        onClose={() => setSelectedUserProfile(null)}
+        onFollow={() => toast.success(`Following ${selectedUserProfile.name}`)}
+      />
+    )}
+    </>
   );
 }
