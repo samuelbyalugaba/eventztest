@@ -510,7 +510,7 @@ export function PostDetailPage({
               <UserAvatar
                 src={post.user.avatar}
                 name={post.user.name}
-                className="w-14 h-14 rounded-2xl object-cover cursor-pointer"
+                className="w-14 h-14 rounded-full object-cover cursor-pointer"
                 onClick={(e) => onProfileClick(post.user, e)}
               />
               <div>
@@ -521,10 +521,7 @@ export function PostDetailPage({
                   >
                     {post.user.name}
                   </span>
-                  {post.user.isOrganizer && (
-                    <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
-                  )}
-                  {post.user.verified && !post.user.isOrganizer && (
+                  {(post.user.isOrganizer || post.user.verified) && (
                     <img src={verifiedBadge} alt="Verified" className="w-4 h-4 select-none" loading="lazy" decoding="async" />
                   )}
                 </div>
