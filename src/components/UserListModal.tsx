@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { X, Search, Star } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
+import verifiedBadge from '../assets/verified-badge.png';
 import { Profile } from '../utils/supabase/api';
 
 interface UserListModalProps {
@@ -86,7 +87,7 @@ export function UserListModal({ isOpen, onClose, title, users, loading = false, 
                     <h3 className="text-sm font-medium text-gray-900 truncate flex items-center gap-1.5">
                       {user.full_name}
                       {user.is_organizer && (
-                        <Star className="w-3.5 h-3.5 text-purple-600 fill-purple-600" />
+                        <img src={verifiedBadge} alt="Verified" className="w-3.5 h-3.5 select-none" loading="lazy" decoding="async" />
                       )}
                     </h3>
                     <p className="text-xs text-gray-500 truncate">@{user.username}</p>
