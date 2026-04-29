@@ -4,7 +4,8 @@ import { UserAvatar } from './UserAvatar';
 import { EventDetailModal } from './EventDetailModal';
 import { PostDetailModal } from './PostDetailModal';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
-import { MapPin, Calendar, Share2, Play, LayoutGrid, Layers, ChevronLeft, Star } from 'lucide-react';
+import { MapPin, Calendar, Share2, Play, LayoutGrid, Layers, ChevronLeft } from 'lucide-react';
+import verifiedBadge from '../assets/verified-badge.png';
 import { 
   getOrganizerStats, 
   getOrganizerEvents, 
@@ -345,7 +346,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
                  <h1 className="text-lg font-bold text-gray-900 leading-tight truncate flex items-center gap-1.5">
                    {displayData.name}
                    {isOrganizerView && (
-                     <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
+                     <img src={verifiedBadge} alt="Verified" className="w-4 h-4 drop-shadow-sm pointer-events-none select-none" loading="lazy" decoding="async" />
                    )}
                  </h1>
                  <p className="text-gray-500 font-medium text-[10px] flex items-center gap-1">
