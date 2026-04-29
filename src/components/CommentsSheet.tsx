@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
-import { X, MessageCircle, Star, Heart } from 'lucide-react';
+import { X, MessageCircle, Heart } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
+import verifiedBadge from '../assets/verified-badge.png';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 
 
@@ -80,7 +81,7 @@ export function CommentsSheet({
                       <span className="text-gray-900 text-sm font-bold flex items-center gap-1">
                         {comment.user.name}
                         {comment.user.is_organizer && (
-                          <Star className="w-3.5 h-3.5 text-purple-600 fill-purple-600" />
+                          <img src={verifiedBadge} alt="Verified" className="w-3.5 h-3.5 select-none" loading="lazy" decoding="async" />
                         )}
                       </span>
                       <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
@@ -117,7 +118,7 @@ export function CommentsSheet({
                         <span className="text-gray-900 text-sm font-bold flex items-center gap-1">
                           {reply.user.name}
                           {reply.user.is_organizer && (
-                            <Star className="w-3 h-3 text-purple-600 fill-purple-600" />
+                            <img src={verifiedBadge} alt="Verified" className="w-3 h-3 select-none" loading="lazy" decoding="async" />
                           )}
                         </span>
                         <span className="text-gray-400 text-[10px]">{reply.timestamp}</span>

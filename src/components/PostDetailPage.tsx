@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
-  Star, MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX
+  MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -510,7 +510,7 @@ export function PostDetailPage({
               <UserAvatar
                 src={post.user.avatar}
                 name={post.user.name}
-                className="w-14 h-14 rounded-2xl object-cover cursor-pointer"
+                className="w-14 h-14 rounded-full object-cover cursor-pointer"
                 onClick={(e) => onProfileClick(post.user, e)}
               />
               <div>
@@ -521,10 +521,7 @@ export function PostDetailPage({
                   >
                     {post.user.name}
                   </span>
-                  {post.user.isOrganizer && (
-                    <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
-                  )}
-                  {post.user.verified && !post.user.isOrganizer && (
+                  {(post.user.isOrganizer || post.user.verified) && (
                     <img src={verifiedBadge} alt="Verified" className="w-4 h-4 select-none" loading="lazy" decoding="async" />
                   )}
                 </div>
@@ -623,7 +620,7 @@ export function PostDetailPage({
                           <span className="text-gray-900 text-xs font-bold flex items-center gap-1">
                             {comment.user.name}
                             {comment.user.is_organizer && (
-                              <Star className="w-3 h-3 text-purple-600 fill-purple-600" />
+                              <img src={verifiedBadge} alt="Verified" className="w-3 h-3 select-none" loading="lazy" decoding="async" />
                             )}
                           </span>
                           <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
@@ -659,7 +656,7 @@ export function PostDetailPage({
                             <span className="text-gray-900 text-[11px] font-bold flex items-center gap-1">
                               {reply.user.name}
                               {reply.user.is_organizer && (
-                                <Star className="w-2.5 h-2.5 text-purple-600 fill-purple-600" />
+                                <img src={verifiedBadge} alt="Verified" className="w-2.5 h-2.5 select-none" loading="lazy" decoding="async" />
                               )}
                             </span>
                             <span className="text-gray-400 text-[9px]">{reply.timestamp}</span>

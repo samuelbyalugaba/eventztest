@@ -519,7 +519,7 @@ export function Feed({
               hasMore={hasMore}
               isLoadingMore={isLoadingMore}
               audioUnlocked={audioUnlocked}
-              isPaused={isPaused}
+              isPaused={isPaused || !!selectedUserProfile || !!selectedPost || !!playingVideo || !!fullScreenImage || showNotifications || showComments || showShareModal}
               onProfileClick={handleOpenUserProfile}
               onLike={(id) => toggleLike(id)}
               onSave={(id) => toggleSave(id)}
