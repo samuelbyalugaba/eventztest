@@ -569,8 +569,8 @@ export function PostDetailModal({
                   >
                     {post.user.name}
                   </span>
-                  {post.user.isOrganizer && (
-                    <Star className="w-4 h-4 text-purple-600 fill-purple-600" />
+                  {(post.user.isOrganizer || post.user.verified) && (
+                    <img src="/src/assets/verified-badge.png" alt="Verified" className="w-4 h-4 select-none" loading="lazy" decoding="async" />
                   )}
                 </div>
                 <span className="text-gray-500 text-sm">{post.timestamp || 'Just now'}</span>

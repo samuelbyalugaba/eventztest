@@ -620,7 +620,7 @@ export function PostDetailPage({
                           <span className="text-gray-900 text-xs font-bold flex items-center gap-1">
                             {comment.user.name}
                             {comment.user.is_organizer && (
-                              <Star className="w-3 h-3 text-purple-600 fill-purple-600" />
+                              <img src={verifiedBadge} alt="Verified" className="w-3 h-3 select-none" loading="lazy" decoding="async" />
                             )}
                           </span>
                           <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
@@ -656,7 +656,7 @@ export function PostDetailPage({
                             <span className="text-gray-900 text-[11px] font-bold flex items-center gap-1">
                               {reply.user.name}
                               {reply.user.is_organizer && (
-                                <Star className="w-2.5 h-2.5 text-purple-600 fill-purple-600" />
+                                <img src={verifiedBadge} alt="Verified" className="w-2.5 h-2.5 select-none" loading="lazy" decoding="async" />
                               )}
                             </span>
                             <span className="text-gray-400 text-[9px]">{reply.timestamp}</span>
