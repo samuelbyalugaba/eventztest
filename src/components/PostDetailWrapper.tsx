@@ -213,6 +213,7 @@ export function PostDetailWrapper() {
   if (!post) return null;
 
   return (
+    <>
     <PostDetailPage
       post={post}
       currentUser={currentUser}
