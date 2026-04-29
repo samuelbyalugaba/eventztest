@@ -505,28 +505,26 @@ export function PostDetailPage({
         {/* User & Post Info */}
         <div className="p-5 space-y-4">
           {/* User Card */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <UserAvatar
-                src={post.user.avatar}
-                name={post.user.name}
-                className="w-14 h-14 rounded-full object-cover cursor-pointer"
-                onClick={(e) => onProfileClick(post.user, e)}
-              />
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span 
-                    className="text-gray-900 font-bold cursor-pointer hover:text-purple-600 transition-colors"
-                    onClick={(e) => onProfileClick(post.user, e)}
-                  >
-                    {post.user.name}
-                  </span>
-                  {(post.user.isOrganizer || post.user.verified) && (
-                    <img src={verifiedBadge} alt="Verified" className="w-4 h-4 select-none" loading="lazy" decoding="async" />
-                  )}
-                </div>
-                <span className="text-gray-500 text-sm">{post.timestamp || 'Just now'}</span>
+          <div className="flex items-center gap-3">
+            <UserAvatar
+              src={post.user.avatar}
+              name={post.user.name}
+              className="w-14 h-14 rounded-full object-cover cursor-pointer flex-shrink-0"
+              onClick={(e) => onProfileClick(post.user, e)}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 mb-1 min-w-0">
+                <span 
+                  className="text-gray-900 font-bold cursor-pointer hover:text-purple-600 transition-colors truncate min-w-0"
+                  onClick={(e) => onProfileClick(post.user, e)}
+                >
+                  {post.user.name}
+                </span>
+                {(post.user.isOrganizer || post.user.verified) && (
+                  <img src={verifiedBadge} alt="Verified" className="w-4 h-4 flex-shrink-0 select-none" loading="lazy" decoding="async" />
+                )}
               </div>
+              <span className="text-gray-500 text-sm">{post.timestamp || 'Just now'}</span>
             </div>
           </div>
 

@@ -58,13 +58,16 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
     return colors[Math.abs(hash) % colors.length];
   }, [safeName]);
 
+  // Detect explicit non-circle shape override; otherwise default to circle
+  const hasShapeOverride = /\brounded-(sm|md|lg|xl|2xl|3xl|none)\b/.test(className);
+  const shapeClass = hasShapeOverride ? '' : 'rounded-full';
+
   const renderAvatar = () => {
     const hasImage = src && src.trim() !== '' && src !== 'null';
     if (!hasImage || imageError) {
-      const hasRoundedClass = className.includes('rounded-');
       return (
         <div 
-          className={`flex items-center justify-center ${hasRoundedClass ? '' : 'rounded-full'} text-white font-medium ${bgColor} ${sizeClasses[size]} ${className}`}
+          className={`flex items-center justify-center ${shapeClass} text-white font-medium ${bgColor} ${sizeClasses[size]} ${className}`}
           onClick={onClick}
         >
           {initials}
@@ -72,17 +75,15 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
       );
     }
 
-    const hasRoundedClass = className.includes('rounded-');
-
     return (
-      <div className={`relative overflow-hidden ${hasRoundedClass ? '' : 'rounded-full'} ${sizeClasses[size]} ${className}`} onClick={onClick}>
-        <div className={`absolute inset-0 z-0 flex items-center justify-center ${hasRoundedClass ? '' : 'rounded-full'} ${bgColor}`} aria-hidden="true">
+      <div className={`relative overflow-hidden ${shapeClass} ${sizeClasses[size]} ${className}`} onClick={onClick}>
+        <div className={`absolute inset-0 z-0 flex items-center justify-center ${shapeClass} ${bgColor}`} aria-hidden="true">
           <span className="text-white font-medium">{initials}</span>
         </div>
         <img 
           src={optimizedSrc || src} 
           alt={safeName || 'User'} 
-          className={`relative z-10 ${hasRoundedClass ? '' : 'rounded-full'} object-cover object-top w-full h-full`}
+          className={`relative z-10 ${shapeClass} object-cover object-top w-full h-full`}
           loading="lazy"
           decoding="async"
           onError={() => setImageError(true)}
