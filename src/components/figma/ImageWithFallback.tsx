@@ -71,7 +71,7 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
     <>
       {showFallback ? (
         <div
-          className={`inline-block bg-muted text-center align-middle ${className ?? ''}`}
+          className={`inline-block bg-muted text-center align-middle overflow-hidden ${className ?? ''}`}
           style={style}
         >
           <div className="flex items-center justify-center w-full h-full text-muted-foreground">
@@ -92,7 +92,7 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
           </div>
         </div>
       ) : (
-        <div className={`relative ${className ?? ''}`} style={style}>
+        <div className={`relative overflow-hidden ${className ?? ''}`} style={style}>
           {/* Blur placeholder — shown instantly while full image loads */}
           {isLoading && blurSrc && (
             <img

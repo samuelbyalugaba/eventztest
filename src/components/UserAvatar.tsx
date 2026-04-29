@@ -58,9 +58,8 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
     return colors[Math.abs(hash) % colors.length];
   }, [safeName]);
 
-  // Detect explicit non-circle shape override; otherwise default to circle
-  const hasShapeOverride = /\brounded-(sm|md|lg|xl|2xl|3xl|none)\b/.test(className);
-  const shapeClass = hasShapeOverride ? '' : 'rounded-full';
+  // Always use circle shape for avatars
+  const shapeClass = 'rounded-full';
 
   const renderAvatar = () => {
     const hasImage = src && src.trim() !== '' && src !== 'null';
