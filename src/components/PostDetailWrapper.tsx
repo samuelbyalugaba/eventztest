@@ -285,5 +285,19 @@ export function PostDetailWrapper() {
       startTime={startTime}
       initialMuted={initialMuted}
     />
+    {selectedUserProfile && (
+      <UserProfileModal
+        user={{
+          id: selectedUserProfile.id,
+          name: selectedUserProfile.name,
+          type: selectedUserProfile.type ?? (selectedUserProfile.isOrganizer ? 'Organizer' : 'Attendee'),
+          avatar: selectedUserProfile.avatar,
+          verified: selectedUserProfile.verified,
+        }}
+        onClose={() => setSelectedUserProfile(null)}
+        onFollow={() => toast.success(`Following ${selectedUserProfile.name}`)}
+      />
+    )}
+    </>
   );
 }
