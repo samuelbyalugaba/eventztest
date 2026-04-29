@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { PostDetailPage } from './PostDetailPage';
+import { UserProfileModal } from './UserProfileModal';
 import { getPostById, toggleLikePost, toggleSavePost, deletePost, createPostComment, toggleLikeComment, updatePostCaption } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
 import { toast } from 'sonner';
