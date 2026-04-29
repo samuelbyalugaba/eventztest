@@ -434,7 +434,15 @@ export function Feed({
 
   const handleOpenUserProfile = (user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; isOrganizerPage?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (onViewPost) onViewPost({ id: user.id, isProfile: true });
+    setSelectedUserProfile({
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      avatar: user.avatar,
+      verified: user.verified,
+      isOrganizer: user.isOrganizer,
+      type: user.isOrganizer ? 'Organizer' : 'Attendee',
+    });
   };
 
   const filteredPosts = posts.filter(post => {
