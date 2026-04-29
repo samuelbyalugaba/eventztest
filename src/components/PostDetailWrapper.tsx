@@ -18,6 +18,7 @@ export function PostDetailWrapper() {
   const startTime = location.state?.startTime || 0;
   const initialMuted = location.state?.isMuted !== undefined ? location.state.isMuted : false;
   const [loading, setLoading] = useState(!post);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -265,8 +266,15 @@ export function PostDetailWrapper() {
       }}
       onProfileClick={(user) => {
         if (user && user.id) {
-          const backgroundBase = (location.state as any)?.backgroundLocation || location;
-          navigate(`/profile/${user.id}`, { state: { backgroundLocation: backgroundBase } });
+          setSelectedUserProfile({
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            avatar: user.avatar,
+            verified: user.verified,
+            isOrganizer: user.isOrganizer,
+            type: user.isOrganizer ? 'Organizer' : 'Attendee',
+          });
         } else {
           toast.error('Could not find user profile');
         }
