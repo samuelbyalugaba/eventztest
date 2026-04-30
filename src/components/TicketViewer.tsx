@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
 import { toPng } from 'html-to-image';
 import { formatPrice } from '../utils/currencies';
+import { formatDateDMY } from '../utils/format';
 
 interface TicketEvent {
   id: number;
@@ -167,7 +168,7 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
                 </div>
                 <div>
                   <p className="text-white/70 text-xs">Date</p>
-                  <p className="text-white font-semibold">{ticket.date}</p>
+                  <p className="text-white font-semibold">{formatDateDMY(ticket.date)}</p>
                 </div>
               </div>
 

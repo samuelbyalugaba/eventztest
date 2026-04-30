@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles } from 'lucide-react';
+import { formatDateDMY } from '../utils/format';
 import { UserProfileModal } from './UserProfileModal';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
@@ -488,7 +489,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               </div>
               <div className="flex-1">
                 <p className="text-gray-600 text-sm">Date & Time</p>
-                <p className="text-gray-900">{event.date}</p>
+                <p className="text-gray-900">{formatDateDMY(event.date)}</p>
                 <p className="text-gray-700 text-sm">{event.time}</p>
               </div>
             </div>

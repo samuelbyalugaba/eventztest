@@ -2,6 +2,7 @@ import { X, Ticket as TicketIcon, Calendar, MapPin, ChevronRight } from 'lucide-
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Ticket } from '../utils/supabase/api';
 import { formatPrice } from '../utils/currencies';
+import { formatDateDMY } from '../utils/format';
 
 interface TicketListModalProps {
   isOpen: boolean;
@@ -52,7 +53,7 @@ export function TicketListModal({ isOpen, eventName, tickets, onClose, onSelectT
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
                   <Calendar className="w-3.5 h-3.5" />
-                  <span>{event.date}</span>
+                  <span>{formatDateDMY(event.date)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <MapPin className="w-3.5 h-3.5" />

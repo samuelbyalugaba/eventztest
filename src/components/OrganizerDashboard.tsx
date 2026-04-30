@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { VideoPreview } from './VideoPreview';
 import { UserAvatar } from './UserAvatar';
+import { formatDateDMY } from '../utils/format';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { EventAnalyticsModal } from './EventAnalyticsModal';
@@ -678,7 +679,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
                         <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                           <div className="flex items-center gap-1.5">
                             <Calendar className="w-4 h-4" />
-                            <span>{new Date(event.date).toLocaleDateString()}</span>
+                            <span>{formatDateDMY(event.date)}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Clock className="w-4 h-4" />

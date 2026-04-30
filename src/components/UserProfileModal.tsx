@@ -5,6 +5,7 @@ import { EventDetailModal } from './EventDetailModal';
 import { PostDetailModal } from './PostDetailModal';
 import { ProfileSkeleton } from './skeletons/ProfileSkeleton';
 import { MapPin, Calendar, Share2, Play, LayoutGrid, Layers, ChevronLeft } from 'lucide-react';
+import { formatDateDMY } from '../utils/format';
 import verifiedBadge from '../assets/verified-badge.png';
 import { 
   getOrganizerStats, 
@@ -321,9 +322,9 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
       
       {/* Header Section */}
       <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-             <button onClick={onClose} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+             <button onClick={onClose} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0">
                <ChevronLeft className="w-6 h-6 text-gray-900" />
              </button>
              
@@ -343,19 +344,21 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
              </div>
 
              <div className="flex-1 min-w-0">
-                 <h1 className="text-lg font-bold text-gray-900 leading-tight truncate flex items-center gap-1.5">
-                   {displayData.name}
+                 <div className="flex items-center gap-1.5 min-w-0">
+                   <h1 className="text-lg font-bold text-gray-900 leading-tight truncate">
+                     {displayData.name}
+                   </h1>
                    {isOrganizerView && (
-                     <img src={verifiedBadge} alt="Verified" className="w-4 h-4 drop-shadow-sm pointer-events-none select-none" loading="lazy" decoding="async" />
+                     <img src={verifiedBadge} alt="Verified" className="w-4 h-4 flex-shrink-0 drop-shadow-sm pointer-events-none select-none" loading="lazy" decoding="async" />
                    )}
-                 </h1>
-                 <p className="text-gray-500 font-medium text-[10px] flex items-center gap-1">
+                 </div>
+                 <p className="text-gray-500 font-medium text-[10px] flex items-center gap-1 truncate">
                    @{displayData.username}
                  </p>
              </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
              <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
                 <Share2 className="w-5 h-5" />
              </button>
@@ -552,7 +555,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
                              <h4 className="text-gray-900 font-medium text-sm line-clamp-1">{event.title}</h4>
                              <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
                                <Calendar className="w-3 h-3" />
-                               {new Date(event.date).toLocaleDateString()}
+                               {formatDateDMY(event.date)}
                              </p>
                              {event.location && (
                                 <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
@@ -590,7 +593,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
                              <h4 className="text-gray-900 font-medium text-sm line-clamp-1">{event.title}</h4>
                              <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
                                <Calendar className="w-3 h-3" />
-                               {new Date(event.date).toLocaleDateString()}
+                               {formatDateDMY(event.date)}
                              </p>
                           </div>
                         </div>

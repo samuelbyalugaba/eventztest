@@ -2,6 +2,7 @@ import { Calendar, MapPin, MoreVertical, Pencil, Trash2, Tv } from 'lucide-react
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { formatDateDMY } from '../utils/format';
 
 interface EventCardProps {
   event: ApiEvent;
@@ -10,25 +11,6 @@ interface EventCardProps {
   currentUserId?: string | null;
   onEditEvent?: (event: ApiEvent) => void;
   onDeleteEvent?: (event: ApiEvent) => void;
-}
-
-function formatEventDate(input?: string): string {
-  if (!input) return '';
-  // Match leading YYYY-MM-DD (optionally followed by extra text like time)
-  const m = String(input).match(/^(\d{4})-(\d{2})-(\d{2})(.*)$/);
-  if (m) {
-    const [, y, mo, d, rest] = m;
-    return `${d}-${mo}-${y}${rest || ''}`;
-  }
-  // Try Date parse fallback
-  const dt = new Date(input);
-  if (!isNaN(dt.getTime())) {
-    const dd = String(dt.getDate()).padStart(2, '0');
-    const mm = String(dt.getMonth() + 1).padStart(2, '0');
-    const yyyy = dt.getFullYear();
-    return `${dd}-${mm}-${yyyy}`;
-  }
-  return input;
 }
 
 export function EventCard({ event, onClick, className = '', currentUserId, onEditEvent, onDeleteEvent }: EventCardProps) {
@@ -138,7 +120,7 @@ export function EventCard({ event, onClick, className = '', currentUserId, onEdi
         
         <div className="flex items-center gap-1.5 mb-1.5 text-gray-600 text-xs">
           <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="line-clamp-1">{formatEventDate(event.date)}</span>
+          <span className="line-clamp-1">{formatDateDMY(event.date)}</span>
         </div>
         
         <div className="flex items-center justify-between mt-2">

@@ -6,6 +6,7 @@ import { extractCurrencyFromPrice, currencies, formatPrice } from '../utils/curr
 import { createTransaction, initiateSnippePayment, waitForTransactionCompletion, createTicket } from '../utils/supabase/api';
 import { ntzsApi } from '../utils/ntzs-api';
 import { getMobileMoneyMinimumMessage, isBelowMobileMoneyMinimum, MOBILE_MONEY_MINIMUM_TZS } from '../utils/paymentLimits';
+import { formatDateDMY } from '../utils/format';
 
 interface TicketTier {
   name: string;
@@ -324,7 +325,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             <h2 className="text-lg font-bold text-gray-900">
               {step === 'select' ? 'Select Tickets' : 'Checkout'}
             </h2>
-            <p className="text-xs text-gray-500">{event.title}</p>
+            <p className="text-xs text-gray-500">{event.title} • {formatDateDMY(event.date)}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5 text-gray-500" />
