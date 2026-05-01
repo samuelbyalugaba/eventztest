@@ -485,10 +485,10 @@ export function Feed({
   }, [setPosts]);
 
   // Stable adapter wrappers for FeedContent props (kept stable so memoized PostCards don't re-render)
-  const onLikeId = useCallback((id: number) => { void toggleLike(id); }, [toggleLike]);
-  const onSaveId = useCallback((id: number) => { void toggleSave(id); }, [toggleSave]);
-  const onShareP = useCallback((p: Post) => { void sharePost(p); }, [sharePost]);
-  const onMessageU = useCallback((user: any) => { void handleStartConversationLocal(user); }, [handleStartConversationLocal]);
+  const onLikeId = useCallback((id: number) => toggleLike(id), [toggleLike]);
+  const onSaveId = useCallback((id: number) => toggleSave(id), [toggleSave]);
+  const onShareP = useCallback((p: Post) => sharePost(p), [sharePost]);
+  const onMessageU = useCallback((user: any) => handleStartConversationLocal(user), [handleStartConversationLocal]);
 
   return (
     <>
