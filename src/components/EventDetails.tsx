@@ -487,7 +487,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               <h3 className="text-gray-900 font-bold text-lg">Upcoming Events</h3>
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-5">
               {upcomingEvents.map((event) => (
                 <EventCard
                   key={event.id}
