@@ -4,7 +4,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { Calendar, Radio, User, Rss } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { useMessaging } from './contexts/MessagingContext';
-import { Toaster, toast } from 'sonner';
+import { Toaster } from 'sonner';
 import { supabase } from './utils/supabase/client';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
@@ -426,6 +426,3 @@ export default function App() {
     </div>
   );
 }
-
-// suppress unused import warning for toast (kept for parity if needed elsewhere)
-void toast;
