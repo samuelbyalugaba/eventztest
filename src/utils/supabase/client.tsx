@@ -11,14 +11,8 @@ const legacyKey = normalizeEnv(import.meta.env.VITE_SUPABASE_KEY);
 const supabaseKey = (() => {
   if (anonKey && looksLikeJwt(anonKey)) return anonKey;
   if (legacyKey && looksLikeJwt(legacyKey)) return legacyKey;
-
-  if (anonKey || legacyKey) {
-  }
   return undefined;
 })();
-
-if (!supabaseUrl || !supabaseKey) {
-}
 
 export const isSupabaseConfigured = () => {
   return (
@@ -30,8 +24,6 @@ export const isSupabaseConfigured = () => {
   );
 };
 
-// Create a singleton Supabase client
-// Use fallback values to prevent app crash on load if env vars are missing
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseKey || 'placeholder',

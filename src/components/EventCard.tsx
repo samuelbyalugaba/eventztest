@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Calendar, MapPin, MoreVertical, Pencil, Trash2, Tv } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import type { Event as ApiEvent } from '../utils/supabase/api';
@@ -13,7 +14,7 @@ interface EventCardProps {
   onDeleteEvent?: (event: ApiEvent) => void;
 }
 
-export function EventCard({ event, onClick, className = '', currentUserId, onEditEvent, onDeleteEvent }: EventCardProps) {
+export const EventCard = memo(function EventCard({ event, onClick, className = '', currentUserId, onEditEvent, onDeleteEvent }: EventCardProps) {
   // Use passed organizer data if available, otherwise fallback to "Event Organizer"
   // Avoiding internal fetches to prevent N+1 request problem
   const organizerName = event.organizer?.full_name || 'Event Organizer';
@@ -136,4 +137,4 @@ export function EventCard({ event, onClick, className = '', currentUserId, onEdi
       </div>
     </div>
   );
-}
+});
