@@ -1,11 +1,10 @@
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { VideoPreview } from './VideoPreview';
 import { UserAvatar } from './UserAvatar';
 import { formatDateDMY } from '../utils/format';
 import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
-import { EventAnalyticsModal } from './EventAnalyticsModal';
 import { HighlightViewerModal } from './HighlightViewerModal';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
 import { handleShare as shareUtil } from '../utils/share';
@@ -17,8 +16,18 @@ import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
 import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
-import { StreamManager } from './livestream/StreamManagerNew';
-import { TicketScannerModal } from './TicketScannerModal';
+
+// Heavy modals — lazy-loaded so Agora SDK / recharts / html5-qrcode aren't in the dashboard chunk
+const EventAnalyticsModal = lazy(() => import('./EventAnalyticsModal').then(m => ({ default: m.EventAnalyticsModal })));
+const StreamManager = lazy(() => import('./livestream/StreamManagerNew').then(m => ({ default: m.StreamManager })));
+const TicketScannerModal = lazy(() => import('./TicketScannerModal').then(m => ({ default: m.TicketScannerModal })));
+
+const ModalFallback = () => (
+  <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+  </div>
+);
+
 
 import {
   DropdownMenu,
