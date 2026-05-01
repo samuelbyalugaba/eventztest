@@ -9,6 +9,8 @@ import { supabase } from './utils/supabase/client';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
 import { GenericPageSkeleton, FeedPageSkeleton, RouteFallback } from './components/skeletons/PageSkeletons';
+import { DesktopSidebar } from './components/desktop/DesktopSidebar';
+import { RightRail } from './components/desktop/RightRail';
 
 // Lazy-loaded heavy pages and route wrappers
 const EventDetails = lazy(() => import('./components/EventDetails').then(m => ({ default: m.EventDetails })));
