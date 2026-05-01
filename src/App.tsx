@@ -197,9 +197,11 @@ export default function App() {
       sessionStorage.setItem(`eventz_tab_scroll_${prevPath}`, String(window.scrollY));
     }
     if (!isModal && isTabPath(location.pathname)) {
+      const isTabSwitch = prevPath !== location.pathname;
       const saved = sessionStorage.getItem(`eventz_tab_scroll_${location.pathname}`);
-      if (saved !== null) {
-        const y = Number(saved) || 0;
+      const y = saved !== null ? (Number(saved) || 0) : 0;
+      // Always reset on tab switch — restore saved position if any, otherwise top.
+      if (isTabSwitch || saved !== null) {
         requestAnimationFrame(() => window.scrollTo(0, y));
       }
     }
