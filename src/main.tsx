@@ -6,6 +6,7 @@ import "./index.css";
 import { registerServiceWorker } from "./utils/registerSW";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
+import { MessagingProvider } from "./contexts/MessagingContext";
 
 try {
   registerServiceWorker();
@@ -20,7 +21,9 @@ createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
     <AuthProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <App />
+        <MessagingProvider>
+          <App />
+        </MessagingProvider>
       </BrowserRouter>
     </AuthProvider>
   </ErrorBoundary>

@@ -1,42 +1,25 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
-import { EventDetails } from './components/EventDetails';
-import { LiveFeed } from './components/LiveFeed';
-import { Feed } from './components/Feed';
-import { Profile } from './components/Profile';
 import { AuthScreen } from './components/AuthScreen';
 import { Calendar, Radio, User, Rss } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
+import { useMessaging } from './contexts/MessagingContext';
+import { Toaster } from 'sonner';
+import { supabase } from './utils/supabase/client';
+import { getPosts } from './utils/supabase/api';
+import { formatTimeAgo } from './utils/format';
+import { GenericPageSkeleton, FeedPageSkeleton, RouteFallback } from './components/skeletons/PageSkeletons';
 
-// Lazy-loaded route components (not needed on initial load)
+// Lazy-loaded heavy pages and route wrappers
+const EventDetails = lazy(() => import('./components/EventDetails').then(m => ({ default: m.EventDetails })));
+const LiveFeed = lazy(() => import('./components/LiveFeed').then(m => ({ default: m.LiveFeed })));
+const Feed = lazy(() => import('./components/Feed').then(m => ({ default: m.Feed })));
+const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
 const CreateEventWrapper = lazy(() => import('./components/CreateEventWrapper').then(m => ({ default: m.CreateEventWrapper })));
 const PostDetailWrapper = lazy(() => import('./components/PostDetailWrapper').then(m => ({ default: m.PostDetailWrapper })));
 const ProfileModalWrapper = lazy(() => import('./components/ProfileModalWrapper').then(m => ({ default: m.ProfileModalWrapper })));
 const EventDetailWrapper = lazy(() => import('./components/EventDetailWrapper').then(m => ({ default: m.EventDetailWrapper })));
 const CreatePostPage = lazy(() => import('./components/CreatePostPage'));
-
-const RouteFallback = () => (
-  <div className="flex items-center justify-center min-h-[40vh]">
-    <div className="w-8 h-8 border-3 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
-  </div>
-);
-import { Toaster, toast } from 'sonner';
-import { supabase } from './utils/supabase/client';
-import { 
-  getConversations, 
-  getMessages, 
-  sendMessage, 
-  startConversation,
-  markMessagesAsRead,
-  subscribeToAllMessages,
-  getLiveStreams,
-  getMutualFollows,
-  subscribeToOnlineUsers,
-  deleteConversation
-} from './utils/supabase/api';
-import { Message, Conversation } from './types';
-import { getPosts } from './utils/supabase/api';
-import { formatTimeAgo } from './utils/format';
 
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -58,31 +41,31 @@ export default function App() {
     isOrganizer,
   } = useAuth();
 
-  // Global messaging state
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [hasLiveEvents, setHasLiveEvents] = useState(false);
-  const [onlineFriends, setOnlineFriends] = useState<any[]>([]);
+  const {
+    conversations,
+    onlineFriends,
+    hasLiveEvents,
+    startConversation: handleStartConversation,
+    sendMessage: handleSendMessage,
+    markAsRead: handleMarkAsRead,
+    deleteConversation: handleDeleteConversation,
+  } = useMessaging();
 
   const handleAuthSuccess = (_token: string, _user: any) => {
-    // When someone signs up/signs in, it opens the /events page
     navigate('/events', { replace: true });
   };
 
+  // Prefetch feed on idle for instant tab switch
   useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
+    if (!isAuthenticated) return;
 
     const prefetchFeed = async () => {
       try {
         const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
         if (cachedRaw) {
           const cached = JSON.parse(cachedRaw);
-          if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS) {
-            return;
-          }
+          if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS) return;
         }
-
         const fresh = await getPosts({ currentUserId: currentUser?.id, limit: 20, offset: 0 });
         const mapped = (fresh || []).map((p: any) => {
           const isOrganizerPage = !!p.posted_as_organizer;
@@ -98,7 +81,7 @@ export default function App() {
               avatar: avatarUrl || '',
               verified: p.user?.verified || false,
               isOrganizer: p.user?.is_organizer || false,
-              isOrganizerPage: isOrganizerPage
+              isOrganizerPage,
             },
             event: p.event ? {
               id: p.event.id,
@@ -136,419 +119,35 @@ export default function App() {
           };
         });
         localStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ posts: mapped, timestamp: Date.now() }));
-      } catch (_e) {
-        // Silent fail: prefetch is best-effort
-      }
+      } catch {/* silent */}
     };
 
-    const schedulePrefetch = () => {
-      const w = window as Window & {
-        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-        cancelIdleCallback?: (handle: number) => void;
-      };
-      if (typeof w.requestIdleCallback === 'function') {
-        const idleHandle = w.requestIdleCallback(() => {
-          void prefetchFeed();
-        }, { timeout: 5000 });
-        return { type: 'idle' as const, handle: idleHandle };
-      }
-
-      const timeoutHandle = window.setTimeout(() => {
-        void prefetchFeed();
-      }, 3000);
-      return { type: 'timeout' as const, handle: timeoutHandle as unknown as number };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
     };
-
-    const scheduled = schedulePrefetch();
+    let scheduled: { type: 'idle' | 'timeout'; handle: number };
+    if (typeof w.requestIdleCallback === 'function') {
+      scheduled = { type: 'idle', handle: w.requestIdleCallback(() => { void prefetchFeed(); }, { timeout: 5000 }) };
+    } else {
+      scheduled = { type: 'timeout', handle: window.setTimeout(() => { void prefetchFeed(); }, 3000) as unknown as number };
+    }
     return () => {
-      if (scheduled.type === 'timeout') {
-        window.clearTimeout(scheduled.handle);
-      } else {
-        (window as any).cancelIdleCallback?.(scheduled.handle);
-      }
+      if (scheduled.type === 'timeout') window.clearTimeout(scheduled.handle);
+      else (window as any).cancelIdleCallback?.(scheduled.handle);
     };
   }, [isAuthenticated, currentUser?.id]);
-
-  // Fetch conversations when authenticated
-  useEffect(() => {
-    const fetchConversations = async () => {
-      if (isAuthenticated && currentUser) {
-        try {
-          const apiConvs = await getConversations(currentUser.id);
-          
-          const formattedConvs: Conversation[] = apiConvs.map((c: any) => {
-            const otherUser = c.participant1_id === currentUser.id ? c.participant2 : c.participant1;
-            
-            return {
-              id: c.id,
-              user: {
-                id: otherUser?.id,
-                name: otherUser?.full_name || 'Unknown User',
-                username: otherUser?.username || '',
-                avatar: otherUser?.avatar_url,
-                verified: otherUser?.verified || false,
-                isOrganizer: otherUser?.is_organizer || false,
-              },
-              lastMessage: {
-                text: c.last_message?.content || '',
-                timestamp: c.last_message ? new Date(c.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-                isRead: c.last_message?.is_read || false,
-              },
-              unreadCount: c.unread_count || 0,
-              messages: [] // Start with empty messages, fetch on demand
-            };
-          });
-          
-          setConversations(formattedConvs);
-        } catch (error) {
-        }
-      } else {
-        setConversations([]);
-      }
-    };
-
-    fetchConversations();
-  }, [isAuthenticated, currentUser]);
-
-  // Check for live events
-  useEffect(() => {
-        if (!isAuthenticated) return;
-
-    const checkLiveEvents = async () => {
-      try {
-        const streams = await getLiveStreams();
-        setHasLiveEvents(streams.length > 0);
-      } catch (error) {
-      }
-    };
-
-    checkLiveEvents();
-    
-    // Poll every minute to update the indicator
-    const interval = setInterval(checkLiveEvents, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Subscribe to real-time messages
-  useEffect(() => {
-    if (!isAuthenticated || !currentUser) return;
-
-    const subscription = subscribeToAllMessages(async (newMessage: any) => {
-      // Avoid processing our own messages if we're optimistically updating (optional, but good for consistency)
-      // Actually, we might want to confirm the ID matches or replace the temp one. 
-      // For now, let's just process everything and assume optimistic updates handle their own duplicates if any,
-      // or we just rely on the server for incoming.
-      // Optimistic updates in handleSendMessage usually don't have the real DB ID immediately unless we wait.
-      // In handleSendMessage, we await sendMessage, so we have the real ID. 
-      // So we might get a duplicate here if we are not careful.
-      // Simple fix: Check if message with this ID already exists.
-
-      setConversations(prevConversations => {
-        const convIndex = prevConversations.findIndex(c => c.id === newMessage.conversation_id);
-        
-        if (convIndex >= 0) {
-          const conv = prevConversations[convIndex];
-          
-          // Check if message already exists (deduplication)
-          if (conv.messages.some(m => m.id === newMessage.id)) {
-            return prevConversations;
-          }
-
-          // Update existing conversation
-          const updatedConvs = [...prevConversations];
-          
-          const appMsg: Message = {
-             id: newMessage.id,
-             senderId: newMessage.sender_id === currentUser.id ? 0 : parseInt(newMessage.sender_id) || 1, 
-             text: newMessage.content,
-             timestamp: new Date(newMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-             read: newMessage.sender_id === currentUser.id ? true : false
-          };
-          
-          const updatedConv = {
-            ...conv,
-            messages: [...conv.messages, appMsg],
-            lastMessage: {
-              text: appMsg.text,
-              timestamp: 'Just now',
-              isRead: appMsg.read
-            },
-            unreadCount: newMessage.sender_id !== currentUser.id ? (conv.unreadCount || 0) + 1 : (conv.unreadCount || 0)
-          };
-          
-          // Move to top
-          updatedConvs.splice(convIndex, 1);
-          updatedConvs.unshift(updatedConv);
-          
-          return updatedConvs;
-        } else {
-           // New conversation logic could go here (e.g. refetch all)
-           return prevConversations; 
-        }
-      });
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [isAuthenticated, currentUser]);
-
-  // Online Friends & Presence
-  useEffect(() => {
-    if (!isAuthenticated || !currentUser) {
-      setOnlineFriends([]);
-      return;
-    }
-
-    let channel: any;
-
-        const setupPresence = async () => {
-      try {
-        // 1. Get mutual friends
-        const friends = await getMutualFollows(currentUser.id);
-        
-        // 2. Subscribe to presence
-        channel = subscribeToOnlineUsers(currentUser.id, (onlineIds: any[]) => {
-          // Filter friends who are online
-          const online = friends.filter((friend: any) => onlineIds.includes(friend.id));
-          
-          // Map to the format expected by ChatList
-          const formattedOnline = online.map((f: any) => ({
-            id: f.id,
-            name: f.full_name,
-            username: f.username,
-            avatar: f.avatar_url
-          }));
-          
-          setOnlineFriends(formattedOnline);
-        });
-      } catch (error) {
-      }
-    };
-
-    setupPresence();
-
-    return () => {
-      if (channel) channel.unsubscribe();
-    };
-  }, [isAuthenticated, currentUser]);
 
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
       navigate('/events');
-    } catch (err) {
-    }
+    } catch {/* silent */}
   };
 
-  // Handler to start or continue a conversation
-  const handleStartConversation = async (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => {
-    if (!currentUser) return;
-
-    // Check if conversation already exists in state
-    const existingConv = conversations.find((conv) => {
-      if (user.id && conv.user.id === user.id) return true;
-      if (conv.user.username && user.username) {
-        return conv.user.username.toLowerCase().trim() === user.username.toLowerCase().trim();
-      }
-      return conv.user.name.toLowerCase().trim() === user.name.toLowerCase().trim();
-    });
-    
-    if (existingConv) {
-      return existingConv;
-    }
-
-    // If we have a user ID, try to create/get conversation via API
-    if (user.id) {
-      try {
-        const apiConv = await startConversation(user.id);
-        
-        // Optimistically add to state or refetch
-        const newConversation: Conversation = {
-          id: apiConv.id,
-          user: {
-            id: user.id,
-            name: user.name,
-            username: user.username || `@${user.name.toLowerCase().replace(/\s+/g, '')}`,
-            avatar: user.avatar,
-            verified: user.verified,
-            isOrganizer: user.isOrganizer,
-          },
-          lastMessage: {
-            text: 'Start a conversation...',
-            timestamp: 'Now',
-            isRead: true,
-          },
-          unreadCount: 0,
-          messages: [],
-        };
-        
-        setConversations([newConversation, ...conversations]);
-        return newConversation;
-      } catch (error) {
-      }
-    }
-    
-    // Fallback for UI-only/mock users if needed (shouldn't happen with real data)
-    return null; 
-  };
-
-  // Handler to send a message
-  const handleSendMessage = async (conversationId: number, messageText: string) => {
-    if (!messageText.trim() || !currentUser) return;
-
-    const tempId = Date.now();
-    const tempMessage: Message = {
-      id: tempId,
-      senderId: 0, // Current user
-      text: messageText,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      read: true,
-    };
-
-    // Optimistic update
-    setConversations(prev => prev.map((conv) => {
-      if (conv.id === conversationId) {
-        return {
-          ...conv,
-          messages: [...conv.messages, tempMessage],
-          lastMessage: {
-            text: tempMessage.text,
-            timestamp: 'Just now',
-            isRead: true,
-          },
-        };
-      }
-      return conv;
-    }));
-
-    try {
-      const sentMsg = await sendMessage(conversationId, messageText);
-      if (sentMsg) {
-        const realMessage: Message = {
-          id: sentMsg.id,
-          senderId: 0, // Current user
-          text: sentMsg.content,
-          timestamp: new Date(sentMsg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-          read: true,
-        };
-
-        // Replace temp message with real one
-        setConversations(prev => prev.map((conv) => {
-          if (conv.id === conversationId) {
-            return {
-              ...conv,
-              messages: conv.messages.map(m => m.id === tempId ? realMessage : m),
-              lastMessage: {
-                text: realMessage.text,
-                timestamp: 'Just now',
-                isRead: true,
-              },
-            };
-          }
-          return conv;
-        }));
-      }
-    } catch (error) {
-      // Revert on error
-      setConversations(prev => prev.map((conv) => {
-        if (conv.id === conversationId) {
-          return {
-            ...conv,
-            messages: conv.messages.filter(m => m.id !== tempId),
-          };
-        }
-        return conv;
-      }));
-      toast.error('Failed to send message');
-    }
-  };
-
-  const handleMarkAsRead = async (conversationId: number) => {
-    if (!currentUser) return;
-
-    try {
-      // Optimistic update
-      setConversations(conversations.map(conv => {
-        if (conv.id === conversationId) {
-          return {
-            ...conv,
-            unreadCount: 0,
-            messages: conv.messages.map(m => ({ ...m, read: true })),
-            lastMessage: {
-              ...conv.lastMessage,
-              isRead: true
-            }
-          };
-        }
-        return conv;
-      }));
-
-      await markMessagesAsRead(conversationId, currentUser.id);
-    } catch (error) {
-    }
-  };
-
-  const handleDeleteConversation = async (conversationId: number) => {
-    try {
-      // Optimistic update
-      setConversations(prev => prev.filter(c => c.id !== conversationId));
-      
-      await deleteConversation(conversationId);
-      toast.success('Conversation deleted');
-    } catch (error) {
-      toast.error('Failed to delete conversation');
-      // Refresh to restore state if failed
-      if (currentUser) {
-        try {
-          const apiConvs = await getConversations(currentUser.id);
-          const formattedConvs: Conversation[] = await Promise.all(apiConvs.map(async (c: any) => {
-            const otherUser = c.participant1_id === currentUser.id ? c.participant2 : c.participant1;
-            const msgs = await getMessages(c.id);
-            const formattedMsgs: Message[] = msgs.map((m: any) => ({
-              id: m.id,
-              senderId: m.sender_id === currentUser.id ? 0 : parseInt(m.sender_id) || 1,
-              text: m.content,
-              timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              read: m.is_read
-            }));
-            return {
-              id: c.id,
-              user: {
-                id: otherUser?.id,
-                name: otherUser?.full_name || 'Unknown User',
-                username: otherUser?.username || '',
-                avatar: otherUser?.avatar_url,
-                verified: otherUser?.verified || false,
-                isOrganizer: otherUser?.is_organizer || false,
-              },
-              lastMessage: {
-                text: c.last_message?.content || '',
-                timestamp: c.last_message ? new Date(c.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-                isRead: c.last_message?.is_read || false,
-              },
-              unreadCount: c.unread_count || 0,
-              messages: formattedMsgs
-            };
-          }));
-          setConversations(formattedConvs);
-        } catch (e) {
-        }
-      }
-    }
-  };
-
-  const handleCreateEvent = () => {
-    navigate('/create');
-  };
-
-  const handleStartOrganizerSetup = () => {
-    navigate('/create');
-  };
-
-  const handleEditEvent = (event: any) => {
-    navigate(`/edit-event/${event.id}`);
-  };
+  const handleCreateEvent = () => navigate('/create');
+  const handleStartOrganizerSetup = () => navigate('/create');
+  const handleEditEvent = (event: any) => navigate(`/edit-event/${event.id}`);
 
   const handleViewPost = (item: any) => {
     const backgroundBase = (location.state as any)?.backgroundLocation || location;
@@ -556,33 +155,28 @@ export default function App() {
       if (item.id && item.id !== 'unknown') {
         navigate(`/profile/${item.id}`, { state: { backgroundLocation: backgroundBase } });
       } else {
-        // Fallback: if we can't find the user ID, maybe it's the current user? 
-        // Or just don't navigate to a broken URL.
         navigate('/profile', { state: { backgroundLocation: backgroundBase } });
       }
     } else {
-      // Use location state to implement modal routing
-      navigate(`/post/${item.id}`, { 
-        state: { 
+      navigate(`/post/${item.id}`, {
+        state: {
           backgroundLocation: backgroundBase,
-          post: item, 
-          startTime: item.startTime, 
-          isMuted: item.isMuted 
-        } 
+          post: item,
+          startTime: item.startTime,
+          isMuted: item.isMuted,
+        },
       });
     }
   };
 
   const isPostModal = location.pathname.startsWith('/post/') && location.state?.backgroundLocation;
   const isEventModal = location.pathname.startsWith('/event/') && location.state?.backgroundLocation;
-  const shouldHideBottomNav = location.pathname.startsWith('/create') || 
-                               location.pathname.startsWith('/edit-event') || 
-                               (location.pathname.startsWith('/post') && !isPostModal) || 
-                               (location.pathname.startsWith('/event/') && !isEventModal);
+  const shouldHideBottomNav = location.pathname.startsWith('/create') ||
+    location.pathname.startsWith('/edit-event') ||
+    (location.pathname.startsWith('/post') && !isPostModal) ||
+    (location.pathname.startsWith('/event/') && !isEventModal);
 
   const backgroundLocation = location.state?.backgroundLocation;
-  
-  // Determine which tab is active for keep-alive rendering
   const effectiveLocation = backgroundLocation || location;
   const effectivePath = effectiveLocation.pathname;
   const isEventsTab = effectivePath === '/events' || effectivePath === '/';
@@ -590,20 +184,18 @@ export default function App() {
   const isLiveTab = effectivePath === '/live';
   const isOwnProfileTab = effectivePath === '/profile';
 
+  // Restore scroll on tab change
   useEffect(() => {
     const isModal =
       !!(location.state as any)?.backgroundLocation &&
       (location.pathname.startsWith('/post/') ||
         location.pathname.startsWith('/profile') ||
         location.pathname.startsWith('/event/'));
-
     const isTabPath = (p: string) => p === '/events' || p === '/live' || p === '/profile';
-
     const prevPath = prevTabPathRef.current;
     if (prevPath && !prevWasModalRef.current && isTabPath(prevPath)) {
       sessionStorage.setItem(`eventz_tab_scroll_${prevPath}`, String(window.scrollY));
     }
-
     if (!isModal && isTabPath(location.pathname)) {
       const saved = sessionStorage.getItem(`eventz_tab_scroll_${location.pathname}`);
       if (saved !== null) {
@@ -611,12 +203,10 @@ export default function App() {
         requestAnimationFrame(() => window.scrollTo(0, y));
       }
     }
-
     prevTabPathRef.current = location.pathname;
     prevWasModalRef.current = isModal;
   }, [location.key, location.pathname, (location.state as any)?.backgroundLocation]);
 
-  // Show loading screen while checking auth
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -628,29 +218,10 @@ export default function App() {
     );
   }
 
-  // Force sign-in globally
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Toaster 
-          position="top-center" 
-          richColors={false}
-          closeButton
-          toastOptions={{
-            className: "font-sans",
-            style: {
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(0, 0, 0, 0.05)',
-              borderRadius: '16px',
-              color: '#1a1a1a',
-              boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
-              padding: '16px',
-              fontSize: '14px',
-              fontWeight: 500,
-            },
-          }}
-        />
+        <Toaster position="top-center" richColors={false} closeButton />
         <AuthScreen onAuthSuccess={handleAuthSuccess} />
       </div>
     );
@@ -658,12 +229,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Toaster 
-        position="top-center" 
+      <Toaster
+        position="top-center"
         richColors={false}
         closeButton
         toastOptions={{
-          className: "font-sans",
+          className: 'font-sans',
           style: {
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
@@ -676,57 +247,63 @@ export default function App() {
             fontWeight: 500,
           },
           classNames: {
-            toast: "group toast group-[.toaster]:bg-white group-[.toaster]:text-neutral-900 group-[.toaster]:border-neutral-200 group-[.toaster]:shadow-lg",
-            description: "group-[.toast]:text-neutral-500",
-            actionButton: "group-[.toast]:bg-neutral-900 group-[.toast]:text-neutral-50",
-            cancelButton: "group-[.toast]:bg-neutral-100 group-[.toast]:text-neutral-500",
-            error: "group-[.toaster]:border-l-4 group-[.toaster]:border-l-red-500",
-            success: "group-[.toaster]:border-l-4 group-[.toaster]:border-l-black",
-            warning: "group-[.toaster]:border-l-4 group-[.toaster]:border-l-amber-500",
-            info: "group-[.toaster]:border-l-4 group-[.toaster]:border-l-blue-500",
-          }
+            toast: 'group toast group-[.toaster]:bg-white group-[.toaster]:text-neutral-900 group-[.toaster]:border-neutral-200 group-[.toaster]:shadow-lg',
+            description: 'group-[.toast]:text-neutral-500',
+            actionButton: 'group-[.toast]:bg-neutral-900 group-[.toast]:text-neutral-50',
+            cancelButton: 'group-[.toast]:bg-neutral-100 group-[.toast]:text-neutral-500',
+            error: 'group-[.toaster]:border-l-4 group-[.toaster]:border-l-red-500',
+            success: 'group-[.toaster]:border-l-4 group-[.toaster]:border-l-black',
+            warning: 'group-[.toaster]:border-l-4 group-[.toaster]:border-l-amber-500',
+            info: 'group-[.toaster]:border-l-4 group-[.toaster]:border-l-blue-500',
+          },
         }}
       />
-      {/* Main Content */}
       <div className={`max-w-7xl mx-auto ${shouldHideBottomNav ? 'pb-20' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'}`}>
-        {/* Always-mounted tab views for instant switching (keep-alive) */}
+        {/* Keep-alive tab views with lazy loading */}
         <div style={{ display: isEventsTab ? 'block' : 'none' }}>
-          <EventDetails 
-            conversations={conversations} 
-            onStartConversation={handleStartConversation} 
-            onSendMessage={handleSendMessage} 
-          />
+          <Suspense fallback={<GenericPageSkeleton />}>
+            <EventDetails
+              conversations={conversations}
+              onStartConversation={handleStartConversation}
+              onSendMessage={handleSendMessage}
+            />
+          </Suspense>
         </div>
         <div style={{ display: isFeedTab ? 'block' : 'none' }}>
-          <Feed 
-            conversations={conversations} 
-            onStartConversation={handleStartConversation} 
-            onSendMessage={handleSendMessage} 
-            onMarkAsRead={handleMarkAsRead} 
-            onlineUsers={onlineFriends} 
-            onDeleteConversation={handleDeleteConversation} 
-            currentUser={currentUser}
-            isOrganizer={isOrganizer}
-            onCreateEvent={handleCreateEvent}
-            onViewPost={handleViewPost}
-            isPaused={!isFeedTab || !!backgroundLocation}
-          />
+          <Suspense fallback={<FeedPageSkeleton />}>
+            <Feed
+              conversations={conversations}
+              onStartConversation={handleStartConversation}
+              onSendMessage={handleSendMessage}
+              onMarkAsRead={handleMarkAsRead}
+              onlineUsers={onlineFriends}
+              onDeleteConversation={handleDeleteConversation}
+              currentUser={currentUser}
+              isOrganizer={isOrganizer}
+              onCreateEvent={handleCreateEvent}
+              onViewPost={handleViewPost}
+              isPaused={!isFeedTab || !!backgroundLocation}
+            />
+          </Suspense>
         </div>
         <div style={{ display: isLiveTab ? 'block' : 'none' }}>
-          <LiveFeed isPaused={!isLiveTab || !!backgroundLocation} />
+          <Suspense fallback={<GenericPageSkeleton />}>
+            <LiveFeed isPaused={!isLiveTab || !!backgroundLocation} />
+          </Suspense>
         </div>
         <div style={{ display: isOwnProfileTab ? 'block' : 'none' }}>
-          <Profile 
-            onLogout={handleLogout} 
-            onCreateEvent={handleCreateEvent}
-            onEditEvent={handleEditEvent}
-            onStartOrganizerSetup={handleStartOrganizerSetup}
-            onViewPost={handleViewPost}
-            isPaused={!isOwnProfileTab || !!backgroundLocation}
-          />
+          <Suspense fallback={<GenericPageSkeleton />}>
+            <Profile
+              onLogout={handleLogout}
+              onCreateEvent={handleCreateEvent}
+              onEditEvent={handleEditEvent}
+              onStartOrganizerSetup={handleStartOrganizerSetup}
+              onViewPost={handleViewPost}
+              isPaused={!isOwnProfileTab || !!backgroundLocation}
+            />
+          </Suspense>
         </div>
 
-        {/* Non-tab routes */}
         <Routes location={backgroundLocation || location}>
           <Route path="/" element={<Navigate to="/events" replace />} />
           <Route path="/events" element={null} />
@@ -734,29 +311,25 @@ export default function App() {
           <Route path="/live" element={null} />
           <Route path="/profile" element={null} />
           <Route path="/profile/:userId" element={
-            <Profile 
-              onLogout={handleLogout} 
-              onCreateEvent={handleCreateEvent}
-              onEditEvent={handleEditEvent}
-              onStartOrganizerSetup={handleStartOrganizerSetup}
-              onViewPost={handleViewPost}
-              isPaused={!!backgroundLocation}
-            />
+            <Suspense fallback={<GenericPageSkeleton />}>
+              <Profile
+                onLogout={handleLogout}
+                onCreateEvent={handleCreateEvent}
+                onEditEvent={handleEditEvent}
+                onStartOrganizerSetup={handleStartOrganizerSetup}
+                onViewPost={handleViewPost}
+                isPaused={!!backgroundLocation}
+              />
+            </Suspense>
           } />
           <Route path="/create" element={
-            <Suspense fallback={<RouteFallback />}>
-              <CreateEventWrapper />
-            </Suspense>
+            <Suspense fallback={<RouteFallback />}><CreateEventWrapper /></Suspense>
           } />
           <Route path="/edit-event/:id" element={
-            <Suspense fallback={<RouteFallback />}>
-              <CreateEventWrapper />
-            </Suspense>
+            <Suspense fallback={<RouteFallback />}><CreateEventWrapper /></Suspense>
           } />
           <Route path="/post/:id" element={
-            <Suspense fallback={<RouteFallback />}>
-              <PostDetailWrapper />
-            </Suspense>
+            <Suspense fallback={<RouteFallback />}><PostDetailWrapper /></Suspense>
           } />
           <Route path="/event/:id" element={
             <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
@@ -770,53 +343,39 @@ export default function App() {
         </Routes>
       </div>
 
-      {/* Modal Route Overlay */}
       {backgroundLocation && (
         <Routes>
-          <Route 
-            path="/post/:id" 
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <PostDetailWrapper />
-              </Suspense>
-            } 
-          />
-          <Route
-            path="/event/:id"
-            element={<Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>}
-          />
-          <Route
-            path="/profile"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <ProfileModalWrapper
-                  onLogout={handleLogout}
-                  onCreateEvent={handleCreateEvent}
-                  onEditEvent={handleEditEvent}
-                  onStartOrganizerSetup={handleStartOrganizerSetup}
-                  onViewPost={handleViewPost}
-                />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/profile/:userId"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <ProfileModalWrapper
-                  onLogout={handleLogout}
-                  onCreateEvent={handleCreateEvent}
-                  onEditEvent={handleEditEvent}
-                  onStartOrganizerSetup={handleStartOrganizerSetup}
-                  onViewPost={handleViewPost}
-                />
-              </Suspense>
-            }
-          />
+          <Route path="/post/:id" element={
+            <Suspense fallback={<RouteFallback />}><PostDetailWrapper /></Suspense>
+          } />
+          <Route path="/event/:id" element={
+            <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+          } />
+          <Route path="/profile" element={
+            <Suspense fallback={<RouteFallback />}>
+              <ProfileModalWrapper
+                onLogout={handleLogout}
+                onCreateEvent={handleCreateEvent}
+                onEditEvent={handleEditEvent}
+                onStartOrganizerSetup={handleStartOrganizerSetup}
+                onViewPost={handleViewPost}
+              />
+            </Suspense>
+          } />
+          <Route path="/profile/:userId" element={
+            <Suspense fallback={<RouteFallback />}>
+              <ProfileModalWrapper
+                onLogout={handleLogout}
+                onCreateEvent={handleCreateEvent}
+                onEditEvent={handleEditEvent}
+                onStartOrganizerSetup={handleStartOrganizerSetup}
+                onViewPost={handleViewPost}
+              />
+            </Suspense>
+          } />
         </Routes>
       )}
 
-      {/* Bottom Navigation */}
       {!shouldHideBottomNav && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 pb-[env(safe-area-inset-bottom)]">
           <div className="max-w-7xl mx-auto px-2 sm:px-4">
@@ -851,7 +410,6 @@ export default function App() {
                 <Rss className="w-6 h-6" />
                 <span className="text-xs">Feed</span>
               </Link>
-
               <Link
                 to="/profile"
                 className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
