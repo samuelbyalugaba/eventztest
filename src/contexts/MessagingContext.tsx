@@ -18,8 +18,8 @@ import { useAuth } from './AuthContext';
 interface OnlineFriend {
   id: string;
   name: string;
-  username?: string;
-  avatar?: string;
+  username: string;
+  avatar: string;
 }
 
 interface StartConversationUser {
@@ -144,7 +144,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
         channel = subscribeToOnlineUsers(currentUser.id, (onlineIds: any[]) => {
           const online = friends.filter((f: any) => onlineIds.includes(f.id));
           setOnlineFriends(online.map((f: any) => ({
-            id: f.id, name: f.full_name, username: f.username, avatar: f.avatar_url,
+            id: f.id, name: f.full_name || '', username: f.username || '', avatar: f.avatar_url || '',
           })));
         });
       } catch {/* silent */}
