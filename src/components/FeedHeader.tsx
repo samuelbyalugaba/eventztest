@@ -138,7 +138,7 @@ export function FeedHeader({
     <div
       id="feed-header"
       ref={headerRef}
-      className="bg-white border-b border-gray-100 fixed top-0 left-0 right-0 z-50 transform-gpu will-change-transform"
+      className="bg-white border-b border-gray-100 fixed top-0 left-0 right-0 lg:left-64 xl:left-72 xl:right-80 z-30 transform-gpu will-change-transform"
     >
       <div className="px-4 pt-5 pb-4">
         {/* Brand Section - Always visible */}
