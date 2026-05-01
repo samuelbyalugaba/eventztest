@@ -91,7 +91,8 @@ export function DesktopSidebar() {
             </button>
           </div>
         </div>
-      )}
+        );
+      })()}
     </aside>
   );
 }
