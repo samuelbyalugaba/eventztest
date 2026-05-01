@@ -262,7 +262,9 @@ export default function App() {
           },
         }}
       />
-      <div className={`max-w-7xl mx-auto ${shouldHideBottomNav ? 'pb-20' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'}`}>
+      <DesktopSidebar />
+      <RightRail />
+      <div className={`max-w-7xl mx-auto lg:max-w-none lg:ml-64 xl:ml-72 xl:mr-80 ${shouldHideBottomNav ? 'pb-20 lg:pb-0' : 'pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
         {/* Keep-alive tab views with lazy loading */}
         <div style={{ display: isEventsTab ? 'block' : 'none' }}>
           <Suspense fallback={<GenericPageSkeleton />}>
