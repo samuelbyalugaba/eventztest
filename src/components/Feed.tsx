@@ -490,6 +490,38 @@ export function Feed({
   const onShareP = useCallback((p: Post) => sharePost(p), [sharePost]);
   const onMessageU = useCallback((user: any) => handleStartConversationLocal(user), [handleStartConversationLocal]);
 
+  // Stable header callbacks
+  const handleToggleNotifications = useCallback(() => {
+    setShowNotifications(prev => !prev);
+    setShowMessages(false);
+  }, [setShowMessages]);
+  const handleToggleMessages = useCallback(() => {
+    setShowMessages(prev => !prev);
+    setShowNotifications(false);
+  }, [setShowMessages]);
+
+  // Stable post-detail-modal callbacks
+  const handleClosePostModal = useCallback(() => setSelectedPost(null), []);
+  const handleClosePlayingVideo = useCallback(() => setPlayingVideo(null), []);
+  const handleCloseFullScreenImage = useCallback(() => setFullScreenImage(null), []);
+  const handleCloseNotifications = useCallback(() => setShowNotifications(false), []);
+  const handleCloseUserProfile = useCallback(() => setSelectedUserProfile(null), []);
+  const handleCloseMessages = useCallback(() => setShowMessages(false), [setShowMessages]);
+  const handleCloseShareModal = useCallback(() => {
+    setShowShareModal(false);
+    setShareModalData(null);
+  }, []);
+  const handleCloseComments = useCallback(() => {
+    setShowComments(false);
+    setSelectedPostForComments(null);
+  }, []);
+
+  // Memoized derived value to avoid recomputing isPaused on every render
+  const isFeedPaused = useMemo(
+    () => isPaused || !!selectedUserProfile || !!selectedPost || !!playingVideo || !!fullScreenImage || showNotifications || showComments || showShareModal,
+    [isPaused, selectedUserProfile, selectedPost, playingVideo, fullScreenImage, showNotifications, showComments, showShareModal]
+  );
+
   return (
     <>
       <div ref={feedContainerRef} className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
