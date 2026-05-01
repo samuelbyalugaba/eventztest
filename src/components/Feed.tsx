@@ -535,10 +535,10 @@ export function Feed({
               audioUnlocked={audioUnlocked}
               isPaused={isPaused || !!selectedUserProfile || !!selectedPost || !!playingVideo || !!fullScreenImage || showNotifications || showComments || showShareModal}
               onProfileClick={handleOpenUserProfile}
-              onLike={(id) => toggleLike(id)}
-              onSave={(id) => toggleSave(id)}
-              onShare={(p) => sharePost(p)}
-              onMessage={(user) => handleStartConversationLocal(user)}
+              onLike={onLikeId}
+              onSave={onSaveId}
+              onShare={onShareP}
+              onMessage={onMessageU}
               onViewPost={handlePostClick}
               onViewComments={handleViewComments}
             />
