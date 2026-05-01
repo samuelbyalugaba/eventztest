@@ -515,7 +515,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             )}
 
             {!isFetching && upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 mb-8">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-5 mb-8">
                 {filteredEvents.map((event) => (
                   <EventCard
                     key={event.id}
