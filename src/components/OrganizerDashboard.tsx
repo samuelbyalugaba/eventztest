@@ -869,43 +869,47 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
       )}
 
       {selectedEventForStream && (
-        <StreamManager
-          event={selectedEventForStream}
-          onClose={() => setSelectedEventForStream(null)}
-          onUpdateStatus={async (isLive) => {
-            // Optimistic update
-            const updatedEvents = publishedEvents.map(e => 
-              e.id === selectedEventForStream.id 
-                ? { ...e, streaming: { ...e.streaming, isLive } }
-                : e
-            );
-            setPublishedEvents(updatedEvents);
+        <Suspense fallback={<ModalFallback />}>
+          <StreamManager
+            event={selectedEventForStream}
+            onClose={() => setSelectedEventForStream(null)}
+            onUpdateStatus={async (isLive) => {
+              // Optimistic update
+              const updatedEvents = publishedEvents.map(e =>
+                e.id === selectedEventForStream.id
+                  ? { ...e, streaming: { ...e.streaming, isLive } }
+                  : e
+              );
+              setPublishedEvents(updatedEvents);
 
-            // Actual DB update
-            try {
-              await updateEventStreamingStatus(selectedEventForStream.id, isLive);
-              
-              // If going live, refresh stats/profile to show live status
-              if (isLive) {
-                setStats(prev => ({ ...prev, liveStreams: prev.liveStreams + 1 }));
-                toast.success('Event is now LIVE on the platform!');
-              } else {
-                toast.info('Event stream ended.');
+              // Actual DB update
+              try {
+                await updateEventStreamingStatus(selectedEventForStream.id, isLive);
+
+                // If going live, refresh stats/profile to show live status
+                if (isLive) {
+                  setStats(prev => ({ ...prev, liveStreams: prev.liveStreams + 1 }));
+                  toast.success('Event is now LIVE on the platform!');
+                } else {
+                  toast.info('Event stream ended.');
+                }
+              } catch (error) {
+                toast.error('Failed to update stream status');
+                // Revert
+                setPublishedEvents(publishedEvents);
               }
-            } catch (error) {
-              toast.error('Failed to update stream status');
-              // Revert
-              setPublishedEvents(publishedEvents);
-            }
-          }}
-        />
+            }}
+          />
+        </Suspense>
       )}
 
       {selectedEventForAnalytics && (
-        <EventAnalyticsModal
-          event={selectedEventForAnalytics}
-          onClose={() => setSelectedEventForAnalytics(null)}
-        />
+        <Suspense fallback={<ModalFallback />}>
+          <EventAnalyticsModal
+            event={selectedEventForAnalytics}
+            onClose={() => setSelectedEventForAnalytics(null)}
+          />
+        </Suspense>
       )}
 
       {selectedHighlight && (
@@ -962,11 +966,13 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
       )}
 
       {showScanner && (
-        <TicketScannerModal
-          eventId={publishedEvents[0]?.id || 0} // Defaulting to first event for now - Logic can be improved to select event
-          eventTitle={publishedEvents[0]?.title || 'Event'}
-          onClose={() => setShowScanner(false)}
-        />
+        <Suspense fallback={<ModalFallback />}>
+          <TicketScannerModal
+            eventId={publishedEvents[0]?.id || 0} // Defaulting to first event for now - Logic can be improved to select event
+            eventTitle={publishedEvents[0]?.title || 'Event'}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
     </>
   );
