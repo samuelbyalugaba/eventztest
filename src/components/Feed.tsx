@@ -535,8 +535,8 @@ export function Feed({
           setExploreSearch={setExploreSearch}
           activeFilter={activeFilter}
           setActiveFilter={setActiveFilter}
-          onToggleNotifications={() => { setShowNotifications(!showNotifications); setShowMessages(false); }}
-          onToggleMessages={() => { setShowMessages(!showMessages); setShowNotifications(false); }}
+          onToggleNotifications={handleToggleNotifications}
+          onToggleMessages={handleToggleMessages}
           showMessagesOrPost={showMessages || !!selectedPost}
           scrollContainer={feedScrollContainer}
         />
@@ -565,7 +565,7 @@ export function Feed({
               hasMore={hasMore}
               isLoadingMore={isLoadingMore}
               audioUnlocked={audioUnlocked}
-              isPaused={isPaused || !!selectedUserProfile || !!selectedPost || !!playingVideo || !!fullScreenImage || showNotifications || showComments || showShareModal}
+              isPaused={isFeedPaused}
               onProfileClick={handleOpenUserProfile}
               onLike={onLikeId}
               onSave={onSaveId}
@@ -584,14 +584,14 @@ export function Feed({
           post={selectedPost}
           currentUser={currentUser}
           currentUserProfile={currentUserProfile}
-          onClose={() => setSelectedPost(null)}
-          onLike={(id, e) => toggleLike(id, e)}
-          onSave={(id, e) => toggleSave(id, e)}
-          onShare={(p, e) => sharePost(p, e)}
+          onClose={handleClosePostModal}
+          onLike={toggleLike}
+          onSave={toggleSave}
+          onShare={sharePost}
           onDelete={handleDeletePost}
           onEditCaption={handleEditCaption}
-          onProfileClick={(user, e) => handleOpenUserProfile(user, e)}
-          onComment={(postId, text, parentId) => handlePostComment(postId, text, parentId)}
+          onProfileClick={handleOpenUserProfile}
+          onComment={handlePostComment}
           onLikeComment={handleLikeComment}
         />
       )}
@@ -603,7 +603,7 @@ export function Feed({
           setNotifications={setNotifications}
           notificationsLoading={notificationsLoading}
           currentUser={currentUser}
-          onClose={() => setShowNotifications(false)}
+          onClose={handleCloseNotifications}
         />
       )}
 
@@ -614,7 +614,7 @@ export function Feed({
             conversations={globalConversations}
             onSelectConversation={(conv) => { setActiveConversation(conv); if (conv.unreadCount > 0 && onMarkAsRead) onMarkAsRead(conv.id); }}
             onStartNewChat={async (user) => { const conv = await onStartConversation(user); if (conv) setActiveConversation(conv); }}
-            onClose={() => setShowMessages(false)}
+            onClose={handleCloseMessages}
             onlineUsers={onlineUsers}
             onDeleteConversation={onDeleteConversation}
           />
@@ -637,7 +637,7 @@ export function Feed({
       {playingVideo && (
         <VideoPlayerOverlay
           playingVideo={playingVideo}
-          onClose={() => setPlayingVideo(null)}
+          onClose={handleClosePlayingVideo}
         />
       )}
 
@@ -648,14 +648,14 @@ export function Feed({
           postId={fullScreenImage.postId}
           posts={posts}
           setPosts={setPosts}
-          onClose={() => setFullScreenImage(null)}
+          onClose={handleCloseFullScreenImage}
         />
       )}
 
       {selectedUserProfile && (
         <UserProfileModal
           user={{ id: selectedUserProfile.id, name: selectedUserProfile.name, type: (selectedUserProfile as any).type ?? (selectedUserProfile.isOrganizer ? 'Organizer' : 'Attendee'), avatar: selectedUserProfile.avatar, verified: selectedUserProfile.verified }}
-          onClose={() => setSelectedUserProfile(null)}
+          onClose={handleCloseUserProfile}
           onFollow={() => toast.success(`Following ${selectedUserProfile.name}`)}
           onMessage={() => { handleStartConversationLocal(selectedUserProfile); setSelectedUserProfile(null); }}
         />
@@ -664,7 +664,7 @@ export function Feed({
       {shareModalData && (
         <ShareModal
           isOpen={showShareModal}
-          onClose={() => { setShowShareModal(false); setShareModalData(null); }}
+          onClose={handleCloseShareModal}
           title={shareModalData.title}
           text={shareModalData.text}
           url={shareModalData.url}
@@ -674,7 +674,7 @@ export function Feed({
       {showComments && selectedPostForComments && (
         <CommentsSheet
           isOpen={showComments}
-          onClose={() => { setShowComments(false); setSelectedPostForComments(null); }}
+          onClose={handleCloseComments}
           post={selectedPostForComments}
           currentUser={currentUser}
           userProfile={currentUserProfile}
