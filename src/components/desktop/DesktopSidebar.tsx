@@ -68,17 +68,18 @@ export function DesktopSidebar() {
         </button>
       </nav>
 
-      {user && (
+      {user && (() => {
+        const meta: any = user.user_metadata || {};
+        const displayName: string = meta.full_name || meta.name || meta.username || (user.email ? user.email.split('@')[0] : 'User');
+        const username: string = meta.username || (user.email ? user.email.split('@')[0] : 'user');
+        const avatarUrl: string | undefined = meta.avatar_url || meta.picture;
+        return (
         <div className="p-3 border-t border-gray-200/70">
           <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition-colors">
-            <UserAvatar
-              src={user.avatar_url}
-              name={user.full_name || user.username || 'U'}
-              size="md"
-            />
+            <UserAvatar src={avatarUrl} name={displayName} size="md" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-[#1A1A1A] truncate">{user.full_name || user.username}</p>
-              <p className="text-xs text-gray-500 truncate">@{user.username}</p>
+              <p className="text-sm font-medium text-[#1A1A1A] truncate">{displayName}</p>
+              <p className="text-xs text-gray-500 truncate">@{username}</p>
             </div>
             <button
               onClick={handleLogout}
