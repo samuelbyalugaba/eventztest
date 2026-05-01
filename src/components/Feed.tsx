@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
@@ -303,7 +303,10 @@ export function Feed({
     }
   }, [selectedPost?.id]);
 
-  const unreadMessagesCount = (globalConversations || []).reduce((acc, conv) => acc + (conv?.unreadCount || 0), 0);
+  const unreadMessagesCount = useMemo(
+    () => (globalConversations || []).reduce((acc, conv) => acc + (conv?.unreadCount || 0), 0),
+    [globalConversations]
+  );
 
   useEffect(() => {
     const sentinel = document.getElementById('feed-sentinel');
@@ -335,37 +338,42 @@ export function Feed({
     }
   }, [currentUser, showNotifications]);
 
-  const toggleLike = async (postId: number, e?: React.MouseEvent) => {
+  const toggleLike = useCallback(async (postId: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (e && !posts.find(p => p.id === postId)?.isLiked) {
+    let wasLiked = false;
+    setPosts(prev => prev.map(post => {
+      if (post.id !== postId) return post;
+      wasLiked = !!post.isLiked;
+      return { ...post, isLiked: !post.isLiked, likes: post.isLiked ? post.likes - 1 : post.likes + 1 };
+    }));
+    if (e && !wasLiked) {
       const rect = (e.target as HTMLElement).getBoundingClientRect();
       setLikeAnimation({ show: true, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
       setTimeout(() => setLikeAnimation({ show: false, x: 0, y: 0 }), 1000);
     }
-    setPosts(posts.map(post => post.id === postId ? { ...post, isLiked: !post.isLiked, likes: post.isLiked ? post.likes - 1 : post.likes + 1 } : post));
-    if (selectedPost && selectedPost.id === postId) {
-      setSelectedPost({ ...selectedPost, isLiked: !selectedPost.isLiked, likes: selectedPost.isLiked ? selectedPost.likes - 1 : selectedPost.likes + 1 });
-    }
+    setSelectedPost(prev => (prev && prev.id === postId)
+      ? { ...prev, isLiked: !prev.isLiked, likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1 }
+      : prev);
     if (currentUser) {
       try { await toggleLikePost(postId, currentUser.id); }
       catch (error) { console.error('Error toggling like:', error); toast.error('Failed to update like'); }
     }
-  };
+  }, [currentUser, setPosts]);
 
-  const toggleSave = async (postId: number, e?: React.MouseEvent) => {
+  const toggleSave = useCallback(async (postId: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setPosts(posts.map(post => {
+    setPosts(prev => prev.map(post => {
       if (post.id === postId) { if (!post.isSaved) toast.success('Saved for later! 📌'); return { ...post, isSaved: !post.isSaved }; }
       return post;
     }));
-    if (selectedPost && selectedPost.id === postId) setSelectedPost({ ...selectedPost, isSaved: !selectedPost.isSaved });
+    setSelectedPost(prev => (prev && prev.id === postId) ? { ...prev, isSaved: !prev.isSaved } : prev);
     if (currentUser) {
       try { await toggleSavePost(postId, currentUser.id); }
       catch (error) { console.error('Error toggling save:', error); toast.error('Failed to update saved post'); }
     }
-  };
+  }, [currentUser, setPosts]);
 
-  const sharePost = async (post: Post, e?: React.MouseEvent) => {
+  const sharePost = useCallback(async (post: Post, e?: React.MouseEvent) => {
     e?.stopPropagation();
     const postUrl = `${window.location.origin}/post/${post.id}`;
     const shared = await handleShare({ title: `Check out this post from ${post.user.name}`, text: post.content.text || 'Check out this amazing post on EVENTZ!', url: postUrl });
@@ -373,18 +381,18 @@ export function Feed({
       setShareModalData({ title: `Post from ${post.user.name}`, text: post.content.text || 'Check out this amazing post on EVENTZ!', url: postUrl });
       setShowShareModal(true);
     }
-  };
+  }, []);
 
-  const handleDeletePost = async (postId: number) => {
+  const handleDeletePost = useCallback(async (postId: number) => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
-    const previousPosts = [...posts];
-    setPosts(posts.filter(p => p.id !== postId));
-    if (selectedPost && selectedPost.id === postId) setSelectedPost(null);
+    let previousPosts: Post[] = [];
+    setPosts(prev => { previousPosts = prev; return prev.filter(p => p.id !== postId); });
+    setSelectedPost(prev => (prev && prev.id === postId) ? null : prev);
     try { await deletePost(postId); toast.success('Post deleted'); }
     catch (error) { console.error('Error deleting post:', error); toast.error('Failed to delete post'); setPosts(previousPosts); }
-  };
+  }, [setPosts]);
 
-  const handlePostComment = async (postId: number, text: string, parentId?: number) => {
+  const handlePostComment = useCallback(async (postId: number, text: string, parentId?: number) => {
     if (!text || !text.trim()) return;
     if (!currentUser) { toast.error('Please sign in to comment'); return; }
     try {
@@ -398,9 +406,9 @@ export function Feed({
       setSelectedPost(prev => { if (!prev || prev.id !== postId) return prev; return { ...prev, comments: [...(prev.comments || []), newComment], comments_count: (prev.comments_count || 0) + 1 }; });
       toast.success('Comment posted');
     } catch (error) { console.error('Error posting comment:', error); toast.error('Failed to post comment'); }
-  };
+  }, [currentUser, setPosts]);
 
-  const handleLikeComment = async (commentId: number) => {
+  const handleLikeComment = useCallback(async (commentId: number) => {
     if (!currentUser) { toast.error('Please sign in to like comments'); return; }
     try {
       const isLiked = await toggleLikeComment(commentId, currentUser.id);
@@ -409,9 +417,9 @@ export function Feed({
         return { ...prev, comments: (prev.comments || []).map((c: any) => c.id === commentId ? { ...c, is_liked: isLiked, likes_count: isLiked ? (c.likes_count || 0) + 1 : Math.max(0, (c.likes_count || 0) - 1) } : c) };
       });
     } catch (e) { console.error('Error liking comment:', e); toast.error('Failed to update like'); }
-  };
+  }, [currentUser]);
 
-  const handleEditCaption = async (postId: number, caption: string) => {
+  const handleEditCaption = useCallback(async (postId: number, caption: string) => {
     if (!currentUser) { toast.error('Please sign in'); return; }
     try {
       const updated = await updatePostCaption(postId, currentUser.id, caption);
@@ -419,9 +427,9 @@ export function Feed({
       setSelectedPost(prev => { if (!prev || prev.id !== postId) return prev; return { ...prev, content: { ...(prev.content || {}), text: updated.content } } as any; });
       window.dispatchEvent(new Event('postsUpdated'));
     } catch (e) { console.error(e); toast.error('Failed to update caption'); throw e; }
-  };
+  }, [currentUser, setPosts]);
 
-  const handleStartConversationLocal = async (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
+  const handleStartConversationLocal = useCallback(async (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!currentUser) { toast.error('Please sign in to start a conversation'); return; }
     const toastId = toast.loading('Opening chat...');
@@ -430,9 +438,9 @@ export function Feed({
       if (conversation) { setSelectedPost(null); setActiveConversation(conversation); setShowMessages(true); toast.dismiss(toastId); }
       else toast.error('Could not start conversation', { id: toastId });
     } catch (error) { console.error('Error starting conversation:', error); toast.error('Failed to start conversation', { id: toastId }); }
-  };
+  }, [currentUser, onStartConversation, setActiveConversation, setShowMessages]);
 
-  const handleOpenUserProfile = (user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; isOrganizerPage?: boolean }, e?: React.MouseEvent) => {
+  const handleOpenUserProfile = useCallback((user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; isOrganizerPage?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setSelectedUserProfile({
       id: user.id,
@@ -443,23 +451,23 @@ export function Feed({
       isOrganizer: user.isOrganizer,
       type: user.isOrganizer ? 'Organizer' : 'Attendee',
     });
-  };
+  }, []);
 
-  const filteredPosts = posts.filter(post => {
+  const filteredPosts = useMemo(() => posts.filter(post => {
     if (activeFilter === 'organizers') return post.user.isOrganizer;
     if (activeFilter === 'trending') return post.likes > 200;
     if (activeFilter === 'following') return followingIds.has(post.user.id);
     return true;
-  });
+  }), [posts, activeFilter, followingIds]);
 
-  const handlePostClick = (post: Post, startTime?: number, isMuted?: boolean) => {
+  const handlePostClick = useCallback((post: Post, startTime?: number, isMuted?: boolean) => {
     const scrollPos = feedScrollRef.current?.scrollTop ?? window.scrollY;
     sessionStorage.setItem('feedScrollPos', String(scrollPos));
     sessionStorage.setItem('feedLastPostId', post.id.toString());
     if (onViewPost) onViewPost({ ...post, startTime, isMuted });
-  };
+  }, [onViewPost]);
 
-  const handleViewComments = async (post: Post) => {
+  const handleViewComments = useCallback(async (post: Post) => {
     setSelectedPostForComments(post);
     setShowComments(true);
     try {
@@ -474,7 +482,13 @@ export function Feed({
         setSelectedPostForComments(prev => { if (!prev || prev.id !== post.id) return prev; return { ...prev, comments: mapped, comments_count: comments.length } as any; });
       }
     } catch (err) { console.error('Error fetching comments:', err); }
-  };
+  }, [setPosts]);
+
+  // Stable adapter wrappers for FeedContent props (kept stable so memoized PostCards don't re-render)
+  const onLikeId = useCallback((id: number) => toggleLike(id), [toggleLike]);
+  const onSaveId = useCallback((id: number) => toggleSave(id), [toggleSave]);
+  const onShareP = useCallback((p: Post) => sharePost(p), [sharePost]);
+  const onMessageU = useCallback((user: any) => handleStartConversationLocal(user), [handleStartConversationLocal]);
 
   return (
     <>
@@ -521,10 +535,10 @@ export function Feed({
               audioUnlocked={audioUnlocked}
               isPaused={isPaused || !!selectedUserProfile || !!selectedPost || !!playingVideo || !!fullScreenImage || showNotifications || showComments || showShareModal}
               onProfileClick={handleOpenUserProfile}
-              onLike={(id) => toggleLike(id)}
-              onSave={(id) => toggleSave(id)}
-              onShare={(p) => sharePost(p)}
-              onMessage={(user) => handleStartConversationLocal(user)}
+              onLike={onLikeId}
+              onSave={onSaveId}
+              onShare={onShareP}
+              onMessage={onMessageU}
               onViewPost={handlePostClick}
               onViewComments={handleViewComments}
             />
