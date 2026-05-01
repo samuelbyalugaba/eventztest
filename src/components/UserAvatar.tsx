@@ -12,6 +12,7 @@ interface UserAvatarProps {
 
 export function UserAvatar({ src, name, size = 'md', verified, className = '', onClick }: UserAvatarProps) {
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const safeName = name || '';
 
   const sizeClasses = {
@@ -47,7 +48,7 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
   const bgColor = useMemo(() => {
     if (!safeName) return 'bg-gray-200';
     const colors = [
-      'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
+      'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
       'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500',
       'bg-orange-500', 'bg-cyan-500'
     ];
@@ -63,9 +64,11 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
 
   const renderAvatar = () => {
     const hasImage = src && src.trim() !== '' && src !== 'null';
+
+    // No image at all, or image failed to load → show initials fallback
     if (!hasImage || imageError) {
       return (
-        <div 
+        <div
           className={`flex items-center justify-center ${shapeClass} text-white font-medium ${bgColor} ${sizeClasses[size]} ${className}`}
           onClick={onClick}
         >
@@ -74,17 +77,24 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
       );
     }
 
+    // Image present → show neutral skeleton until loaded, never flash initials
     return (
       <div className={`relative overflow-hidden ${shapeClass} ${sizeClasses[size]} ${className}`} onClick={onClick}>
-        <div className={`absolute inset-0 z-0 flex items-center justify-center ${shapeClass} ${bgColor}`} aria-hidden="true">
-          <span className="text-white font-medium">{initials}</span>
-        </div>
-        <img 
-          src={optimizedSrc || src} 
-          alt={safeName || 'User'} 
-          className={`relative z-10 ${shapeClass} object-cover object-top w-full h-full`}
-          loading="lazy"
+        {!imageLoaded && (
+          <div
+            className={`absolute inset-0 z-0 ${shapeClass} bg-gray-200 animate-pulse`}
+            aria-hidden="true"
+          />
+        )}
+        <img
+          src={optimizedSrc || src}
+          alt={safeName || 'User'}
+          className={`relative z-10 ${shapeClass} object-cover object-top w-full h-full transition-opacity duration-150 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+          loading="eager"
           decoding="async"
+          // @ts-expect-error - fetchpriority is a valid HTML attribute
+          fetchpriority="high"
+          onLoad={() => setImageLoaded(true)}
           onError={() => setImageError(true)}
         />
       </div>
