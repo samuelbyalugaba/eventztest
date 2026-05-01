@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { 
   DollarSign, 
   Ticket, 
@@ -14,10 +14,16 @@ import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerStats, getOrganizerEvents, updateEventStreamingStatus, getUserTickets } from '../utils/supabase/api';
 import { OrganizerSettingsModal } from './OrganizerSettingsModal';
-import { StreamManager } from './livestream/StreamManagerNew';
-import { TicketScannerModal } from './TicketScannerModal';
+const StreamManager = lazy(() => import('./livestream/StreamManagerNew').then(m => ({ default: m.StreamManager })));
+const TicketScannerModal = lazy(() => import('./TicketScannerModal').then(m => ({ default: m.TicketScannerModal })));
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+
+const HeavyModalFallback = () => (
+  <div className="fixed inset-0 z-[80] bg-black/40 flex items-center justify-center">
+    <div className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+  </div>
+);
 
 interface ProfessionalDashboardModalProps {
   onClose: () => void;
@@ -344,40 +350,39 @@ export function ProfessionalDashboardModal({
       )}
 
       {selectedEventForStream && (
-        <StreamManager
-          event={selectedEventForStream}
-          onClose={() => setSelectedEventForStream(null)}
-          onUpdateStatus={async (isLive) => {
-            // Optimistic update local list
-             const updatedEvents = publishedEvents.map(e => 
-              e.id === selectedEventForStream.id 
-                ? { ...e, streaming: { ...e.streaming, isLive } }
-                : e
-            );
-            setPublishedEvents(updatedEvents);
-
-            try {
-              await updateEventStreamingStatus(selectedEventForStream.id, isLive);
-              if (isLive) {
-                toast.success('Event is now LIVE on the platform!');
-              } else {
-                toast.info('Event stream ended.');
+        <Suspense fallback={<HeavyModalFallback />}>
+          <StreamManager
+            event={selectedEventForStream}
+            onClose={() => setSelectedEventForStream(null)}
+            onUpdateStatus={async (isLive) => {
+              const updatedEvents = publishedEvents.map(e => 
+                e.id === selectedEventForStream.id 
+                  ? { ...e, streaming: { ...e.streaming, isLive } }
+                  : e
+              );
+              setPublishedEvents(updatedEvents);
+              try {
+                await updateEventStreamingStatus(selectedEventForStream.id, isLive);
+                if (isLive) toast.success('Event is now LIVE on the platform!');
+                else toast.info('Event stream ended.');
+              } catch (error) {
+                toast.error('Failed to update stream status');
               }
-            } catch (error) {
-              toast.error('Failed to update stream status');
-            }
-          }}
-        />
+            }}
+          />
+        </Suspense>
       )}
 
       {showScanner && (
-        <TicketScannerModal
-          eventId={selectedEventForScanner?.id || 0} 
-          eventTitle={selectedEventForScanner?.title || 'Event'}
-          events={publishedEvents}
-          onEventChange={setSelectedEventForScanner}
-          onClose={() => setShowScanner(false)}
-        />
+        <Suspense fallback={<HeavyModalFallback />}>
+          <TicketScannerModal
+            eventId={selectedEventForScanner?.id || 0} 
+            eventTitle={selectedEventForScanner?.title || 'Event'}
+            events={publishedEvents}
+            onEventChange={setSelectedEventForScanner}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

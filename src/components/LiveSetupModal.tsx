@@ -1,10 +1,16 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { X, Radio, Calendar, MapPin, Tv, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerEvents, subscribeToEventStreaming, updateEventStreamingStatus, uploadImage } from '../utils/supabase/api';
-import { StreamManager } from './livestream/StreamManagerNew';
+const StreamManager = lazy(() => import('./livestream/StreamManagerNew').then(m => ({ default: m.StreamManager })));
 import type { Event as ApiEvent } from '../utils/supabase/api';
+
+const StreamManagerFallback = () => (
+  <div className="flex items-center justify-center h-[60vh]">
+    <div className="w-10 h-10 border-3 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+  </div>
+);
 
 interface LiveSetupModalProps {
   isOpen: boolean;
@@ -351,19 +357,21 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
           </>
         ) : (
           <div className="p-0">
-            <StreamManager
-              event={selectedEvent}
-              onClose={() => {
-                setSelectedEvent(null);
-                onClose();
-              }}
-              onUpdateStatus={async (isLive) => {
-                try {
-                  await updateEventStreamingStatus(selectedEvent.id, isLive);
-                } catch (e) {
-                }
-              }}
-            />
+            <Suspense fallback={<StreamManagerFallback />}>
+              <StreamManager
+                event={selectedEvent}
+                onClose={() => {
+                  setSelectedEvent(null);
+                  onClose();
+                }}
+                onUpdateStatus={async (isLive) => {
+                  try {
+                    await updateEventStreamingStatus(selectedEvent.id, isLive);
+                  } catch (e) {
+                  }
+                }}
+              />
+            </Suspense>
           </div>
         )}
       </div>
