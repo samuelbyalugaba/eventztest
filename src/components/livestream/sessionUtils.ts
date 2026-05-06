@@ -21,10 +21,31 @@ export const playLocalPreview = (
   if (video && isBack) video.style.transform = 'none';
 };
 
+// HD encoder configuration: 1280x720 @ 30fps, ~2.5 Mbps target / 3 Mbps max
+// Use a custom config (instead of a preset string) so we get consistent HD quality
+// across devices. Agora will gracefully downscale on weak networks via its
+// internal adaptation when this is the target.
+export const HD_VIDEO_ENCODER_CONFIG = {
+  width: { min: 640, ideal: 1280, max: 1920 },
+  height: { min: 360, ideal: 720, max: 1080 },
+  frameRate: { min: 24, ideal: 30, max: 30 },
+  bitrateMin: 1500,
+  bitrateMax: 3000,
+} as const;
+
+export const HD_AUDIO_ENCODER_CONFIG = 'music_standard' as const; // 48kHz, ~40kbps
+
 export const initializeLocalTracks = async () => {
   const cameras = await AgoraRTC.getCameras();
   const cameraId = cameras[0]?.deviceId;
-  const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks({}, cameraId ? { cameraId } : {});
+  const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+    { encoderConfig: HD_AUDIO_ENCODER_CONFIG, AEC: true, ANS: true, AGC: true },
+    {
+      ...(cameraId ? { cameraId } : {}),
+      encoderConfig: HD_VIDEO_ENCODER_CONFIG,
+      optimizationMode: 'motion',
+    }
+  );
   return {
     cameras,
     audioTrack,
