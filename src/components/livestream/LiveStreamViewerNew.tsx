@@ -254,39 +254,101 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
     let hls: Hls | null = null;
     const url = stream.playback_url;
+    // Detect Cloudflare LL-HLS endpoint to enable low-latency only when supported
+    const isLowLatency = /lowLatency=true|\/manifest\/video\.ll\.m3u8/i.test(url);
 
-    const onPlay = () => setHlsReady(true);
-    video.addEventListener('playing', onPlay);
+    // Mark "ready" as early as possible so the spinner doesn't get stuck on mobile
+    // when autoplay-with-sound is blocked and the `playing` event never fires.
+    const markReady = () => setHlsReady(true);
+    video.addEventListener('loadedmetadata', markReady);
+    video.addEventListener('canplay', markReady);
+    video.addEventListener('playing', markReady);
+
+    // Required for inline mobile playback + autoplay
+    video.setAttribute('playsinline', 'true');
+    (video as any).playsInline = true;
+    video.setAttribute('webkit-playsinline', 'true');
+    video.autoplay = true;
+    video.preload = 'auto';
+
+    const tryPlay = () => {
+      const p = video.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => {
+          // Autoplay with sound blocked → fall back to muted autoplay so the
+          // user sees the live video immediately. They can tap the unmute
+          // button to enable audio.
+          if (!video.muted) {
+            video.muted = true;
+            video.play().catch(() => { /* user gesture required */ });
+          }
+        });
+      }
+    };
 
     if (Hls.isSupported()) {
-      hls = new Hls({ lowLatencyMode: true, liveSyncDuration: 2 });
+      hls = new Hls({
+        // Smooth playback tuned for Cloudflare standard HLS. Only enable
+        // lowLatencyMode for the dedicated LL-HLS manifest — using it on a
+        // standard HLS feed causes stalls and constant "buffering".
+        lowLatencyMode: isLowLatency,
+        liveSyncDurationCount: isLowLatency ? 2 : 3,
+        liveMaxLatencyDurationCount: isLowLatency ? 4 : 8,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        backBufferLength: 30,
+        enableWorker: true,
+        // ABR: start conservatively so video appears fast on cellular
+        startLevel: -1,
+        capLevelToPlayerSize: true,
+        abrEwmaDefaultEstimate: 800_000, // 800 kbps initial guess
+      });
       hlsRef.current = hls;
       hls.loadSource(url);
       hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
       hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (data.fatal) setVideoError(`Stream error: ${data.details}`);
+        if (!data.fatal) return;
+        // Try to recover from transient network/media errors before failing
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            try { hls?.startLoad(); } catch {}
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            try { hls?.recoverMediaError(); } catch {}
+            break;
+          default:
+            setVideoError(`Stream error: ${data.details}`);
+        }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS (Safari / iOS)
       video.src = url;
+      video.addEventListener('loadedmetadata', tryPlay, { once: true });
     } else {
       setVideoError('HLS playback not supported in this browser');
       return;
     }
 
     video.muted = isMuted;
-    video.play().catch(() => { /* autoplay blocked; user can tap */ });
+    tryPlay();
 
     return () => {
-      video.removeEventListener('playing', onPlay);
+      video.removeEventListener('loadedmetadata', markReady);
+      video.removeEventListener('canplay', markReady);
+      video.removeEventListener('playing', markReady);
       if (hls) { hls.destroy(); hlsRef.current = null; }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHlsMode, stream.playback_url, stream.id]);
 
-  // HLS mute control
+  // HLS mute control — also kicks playback when user unmutes (after autoplay fallback)
   useEffect(() => {
     if (!isHlsMode) return;
-    if (hlsVideoRef.current) hlsVideoRef.current.muted = isMuted;
+    const v = hlsVideoRef.current;
+    if (!v) return;
+    v.muted = isMuted;
+    if (!isMuted && v.paused) v.play().catch(() => {});
   }, [isMuted, isHlsMode]);
 
   // Cleanup hearts
