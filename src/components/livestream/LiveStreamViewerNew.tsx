@@ -38,8 +38,9 @@ interface LiveStreamViewerProps {
 export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) {
   const isMobile = useIsMobile();
 
-  // Core state
-  const [isMuted, setIsMuted] = useState(false);
+  // Core state — start muted so mobile browsers allow autoplay (no black screen).
+  // User can tap the unmute control to enable audio.
+  const [isMuted, setIsMuted] = useState(true);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<{ user: string; text: string; avatar?: string; isGift?: boolean }[]>([]);
   const [likes, setLikes] = useState(0);
