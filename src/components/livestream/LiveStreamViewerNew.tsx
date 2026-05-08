@@ -460,6 +460,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
             className="w-full h-full object-contain bg-black"
             playsInline
             autoPlay
+            muted
             controls={false}
           />
         </div>
