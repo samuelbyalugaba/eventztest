@@ -106,8 +106,17 @@ export function useLiveFeedData() {
         fetchStreams();
       })
       .subscribe();
+
+    // Poll Cloudflare to detect OBS-driven streams that go live without a webhook.
+    const pollCf = () => {
+      supabase.functions.invoke('cloudflare-stream-status', { body: {} }).catch(() => {});
+    };
+    pollCf();
+    const cfInterval = setInterval(pollCf, 15_000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(cfInterval);
     };
   }, []);
 
