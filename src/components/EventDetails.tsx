@@ -7,7 +7,6 @@ import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { Conversation } from '../types';
 import { PremiumSearchModal } from './PremiumSearchModal';
-import { UserProfileModal } from './UserProfileModal';
 import { MediaViewer } from './MediaViewer';
 
 import { EventDetailModal } from './EventDetailModal';
@@ -654,25 +653,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       )}
 
       {selectedUser && (
-        <UserProfileModal
-          user={{
-            id: selectedUser.id,
-            name: selectedUser.full_name || selectedUser.name,
-            type: selectedUser.is_organizer ? 'Organizer' : (selectedUser.type || 'Attendee'),
-            avatar: selectedUser.avatar_url || selectedUser.avatar || '',
-            verified: !!selectedUser.verified,
-            coverImage: selectedUser.cover_url || (selectedUser.full_name === 'Buki Jenard' ? 'https://i.ibb.co/F2wGf9R/B-Cover.jpg' : selectedUser.name === 'Luchy Ranks' ? 'https://i.ibb.co/k2Jg34Nv/L-cover.jpg' : 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200'),
-            bio: selectedUser.bio,
-            followers: organizerStats?.followers ?? selectedUser.followers ?? 0,
-          }}
-          onClose={() => setSelectedUser(null)}
-          onFollow={() => {
-            toast.success(`You are now following ${selectedUser.name}!`);
-          }}
-          onMessage={() => {
-            handleStartConversationLocal(selectedUser);
-          }}
-        />
+        (() => {
+          navigate(`/profile/${selectedUser.id}`);
+          setSelectedUser(null);
+          return null;
+        })()
       )}
 
       {selectedEvent && (

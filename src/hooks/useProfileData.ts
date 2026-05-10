@@ -104,7 +104,12 @@ export function useProfileData(userId?: string, activeTab?: string) {
 
       const profile = await getProfile(targetUserId);
       if (seq !== loadSeqRef.current) return;
-      if (profile) setUserProfile(profile);
+      if (profile) {
+         setUserProfile(profile);
+         if (profile.is_organizer) {
+           void loadOrganizerEventsIfNeeded(true);
+         }
+       }
 
       const [followers, following, followingFlag, stats] = await Promise.all([
         getFollowersCount(targetUserId),
@@ -170,8 +175,9 @@ export function useProfileData(userId?: string, activeTab?: string) {
     }
   };
 
-  const loadOrganizerEventsIfNeeded = async () => {
-    if (!userProfile?.is_organizer || isLoadingOrganizerEvents || organizerEventsLoadedRef.current) return;
+  const loadOrganizerEventsIfNeeded = async (isOrganizerOverride?: boolean) => {
+    const isOrg = isOrganizerOverride !== undefined ? isOrganizerOverride : userProfile?.is_organizer;
+    if (!isOrg || isLoadingOrganizerEvents || organizerEventsLoadedRef.current) return;
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
     try {
@@ -202,7 +208,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   };
 
   const loadTicketsIfNeeded = async () => {
-    if (!isOwnProfile || isOrganizer || isLoadingTickets || ticketsLoadedRef.current) return;
+    if (isOrganizer || isLoadingTickets || ticketsLoadedRef.current) return;
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
     try {
@@ -242,11 +248,11 @@ export function useProfileData(userId?: string, activeTab?: string) {
 
   useEffect(() => {
     if (activeTab === 'tickets') void loadTicketsIfNeeded();
-  }, [activeTab, isOwnProfile, isOrganizer, currentUser?.id, userId]);
+  }, [activeTab, isOrganizer, currentUser?.id, userId]);
 
   useEffect(() => {
     void loadTicketsIfNeeded();
-  }, [isOwnProfile, isOrganizer, currentUser?.id, userId]);
+  }, [isOrganizer, currentUser?.id, userId]);
 
   useEffect(() => {
     if (isLoading || userPosts.length === 0) return;

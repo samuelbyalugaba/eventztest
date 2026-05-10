@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles } from 'lucide-react';
 import { formatDateDMY } from '../utils/format';
-import { UserProfileModal } from './UserProfileModal';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
 import { LiveStreamViewerNew as LiveStreamViewer } from './livestream/LiveStreamViewerNew';
@@ -31,6 +31,7 @@ const locations = [
 ];
 
 export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation, onTierSelect }: EventDetailModalProps) {
+  const navigate = useNavigate();
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
   const [hasVirtualAccess, setHasVirtualAccess] = useState(false);
   const [isCheckingVirtualAccess, setIsCheckingVirtualAccess] = useState(false);
@@ -75,7 +76,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
   };
 
   // Format price using the event's currency for consistency
-  const formatEventPrice = (price: string | number | null | undefined): string => {
+  const formatEventPrice = (price: string | number | null | undefined, allowTierFallback: boolean = true): string => {
     if (price === null || price === undefined) return 'Free';
     
     // Handle number inputs directly
@@ -96,7 +97,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     
     // If empty string, return Free (unless we can calculate from tiers)
     if (priceStr === '') {
-      if (!event.ticket_tiers || event.ticket_tiers.length === 0) {
+      if (!allowTierFallback || !event.ticket_tiers || event.ticket_tiers.length === 0) {
         return 'Free';
       }
       // Continue to calculate from tiers below if tiers exist
@@ -111,7 +112,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       return 'Free';
     }
     // If empty but has ticket tiers, try to calculate from tiers
-    if (priceStr === '' && event.ticket_tiers && event.ticket_tiers.length > 0) {
+    if (allowTierFallback && priceStr === '' && event.ticket_tiers && event.ticket_tiers.length > 0) {
       // Calculate from tiers
       const prices = event.ticket_tiers.map(t => {
         const tierPrice = parseFloat(String(t.price).replace(/[^0-9.]/g, '')) || 0;
@@ -400,31 +401,13 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             className="w-full h-full object-cover"
           />
           
-          {/* Organizer Profile Modal */}
+          {/* Organizer Profile Navigation */}
           {showOrganizerProfile && event.organizer_id && (
-            <UserProfileModal
-              user={{
-                id: event.organizer_id,
-                name: organizerDisplayName,
-                type: 'Organizer',
-                avatar: event.organizer?.avatar_url || '',
-                verified: event.organizer?.verified || false
-              }}
-              onClose={() => setShowOrganizerProfile(false)}
-              onFollow={() => {
-                toast.success(`Following ${organizerDisplayName}`);
-              }}
-              onMessage={() => {
-                onStartConversation?.({
-                  name: organizerDisplayName,
-                  username: event.organizer?.username,
-                  avatar: event.organizer?.avatar_url || '',
-                  verified: event.organizer?.verified || false,
-                  isOrganizer: true
-                });
-                setShowOrganizerProfile(false);
-              }}
-            />
+            (() => {
+              navigate(`/profile/${event.organizer_id}`);
+              setShowOrganizerProfile(false);
+              return null;
+            })()
           )}
           
           {/* Back Button */}
@@ -667,7 +650,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
               <div className="flex items-center justify-between mb-4 p-3 bg-white rounded-xl border border-gray-100">
                 <span className="text-gray-600 text-sm">Virtual Ticket</span>
-                <span className="text-gray-900 font-semibold">{formatEventPrice(event.streaming.virtualPrice)}</span>
+                <span className="text-gray-900 font-semibold">{formatEventPrice(event.streaming.virtualPrice, false)}</span>
               </div>
 
               {/* Virtual Ticket CTA */}

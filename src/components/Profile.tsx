@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { deleteEvent, Ticket, ApiPost, getFollowers, getFollowing, toggleFollow } from '../utils/supabase/api';
 import type { Event as AppEvent } from '../utils/supabase/api';
 import { UserListModal } from './UserListModal';
-import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 import { Conversation, Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
@@ -58,6 +57,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const userId = userIdProp || userIdParam;
   const navigate = useNavigate();
 
+  const handleBack = onBack || (userId ? () => navigate(-1) : undefined);
+
   const [activeTab, setActiveTab] = useState<ProfileTab>('media');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsInitialView, setSettingsInitialView] = useState<'main' | 'profile'>('main');
@@ -77,7 +78,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [followList, setFollowList] = useState<any[]>([]);
   const [isLoadingFollowList, setIsLoadingFollowList] = useState(false);
-  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
 
   const {
@@ -211,7 +211,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         username={userProfile?.username}
         isOwnProfile={isOwnProfile}
         isOrganizer={isOrganizer}
-        onBack={onBack}
+        onBack={handleBack}
         onGoLive={() => setShowLiveSetupModal(true)}
         sidebarSlot={
           <ProfileSidebar
@@ -359,25 +359,21 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         )}
       {showFollowersModal && (
         <UserListModal isOpen={showFollowersModal} onClose={() => setShowFollowersModal(false)} title="Followers" users={followList} loading={isLoadingFollowList}
-          onUserSelect={(user) => { setSelectedUserForModal(user); setShowUserProfileModal(true); }}
+          onUserSelect={(user) => {
+            navigate(`/profile/${user.id}`);
+            setShowFollowersModal(false);
+          }}
         />
       )}
       {showFollowingModal && (
         <UserListModal isOpen={showFollowingModal} onClose={() => setShowFollowingModal(false)} title="Following" users={followList} loading={isLoadingFollowList}
-          onUserSelect={(user) => { setSelectedUserForModal(user); setShowUserProfileModal(true); }}
-        />
-      )}
-      {showUserProfileModal && selectedUserForModal && (
-        <UserProfileModal
-          user={{ id: selectedUserForModal.id, name: selectedUserForModal.full_name || selectedUserForModal.username || 'User', type: selectedUserForModal.is_organizer ? 'Organizer' : 'Attendee', avatar: selectedUserForModal.avatar_url || '', verified: !!selectedUserForModal.verified, isOrganizer: !!selectedUserForModal.is_organizer, username: selectedUserForModal.username || '' } as any}
-          onClose={() => setShowUserProfileModal(false)}
-          onMessage={() => {
-            if (!currentUser) { toast.error('Please sign in to message'); return; }
-            navigate('/feed', { state: { openMessages: true, userToMessage: { id: selectedUserForModal.id, name: selectedUserForModal.full_name || selectedUserForModal.username || 'User', username: selectedUserForModal.username || '', avatar: selectedUserForModal.avatar_url || '', verified: !!selectedUserForModal.verified, isOrganizer: !!selectedUserForModal.is_organizer } } });
-            setShowUserProfileModal(false);
+          onUserSelect={(user) => {
+            navigate(`/profile/${user.id}`);
+            setShowFollowingModal(false);
           }}
         />
       )}
+
     </div>
   );
 }

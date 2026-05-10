@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+// Profile navigation updated to use unified /profile/:userId route
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
@@ -12,7 +13,6 @@ import { useFeedConversationState } from '../hooks/useFeedConversationState';
 
 import { ChatList } from './ChatList';
 import { ChatDetail } from './ChatDetail';
-import { UserProfileModal } from './UserProfileModal';
 import { ShareModal } from './ShareModal';
 import { FeedHeader } from './FeedHeader';
 import { CommentsSheet } from './CommentsSheet';
@@ -56,7 +56,6 @@ export function Feed({
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [selectedUserProfile, setSelectedUserProfile] = useState<{ id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; type?: string } | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -442,16 +441,8 @@ export function Feed({
 
   const handleOpenUserProfile = useCallback((user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; isOrganizerPage?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setSelectedUserProfile({
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      avatar: user.avatar,
-      verified: user.verified,
-      isOrganizer: user.isOrganizer,
-      type: user.isOrganizer ? 'Organizer' : 'Attendee',
-    });
-  }, []);
+    navigate(`/profile/${user.id}`);
+  }, [navigate]);
 
   const filteredPosts = useMemo(() => posts.filter(post => {
     if (activeFilter === 'organizers') return post.user.isOrganizer;
@@ -505,7 +496,6 @@ export function Feed({
   const handleClosePlayingVideo = useCallback(() => setPlayingVideo(null), []);
   const handleCloseFullScreenImage = useCallback(() => setFullScreenImage(null), []);
   const handleCloseNotifications = useCallback(() => setShowNotifications(false), []);
-  const handleCloseUserProfile = useCallback(() => setSelectedUserProfile(null), []);
   const handleCloseMessages = useCallback(() => setShowMessages(false), [setShowMessages]);
   const handleCloseShareModal = useCallback(() => {
     setShowShareModal(false);
@@ -518,8 +508,8 @@ export function Feed({
 
   // Memoized derived value to avoid recomputing isPaused on every render
   const isFeedPaused = useMemo(
-    () => isPaused || !!selectedUserProfile || !!selectedPost || !!playingVideo || !!fullScreenImage || showNotifications || showComments || showShareModal,
-    [isPaused, selectedUserProfile, selectedPost, playingVideo, fullScreenImage, showNotifications, showComments, showShareModal]
+    () => isPaused || !!selectedPost || !!playingVideo || !!fullScreenImage || showNotifications || showComments || showShareModal,
+    [isPaused, selectedPost, playingVideo, fullScreenImage, showNotifications, showComments, showShareModal]
   );
 
   return (
@@ -625,7 +615,8 @@ export function Feed({
             currentUser={{ id: currentUser?.id || '' }}
             onBack={() => setActiveConversation(null)}
             onViewProfile={() => {
-              setSelectedUserProfile({ id: activeConversation.user.id || '', name: activeConversation.user.name, username: activeConversation.user.username, avatar: activeConversation.user.avatar, verified: activeConversation.user.verified, isOrganizer: activeConversation.user.isOrganizer });
+              navigate(`/profile/${activeConversation.user.id}`);
+              handleCloseMessages();
             }}
             isOnline={onlineUsers.some(u => u.id === activeConversation.user.id)}
           />
@@ -649,15 +640,6 @@ export function Feed({
           posts={posts}
           setPosts={setPosts}
           onClose={handleCloseFullScreenImage}
-        />
-      )}
-
-      {selectedUserProfile && (
-        <UserProfileModal
-          user={{ id: selectedUserProfile.id, name: selectedUserProfile.name, type: (selectedUserProfile as any).type ?? (selectedUserProfile.isOrganizer ? 'Organizer' : 'Attendee'), avatar: selectedUserProfile.avatar, verified: selectedUserProfile.verified }}
-          onClose={handleCloseUserProfile}
-          onFollow={() => toast.success(`Following ${selectedUserProfile.name}`)}
-          onMessage={() => { handleStartConversationLocal(selectedUserProfile); setSelectedUserProfile(null); }}
         />
       )}
 

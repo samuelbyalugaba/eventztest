@@ -14,7 +14,6 @@ import { getProfile, getPosts, toggleLikePost, getOrganizerStats, getOrganizerEv
 import { TicketViewer } from './TicketViewer';
 import { ShareModal } from './ShareModal';
 import { UserListModal } from './UserListModal';
-import { UserProfileModal } from './UserProfileModal';
 import { TicketListModal } from './TicketListModal';
 
 // Heavy modals — lazy-loaded so Agora SDK / recharts / html5-qrcode aren't in the dashboard chunk
@@ -56,8 +55,6 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [showScanner, setShowScanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'published' | 'drafts'>('published');
   
-  // User Profile Modal State
-  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const [stats, setStats] = useState({
@@ -939,28 +936,8 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
           users={followersList}
           loading={loadingFollowers}
           onUserSelect={(user) => {
-            setSelectedUser({
-              ...user,
-              type: user.is_organizer ? 'Organizer' : 'Attendee',
-              name: user.full_name || user.username || 'User',
-              avatar: user.avatar_url || '',
-              verified: user.verified || false
-            });
-            setShowUserProfileModal(true);
-          }}
-        />
-      )}
-
-      {showUserProfileModal && selectedUser && (
-        <UserProfileModal
-          user={selectedUser}
-          onClose={() => {
-            setShowUserProfileModal(false);
-            setSelectedUser(null);
-          }}
-          onFollow={() => {
-            // Refresh followers list if needed
-            handleShowFollowers();
+            navigate(`/profile/${user.id}`);
+            setShowFollowersModal(false);
           }}
         />
       )}
