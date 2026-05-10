@@ -20,17 +20,6 @@ export const EventCard = memo(function EventCard({ event, onClick, className = '
   const organizerName = event.organizer?.full_name || 'Event Organizer';
   const canManage = !!currentUserId && currentUserId === event.organizer_id && (!!onEditEvent || !!onDeleteEvent);
 
-  const getCategoryColor = (category: string) => {
-    switch ((category || '').toLowerCase()) {
-      case 'entertainment': return 'bg-purple-500 text-white';
-      case 'business & tech': return 'bg-cyan-500 text-white';
-      case 'culture': return 'bg-amber-600 text-white';
-      case 'education': return 'bg-blue-500 text-white';
-      case 'religion': return 'bg-red-600 text-white';
-      case 'sports & fitness': return 'bg-green-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
 
   return (
     <div
