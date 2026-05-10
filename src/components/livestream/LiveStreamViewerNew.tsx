@@ -232,9 +232,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     remoteUsers.forEach((user) => {
       const el = document.getElementById(`remote-player-${user.uid}`);
       if (el && user.videoTrack) {
-        user.videoTrack.play(el, { mirror: false });
-        const v = el.querySelector('video') as HTMLVideoElement | null;
-        if (v) v.style.transform = 'none';
+        // Mirror the remote video so viewers see the same orientation as the
+        // streamer's selfie preview (left/right matches what the host sees).
+        user.videoTrack.play(el, { mirror: true });
       }
     });
   }, [remoteUsers, isHlsMode]);
