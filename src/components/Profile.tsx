@@ -246,7 +246,14 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         followers={followStats.followers}
         following={followStats.following}
         dataReady={!isLoading}
-        onHostedClick={() => setShowEventListModal(true)}
+        onHostedClick={() => {
+          if (isOrganizer) {
+            setActiveTab('hosted');
+            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 50);
+          } else {
+            setShowEventListModal(true);
+          }
+        }}
         onFollowersClick={handleShowFollowers}
         onFollowingClick={handleShowFollowing}
       />

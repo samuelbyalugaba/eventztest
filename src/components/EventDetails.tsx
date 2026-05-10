@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { EventGridSkeleton } from './skeletons/EventCardSkeleton';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, ChevronLeft, X, Filter, Tv, Search, Send, Star, CheckCircle2, Smartphone, MessageCircle, Music, Trophy, Globe } from 'lucide-react';
+import { Calendar, ChevronLeft, X, Filter, Search, Send, Star, CheckCircle2, MessageCircle } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { Conversation } from '../types';
@@ -20,11 +20,11 @@ import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/n
 import { eventsStore } from '../store/eventStore';
 
 const locations = [
-  { id: 'all', name: 'All Locations', icon: <Globe className="w-5 h-5" /> },
-  { id: 'Atlanta', name: 'Atlanta, USA', flag: '🇺🇸' },
-  { id: 'Dar es Salaam', name: 'Dar es Salaam, Tanzania', flag: '🇹🇿' },
-  { id: 'Zanzibar', name: 'Zanzibar, Tanzania', flag: '🇹🇿' },
-  { id: 'New York', name: 'New York, USA', flag: '🇺🇸' },
+  { id: 'all', name: 'All Locations' },
+  { id: 'Atlanta', name: 'Atlanta, USA' },
+  { id: 'Dar es Salaam', name: 'Dar es Salaam, Tanzania' },
+  { id: 'Zanzibar', name: 'Zanzibar, Tanzania' },
+  { id: 'New York', name: 'New York, USA' },
 ];
 
 type LocationOption = {
@@ -161,13 +161,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   }, [globalConversations, activeConversation]);
 
   const categories = [
-    { id: 'all', name: 'All', icon: <Star className="w-6 h-6" /> },
-    { id: 'entertainment', name: 'Entertainment', icon: <Music className="w-6 h-6" />, subcategories: ['Concerts', 'Club Nights', 'Live Performances', 'Nightlife (Bars/Lounges)', 'Themed Parties'] },
-    { id: 'education', name: 'Education', icon: <Tv className="w-6 h-6" />, subcategories: ['Workshops', 'Seminars', 'Webinars'] },
-    { id: 'culture', name: 'Culture', icon: <MapPin className="w-6 h-6" />, subcategories: ['Festivals', 'Arts', 'Theater', 'Food & Drink', 'Local Traditions', 'Fashion Events'] },
-    { id: 'religion', name: 'Religion', icon: <Star className="w-6 h-6" />, subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
-    { id: 'business & tech', name: 'Business & Tech', icon: <Smartphone className="w-6 h-6" />, subcategories: ['Startup Events', 'Networking', 'Conferences', 'Tech Talks'] },
-    { id: 'sports & fitness', name: 'Sports & Fitness', icon: <Trophy className="w-6 h-6" />, subcategories: ['Fitness Classes', 'Competitions', 'Sports Events'] },
+    { id: 'all', name: 'All' },
+    { id: 'entertainment', name: 'Entertainment', subcategories: ['Concerts', 'Club Nights', 'Live Performances', 'Nightlife (Bars/Lounges)', 'Themed Parties'] },
+    { id: 'education', name: 'Education', subcategories: ['Workshops', 'Seminars', 'Webinars'] },
+    { id: 'culture', name: 'Culture', subcategories: ['Festivals', 'Arts', 'Theater', 'Food & Drink', 'Local Traditions', 'Fashion Events'] },
+    { id: 'religion', name: 'Religion', subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
+    { id: 'business & tech', name: 'Business & Tech', subcategories: ['Startup Events', 'Networking', 'Conferences', 'Tech Talks'] },
+    { id: 'sports & fitness', name: 'Sports & Fitness', subcategories: ['Fitness Classes', 'Competitions', 'Sports Events'] },
   ];
 
   const filteredEvents = React.useMemo(() => {
@@ -232,7 +232,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           const key = normalizePlaceName(city);
           if (seen.has(key)) continue;
           seen.add(key);
-          next.push({ id: city, name: city, icon: <MapPin className="w-5 h-5" /> });
+          next.push({ id: city, name: city });
           if (next.length >= 12) break;
         }
 
@@ -408,7 +408,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               <div className="flex gap-2 mb-4 flex-wrap">
                 {selectedLocation !== 'all' && (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                    <span>{(locations.find(l => l.id === selectedLocation) as any)?.flag || '📍'}</span>
                     <span>{String((locations.find(l => l.id === selectedLocation) as any)?.name || selectedLocation).split(',')[0]}</span>
                     <button 
                       onClick={() => setSelectedLocation('all')}
@@ -420,7 +419,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 )}
                 {selectedSubcategory !== '' ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                    <span>🔍</span>
                     <span>{selectedSubcategory}</span>
                     <button 
                       onClick={() => setSelectedSubcategory('')}
@@ -431,7 +429,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   </div>
                 ) : selectedCategory !== 'all' && (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                    <span>{categories.find(c => c.id === selectedCategory)?.icon}</span>
                     <span>{categories.find(c => c.id === selectedCategory)?.name}</span>
                     <button 
                       onClick={() => setSelectedCategory('all')}
@@ -572,8 +569,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                           : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      {/* @ts-ignore */}
-                      <span className="text-base">{location.icon || location.flag}</span>
                       <span>{location.name}</span>
                     </button>
                   ))}
@@ -596,7 +591,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                           : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-base">{category.icon}</span>
                       <span>{category.name}</span>
                     </button>
                   ))}

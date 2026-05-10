@@ -400,18 +400,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             className="w-full h-full object-cover"
           />
           
-          {/* Organizer Badge */}
-          {(event.organizer || event.organizer_id) && (
-            <button
-              onClick={() => setShowOrganizerProfile(true)}
-              className="absolute top-4 left-16 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg z-20 hover:bg-white transition-all cursor-pointer group"
-            >
-              <p className="text-gray-900 text-sm group-hover:text-[#8A2BE2] transition-colors">
-                by {organizerDisplayName}
-              </p>
-            </button>
-          )}
-          
           {/* Organizer Profile Modal */}
           {showOrganizerProfile && event.organizer_id && (
             <UserProfileModal
@@ -463,7 +451,17 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           {/* Event Title with Action Buttons - Professional Layout */}
           <div className="mb-6 pb-4 border-b border-gray-100">
             <div className="flex items-start justify-between gap-4">
-              <h2 className="text-gray-900 text-2xl font-bold flex-1">{event.title}</h2>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-gray-900 text-2xl font-bold">{event.title}</h2>
+                {(event.organizer || event.organizer_id) && (
+                  <button
+                    onClick={() => setShowOrganizerProfile(true)}
+                    className="mt-2 text-sm text-gray-600 hover:text-[#8A2BE2] transition-colors text-left"
+                  >
+                    by <span className="font-semibold">{organizerDisplayName}</span>
+                  </button>
+                )}
+              </div>
               <div className="flex gap-2">
                 <button 
                   onClick={handleToggleSave}

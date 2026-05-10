@@ -87,8 +87,8 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         return;
       }
 
-      // 1. Calculate Price
-      const priceString = event.streaming?.virtualPrice || event.price_range || '0';
+      // 1. Calculate Price — virtual ticket only (never the in-person tier range)
+      const priceString = event.streaming?.virtualPrice || '0';
       const price = parseFloat(priceString.replace(/[^0-9.]/g, '')) || 0;
       const currency = extractCurrencyFromPrice(priceString);
 
@@ -226,8 +226,9 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
 
   if (!isOpen) return null;
   
-  // Calculate price for display
-  const priceString = event.streaming?.virtualPrice || event.price_range || '0';
+  // Calculate price for display — always use the dedicated virtual ticket price.
+  // Never fall back to price_range (which is the in-person tier range).
+  const priceString = event.streaming?.virtualPrice || '0';
   const price = parseFloat(priceString.replace(/[^0-9.]/g, '')) || 0;
   const isFreeVirtual = price <= 0;
   const isMobilePaymentBlocked = isBelowMobileMoneyMinimum(price, selectedProvider);
@@ -258,7 +259,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900 text-sm line-clamp-1">{event.title}</h3>
-                        <p className="text-purple-700 font-bold text-sm">{isFreeVirtual ? 'Free' : formatPrice(event.streaming?.virtualPrice || event.price_range)}</p>
+                        <p className="text-purple-700 font-bold text-sm">{isFreeVirtual ? 'Free' : formatPrice(event.streaming?.virtualPrice)}</p>
                     </div>
                 </div>
 
@@ -355,7 +356,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                                 ? 'Get Free Access'
                                 : isMobilePaymentBlocked
                                   ? 'Use Wallet for this ticket'
-                                  : `Pay ${event.streaming?.virtualPrice}`}
+                                  : `Pay ${formatPrice(event.streaming?.virtualPrice)}`}
                             </span>
                             <ArrowRight className="w-4 h-4" />
                         </>
