@@ -1,6 +1,6 @@
 import { LayoutGrid, Ticket as TicketIcon, Calendar, Bookmark, History } from 'lucide-react';
 
-export type ProfileTab = 'tickets' | 'events' | 'media' | 'saved' | 'my_events' | 'hosted' | 'upcoming';
+export type ProfileTab = 'tickets' | 'events' | 'media' | 'saved' | 'my_events' | 'upcoming';
 
 interface ProfileTabsProps {
   activeTab: ProfileTab;
@@ -20,10 +20,6 @@ export function ProfileTabs({ activeTab, onTabChange, isOwnProfile, isOrganizer 
 
       {isOrganizer && (
         <TabButton active={activeTab === 'upcoming'} onClick={() => onTabChange('upcoming')} icon={<Calendar className="w-3.5 h-3.5" />} label="Upcoming" />
-      )}
-
-      {isOrganizer && (
-        <TabButton active={activeTab === 'hosted'} onClick={() => onTabChange('hosted')} icon={<History className="w-3.5 h-3.5" />} label="Hosted" />
       )}
 
       {isOwnProfile && (

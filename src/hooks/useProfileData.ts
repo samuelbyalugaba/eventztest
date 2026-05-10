@@ -233,7 +233,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   }, [userId, isOwnProfile, authUser?.id]);
 
   useEffect(() => {
-    if (activeTab === 'upcoming' || activeTab === 'hosted') void loadOrganizerEventsIfNeeded();
+    if (activeTab === 'upcoming') void loadOrganizerEventsIfNeeded();
   }, [activeTab, userProfile?.is_organizer, currentUser?.id, userId]);
 
   useEffect(() => {

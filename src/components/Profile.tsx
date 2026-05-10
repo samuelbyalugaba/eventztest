@@ -248,7 +248,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         dataReady={!isLoading}
         onHostedClick={() => {
           if (isOrganizer) {
-            setActiveTab('hosted');
+            setActiveTab('upcoming');
             setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 50);
           } else {
             setShowEventListModal(true);
