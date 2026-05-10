@@ -186,30 +186,26 @@ export default function App() {
   const isLiveTab = effectivePath === '/live';
   const isOwnProfileTab = effectivePath === '/profile';
 
-  // Restore scroll on tab change
+  // Refs to manage scroll position of each tab
+  const eventsScrollRef = useRef<HTMLDivElement>(null);
+  const liveScrollRef = useRef<HTMLDivElement>(null);
+  const profileScrollRef = useRef<HTMLDivElement>(null);
+  const routeScrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top on tab switch (except for feed)
   useEffect(() => {
-    const isModal =
-      !!(location.state as any)?.backgroundLocation &&
-      (location.pathname.startsWith('/post/') ||
-        location.pathname.startsWith('/profile') ||
-        location.pathname.startsWith('/event/'));
-    const isTabPath = (p: string) => p === '/events' || p === '/live' || p === '/profile';
-    const prevPath = prevTabPathRef.current;
-    if (prevPath && !prevWasModalRef.current && isTabPath(prevPath)) {
-      sessionStorage.setItem(`eventz_tab_scroll_${prevPath}`, String(window.scrollY));
-    }
-    if (!isModal && isTabPath(location.pathname)) {
-      const isTabSwitch = prevPath !== location.pathname;
-      const saved = sessionStorage.getItem(`eventz_tab_scroll_${location.pathname}`);
-      const y = saved !== null ? (Number(saved) || 0) : 0;
-      // Always reset on tab switch — restore saved position if any, otherwise top.
-      if (isTabSwitch || saved !== null) {
-        requestAnimationFrame(() => window.scrollTo(0, y));
-      }
+    const isTabSwitch = prevTabPathRef.current !== location.pathname;
+    if (isTabSwitch) {
+      if (isEventsTab && eventsScrollRef.current) eventsScrollRef.current.scrollTop = 0;
+      if (isLiveTab && liveScrollRef.current) liveScrollRef.current.scrollTop = 0;
+      if (isOwnProfileTab && profileScrollRef.current) profileScrollRef.current.scrollTop = 0;
+      if (routeScrollRef.current) routeScrollRef.current.scrollTop = 0;
+      
+      // Also reset window scroll just in case something is using it
+      window.scrollTo(0, 0);
     }
     prevTabPathRef.current = location.pathname;
-    prevWasModalRef.current = isModal;
-  }, [location.key, location.pathname, (location.state as any)?.backgroundLocation]);
+  }, [location.pathname, isEventsTab, isLiveTab, isOwnProfileTab]);
 
   if (isCheckingAuth) {
     return (
@@ -233,9 +229,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Toaster
-        position="top-center"
-        richColors={false}
+      <Toaster 
+        position="top-center" 
+        richColors={false} 
         closeButton
         toastOptions={{
           className: 'font-sans',
@@ -266,7 +262,11 @@ export default function App() {
       <RightRail />
       <div className={`max-w-7xl mx-auto lg:max-w-none lg:ml-64 xl:ml-72 xl:mr-80 ${shouldHideBottomNav ? 'pb-20 lg:pb-0' : 'pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
         {/* Keep-alive tab views with lazy loading */}
-        <div style={{ display: isEventsTab ? 'block' : 'none' }}>
+        <div 
+          ref={eventsScrollRef}
+          style={{ display: isEventsTab ? 'block' : 'none' }}
+          className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
+        >
           <Suspense fallback={<GenericPageSkeleton />}>
             <EventDetails
               conversations={conversations}
@@ -292,12 +292,20 @@ export default function App() {
             />
           </Suspense>
         </div>
-        <div style={{ display: isLiveTab ? 'block' : 'none' }}>
+        <div 
+          ref={liveScrollRef}
+          style={{ display: isLiveTab ? 'block' : 'none' }}
+          className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
+        >
           <Suspense fallback={<GenericPageSkeleton />}>
             <LiveFeed isPaused={!isLiveTab || !!backgroundLocation} />
           </Suspense>
         </div>
-        <div style={{ display: isOwnProfileTab ? 'block' : 'none' }}>
+        <div 
+          ref={profileScrollRef}
+          style={{ display: isOwnProfileTab ? 'block' : 'none' }}
+          className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
+        >
           <Suspense fallback={<GenericPageSkeleton />}>
             <Profile
               onLogout={handleLogout}
@@ -310,43 +318,48 @@ export default function App() {
           </Suspense>
         </div>
 
-        <Routes location={backgroundLocation || location}>
-          <Route path="/" element={<Navigate to="/events" replace />} />
-          <Route path="/events" element={null} />
-          <Route path="/feed" element={null} />
-          <Route path="/live" element={null} />
-          <Route path="/profile" element={null} />
-          <Route path="/profile/:userId" element={
-            <Suspense fallback={<GenericPageSkeleton />}>
-              <Profile
-                onLogout={handleLogout}
-                onCreateEvent={handleCreateEvent}
-                onEditEvent={handleEditEvent}
-                onStartOrganizerSetup={handleStartOrganizerSetup}
-                onViewPost={handleViewPost}
-                isPaused={!!backgroundLocation}
-              />
-            </Suspense>
-          } />
-          <Route path="/create" element={
-            <Suspense fallback={<RouteFallback />}><CreateEventWrapper /></Suspense>
-          } />
-          <Route path="/edit-event/:id" element={
-            <Suspense fallback={<RouteFallback />}><CreateEventWrapper /></Suspense>
-          } />
-          <Route path="/post/:id" element={
-            <Suspense fallback={<RouteFallback />}><PostDetailWrapper /></Suspense>
-          } />
-          <Route path="/event/:id" element={
-            <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
-          } />
-          <Route path="/live/:id" element={
-            <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
-          } />
-          <Route path="/compose/post" element={
-            <Suspense fallback={<RouteFallback />}><CreatePostPage /></Suspense>
-          } />
-        </Routes>
+        <div 
+          ref={routeScrollRef}
+          className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
+        >
+          <Routes location={backgroundLocation || location}>
+            <Route path="/" element={<Navigate to="/events" replace />} />
+            <Route path="/events" element={null} />
+            <Route path="/feed" element={null} />
+            <Route path="/live" element={null} />
+            <Route path="/profile" element={null} />
+            <Route path="/profile/:userId" element={
+              <Suspense fallback={<GenericPageSkeleton />}>
+                <Profile
+                  onLogout={handleLogout}
+                  onCreateEvent={handleCreateEvent}
+                  onEditEvent={handleEditEvent}
+                  onStartOrganizerSetup={handleStartOrganizerSetup}
+                  onViewPost={handleViewPost}
+                  isPaused={!!backgroundLocation}
+                />
+              </Suspense>
+            } />
+            <Route path="/create" element={
+              <Suspense fallback={<RouteFallback />}><CreateEventWrapper /></Suspense>
+            } />
+            <Route path="/edit-event/:id" element={
+              <Suspense fallback={<RouteFallback />}><CreateEventWrapper /></Suspense>
+            } />
+            <Route path="/post/:id" element={
+              <Suspense fallback={<RouteFallback />}><PostDetailWrapper /></Suspense>
+            } />
+            <Route path="/event/:id" element={
+              <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+            } />
+            <Route path="/live/:id" element={
+              <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+            } />
+            <Route path="/compose/post" element={
+              <Suspense fallback={<RouteFallback />}><CreatePostPage /></Suspense>
+            } />
+          </Routes>
+        </div>
       </div>
 
       {backgroundLocation && (

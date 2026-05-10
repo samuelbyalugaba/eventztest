@@ -8,6 +8,7 @@ interface ProfileHeaderProps {
   username?: string;
   isOwnProfile: boolean;
   isOrganizer: boolean;
+  isVerified?: boolean;
   onBack?: () => void;
   onGoLive: () => void;
   sidebarSlot?: React.ReactNode;
@@ -20,6 +21,7 @@ export function ProfileHeader({
   username,
   isOwnProfile,
   isOrganizer,
+  isVerified,
   onBack,
   onGoLive,
   sidebarSlot,
@@ -53,9 +55,25 @@ export function ProfileHeader({
             </div>
           ) : (
             <>
-              <h1 className="text-xl font-semibold text-gray-900 leading-tight">
-                {displayName || 'User'}
-              </h1>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-xl font-semibold text-gray-900 leading-tight">
+                  {displayName || 'User'}
+                </h1>
+                {isVerified && (
+                  <img 
+                    src="/src/assets/verified-badge.png" 
+                    alt="Creator badge" 
+                    className="w-4 h-4 object-contain flex-shrink-0 drop-shadow-sm pointer-events-none select-none"
+                    style={{ visibility: 'visible', opacity: 1, display: 'inline-block' }}
+                    loading="eager"
+                    onError={(e) => {
+                      console.error('Badge image failed to load:', e);
+                      // Fallback to text if image fails
+                      (e.target as any).style.display = 'none';
+                    }}
+                  />
+                )}
+              </div>
               <p className="text-gray-500 font-medium text-xs flex items-center gap-1">
                 @{username || 'user'}
               </p>

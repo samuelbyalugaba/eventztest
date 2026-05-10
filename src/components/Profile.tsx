@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { toast } from 'sonner';
@@ -107,6 +107,17 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     loadMorePosts,
   } = useProfileData(userId, activeTab);
 
+  // Scroll to top on mount or when user changes
+  useEffect(() => {
+    // Target the parent scroll container if it exists
+    const container = document.querySelector('.overflow-y-auto.overscroll-behavior-y-contain');
+    if (container) {
+      container.scrollTop = 0;
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [userId]);
+
   const profileImage = userProfile?.avatar_url;
   const displayName = userProfile?.full_name || 'User';
   const organizerCategory = userProfile?.organizer_type;
@@ -211,6 +222,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         username={userProfile?.username}
         isOwnProfile={isOwnProfile}
         isOrganizer={isOrganizer}
+        isVerified={!!userProfile?.verified}
         onBack={handleBack}
         onGoLive={() => setShowLiveSetupModal(true)}
         sidebarSlot={
