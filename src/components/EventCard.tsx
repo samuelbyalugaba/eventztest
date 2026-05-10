@@ -89,12 +89,6 @@ export const EventCard = memo(function EventCard({ event, onClick, className = '
             </DropdownMenu>
           </div>
         )}
-        {/* Category Badge */}
-        <div className="absolute top-2 left-2">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] ${getCategoryColor(event.category)}`}>
-            {event.category}
-          </span>
-        </div>
         {/* Streaming Badge */}
         {event.streaming?.available && (
           <div className="absolute bottom-2 right-2">
