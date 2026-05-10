@@ -241,18 +241,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
       <ProfileStats
         isOrganizer={isOrganizer}
-        hostedCount={organizerStats?.totalEvents ?? null}
+        hostedCount={publishedEvents.filter(e => new Date(e.date) < new Date()).length}
         attendedCount={attendedEvents.length}
         followers={followStats.followers}
         following={followStats.following}
         dataReady={!isLoading}
         onHostedClick={() => {
-          if (isOrganizer) {
-            setActiveTab('upcoming');
-            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 50);
-          } else {
-            setShowEventListModal(true);
-          }
+          setShowEventListModal(true);
         }}
         onFollowersClick={handleShowFollowers}
         onFollowingClick={handleShowFollowing}
@@ -352,13 +347,16 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         />
       )}
       {showEventListModal && (
-        <EventListModal
-          title={isOrganizer ? "Upcoming Events" : "Attended Events"}
-          events={isOrganizer ? (publishedEvents as any) : attendedEvents}
-          onClose={() => setShowEventListModal(false)}
-          onEventClick={(event) => { setSelectedEvent(event); setShowEventListModal(false); }}
-        />
-      )}
+          <EventListModal
+            title={isOrganizer ? "Past Hosted Events" : "Attended Events"}
+            events={isOrganizer ? publishedEvents.filter(e => new Date(e.date) < new Date()) : (attendedEvents as any)}
+            onClose={() => setShowEventListModal(false)}
+            onEventClick={(event) => {
+              setSelectedEvent(event);
+              setShowEventListModal(false);
+            }}
+          />
+        )}
       {showFollowersModal && (
         <UserListModal isOpen={showFollowersModal} onClose={() => setShowFollowersModal(false)} title="Followers" users={followList} loading={isLoadingFollowList}
           onUserSelect={(user) => { setSelectedUserForModal(user); setShowUserProfileModal(true); }}

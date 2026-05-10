@@ -34,6 +34,7 @@ import {
  import { formatTimeAgo } from '../utils/format';
 import { mapPostsToViewModel } from '../utils/postMapper';
 import { UserListModal } from './UserListModal';
+import { EventListModal } from './EventListModal';
 import { toast } from 'sonner';
 import { Post } from '../types';
 
@@ -76,6 +77,8 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
   const [followList, setFollowList] = useState<any[]>([]);
   const [isLoadingFollowList, setIsLoadingFollowList] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [showEventListModal, setShowEventListModal] = useState(false);
+  const [selectedEventForDetail, setSelectedEventForDetail] = useState<Event | null>(null);
 
   const handleEditCaption = async (postId: number, caption: string) => {
     if (!currentUser) {
@@ -173,12 +176,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
   };
 
   const handleShowEvents = () => {
-    if (isOrganizerView) {
-      setActiveTab('upcoming');
-    } else {
-      setActiveTab('attended');
-    }
-    toast.success(`Viewing ${isOrganizerView ? 'upcoming' : 'attended'} events`);
+    setShowEventListModal(true);
   };
 
   useEffect(() => {
@@ -373,7 +371,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
                   onClick={handleShowEvents}
                 >
                   <div className="text-lg font-bold text-gray-900 leading-none">
-                      {isOrganizerView ? (stats?.totalEvents || 0) : attendedEvents.length}
+                      {isOrganizerView ? organizerEvents.filter(e => new Date(e.date) < new Date()).length : attendedEvents.length}
                   </div>
                   <div className="text-[10px] text-gray-500 font-medium mt-1 uppercase tracking-wider">
                       {isOrganizerView ? 'Events' : 'Attended'}
@@ -642,6 +640,25 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
           // Same here
         }}
       />
+
+      {showEventListModal && (
+        <EventListModal
+          title={isOrganizerView ? "Past Hosted Events" : "Attended Events"}
+          events={isOrganizerView ? organizerEvents.filter(e => new Date(e.date) < new Date()) : attendedEvents}
+          onClose={() => setShowEventListModal(false)}
+          onEventClick={(event) => {
+            setSelectedEventForDetail(event);
+            setShowEventListModal(false);
+          }}
+        />
+      )}
+
+      {selectedEventForDetail && (
+        <EventDetailModal
+          event={selectedEventForDetail}
+          onClose={() => setSelectedEventForDetail(null)}
+        />
+      )}
 
       {/* Post Detail Modal */}
       {selectedPost && (
