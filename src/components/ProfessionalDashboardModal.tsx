@@ -193,7 +193,7 @@ export function ProfessionalDashboardModal({
               <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
             </div>
             <div>
-              <p className="text-gray-500 font-medium text-xs mb-1">Events Hosted</p>
+              <p className="text-gray-500 font-medium text-xs mb-1">Events Created</p>
               <h3 className="text-xl font-bold text-gray-900">{stats.totalEvents}</h3>
             </div>
           </div>

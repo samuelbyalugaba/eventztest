@@ -111,7 +111,7 @@ export function BecomeOrganizer({ onComplete }: BecomeOrganizerProps) {
               <div className="flex flex-col items-center gap-2">
                 <Zap className="w-7 h-7 text-white/90" />
                 <p className="text-white text-2xl">{formatNumber(stats.eventsHosted)}</p>
-                <p className="text-white/80 text-xs leading-tight">Events Hosted</p>
+                <p className="text-white/80 text-xs leading-tight">Events Created</p>
               </div>
             </div>
           </div>

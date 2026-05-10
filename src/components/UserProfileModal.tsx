@@ -178,7 +178,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
     } else {
       setActiveTab('attended');
     }
-    toast.success(`Viewing ${isOrganizerView ? 'hosted' : 'attended'} events`);
+    toast.success(`Viewing ${isOrganizerView ? 'upcoming' : 'attended'} events`);
   };
 
   useEffect(() => {
@@ -376,7 +376,7 @@ export function UserProfileModal({ user, onClose, onFollow, onMessage, onViewPos
                       {isOrganizerView ? (stats?.totalEvents || 0) : attendedEvents.length}
                   </div>
                   <div className="text-[10px] text-gray-500 font-medium mt-1 uppercase tracking-wider">
-                      {isOrganizerView ? 'Hosted' : 'Attended'}
+                      {isOrganizerView ? 'Events' : 'Attended'}
                   </div>
                 </div>
                 <div 

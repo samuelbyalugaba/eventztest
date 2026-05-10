@@ -34,7 +34,7 @@ export function ProfileStats({
           {isOrganizer ? (hostedCount ?? 0) : attendedCount}
         </div>
         <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
-          {isOrganizer ? 'Hosted' : 'Attended'}
+          {isOrganizer ? 'Events' : 'Attended'}
         </div>
       </div>
       <div

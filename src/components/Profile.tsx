@@ -353,7 +353,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       )}
       {showEventListModal && (
         <EventListModal
-          title={isOrganizer ? "Hosted Events" : "Attended Events"}
+          title={isOrganizer ? "Upcoming Events" : "Attended Events"}
           events={isOrganizer ? (publishedEvents as any) : attendedEvents}
           onClose={() => setShowEventListModal(false)}
           onEventClick={(event) => { setSelectedEvent(event); setShowEventListModal(false); }}
