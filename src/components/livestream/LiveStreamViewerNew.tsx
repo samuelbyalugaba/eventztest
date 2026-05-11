@@ -76,6 +76,42 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const hlsVideoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [hlsReady, setHlsReady] = useState(false);
+  const [isLandscapeSource, setIsLandscapeSource] = useState(false);
+  const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
+  const [isRotated, setIsRotated] = useState(false);
+
+  // Detect landscape video & auto-fit on mobile
+  useEffect(() => {
+    const v = hlsVideoRef.current;
+    if (!v) return;
+    const onMeta = () => {
+      const landscape = v.videoWidth > v.videoHeight;
+      setIsLandscapeSource(landscape);
+      // Default mobile portrait viewing of landscape video → contain (letterbox)
+    };
+    v.addEventListener('loadedmetadata', onMeta);
+    return () => v.removeEventListener('loadedmetadata', onMeta);
+  }, [hlsReady]);
+
+  const handleRotate = async () => {
+    const container = hlsVideoRef.current?.parentElement?.parentElement;
+    try {
+      if (!document.fullscreenElement && container?.requestFullscreen) {
+        await container.requestFullscreen();
+      }
+      // Try native orientation lock (Android Chrome)
+      const orientation: any = (screen as any).orientation;
+      if (orientation?.lock) {
+        await orientation.lock('landscape').catch(() => {});
+        setIsRotated(false);
+        return;
+      }
+      // Fallback: CSS rotate (iOS Safari has no orientation lock API)
+      setIsRotated((r) => !r);
+    } catch {
+      setIsRotated((r) => !r);
+    }
+  };
 
   if (!isHlsMode && !client.current) {
     client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
