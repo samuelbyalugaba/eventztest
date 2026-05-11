@@ -110,6 +110,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const currentUserIdRef = useRef<string | null>(null);
   const pendingLikeRef = useRef(false); // Track pending like operation
   const likesRef = useRef(0); // Keep likes in sync via ref
+  const isMutedRef = useRef(isMuted);
   const { addMessage } = useMessageBuffer();
 
   // Playback mode: HLS (Cloudflare/OBS) when playback_url present, else Agora WebRTC
@@ -123,6 +124,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   // HLS
   const hlsVideoRef = useRef<HTMLVideoElement | null>(null);
   const cloudflareIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const cloudflarePlayerRef = useRef<any>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [hlsReady, setHlsReady] = useState(false);
   const [useIframePlayer, setUseIframePlayer] = useState(() => shouldUseIframePlayer(stream.playback_url));
@@ -178,6 +180,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   // Keep ref in sync
   useEffect(() => { likesRef.current = likes; }, [likes]);
+  useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
 
   // Load initial state
   useEffect(() => {
@@ -494,10 +497,12 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         await loadSdk();
         if (cancelled || !cloudflareIframeRef.current) return;
         const player = (window as any).Stream(cloudflareIframeRef.current);
-        player.muted = true;
+        cloudflarePlayerRef.current = player;
+        player.muted = isMutedRef.current;
         player.autoplay = true;
         await player.play().catch(async () => {
           player.muted = true;
+          setIsMuted(true);
           await player.play();
         });
       } catch {
@@ -509,17 +514,30 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
+      cloudflarePlayerRef.current = null;
     };
   }, [isHlsMode, useIframePlayer, stream.playback_url]);
 
   // HLS mute control — also kicks playback when user unmutes (after autoplay fallback)
   useEffect(() => {
     if (!isHlsMode) return;
-    const v = hlsVideoRef.current;
-    if (!v) return;
-    v.muted = isMuted;
-    if (!isMuted && v.paused) v.play().catch(() => {});
-  }, [isMuted, isHlsMode]);
+
+    if (useIframePlayer) {
+      const player = cloudflarePlayerRef.current;
+      if (!player) return;
+      try {
+        player.muted = isMuted;
+        if (!isMuted) player.volume = 1;
+        player.play?.().catch?.(() => {});
+      } catch {}
+      return;
+    }
+
+    const video = hlsVideoRef.current;
+    if (!video) return;
+    video.muted = isMuted;
+    if (!isMuted && video.paused) video.play().catch(() => {});
+  }, [isMuted, isHlsMode, useIframePlayer]);
 
   // Cleanup hearts
   useEffect(() => {
