@@ -238,7 +238,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   };
 
   const loadStreamedVideosIfNeeded = async () => {
-    if (isLoadingStreamedVideos || streamedVideosLoadedRef.current) return;
+    if (isLoadingStreamedVideos) return;
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
     try {

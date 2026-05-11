@@ -30,29 +30,63 @@ Deno.serve(async (req) => {
     }
 
     const payload = JSON.parse(raw);
-    const liveInputUid: string | undefined = payload?.live_input_uid ||
-      payload?.data?.live_input_uid ||
-      payload?.meta?.live_input_uid;
-    const status: string | undefined = payload?.status ||
-      payload?.notification_type ||
-      payload?.event;
-
-    if (!liveInputUid) {
-      console.warn("Webhook missing live_input_uid", payload);
-      return new Response("ok", { status: 200 });
-    }
+    const liveInputUid = getString(payload, [
+      "live_input_uid",
+      "liveInputUid",
+      "live_input.uid",
+      "liveInput.uid",
+      "input.uid",
+      "video.live_input_uid",
+      "video.liveInputUid",
+      "video.input.uid",
+      "data.live_input_uid",
+      "data.liveInputUid",
+      "data.live_input.uid",
+      "data.liveInput.uid",
+      "data.input.uid",
+      "data.video.live_input_uid",
+      "data.video.liveInputUid",
+      "data.video.input.uid",
+      "meta.live_input_uid",
+      "meta.liveInputUid",
+      "result.live_input_uid",
+      "result.liveInputUid",
+      "result.input.uid",
+    ]);
+    const status = getString(payload, [
+      "status",
+      "notification_type",
+      "event",
+      "type",
+      "data.status",
+      "data.event",
+      "data.type",
+      "video.status",
+      "result.status",
+    ]);
+    const eventIdFromPayload = getEventIdFromPayload(payload);
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Find event by live input uid (matches inside JSONB streaming.cf_live_input_uid)
-    const { data: events, error } = await admin
+    let query = admin
       .from("events")
       .select("id, organizer_id, title, image_url, streaming")
-      .eq("streaming->>cf_live_input_uid", liveInputUid)
       .limit(1);
 
+    if (liveInputUid) {
+      query = query.eq("streaming->>cf_live_input_uid", liveInputUid);
+    } else if (eventIdFromPayload) {
+      query = query.eq("id", eventIdFromPayload);
+    } else {
+      console.warn("Webhook missing live input uid and event id", payload);
+      return new Response("ok", { status: 200 });
+    }
+
+    const { data: events, error } = await query;
+
     if (error || !events?.length) {
-      console.warn("No event found for liveInputUid", liveInputUid);
+      console.warn("No event found for Cloudflare webhook", { liveInputUid, eventIdFromPayload });
       return new Response("ok", { status: 200 });
     }
 
@@ -76,11 +110,16 @@ Deno.serve(async (req) => {
 
     const videoUid = getString(payload, [
       "uid",
+      "id",
       "video.uid",
+      "video.id",
       "data.uid",
+      "data.id",
       "data.video.uid",
+      "data.video.id",
       "meta.uid",
       "result.uid",
+      "result.id",
     ]);
 
     if (videoUid) {
@@ -116,7 +155,7 @@ Deno.serve(async (req) => {
           user_id: event.organizer_id,
           event_id: event.id,
           uid: videoUid,
-          live_input_uid: liveInputUid,
+          live_input_uid: liveInputUid || String(streaming.cf_live_input_uid || ""),
           title: getString(payload, ["name", "data.name", "video.name", "result.name"]) ||
             event.title ||
             "Streamed video",
@@ -147,6 +186,35 @@ function getString(source: unknown, paths: string[]): string | null {
     if (typeof value === "string" && value.trim()) return value.trim();
   }
   return null;
+}
+
+function getEventIdFromPayload(source: unknown): number | null {
+  const direct = getNumber(source, [
+    "event_id",
+    "eventId",
+    "data.event_id",
+    "data.eventId",
+    "meta.event_id",
+    "meta.eventId",
+    "result.event_id",
+    "result.eventId",
+  ]);
+  if (direct && direct > 0) return direct;
+
+  const name = getString(source, [
+    "name",
+    "data.name",
+    "video.name",
+    "data.video.name",
+    "result.name",
+    "meta.name",
+    "data.meta.name",
+  ]);
+  const match = name?.match(/event-(\d+)/i);
+  if (!match) return null;
+
+  const eventId = Number(match[1]);
+  return Number.isFinite(eventId) && eventId > 0 ? eventId : null;
 }
 
 function getNumber(source: unknown, paths: string[]): number | null {

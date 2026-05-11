@@ -1,4 +1,4 @@
-import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon, PlaySquare } from 'lucide-react';
+import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon, PlaySquare, Radio } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { EventCard } from '../EventCard';
 import type { ProfileTab } from './ProfileTabs';
@@ -128,6 +128,10 @@ function getStreamPlaybackUrl(stream: CloudflareStream) {
   return `https://iframe.videodelivery.net/${stream.uid}`;
 }
 
+function hasPlayableRecording(stream: CloudflareStream) {
+  return stream.has_recording !== false && Boolean(stream.playback_url || (stream.source !== 'event' && stream.uid));
+}
+
 function StreamedTab({ isLoading, streams }: { isLoading: boolean; streams: CloudflareStream[] }) {
   if (isLoading) {
     return (
@@ -154,16 +158,32 @@ function StreamedTab({ isLoading, streams }: { isLoading: boolean; streams: Clou
     <div className="space-y-5">
       {streams.map((stream) => {
         const duration = formatDuration(typeof stream.duration === 'number' ? stream.duration : null);
+        const canPlay = hasPlayableRecording(stream);
         return (
           <article key={stream.id} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <div className="aspect-video bg-black">
-              <iframe
-                src={getStreamPlaybackUrl(stream)}
-                title={stream.title || 'Streamed video'}
-                className="w-full h-full"
-                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                allowFullScreen
-              />
+              {canPlay ? (
+                <iframe
+                  src={getStreamPlaybackUrl(stream)}
+                  title={stream.title || 'Streamed video'}
+                  className="w-full h-full"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="relative h-full w-full overflow-hidden">
+                  <ImageWithFallback
+                    src={stream.thumbnail_url || stream.event?.image_url}
+                    alt={stream.title || stream.event?.title || 'Streamed video'}
+                    className="h-full w-full object-cover opacity-70"
+                  />
+                  <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center text-center px-4">
+                    <Radio className="w-8 h-8 text-white/90 mb-2" />
+                    <p className="text-white text-sm font-semibold">Stream ended</p>
+                    <p className="text-white/70 text-xs mt-1">Recording playback is not available for this session.</p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="p-4">
               <h3 className="text-gray-900 font-semibold line-clamp-2">{stream.title || stream.event?.title || 'Streamed video'}</h3>
