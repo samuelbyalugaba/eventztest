@@ -87,11 +87,14 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     const onMeta = () => {
       const landscape = v.videoWidth > v.videoHeight;
       setIsLandscapeSource(landscape);
-      // Default mobile portrait viewing of landscape video → contain (letterbox)
+      // On mobile portrait, default landscape video to "cover" so it fills the
+      // screen (cropped) instead of showing a tiny letterboxed strip that
+      // looks like a black screen. User can tap "Fit" to letterbox.
+      if (landscape && isMobile) setFitMode('cover');
     };
     v.addEventListener('loadedmetadata', onMeta);
     return () => v.removeEventListener('loadedmetadata', onMeta);
-  }, [hlsReady]);
+  }, [hlsReady, isMobile]);
 
   const handleRotate = async () => {
     const container = hlsVideoRef.current?.parentElement?.parentElement;
