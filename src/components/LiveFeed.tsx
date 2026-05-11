@@ -1,11 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Filter, MapPin, Video, Smartphone, Clock } from 'lucide-react';
-import { LiveStreamViewerNew as LiveStreamViewer } from './livestream/LiveStreamViewerNew';
-import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
-import { EventDetailModal } from './EventDetailModal';
 import { toast } from 'sonner';
-import { getEventById, hasActiveVirtualTicket, type Event as ApiEvent } from '../utils/supabase/api';
-import { supabase } from '../utils/supabase/client';
 import { Skeleton } from './ui/skeleton';
 import { normalizePlaceName } from '../utils/nominatim';
 import { locations, liveCategories, type LocationOption } from '../utils/locations';
@@ -68,7 +64,8 @@ function LiveFeedSkeleton() {
   );
 }
 
-export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
+export function LiveFeed() {
+  const navigate = useNavigate();
   const { liveStreams, upcomingStreams, isLoading } = useLiveFeedData();
 
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -76,10 +73,6 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
   const [showFilters, setShowFilters] = useState(false);
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
-  const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
-  const [showTicketModal, setShowTicketModal] = useState(false);
-  const [eventToPurchase, setEventToPurchase] = useState<ApiEvent | null>(null);
   const [reminders, setReminders] = useState<Set<number>>(new Set());
 
   const {
@@ -88,17 +81,6 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
     persistRecents,
     recentLocations,
   } = useLocationPrefs(locationSearch);
-
-  // Pause: dismiss the active stream when the tab is no longer foreground
-  useEffect(() => {
-    if (isPaused && selectedStream) setSelectedStream(null);
-  }, [isPaused, selectedStream]);
-
-  const handlePurchaseTicket = (event: ApiEvent) => {
-    setEventToPurchase(event);
-    setShowTicketModal(true);
-    if (selectedEvent) setSelectedEvent(null);
-  };
 
   const handleLocationSelect = async (locationId: string) => {
     setSelectedLocation(locationId);
@@ -155,36 +137,8 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
     ] as any;
   }, [locationSearch, recentLocationOptions, remoteLocationOptions]);
 
-  const handleStreamClick = async (stream: any) => {
-    if (stream.isLive) {
-      try {
-        const priceString = stream?.streaming?.virtualPrice ?? '';
-        const priceNumber = parseFloat(String(priceString).replace(/[^0-9.]/g, '')) || 0;
-        if (priceNumber <= 0) {
-          setSelectedStream(stream);
-          return;
-        }
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast.error('Please sign in to watch paid live streams');
-          const fullEvent = await getEventById(stream.id);
-          setSelectedEvent(fullEvent as unknown as ApiEvent);
-          return;
-        }
-        const hasAccess = await hasActiveVirtualTicket(user.id, stream.id);
-        if (hasAccess) {
-          setSelectedStream(stream);
-          return;
-        }
-        toast.error('Virtual Access required to watch this live stream');
-        const fullEvent = await getEventById(stream.id);
-        handlePurchaseTicket(fullEvent as unknown as ApiEvent);
-      } catch {
-        toast.error('Unable to open stream');
-      }
-    } else {
-      setSelectedEvent(stream as unknown as ApiEvent);
-    }
+  const handleStreamClick = (stream: any) => {
+    navigate(`/live/${stream.id}`);
   };
 
   const handleToggleReminder = (streamId: number) => {
@@ -354,24 +308,7 @@ export function LiveFeed({ isPaused }: { isPaused?: boolean }) {
         onCloseLocation={() => setShowLocationFilter(false)}
       />
 
-      {selectedStream && (
-        <LiveStreamViewer stream={selectedStream} onClose={() => setSelectedStream(null)} />
-      )}
-      {selectedEvent && (
-        <EventDetailModal
-          event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onPurchaseTicket={handlePurchaseTicket}
-          onPurchaseNormalTicket={() => {}}
-        />
-      )}
-      {showTicketModal && eventToPurchase && (
-        <VirtualTicketPurchaseModal
-          isOpen={showTicketModal}
-          onClose={() => setShowTicketModal(false)}
-          event={eventToPurchase}
-        />
-      )}
+
     </div>
   );
 }

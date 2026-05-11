@@ -21,6 +21,7 @@ const CreateEventWrapper = lazy(() => import('./components/CreateEventWrapper').
 const PostDetailWrapper = lazy(() => import('./components/PostDetailWrapper').then(m => ({ default: m.PostDetailWrapper })));
 const ProfileModalWrapper = lazy(() => import('./components/ProfileModalWrapper').then(m => ({ default: m.ProfileModalWrapper })));
 const EventDetailWrapper = lazy(() => import('./components/EventDetailWrapper').then(m => ({ default: m.EventDetailWrapper })));
+const LiveStreamPage = lazy(() => import('./components/LiveStreamPage').then(m => ({ default: m.LiveStreamPage })));
 const CreatePostPage = lazy(() => import('./components/CreatePostPage'));
 
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
@@ -176,7 +177,8 @@ export default function App() {
   const shouldHideBottomNav = location.pathname.startsWith('/create') ||
     location.pathname.startsWith('/edit-event') ||
     (location.pathname.startsWith('/post') && !isPostModal) ||
-    (location.pathname.startsWith('/event/') && !isEventModal);
+    (location.pathname.startsWith('/event/') && !isEventModal) ||
+    location.pathname.startsWith('/live/');
 
   const backgroundLocation = location.state?.backgroundLocation;
   const effectiveLocation = backgroundLocation || location;
@@ -298,7 +300,7 @@ export default function App() {
           className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
         >
           <Suspense fallback={<GenericPageSkeleton />}>
-            <LiveFeed isPaused={!isLiveTab || !!backgroundLocation} />
+            <LiveFeed />
           </Suspense>
         </div>
         <div 
@@ -353,7 +355,7 @@ export default function App() {
               <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
             } />
             <Route path="/live/:id" element={
-              <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+              <Suspense fallback={<RouteFallback />}><LiveStreamPage /></Suspense>
             } />
             <Route path="/compose/post" element={
               <Suspense fallback={<RouteFallback />}><CreatePostPage /></Suspense>
