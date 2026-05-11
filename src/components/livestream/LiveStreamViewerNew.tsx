@@ -76,6 +76,42 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const hlsVideoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [hlsReady, setHlsReady] = useState(false);
+  const [isLandscapeSource, setIsLandscapeSource] = useState(false);
+  const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
+  const [isRotated, setIsRotated] = useState(false);
+
+  // Detect landscape video & auto-fit on mobile
+  useEffect(() => {
+    const v = hlsVideoRef.current;
+    if (!v) return;
+    const onMeta = () => {
+      const landscape = v.videoWidth > v.videoHeight;
+      setIsLandscapeSource(landscape);
+      // Default mobile portrait viewing of landscape video → contain (letterbox)
+    };
+    v.addEventListener('loadedmetadata', onMeta);
+    return () => v.removeEventListener('loadedmetadata', onMeta);
+  }, [hlsReady]);
+
+  const handleRotate = async () => {
+    const container = hlsVideoRef.current?.parentElement?.parentElement;
+    try {
+      if (!document.fullscreenElement && container?.requestFullscreen) {
+        await container.requestFullscreen();
+      }
+      // Try native orientation lock (Android Chrome)
+      const orientation: any = (screen as any).orientation;
+      if (orientation?.lock) {
+        await orientation.lock('landscape').catch(() => {});
+        setIsRotated(false);
+        return;
+      }
+      // Fallback: CSS rotate (iOS Safari has no orientation lock API)
+      setIsRotated((r) => !r);
+    } catch {
+      setIsRotated((r) => !r);
+    }
+  };
 
   if (!isHlsMode && !client.current) {
     client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
@@ -453,16 +489,36 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const renderVideo = (id?: string) => (
     <>
       {isHlsMode ? (
-        <div className="w-full h-full">
+        <div className="relative w-full h-full bg-black overflow-hidden">
           <video
             ref={hlsVideoRef}
             id={id || 'hls-player'}
-            className="w-full h-full object-contain bg-black"
+            className={`w-full h-full bg-black transition-transform duration-300 ${
+              fitMode === 'cover' ? 'object-cover' : 'object-contain'
+            } ${isRotated ? 'rotate-90 scale-[1.78]' : ''}`}
             playsInline
             autoPlay
             muted
             controls={false}
           />
+          {isMobile && isLandscapeSource && hlsReady && (
+            <div className="absolute top-3 right-3 z-30 flex gap-2">
+              <button
+                onClick={() => setFitMode((m) => (m === 'contain' ? 'cover' : 'contain'))}
+                className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
+                aria-label="Toggle fit mode"
+              >
+                {fitMode === 'contain' ? 'Fill' : 'Fit'}
+              </button>
+              <button
+                onClick={handleRotate}
+                className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
+                aria-label="Rotate to landscape"
+              >
+                ⤿ Rotate
+              </button>
+            </div>
+          )}
         </div>
       ) : remoteUsers.length > 0 ? (
         <div className="w-full h-full">
