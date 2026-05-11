@@ -635,26 +635,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         </div>
       )}
 
-      {/* Video fit / rotate controls — sit just above the action bar */}
-      {isHlsMode && isLandscapeSource && hlsReady && (
-        <div className="absolute bottom-[88px] right-3 z-30 flex gap-2 pointer-events-auto">
-          <button
-            onClick={() => setFitMode((m) => (m === 'contain' ? 'cover' : 'contain'))}
-            className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
-            aria-label="Toggle fit mode"
-          >
-            {fitMode === 'contain' ? 'Fill' : 'Fit'}
-          </button>
-          <button
-            onClick={handleRotate}
-            className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
-            aria-label="Rotate to landscape"
-          >
-            ⤿ Rotate
-          </button>
-        </div>
-      )}
-
       {/* Fixed bottom overlay - always at bottom, never pushes video */}
       <div className="absolute bottom-0 left-0 right-0 p-3">
         <ViewerActionBar
@@ -666,6 +646,10 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
             onGift={() => setShowGiftPicker(true)}
             onMuteToggle={() => setIsMuted((m) => !m)}
             onToggleChat={() => setIsChatVisible((v) => !v)}
+            onToggleFit={() => setFitMode((m) => (m === 'contain' ? 'cover' : 'contain'))}
+            onRotate={handleRotate}
+            fitMode={fitMode}
+            showVideoControls={isHlsMode && isLandscapeSource && hlsReady}
             isLiked={isLiked}
             isMuted={isMuted}
             isChatVisible={isChatVisible}
