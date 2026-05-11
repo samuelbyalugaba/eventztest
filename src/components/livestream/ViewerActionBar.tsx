@@ -89,6 +89,30 @@ export function ViewerActionBar({
               >
                 {isMuted ? <VolumeX className="w-4 h-4 md:w-5 md:h-5" /> : <Volume2 className="w-4 h-4 md:w-5 md:h-5" />}
               </button>
+              {showVideoControls && onToggleFit && (
+                <button
+                  type="button"
+                  onClick={onToggleFit}
+                  className="p-2 rounded-xl bg-black/50 backdrop-blur-xl text-white/80 border border-white/10 hover:bg-white/10 transition-all"
+                  title={fitMode === 'contain' ? 'Fill screen' : 'Fit to screen'}
+                  aria-label="Toggle fit mode"
+                >
+                  {fitMode === 'contain'
+                    ? <Maximize2 className="w-4 h-4 md:w-5 md:h-5" />
+                    : <Minimize2 className="w-4 h-4 md:w-5 md:h-5" />}
+                </button>
+              )}
+              {showVideoControls && onRotate && (
+                <button
+                  type="button"
+                  onClick={onRotate}
+                  className="p-2 rounded-xl bg-black/50 backdrop-blur-xl text-white/80 border border-white/10 hover:bg-white/10 transition-all"
+                  title="Rotate / fullscreen"
+                  aria-label="Rotate video"
+                >
+                  <RotateCw className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+              )}
             </div>
 
             {/* Right: gift, share, like */}
