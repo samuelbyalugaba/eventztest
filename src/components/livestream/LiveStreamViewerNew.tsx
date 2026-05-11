@@ -35,6 +35,54 @@ interface LiveStreamViewerProps {
   isUnlockedOverride?: boolean;
 }
 
+function isHlsManifestUrl(url?: string) {
+  return Boolean(url && /\.m3u8(?:[?#].*)?$/i.test(url));
+}
+
+function isCloudflareStreamUrl(url?: string) {
+  return Boolean(url && /(cloudflarestream\.com|videodelivery\.net)/i.test(url));
+}
+
+function shouldUseIframePlayer(url?: string) {
+  return Boolean(url && (isCloudflareStreamUrl(url) || !isHlsManifestUrl(url)));
+}
+
+function getCloudflareIframeUrl(url?: string) {
+  const withAutoplayParams = (playerUrl: string) => {
+    try {
+      const parsed = new URL(playerUrl);
+      parsed.searchParams.set('autoplay', 'true');
+      parsed.searchParams.set('muted', 'true');
+      parsed.searchParams.set('preload', 'auto');
+      return parsed.toString();
+    } catch {
+      const separator = playerUrl.includes('?') ? '&' : '?';
+      return `${playerUrl}${separator}autoplay=true&muted=true&preload=auto`;
+    }
+  };
+
+  if (!url) return '';
+  if (/\/iframe(?:[?#].*)?$/i.test(url) || /iframe\.videodelivery\.net/i.test(url)) {
+    return withAutoplayParams(url);
+  }
+
+  try {
+    const parsed = new URL(url);
+    const uid = parsed.pathname.split('/').filter(Boolean)[0];
+    if (!uid) return url;
+
+    if (/cloudflarestream\.com$/i.test(parsed.hostname)) {
+      return withAutoplayParams(`${parsed.origin}/${uid}/iframe`);
+    }
+
+    if (/videodelivery\.net$/i.test(parsed.hostname)) {
+      return withAutoplayParams(`https://iframe.videodelivery.net/${uid}`);
+    }
+  } catch {}
+
+  return withAutoplayParams(url);
+}
+
 export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) {
   const isMobile = useIsMobile();
 
@@ -74,11 +122,19 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   // HLS
   const hlsVideoRef = useRef<HTMLVideoElement | null>(null);
+  const cloudflareIframeRef = useRef<HTMLIFrameElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [hlsReady, setHlsReady] = useState(false);
+  const [useIframePlayer, setUseIframePlayer] = useState(() => shouldUseIframePlayer(stream.playback_url));
   const [isLandscapeSource, setIsLandscapeSource] = useState(false);
   const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
   const [isRotated, setIsRotated] = useState(false);
+
+  useEffect(() => {
+    setUseIframePlayer(shouldUseIframePlayer(stream.playback_url));
+    setHlsReady(false);
+    setVideoError(null);
+  }, [stream.playback_url, stream.id]);
 
   // Detect landscape video & auto-fit on mobile
   useEffect(() => {
@@ -288,9 +344,12 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   // ─── HLS playback (Cloudflare Stream / OBS) ─────────────
   useEffect(() => {
-    if (!isHlsMode || !stream.playback_url) return;
+    if (!isHlsMode || !stream.playback_url || useIframePlayer) return;
     const video = hlsVideoRef.current;
     if (!video) return;
+
+    setHlsReady(true);
+    setVideoError(null);
 
     let hls: Hls | null = null;
     const url = stream.playback_url;
@@ -300,9 +359,14 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     // Mark "ready" as early as possible so the spinner doesn't get stuck on mobile
     // when autoplay-with-sound is blocked and the `playing` event never fires.
     const markReady = () => setHlsReady(true);
+    const markHasFrames = () => {
+      setHlsReady(true);
+      setVideoError(null);
+    };
     video.addEventListener('loadedmetadata', markReady);
     video.addEventListener('canplay', markReady);
-    video.addEventListener('playing', markReady);
+    video.addEventListener('loadeddata', markHasFrames);
+    video.addEventListener('playing', markHasFrames);
 
     // Required for inline mobile playback + autoplay
     video.setAttribute('playsinline', 'true');
@@ -310,6 +374,15 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     video.setAttribute('webkit-playsinline', 'true');
     video.autoplay = true;
     video.preload = 'auto';
+    video.muted = isMuted;
+    video.removeAttribute('src');
+    video.load();
+
+    const frameTimeout = window.setTimeout(() => {
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        setUseIframePlayer(true);
+      }
+    }, 8000);
 
     const tryPlay = () => {
       const p = video.play();
@@ -340,15 +413,18 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         enableWorker: true,
         // ABR: start conservatively so video appears fast on cellular
         startLevel: -1,
-        capLevelToPlayerSize: true,
+        capLevelToPlayerSize: false,
         abrEwmaDefaultEstimate: 800_000, // 800 kbps initial guess
       });
       hlsRef.current = hls;
-      hls.loadSource(url);
       hls.attachMedia(video);
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        hls?.loadSource(url);
+      });
       hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (!data.fatal) return;
+        setUseIframePlayer(true);
         // Try to recover from transient network/media errors before failing
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
@@ -370,17 +446,71 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       return;
     }
 
-    video.muted = isMuted;
     tryPlay();
 
     return () => {
+      window.clearTimeout(frameTimeout);
       video.removeEventListener('loadedmetadata', markReady);
       video.removeEventListener('canplay', markReady);
-      video.removeEventListener('playing', markReady);
+      video.removeEventListener('loadeddata', markHasFrames);
+      video.removeEventListener('playing', markHasFrames);
       if (hls) { hls.destroy(); hlsRef.current = null; }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHlsMode, stream.playback_url, stream.id]);
+  }, [isHlsMode, isMobile, stream.playback_url, stream.id, useIframePlayer]);
+
+  useEffect(() => {
+    if (!isHlsMode || !useIframePlayer || !stream.playback_url) return;
+    const iframe = cloudflareIframeRef.current;
+    if (!iframe) return;
+
+    let cancelled = false;
+
+    const loadSdk = () =>
+      new Promise<void>((resolve, reject) => {
+        if ((window as any).Stream) {
+          resolve();
+          return;
+        }
+
+        const existing = document.querySelector<HTMLScriptElement>('script[data-cloudflare-stream-sdk="true"]');
+        if (existing) {
+          existing.addEventListener('load', () => resolve(), { once: true });
+          existing.addEventListener('error', () => reject(), { once: true });
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://embed.cloudflarestream.com/embed/sdk.latest.js';
+        script.async = true;
+        script.dataset.cloudflareStreamSdk = 'true';
+        script.onload = () => resolve();
+        script.onerror = () => reject();
+        document.head.appendChild(script);
+      });
+
+    const start = async () => {
+      try {
+        await loadSdk();
+        if (cancelled || !cloudflareIframeRef.current) return;
+        const player = (window as any).Stream(cloudflareIframeRef.current);
+        player.muted = true;
+        player.autoplay = true;
+        await player.play().catch(async () => {
+          player.muted = true;
+          await player.play();
+        });
+      } catch {
+        // Cloudflare still shows its native play overlay when autoplay is blocked.
+      }
+    };
+
+    const timer = window.setTimeout(start, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [isHlsMode, useIframePlayer, stream.playback_url]);
 
   // HLS mute control — also kicks playback when user unmutes (after autoplay fallback)
   useEffect(() => {
@@ -487,23 +617,34 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   };
 
   // ─── Video content (shared between layouts) ─────────────
-  const hasMedia = isHlsMode ? hlsReady : remoteUsers.length > 0;
+  const hasMedia = isHlsMode ? Boolean(stream.playback_url) : remoteUsers.length > 0;
 
   const renderVideo = (id?: string) => (
     <>
       {isHlsMode ? (
         <div className="relative w-full h-full bg-black overflow-hidden">
-          <video
-            ref={hlsVideoRef}
-            id={id || 'hls-player'}
-            className={`w-full h-full bg-black transition-transform duration-300 ${
-              fitMode === 'cover' ? 'object-cover' : 'object-contain'
-            } ${isRotated ? 'rotate-90 scale-[1.78]' : ''}`}
-            playsInline
-            autoPlay
-            muted
-            controls={false}
-          />
+          {useIframePlayer ? (
+            <iframe
+              ref={cloudflareIframeRef}
+              title={stream.title}
+              src={getCloudflareIframeUrl(stream.playback_url)}
+              className="w-full h-full border-0 bg-black"
+              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+              allowFullScreen
+            />
+          ) : (
+            <video
+              ref={hlsVideoRef}
+              id={id || 'hls-player'}
+              className={`w-full h-full bg-black transition-transform duration-300 ${
+                fitMode === 'cover' ? 'object-cover' : 'object-contain'
+              } ${isRotated ? 'rotate-90 scale-[1.78]' : ''}`}
+              playsInline
+              autoPlay
+              muted={isMuted}
+              controls={false}
+            />
+          )}
         </div>
       ) : remoteUsers.length > 0 ? (
         <div className="w-full h-full">
