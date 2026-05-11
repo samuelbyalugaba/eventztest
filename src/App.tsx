@@ -35,7 +35,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const prevTabPathRef = useRef<string | null>(null);
-  const prevWasModalRef = useRef(false);
+  
   const {
     user: currentUser,
     isAuthenticated,

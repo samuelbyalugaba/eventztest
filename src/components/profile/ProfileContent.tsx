@@ -1,4 +1,4 @@
-import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon, History } from 'lucide-react';
+import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { EventCard } from '../EventCard';
 import type { ProfileTab } from './ProfileTabs';

@@ -132,13 +132,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   
-  // Organizer stats hook
-  const organizerStats = selectedUser?.is_organizer ? {
-    followers: selectedUser.followers || 1200,
-    totalEvents: selectedUser.totalEvents || 15,
-    ticketsSold: selectedUser.ticketsSold || 3450,
-    avgRating: selectedUser.avgRating || 4.8
-  } : null;
 
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex] = useState(0);
