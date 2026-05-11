@@ -55,7 +55,7 @@ export function OrganizerDashboard({ onCreateEvent, onEditEvent }: OrganizerDash
   const [showScanner, setShowScanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'published' | 'drafts'>('published');
   
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  
 
   const [stats, setStats] = useState({
     totalEvents: 0,

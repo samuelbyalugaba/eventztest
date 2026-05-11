@@ -30,7 +30,7 @@ const locations = [
   { id: 'newyork', name: 'New York, USA', flag: '' },
 ];
 
-export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onStartConversation, onTierSelect }: EventDetailModalProps) {
+export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onTierSelect }: EventDetailModalProps) {
   const navigate = useNavigate();
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
   const [hasVirtualAccess, setHasVirtualAccess] = useState(false);

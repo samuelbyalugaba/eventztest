@@ -78,12 +78,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [followList, setFollowList] = useState<any[]>([]);
   const [isLoadingFollowList, setIsLoadingFollowList] = useState(false);
-  const [selectedUserForModal, setSelectedUserForModal] = useState<any>(null);
+  
 
   const {
     currentUser,
     userProfile,
-    organizerStats,
+    
     publishedEvents,
     savedEvents,
     attendedEvents,

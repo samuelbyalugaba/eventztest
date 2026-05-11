@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Search, Star } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import verifiedBadge from '../assets/verified-badge.png';
 import { Profile } from '../utils/supabase/api';

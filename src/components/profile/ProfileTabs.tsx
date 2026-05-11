@@ -1,4 +1,4 @@
-import { LayoutGrid, Ticket as TicketIcon, Calendar, Bookmark, History } from 'lucide-react';
+import { LayoutGrid, Ticket as TicketIcon, Calendar, Bookmark } from 'lucide-react';
 
 export type ProfileTab = 'tickets' | 'events' | 'media' | 'saved' | 'my_events' | 'upcoming';
 
