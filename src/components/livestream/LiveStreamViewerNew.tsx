@@ -87,11 +87,14 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     const onMeta = () => {
       const landscape = v.videoWidth > v.videoHeight;
       setIsLandscapeSource(landscape);
-      // Default mobile portrait viewing of landscape video → contain (letterbox)
+      // On mobile portrait, default landscape video to "cover" so it fills the
+      // screen (cropped) instead of showing a tiny letterboxed strip that
+      // looks like a black screen. User can tap "Fit" to letterbox.
+      if (landscape && isMobile) setFitMode('cover');
     };
     v.addEventListener('loadedmetadata', onMeta);
     return () => v.removeEventListener('loadedmetadata', onMeta);
-  }, [hlsReady]);
+  }, [hlsReady, isMobile]);
 
   const handleRotate = async () => {
     const container = hlsVideoRef.current?.parentElement?.parentElement;
@@ -501,24 +504,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
             muted
             controls={false}
           />
-          {isMobile && isLandscapeSource && hlsReady && (
-            <div className="absolute top-3 right-3 z-30 flex gap-2">
-              <button
-                onClick={() => setFitMode((m) => (m === 'contain' ? 'cover' : 'contain'))}
-                className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
-                aria-label="Toggle fit mode"
-              >
-                {fitMode === 'contain' ? 'Fill' : 'Fit'}
-              </button>
-              <button
-                onClick={handleRotate}
-                className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
-                aria-label="Rotate to landscape"
-              >
-                ⤿ Rotate
-              </button>
-            </div>
-          )}
         </div>
       ) : remoteUsers.length > 0 ? (
         <div className="w-full h-full">
@@ -647,6 +632,26 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
           <div className="pointer-events-auto">
             <FloatingChat messages={messages} maxVisible={5} />
           </div>
+        </div>
+      )}
+
+      {/* Video fit / rotate controls — sit just above the action bar */}
+      {isHlsMode && isLandscapeSource && hlsReady && (
+        <div className="absolute bottom-[88px] right-3 z-30 flex gap-2 pointer-events-auto">
+          <button
+            onClick={() => setFitMode((m) => (m === 'contain' ? 'cover' : 'contain'))}
+            className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
+            aria-label="Toggle fit mode"
+          >
+            {fitMode === 'contain' ? 'Fill' : 'Fit'}
+          </button>
+          <button
+            onClick={handleRotate}
+            className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
+            aria-label="Rotate to landscape"
+          >
+            ⤿ Rotate
+          </button>
         </div>
       )}
 
