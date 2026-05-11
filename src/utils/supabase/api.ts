@@ -179,6 +179,22 @@ export type ApiPost = {
   posted_as_organizer?: boolean;
 };
 
+export type CloudflareStream = {
+  id: number;
+  user_id: string;
+  event_id?: number | null;
+  uid: string;
+  live_input_uid?: string | null;
+  title: string;
+  thumbnail_url?: string | null;
+  preview_url?: string | null;
+  playback_url?: string | null;
+  duration?: number | null;
+  status?: string | null;
+  created_at: string;
+  event?: Event | null;
+};
+
 // --- PROFILES ---
 
 export const getProfile = async (userId: string) => {
@@ -1976,6 +1992,26 @@ export const generateStreamKeys = async (eventId: number) => {
   };
 
   return { streamKey, ingestUrl, playbackUrl };
+};
+
+export const getProfileStreamedVideos = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('cloudflare_streams')
+    .select(`
+      *,
+      event:events(id, title, image_url, date, time, location, category)
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    if (error.code === '42P01' || /cloudflare_streams/i.test(error.message || '')) {
+      return [] as CloudflareStream[];
+    }
+    throw error;
+  }
+
+  return (data || []) as CloudflareStream[];
 };
 
 // --- STREAMING CHAT ---

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getProfilePostsGrid, subscribeToSavedEvents, getOrganizerStats, getOrganizerEvents, checkIsFollowing } from '../utils/supabase/api';
-import type { ApiPost, Profile as UserProfile, Ticket, Event as AppEvent } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getProfilePostsGrid, subscribeToSavedEvents, getOrganizerStats, getOrganizerEvents, checkIsFollowing, getProfileStreamedVideos } from '../utils/supabase/api';
+import type { ApiPost, Profile as UserProfile, Ticket, Event as AppEvent, CloudflareStream } from '../utils/supabase/api';
 import { useProfileStore } from '../store/profileStore';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -22,6 +22,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const [attendedEvents, setAttendedEvents] = useState<AppEvent[]>([]);
   const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
   const [userPosts, setUserPosts] = useState<ApiPost[]>([]);
+  const [streamedVideos, setStreamedVideos] = useState<CloudflareStream[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [isLoadingMorePosts, setIsLoadingMorePosts] = useState(false);
@@ -30,6 +31,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const [isLoadingSavedEvents, setIsLoadingSavedEvents] = useState(false);
   const [isLoadingTickets, setIsLoadingTickets] = useState(false);
   const [isLoadingOrganizerEvents, setIsLoadingOrganizerEvents] = useState(false);
+  const [isLoadingStreamedVideos, setIsLoadingStreamedVideos] = useState(false);
   const [followStats, setFollowStats] = useState(isOwnProfileCheck && cachedFollowStats ? cachedFollowStats : { followers: 0, following: 0 });
   const [isFollowing, setIsFollowing] = useState(false);
 
@@ -38,6 +40,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const savedEventsLoadedRef = useRef(false);
   const ticketsLoadedRef = useRef(false);
   const organizerEventsLoadedRef = useRef(false);
+  const streamedVideosLoadedRef = useRef(false);
   const savedEventsSubscriptionRef = useRef<any>(null);
 
   const isOwnProfile = !userId || (currentUser && userId === currentUser.id);
@@ -87,9 +90,11 @@ export function useProfileData(userId?: string, activeTab?: string) {
         setTicketEvents([]);
         setAttendedEvents([]);
         setUserPosts(Array.isArray(cachedData?.posts) ? cachedData.posts : []);
+        setStreamedVideos([]);
         savedEventsLoadedRef.current = false;
         ticketsLoadedRef.current = false;
         organizerEventsLoadedRef.current = false;
+        streamedVideosLoadedRef.current = false;
         lastLoadedProfileIdRef.current = targetUserId;
       }
 
@@ -232,6 +237,20 @@ export function useProfileData(userId?: string, activeTab?: string) {
     }
   };
 
+  const loadStreamedVideosIfNeeded = async () => {
+    if (isLoadingStreamedVideos || streamedVideosLoadedRef.current) return;
+    const targetUserId = userId || currentUser?.id;
+    if (!targetUserId) return;
+    try {
+      setIsLoadingStreamedVideos(true);
+      const streams = await getProfileStreamedVideos(targetUserId);
+      setStreamedVideos(streams || []);
+      streamedVideosLoadedRef.current = true;
+    } finally {
+      setIsLoadingStreamedVideos(false);
+    }
+  };
+
   useEffect(() => {
     const handleProfileUpdated = () => { void loadData(); };
     window.addEventListener('profileUpdated', handleProfileUpdated as EventListener);
@@ -249,6 +268,10 @@ export function useProfileData(userId?: string, activeTab?: string) {
   useEffect(() => {
     if (activeTab === 'tickets') void loadTicketsIfNeeded();
   }, [activeTab, isOrganizer, currentUser?.id, userId]);
+
+  useEffect(() => {
+    if (activeTab === 'streamed') void loadStreamedVideosIfNeeded();
+  }, [activeTab, currentUser?.id, userId]);
 
   useEffect(() => {
     void loadTicketsIfNeeded();
@@ -314,6 +337,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
     attendedEvents,
     ticketEvents,
     userPosts,
+    streamedVideos,
     isLoading,
     isLoadingPosts,
     isLoadingMorePosts,
@@ -321,6 +345,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
     isLoadingSavedEvents,
     isLoadingOrganizerEvents,
     isLoadingTickets,
+    isLoadingStreamedVideos,
     followStats,
     isFollowing,
     isOwnProfile,

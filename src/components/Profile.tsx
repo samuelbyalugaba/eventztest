@@ -89,6 +89,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     attendedEvents,
     ticketEvents,
     userPosts,
+    streamedVideos,
     isLoading,
     isLoadingPosts,
     isLoadingMorePosts,
@@ -96,6 +97,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     isLoadingSavedEvents,
     isLoadingOrganizerEvents,
     isLoadingTickets,
+    isLoadingStreamedVideos,
     followStats,
     isFollowing,
     isOwnProfile,
@@ -309,6 +311,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         isLoadingTickets={isLoadingTickets}
         uniqueTicketGroups={uniqueTicketGroups}
         onTicketGroupClick={(tickets) => { setSelectedEventTickets(tickets); setShowTicketListModal(true); }}
+        isLoadingStreamedVideos={isLoadingStreamedVideos}
+        streamedVideos={streamedVideos}
       />
 
       {/* FAB */}

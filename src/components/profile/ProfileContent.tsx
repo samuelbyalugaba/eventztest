@@ -1,8 +1,8 @@
-import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon } from 'lucide-react';
+import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon, PlaySquare } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { EventCard } from '../EventCard';
 import type { ProfileTab } from './ProfileTabs';
-import type { ApiPost, Ticket, Event as AppEvent } from '../../utils/supabase/api';
+import type { ApiPost, Ticket, Event as AppEvent, CloudflareStream } from '../../utils/supabase/api';
 
 interface ProfileContentProps {
   activeTab: ProfileTab;
@@ -30,6 +30,9 @@ interface ProfileContentProps {
   isLoadingTickets: boolean;
   uniqueTicketGroups: Ticket[][];
   onTicketGroupClick: (tickets: Ticket[]) => void;
+  // Streamed
+  isLoadingStreamedVideos: boolean;
+  streamedVideos: CloudflareStream[];
 }
 
 export function ProfileContent({
@@ -54,6 +57,8 @@ export function ProfileContent({
   isLoadingTickets,
   uniqueTicketGroups,
   onTicketGroupClick,
+  isLoadingStreamedVideos,
+  streamedVideos,
 }: ProfileContentProps) {
   return (
     <div>
@@ -100,6 +105,77 @@ export function ProfileContent({
           onGroupClick={onTicketGroupClick}
         />
       )}
+
+      {activeTab === 'streamed' && (
+        <StreamedTab
+          isLoading={isLoadingStreamedVideos}
+          streams={streamedVideos}
+        />
+      )}
+    </div>
+  );
+}
+
+function formatDuration(totalSeconds?: number | null) {
+  if (!totalSeconds || totalSeconds <= 0) return null;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
+function getStreamPlaybackUrl(stream: CloudflareStream) {
+  if (stream.playback_url) return stream.playback_url;
+  return `https://iframe.videodelivery.net/${stream.uid}`;
+}
+
+function StreamedTab({ isLoading, streams }: { isLoading: boolean; streams: CloudflareStream[] }) {
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="aspect-video bg-gray-100 rounded-2xl animate-pulse" />
+        <div className="aspect-video bg-gray-100 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (streams.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+          <PlaySquare className="w-8 h-8 text-gray-300" />
+        </div>
+        <p className="text-gray-900 font-medium mb-1">Stream Recordings</p>
+        <p className="text-gray-500 text-sm max-w-xs mx-auto">Recordings saved to this profile will appear here for playback.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {streams.map((stream) => {
+        const duration = formatDuration(typeof stream.duration === 'number' ? stream.duration : null);
+        return (
+          <article key={stream.id} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <div className="aspect-video bg-black">
+              <iframe
+                src={getStreamPlaybackUrl(stream)}
+                title={stream.title || 'Streamed video'}
+                className="w-full h-full"
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                allowFullScreen
+              />
+            </div>
+            <div className="p-4">
+              <h3 className="text-gray-900 font-semibold line-clamp-2">{stream.title || stream.event?.title || 'Streamed video'}</h3>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                {stream.event?.title && <span>{stream.event.title}</span>}
+                {duration && <span>{duration}</span>}
+                {stream.created_at && <span>{new Date(stream.created_at).toLocaleDateString()}</span>}
+              </div>
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import { LayoutGrid, Ticket as TicketIcon, Calendar, Bookmark } from 'lucide-react';
+import { LayoutGrid, Ticket as TicketIcon, Calendar, Bookmark, PlaySquare } from 'lucide-react';
 
-export type ProfileTab = 'tickets' | 'events' | 'media' | 'saved' | 'my_events' | 'upcoming';
+export type ProfileTab = 'tickets' | 'events' | 'media' | 'streamed' | 'saved' | 'my_events' | 'upcoming';
 
 interface ProfileTabsProps {
   activeTab: ProfileTab;
@@ -13,6 +13,8 @@ export function ProfileTabs({ activeTab, onTabChange, isOwnProfile, isOrganizer 
   return (
     <div className="bg-gray-100 p-1.5 rounded-2xl flex mb-6 overflow-x-auto scrollbar-hide">
       <TabButton active={activeTab === 'media'} onClick={() => onTabChange('media')} icon={<LayoutGrid className="w-3.5 h-3.5" />} label="Posts" />
+
+      <TabButton active={activeTab === 'streamed'} onClick={() => onTabChange('streamed')} icon={<PlaySquare className="w-3.5 h-3.5" />} label="Streamed" />
 
       {isOwnProfile && !isOrganizer && (
         <TabButton active={activeTab === 'tickets'} onClick={() => onTabChange('tickets')} icon={<TicketIcon className="w-3.5 h-3.5" />} label="Tickets" />

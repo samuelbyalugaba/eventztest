@@ -1,5 +1,5 @@
 // Receives Cloudflare Stream webhook notifications (live input connect/disconnect, recording ready).
-// Updates the matching event's streaming state.
+// Updates the matching event's streaming state and saves completed recordings for profile playback.
 //
 // Configure in Cloudflare dashboard: Stream → Webhooks → add this function URL.
 // Cloudflare signs requests with HMAC SHA-256 in the `Webhook-Signature` header.
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Find event by live input uid (matches inside JSONB streaming.cf_live_input_uid)
     const { data: events, error } = await admin
       .from("events")
-      .select("id, streaming")
+      .select("id, organizer_id, title, image_url, streaming")
       .eq("streaming->>cf_live_input_uid", liveInputUid)
       .limit(1);
 
@@ -74,12 +74,91 @@ Deno.serve(async (req) => {
       .update({ streaming: updated })
       .eq("id", event.id);
 
+    const videoUid = getString(payload, [
+      "uid",
+      "video.uid",
+      "data.uid",
+      "data.video.uid",
+      "meta.uid",
+      "result.uid",
+    ]);
+
+    if (videoUid) {
+      const duration = getNumber(payload, [
+        "duration",
+        "video.duration",
+        "data.duration",
+        "data.video.duration",
+        "result.duration",
+      ]);
+      const thumbnail = getString(payload, [
+        "thumbnail",
+        "thumbnail_url",
+        "video.thumbnail",
+        "data.thumbnail",
+        "data.thumbnail_url",
+        "data.video.thumbnail",
+        "result.thumbnail",
+      ]);
+      const preview = getString(payload, [
+        "preview",
+        "preview_url",
+        "video.preview",
+        "data.preview",
+        "data.preview_url",
+        "data.video.preview",
+        "result.preview",
+      ]);
+
+      await admin
+        .from("cloudflare_streams")
+        .upsert({
+          user_id: event.organizer_id,
+          event_id: event.id,
+          uid: videoUid,
+          live_input_uid: liveInputUid,
+          title: getString(payload, ["name", "data.name", "video.name", "result.name"]) ||
+            event.title ||
+            "Streamed video",
+          thumbnail_url: thumbnail || event.image_url || null,
+          preview_url: preview || null,
+          playback_url: `https://iframe.videodelivery.net/${videoUid}`,
+          duration,
+          status: status || null,
+          raw_payload: payload,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "uid" });
+    }
+
     return new Response("ok", { status: 200 });
   } catch (err) {
     console.error("webhook error", err);
     return new Response("ok", { status: 200 }); // 200 so Cloudflare doesn't retry forever
   }
 });
+
+function getPath(source: unknown, path: string): unknown {
+  return path.split(".").reduce((value: any, key) => value?.[key], source as any);
+}
+
+function getString(source: unknown, paths: string[]): string | null {
+  for (const path of paths) {
+    const value = getPath(source, path);
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function getNumber(source: unknown, paths: string[]): number | null {
+  for (const path of paths) {
+    const value = getPath(source, path);
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) {
+      return Number(value);
+    }
+  }
+  return null;
+}
 
 async function verifyCfSignature(
   body: string,
