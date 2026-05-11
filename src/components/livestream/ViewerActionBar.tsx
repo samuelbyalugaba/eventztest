@@ -1,4 +1,4 @@
-import { Send, Share2, Heart, Gift, Volume2, VolumeX, MessageCircle, MessageCircleOff } from 'lucide-react';
+import { Send, Share2, Heart, Gift, Volume2, VolumeX, MessageCircle, MessageCircleOff, Maximize2, Minimize2, RotateCw } from 'lucide-react';
 
 interface ViewerActionBarProps {
   message: string;
@@ -9,6 +9,10 @@ interface ViewerActionBarProps {
   onGift: () => void;
   onMuteToggle: () => void;
   onToggleChat?: () => void;
+  onToggleFit?: () => void;
+  onRotate?: () => void;
+  fitMode?: 'contain' | 'cover';
+  showVideoControls?: boolean;
   isLiked: boolean;
   isMuted: boolean;
   isChatVisible?: boolean;
