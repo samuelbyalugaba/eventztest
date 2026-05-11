@@ -489,16 +489,36 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const renderVideo = (id?: string) => (
     <>
       {isHlsMode ? (
-        <div className="w-full h-full">
+        <div className="relative w-full h-full bg-black overflow-hidden">
           <video
             ref={hlsVideoRef}
             id={id || 'hls-player'}
-            className="w-full h-full object-contain bg-black"
+            className={`w-full h-full bg-black transition-transform duration-300 ${
+              fitMode === 'cover' ? 'object-cover' : 'object-contain'
+            } ${isRotated ? 'rotate-90 scale-[1.78]' : ''}`}
             playsInline
             autoPlay
             muted
             controls={false}
           />
+          {isMobile && isLandscapeSource && hlsReady && (
+            <div className="absolute top-3 right-3 z-30 flex gap-2">
+              <button
+                onClick={() => setFitMode((m) => (m === 'contain' ? 'cover' : 'contain'))}
+                className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
+                aria-label="Toggle fit mode"
+              >
+                {fitMode === 'contain' ? 'Fill' : 'Fit'}
+              </button>
+              <button
+                onClick={handleRotate}
+                className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold border border-white/20"
+                aria-label="Rotate to landscape"
+              >
+                ⤿ Rotate
+              </button>
+            </div>
+          )}
         </div>
       ) : remoteUsers.length > 0 ? (
         <div className="w-full h-full">
