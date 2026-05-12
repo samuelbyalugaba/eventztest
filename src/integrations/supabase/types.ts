@@ -50,6 +50,72 @@ export type Database = {
         }
         Relationships: []
       }
+      cloudflare_streams: {
+        Row: {
+          created_at: string
+          duration: number | null
+          event_id: number | null
+          id: number
+          live_input_uid: string | null
+          playback_url: string | null
+          preview_url: string | null
+          raw_payload: Json
+          status: string | null
+          thumbnail_url: string | null
+          title: string
+          uid: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration?: number | null
+          event_id?: number | null
+          id?: number
+          live_input_uid?: string | null
+          playback_url?: string | null
+          preview_url?: string | null
+          raw_payload?: Json
+          status?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          uid: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration?: number | null
+          event_id?: number | null
+          id?: number
+          live_input_uid?: string | null
+          playback_url?: string | null
+          preview_url?: string | null
+          raw_payload?: Json
+          status?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          uid?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cloudflare_streams_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cloudflare_streams_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           created_at: string | null
