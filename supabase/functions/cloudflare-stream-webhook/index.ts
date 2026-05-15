@@ -1,5 +1,5 @@
 // Receives Cloudflare Stream webhook notifications (live input connect/disconnect, recording ready).
-// Updates the matching event's streaming state and saves completed recordings for profile playback.
+// Updates the matching event's streaming state and saves completed recordings for replay playback.
 //
 // Configure in Cloudflare dashboard: Stream → Webhooks → add this function URL.
 // Cloudflare signs requests with HMAC SHA-256 in the `Webhook-Signature` header.
@@ -22,7 +22,6 @@ Deno.serve(async (req) => {
   try {
     const raw = await req.text();
 
-    // Verify Cloudflare signature when secret configured
     if (WEBHOOK_SECRET) {
       const sigHeader = req.headers.get("Webhook-Signature") || "";
       const ok = await verifyCfSignature(raw, sigHeader, WEBHOOK_SECRET);
@@ -30,41 +29,37 @@ Deno.serve(async (req) => {
     }
 
     const payload = JSON.parse(raw);
+    console.log("CF webhook payload:", JSON.stringify(payload).slice(0, 1500));
+
     const liveInputUid = getString(payload, [
-      "live_input_uid",
-      "liveInputUid",
-      "live_input.uid",
-      "liveInput.uid",
-      "input.uid",
-      "video.live_input_uid",
-      "video.liveInputUid",
-      "video.input.uid",
-      "data.live_input_uid",
-      "data.liveInputUid",
-      "data.live_input.uid",
-      "data.liveInput.uid",
-      "data.input.uid",
-      "data.video.live_input_uid",
-      "data.video.liveInputUid",
-      "data.video.input.uid",
-      "meta.live_input_uid",
-      "meta.liveInputUid",
-      "result.live_input_uid",
-      "result.liveInputUid",
-      "result.input.uid",
+      "live_input_uid", "liveInputUid", "live_input.uid", "liveInput.uid", "input.uid",
+      "video.live_input_uid", "video.liveInputUid", "video.input.uid",
+      "data.live_input_uid", "data.liveInputUid", "data.live_input.uid", "data.liveInput.uid",
+      "data.input.uid", "data.video.live_input_uid", "data.video.liveInputUid", "data.video.input.uid",
+      "meta.live_input_uid", "meta.liveInputUid",
+      "result.live_input_uid", "result.liveInputUid", "result.input.uid",
     ]);
     const status = getString(payload, [
-      "status",
-      "notification_type",
-      "event",
-      "type",
-      "data.status",
-      "data.event",
-      "data.type",
-      "video.status",
-      "result.status",
+      "status", "notification_type", "event", "type",
+      "data.status", "data.event", "data.type",
+      "video.status", "result.status",
     ]);
     const eventIdFromPayload = getEventIdFromPayload(payload);
+
+    // The recording's VOD UID — distinct from the live_input UID.
+    // Cloudflare delivers it in `uid` / `video.uid` for "video.live_input.recording.ready".
+    const videoUid = getString(payload, [
+      "uid", "id",
+      "video.uid", "video.id",
+      "data.uid", "data.id",
+      "data.video.uid", "data.video.id",
+      "meta.uid",
+      "result.uid", "result.id",
+    ]);
+
+    // If the event payload IS a live_input event itself, `uid` may equal liveInputUid.
+    // Treat as a recording only if it differs from the live input.
+    const isRecording = !!videoUid && videoUid !== liveInputUid;
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -79,7 +74,7 @@ Deno.serve(async (req) => {
     } else if (eventIdFromPayload) {
       query = query.eq("id", eventIdFromPayload);
     } else {
-      console.warn("Webhook missing live input uid and event id", payload);
+      console.warn("Webhook missing live input uid and event id");
       return new Response("ok", { status: 200 });
     }
 
@@ -93,62 +88,57 @@ Deno.serve(async (req) => {
     const event = events[0];
     const streaming = (event.streaming || {}) as Record<string, unknown>;
 
-    // Map Cloudflare status → our flags
-    const isConnect = /connect|live_input.*connected|streaming/i.test(
-      String(status),
-    );
+    const isConnect = /connect|live_input.*connected|streaming/i.test(String(status));
     const isDisconnect = /disconnect|stopped|ended/i.test(String(status));
+    const isRecordingReady = /recording.*ready|ready.*to.*stream|video\.ready/i.test(String(status)) || isRecording;
 
     let updated: Record<string, unknown> = { ...streaming, last_cf_status: status };
     if (isConnect) updated = { ...updated, isLive: true, startedAt: Date.now() };
-    if (isDisconnect) updated = { ...updated, isLive: false };
+    if (isDisconnect) updated = { ...updated, isLive: false, endedAt: Date.now() };
 
-    await admin
-      .from("events")
-      .update({ streaming: updated })
-      .eq("id", event.id);
-
-    const videoUid = getString(payload, [
-      "uid",
-      "id",
-      "video.uid",
-      "video.id",
-      "data.uid",
-      "data.id",
-      "data.video.uid",
-      "data.video.id",
-      "meta.uid",
-      "result.uid",
-      "result.id",
-    ]);
+    // HLS replay manifest from the recording's customer subdomain (preferred), with iframe fallback
+    let replayHls: string | null = null;
+    let replayThumb: string | null = null;
+    let replayPreview: string | null = null;
+    let replayDuration: number | null = null;
 
     if (videoUid) {
-      const duration = getNumber(payload, [
-        "duration",
-        "video.duration",
-        "data.duration",
-        "data.video.duration",
-        "result.duration",
-      ]);
-      const thumbnail = getString(payload, [
-        "thumbnail",
-        "thumbnail_url",
-        "video.thumbnail",
-        "data.thumbnail",
-        "data.thumbnail_url",
-        "data.video.thumbnail",
+      replayHls = getString(payload, [
+        "playback.hls", "video.playback.hls",
+        "data.playback.hls", "data.video.playback.hls",
+        "result.playback.hls",
+      ]) || `https://videodelivery.net/${videoUid}/manifest/video.m3u8`;
+
+      replayThumb = getString(payload, [
+        "thumbnail", "thumbnail_url",
+        "video.thumbnail", "data.thumbnail", "data.thumbnail_url", "data.video.thumbnail",
         "result.thumbnail",
       ]);
-      const preview = getString(payload, [
-        "preview",
-        "preview_url",
-        "video.preview",
-        "data.preview",
-        "data.preview_url",
-        "data.video.preview",
+      replayPreview = getString(payload, [
+        "preview", "preview_url",
+        "video.preview", "data.preview", "data.preview_url", "data.video.preview",
         "result.preview",
       ]);
+      replayDuration = getNumber(payload, [
+        "duration", "video.duration", "data.duration", "data.video.duration", "result.duration",
+      ]);
 
+      if (isRecordingReady) {
+        updated = {
+          ...updated,
+          isLive: false,
+          replayAvailable: true,
+          recording_uid: videoUid,
+          recording_url: replayHls,
+          replay_thumbnail: replayThumb || undefined,
+          recordingReadyAt: Date.now(),
+        };
+      }
+    }
+
+    await admin.from("events").update({ streaming: updated }).eq("id", event.id);
+
+    if (videoUid) {
       await admin
         .from("cloudflare_streams")
         .upsert({
@@ -157,12 +147,11 @@ Deno.serve(async (req) => {
           uid: videoUid,
           live_input_uid: liveInputUid || String(streaming.cf_live_input_uid || ""),
           title: getString(payload, ["name", "data.name", "video.name", "result.name"]) ||
-            event.title ||
-            "Streamed video",
-          thumbnail_url: thumbnail || event.image_url || null,
-          preview_url: preview || null,
-          playback_url: `https://iframe.videodelivery.net/${videoUid}`,
-          duration,
+            event.title || "Streamed video",
+          thumbnail_url: replayThumb || event.image_url || null,
+          preview_url: replayPreview || null,
+          playback_url: replayHls || `https://videodelivery.net/${videoUid}/manifest/video.m3u8`,
+          duration: replayDuration,
           status: status || null,
           raw_payload: payload,
           updated_at: new Date().toISOString(),
@@ -172,7 +161,7 @@ Deno.serve(async (req) => {
     return new Response("ok", { status: 200 });
   } catch (err) {
     console.error("webhook error", err);
-    return new Response("ok", { status: 200 }); // 200 so Cloudflare doesn't retry forever
+    return new Response("ok", { status: 200 });
   }
 });
 
@@ -190,29 +179,19 @@ function getString(source: unknown, paths: string[]): string | null {
 
 function getEventIdFromPayload(source: unknown): number | null {
   const direct = getNumber(source, [
-    "event_id",
-    "eventId",
-    "data.event_id",
-    "data.eventId",
-    "meta.event_id",
-    "meta.eventId",
-    "result.event_id",
-    "result.eventId",
+    "event_id", "eventId",
+    "data.event_id", "data.eventId",
+    "meta.event_id", "meta.eventId",
+    "result.event_id", "result.eventId",
   ]);
   if (direct && direct > 0) return direct;
 
   const name = getString(source, [
-    "name",
-    "data.name",
-    "video.name",
-    "data.video.name",
-    "result.name",
-    "meta.name",
-    "data.meta.name",
+    "name", "data.name", "video.name", "data.video.name", "result.name",
+    "meta.name", "data.meta.name",
   ]);
   const match = name?.match(/event-(\d+)/i);
   if (!match) return null;
-
   const eventId = Number(match[1]);
   return Number.isFinite(eventId) && eventId > 0 ? eventId : null;
 }
@@ -228,36 +207,18 @@ function getNumber(source: unknown, paths: string[]): number | null {
   return null;
 }
 
-async function verifyCfSignature(
-  body: string,
-  header: string,
-  secret: string,
-): Promise<boolean> {
-  // Cloudflare format: "time=TIMESTAMP,sig1=HEX_HMAC"
+async function verifyCfSignature(body: string, header: string, secret: string): Promise<boolean> {
   try {
-    const parts = Object.fromEntries(
-      header.split(",").map((p) => p.trim().split("=")),
-    );
+    const parts = Object.fromEntries(header.split(",").map((p) => p.trim().split("=")));
     const timestamp = parts.time;
     const sig = parts.sig1;
     if (!timestamp || !sig) return false;
-
     const enc = new TextEncoder();
     const key = await crypto.subtle.importKey(
-      "raw",
-      enc.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
+      "raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
     );
-    const mac = await crypto.subtle.sign(
-      "HMAC",
-      key,
-      enc.encode(`${timestamp}.${body}`),
-    );
-    const hex = [...new Uint8Array(mac)]
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+    const mac = await crypto.subtle.sign("HMAC", key, enc.encode(`${timestamp}.${body}`));
+    const hex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
     return hex === sig;
   } catch {
     return false;
