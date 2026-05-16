@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { EventGridSkeleton } from './skeletons/EventCardSkeleton';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Calendar, ChevronLeft, X, Filter, Search, Send, Star, CheckCircle2, MessageCircle } from 'lucide-react';
+import { Calendar, ChevronLeft, X, Filter, Search, Send, Star, CheckCircle2, MessageCircle, Music2, GraduationCap, BriefcaseBusiness, Palette, Landmark, Dumbbell } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { Conversation } from '../types';
@@ -32,6 +32,24 @@ type LocationOption = {
   flag?: string;
   icon?: React.ReactNode;
 };
+
+type CategoryOption = {
+  id: string;
+  name: string;
+  chipName?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  subcategories?: string[];
+};
+
+const categories: CategoryOption[] = [
+  { id: 'all', name: 'All' },
+  { id: 'entertainment', name: 'Entertainment', icon: Music2, subcategories: ['Concerts', 'Club Nights', 'Live Performances', 'Nightlife (Bars/Lounges)', 'Themed Parties'] },
+  { id: 'education', name: 'Education', icon: GraduationCap, subcategories: ['Workshops', 'Seminars', 'Webinars'] },
+  { id: 'business & tech', name: 'Business & Tech', chipName: 'Business', icon: BriefcaseBusiness, subcategories: ['Startup Events', 'Networking', 'Conferences', 'Tech Talks'] },
+  { id: 'culture', name: 'Culture', icon: Palette, subcategories: ['Festivals', 'Arts', 'Theater', 'Food & Drink', 'Local Traditions', 'Fashion Events'] },
+  { id: 'religion', name: 'Religion', icon: Landmark, subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
+  { id: 'sports & fitness', name: 'Sports & Fitness', chipName: 'Sports', icon: Dumbbell, subcategories: ['Fitness Classes', 'Competitions', 'Sports Events'] },
+];
 
 interface EventDetailsProps {
   conversations: Conversation[];
@@ -163,15 +181,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     }
   }, [globalConversations, activeConversation]);
 
-  const categories = [
-    { id: 'all', name: 'All' },
-    { id: 'entertainment', name: 'Entertainment', subcategories: ['Concerts', 'Club Nights', 'Live Performances', 'Nightlife (Bars/Lounges)', 'Themed Parties'] },
-    { id: 'education', name: 'Education', subcategories: ['Workshops', 'Seminars', 'Webinars'] },
-    { id: 'culture', name: 'Culture', subcategories: ['Festivals', 'Arts', 'Theater', 'Food & Drink', 'Local Traditions', 'Fashion Events'] },
-    { id: 'religion', name: 'Religion', subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
-    { id: 'business & tech', name: 'Business & Tech', subcategories: ['Startup Events', 'Networking', 'Conferences', 'Tech Talks'] },
-    { id: 'sports & fitness', name: 'Sports & Fitness', subcategories: ['Fitness Classes', 'Competitions', 'Sports Events'] },
-  ];
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setSelectedSubcategory('');
+  };
 
   const filteredEvents = React.useMemo(() => {
     return events.filter(event => {
@@ -407,8 +420,34 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
           {/* Filters */}
           <div className="mt-4">
-            {hasActiveFilters && (
-              <div className="flex gap-2 mb-4 flex-wrap">
+            <div className="-mx-4 overflow-x-auto px-4 pb-2 scrollbar-hide">
+              <div className="flex w-max items-center gap-2">
+                {categories.map((category) => {
+                  const Icon = category.icon;
+                  const isSelected = selectedCategory === category.id;
+
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => handleCategorySelect(category.id)}
+                      className={`flex h-8 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-all ${
+                        isSelected
+                          ? 'border-gray-950 bg-gray-950 text-white shadow-sm'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
+                      }`}
+                    >
+                      {Icon && <Icon className="h-3.5 w-3.5" />}
+                      <span>{category.chipName || category.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {(selectedLocation !== 'all' || selectedSubcategory !== '') && (
+              <div className="flex gap-2 mb-4 mt-2 flex-wrap">
                 {selectedLocation !== 'all' && (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
                     <span>{String((locations.find(l => l.id === selectedLocation) as any)?.name || selectedLocation).split(',')[0]}</span>
@@ -420,21 +459,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     </button>
                   </div>
                 )}
-                {selectedSubcategory !== '' ? (
+                {selectedSubcategory !== '' && (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
                     <span>{selectedSubcategory}</span>
                     <button 
                       onClick={() => setSelectedSubcategory('')}
-                      className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : selectedCategory !== 'all' && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                    <span>{categories.find(c => c.id === selectedCategory)?.name}</span>
-                    <button 
-                      onClick={() => setSelectedCategory('all')}
                       className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
                     >
                       <X className="w-3 h-3" />
@@ -587,13 +616,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   {categories.map((category) => (
                     <button
                       key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
+                      onClick={() => handleCategorySelect(category.id)}
                       className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm transition-all border ${
                         selectedCategory === category.id
                           ? 'bg-purple-600 text-white border-purple-600 shadow-md'
                           : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                       }`}
                     >
+                      {category.icon && <category.icon className="w-4 h-4" />}
                       <span>{category.name}</span>
                     </button>
                   ))}
