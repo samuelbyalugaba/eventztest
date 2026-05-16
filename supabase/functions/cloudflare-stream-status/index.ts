@@ -19,7 +19,11 @@ Deno.serve(async (req) => {
 
   try {
     if (!CF_ACCOUNT_ID || !CF_STREAM_TOKEN) {
-      return json({ error: "Cloudflare not configured" }, 500);
+      return json({
+        configured: false,
+        results: [],
+        message: "Cloudflare Stream credentials are not configured",
+      });
     }
     const body = await req.json().catch(() => ({}));
     const eventId = body.eventId ? Number(body.eventId) : null;

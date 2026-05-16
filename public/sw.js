@@ -1,6 +1,6 @@
-const STATIC_CACHE = 'eventz-static-v4';
-const RUNTIME_CACHE = 'eventz-runtime-v4';
-const IMAGE_CACHE = 'eventz-images-v4';
+const STATIC_CACHE = 'eventz-static-v5';
+const RUNTIME_CACHE = 'eventz-runtime-v5';
+const IMAGE_CACHE = 'eventz-images-v5';
 const IMAGE_CACHE_MAX = 200;
 const CURRENT_CACHES = [STATIC_CACHE, RUNTIME_CACHE, IMAGE_CACHE];
 
@@ -21,6 +21,14 @@ const isWsrvRequest = (url) => url.hostname === 'wsrv.nl';
 const isImageRequest = (request) => {
   const accept = request.headers.get('accept') || '';
   return request.destination === 'image' || accept.includes('image/');
+};
+const isBuildAssetRequest = (request, url) => {
+  return request.destination === 'script' ||
+    request.destination === 'style' ||
+    request.destination === 'worker' ||
+    request.destination === 'manifest' ||
+    url.pathname.startsWith('/assets/') ||
+    /\.(js|mjs|css)$/i.test(url.pathname);
 };
 
 const pruneImageCache = async () => {
@@ -70,7 +78,7 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then((response) => {
           if (isCacheableResponse(response)) {
             const responseToCache = response.clone();
@@ -105,6 +113,27 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (!isSameOrigin) return;
+
+  if (isBuildAssetRequest(event.request, url)) {
+    event.respondWith(
+      caches.open(RUNTIME_CACHE).then(async (cache) => {
+        const cachedResponse = await cache.match(event.request);
+
+        try {
+          const response = await fetch(event.request, { cache: 'no-store' });
+          if (isCacheableResponse(response)) {
+            cache.put(event.request, response.clone());
+          }
+          if (!response.ok && cachedResponse) return cachedResponse;
+          return response;
+        } catch {
+          if (cachedResponse) return cachedResponse;
+          return new Response('Offline - Please check your connection', { status: 503 });
+        }
+      })
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

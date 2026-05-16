@@ -10,6 +10,22 @@ interface State {
   componentStack: string | null;
 }
 
+const CHUNK_RELOAD_KEY = 'eventz-chunk-reload-attempted-at';
+const CHUNK_RELOAD_WINDOW_MS = 60_000;
+
+const isDynamicImportError = (error: Error | null) => {
+  const message = String(error?.message || '');
+  const name = String((error as any)?.name || '');
+
+  return (
+    name.includes('ChunkLoadError') ||
+    /failed to fetch dynamically imported module/i.test(message) ||
+    /error loading dynamically imported module/i.test(message) ||
+    /importing a module script failed/i.test(message) ||
+    /loading chunk \d+ failed/i.test(message)
+  );
+};
+
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
@@ -23,6 +39,36 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(_error: Error, errorInfo: ErrorInfo) {
     this.setState({ componentStack: errorInfo.componentStack || null });
+    void this.recoverFromChunkLoadError(_error);
+  }
+
+  private async recoverFromChunkLoadError(error: Error) {
+    if (!isDynamicImportError(error)) return;
+
+    const lastAttempt = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
+    if (Number.isFinite(lastAttempt) && Date.now() - lastAttempt < CHUNK_RELOAD_WINDOW_MS) {
+      return;
+    }
+
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+
+    try {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames
+            .filter((cacheName) => cacheName.startsWith('eventz-'))
+            .map((cacheName) => caches.delete(cacheName))
+        );
+      }
+
+      const registrations = await navigator.serviceWorker?.getRegistrations?.();
+      await Promise.all((registrations || []).map((registration) => registration.update()));
+    } catch {
+      // Best-effort cleanup; reload still gives the browser a chance to fetch the new bundle.
+    }
+
+    window.location.reload();
   }
 
   public render() {
