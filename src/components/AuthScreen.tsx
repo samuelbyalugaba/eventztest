@@ -212,10 +212,10 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
         <div className="mb-6 text-center">
           <div className="text-xs font-semibold tracking-[0.3em] text-gray-500">EVENTZ</div>
           <div className="mt-2 text-2xl font-semibold text-gray-900">
-            {isLogin ? 'Sign in' : 'Create account'}
+            {isLogin ? 'Sign in' : 'Join Eventz'}
           </div>
           <div className="mt-1 text-sm text-gray-600">
-            {isLogin ? 'Use your email and password to continue.' : 'Create an account to get started.'}
+            {isLogin ? 'Use your email and password to continue.' : 'Discover Events. Go Live. Get Tickets'}
           </div>
         </div>
 
@@ -348,7 +348,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                     value={formData.fullName}
                     onChange={handleInputChange}
                     className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
-                    placeholder="John Doe"
+                    placeholder="Full Name"
                     disabled={isSubmitting}
                     autoComplete="name"
                   />
@@ -363,7 +363,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                     value={formData.email}
                     onChange={handleInputChange}
                     className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
-                    placeholder="you@example.com"
+                    placeholder="Email"
                     disabled={isSubmitting}
                     autoComplete="email"
                     inputMode="email"

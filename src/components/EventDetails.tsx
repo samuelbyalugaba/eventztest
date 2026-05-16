@@ -19,7 +19,7 @@ import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/n
 import { eventsStore } from '../store/eventStore';
 
 const locations = [
-  { id: 'all', name: 'All Locations' },
+  { id: 'all', name: 'Worldwide' },
   { id: 'Atlanta', name: 'Atlanta, USA' },
   { id: 'Dar es Salaam', name: 'Dar es Salaam, Tanzania' },
   { id: 'Zanzibar', name: 'Zanzibar, Tanzania' },
@@ -44,7 +44,7 @@ type CategoryOption = {
 type TimeFilterId = 'all' | 'today' | 'tomorrow' | 'weekend' | 'month';
 
 type TimeFilterOption = {
-  id: Exclude<TimeFilterId, 'all'>;
+  id: TimeFilterId;
   name: string;
 };
 
@@ -59,6 +59,7 @@ const categories: CategoryOption[] = [
 ];
 
 const timeFilters: TimeFilterOption[] = [
+  { id: 'all', name: 'All Upcoming Events' },
   { id: 'today', name: 'Today' },
   { id: 'tomorrow', name: 'Tomorrow' },
   { id: 'weekend', name: 'This Weekend' },
@@ -412,7 +413,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   const hasActiveFilters = selectedLocation !== 'all' || selectedCategory !== 'all' || selectedSubcategory !== '' || selectedTimeFilter !== 'all';
   const activeFiltersCount = (selectedLocation !== 'all' ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (selectedSubcategory !== '' ? 1 : 0) + (selectedTimeFilter !== 'all' ? 1 : 0);
-  const selectedTimeFilterName = timeFilters.find(filter => filter.id === selectedTimeFilter)?.name;
+  const selectedTimeFilterName = selectedTimeFilter === 'all'
+    ? undefined
+    : timeFilters.find(filter => filter.id === selectedTimeFilter)?.name;
 
   // Ticket Purchase Handlers
   const handlePurchaseTicket = (event: ApiEvent) => {
@@ -612,7 +615,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                             type="button"
                             aria-pressed={isSelected}
                             onClick={() => {
-                              setSelectedTimeFilter(isSelected ? 'all' : filter.id);
+                              setSelectedTimeFilter(filter.id);
                               setShowWhenMenu(false);
                             }}
                             className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-semibold transition-colors ${

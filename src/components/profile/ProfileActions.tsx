@@ -60,9 +60,9 @@ export function ProfileActions({
                 className="w-8 h-8 object-contain transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="text-gray-900 font-bold text-sm">Become a Creator</h3>
-              <p className="text-gray-500 text-xs">Create events and go live</p>
+              <p className="text-gray-500 text-xs leading-snug">Go live, host events & grow your audience</p>
             </div>
           </div>
           <div className="text-gray-400 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-gray-500">

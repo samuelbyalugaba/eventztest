@@ -202,6 +202,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     return acc;
   }, {} as Record<number, Ticket[]>);
   const uniqueTicketGroups = Object.values(groupedTickets);
+  const pastHostedEvents = publishedEvents.filter(e => new Date(e.date) < new Date());
+  const pastHostedEventIds = new Set(pastHostedEvents.map((event) => event.id));
+  const additionalHostedStreams = streamedVideos.filter((stream) => !stream.event_id || !pastHostedEventIds.has(stream.event_id));
+  const hostedCount = pastHostedEvents.length + additionalHostedStreams.length;
 
   const handleFollow = async () => {
     const targetUserId = userId || currentUser?.id;
@@ -255,7 +259,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
       <ProfileStats
         isOrganizer={isOrganizer}
-        hostedCount={publishedEvents.filter(e => new Date(e.date) < new Date()).length}
+        hostedCount={hostedCount}
         attendedCount={attendedEvents.length}
         followers={followStats.followers}
         following={followStats.following}
@@ -364,8 +368,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       )}
       {showEventListModal && (
           <EventListModal
-            title={isOrganizer ? "Past Hosted Events" : "Attended Events"}
-            events={isOrganizer ? publishedEvents.filter(e => new Date(e.date) < new Date()) : (attendedEvents as any)}
+            title={isOrganizer ? "Hosted" : "Attended Events"}
+            events={isOrganizer ? pastHostedEvents : (attendedEvents as any)}
+            streams={isOrganizer ? streamedVideos : []}
             onClose={() => setShowEventListModal(false)}
             onEventClick={(event) => {
               setSelectedEvent(event);

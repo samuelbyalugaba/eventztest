@@ -238,7 +238,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   };
 
   const loadStreamedVideosIfNeeded = async () => {
-    if (isLoadingStreamedVideos) return;
+    if (isLoadingStreamedVideos || streamedVideosLoadedRef.current) return;
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
     try {
@@ -272,6 +272,10 @@ export function useProfileData(userId?: string, activeTab?: string) {
   useEffect(() => {
     if (activeTab === 'streamed') void loadStreamedVideosIfNeeded();
   }, [activeTab, currentUser?.id, userId]);
+
+  useEffect(() => {
+    if (isOrganizer) void loadStreamedVideosIfNeeded();
+  }, [isOrganizer, currentUser?.id, userId]);
 
   useEffect(() => {
     void loadTicketsIfNeeded();
