@@ -6,6 +6,7 @@ import { ShareModal } from './ShareModal';
 import { supabase } from '../utils/supabase/client';
 import { currencies, extractCurrencyFromPrice } from '../utils/currencies';
 import { createEvent, updateEvent, uploadImage, getProfile, getEventAnalytics } from '../utils/supabase/api';
+import { eventsStore } from '../store/eventStore';
 import { EventPreview } from './create-event/EventPreview';
 import { EventSuccessScreen } from './create-event/EventSuccessScreen';
 
@@ -303,12 +304,14 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
       if (isEditing && savedEventId) {
         await updateEvent(savedEventId, eventData);
+        eventsStore.invalidate();
         setCurrentStatus('published');
         toast.success('Event updated successfully! ✏️', { description: 'Your changes have been saved' });
         window.dispatchEvent(new Event('eventsUpdated'));
         if (onBack) onBack();
       } else {
         const newEvent = await createEvent(eventData);
+        eventsStore.invalidate();
         setSavedEventId(newEvent.id);
         setCurrentStatus('published');
         toast.success('Event published successfully', { description: 'Your event is now live on EVENTZ' });

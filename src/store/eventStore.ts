@@ -38,6 +38,14 @@ export const eventsStore = {
     }
     listeners.forEach(listener => listener());
   },
+
+  invalidate: () => {
+    lastFetchTime = 0;
+    try {
+      localStorage.removeItem(STORAGE_TIMESTAMP_KEY);
+    } catch (e) {
+    }
+  },
   
   subscribe: (listener: () => void) => {
     listeners.add(listener);
