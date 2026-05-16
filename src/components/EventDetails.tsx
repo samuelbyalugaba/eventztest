@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { EventGridSkeleton } from './skeletons/EventCardSkeleton';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Calendar, ChevronLeft, X, Filter, Search, Send, Star, CheckCircle2, MessageCircle, Music2, GraduationCap, BriefcaseBusiness, Palette, Landmark, Dumbbell } from 'lucide-react';
+import { Calendar, CalendarDays, ChevronDown, ChevronLeft, X, Filter, Search, Send, Star, CheckCircle2, MessageCircle, Music2, GraduationCap, BriefcaseBusiness, Palette, Landmark, Dumbbell } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { Conversation } from '../types';
@@ -41,6 +41,13 @@ type CategoryOption = {
   subcategories?: string[];
 };
 
+type TimeFilterId = 'all' | 'today' | 'tomorrow' | 'weekend' | 'month';
+
+type TimeFilterOption = {
+  id: Exclude<TimeFilterId, 'all'>;
+  name: string;
+};
+
 const categories: CategoryOption[] = [
   { id: 'all', name: 'All' },
   { id: 'entertainment', name: 'Entertainment', icon: Music2, subcategories: ['Concerts', 'Club Nights', 'Live Performances', 'Nightlife (Bars/Lounges)', 'Themed Parties'] },
@@ -50,6 +57,58 @@ const categories: CategoryOption[] = [
   { id: 'religion', name: 'Religion', icon: Landmark, subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
   { id: 'sports & fitness', name: 'Sports & Fitness', chipName: 'Sports', icon: Dumbbell, subcategories: ['Fitness Classes', 'Competitions', 'Sports Events'] },
 ];
+
+const timeFilters: TimeFilterOption[] = [
+  { id: 'today', name: 'Today' },
+  { id: 'tomorrow', name: 'Tomorrow' },
+  { id: 'weekend', name: 'This Weekend' },
+  { id: 'month', name: 'This Month' },
+];
+
+const startOfDay = (date: Date) => {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const getEventDateTime = (event: ApiEvent) => {
+  try {
+    const dateStr = event.date;
+    const timeStr = event.time ? String(event.time).replace(/\s+/g, '') : '00:00';
+    return new Date(`${dateStr} ${timeStr}`);
+  } catch (e) {
+    return new Date(event.date);
+  }
+};
+
+const matchesTimeFilter = (eventDate: Date, filterId: TimeFilterId, now: Date) => {
+  if (filterId === 'all') return true;
+
+  const todayStart = startOfDay(now);
+  let start = todayStart;
+  let end = addDays(todayStart, 1);
+
+  if (filterId === 'tomorrow') {
+    start = addDays(todayStart, 1);
+    end = addDays(todayStart, 2);
+  } else if (filterId === 'weekend') {
+    const day = now.getDay();
+    const daysUntilSaturday = day === 0 ? -1 : 6 - day;
+    start = addDays(todayStart, daysUntilSaturday);
+    end = addDays(start, 2);
+  } else if (filterId === 'month') {
+    start = todayStart;
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  }
+
+  return eventDate >= start && eventDate < end;
+};
 
 interface EventDetailsProps {
   conversations: Conversation[];
@@ -146,6 +205,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState<TimeFilterId>('all');
+  const [showWhenMenu, setShowWhenMenu] = useState(false);
   const handleEventClick = (event: ApiEvent) => {
     const backgroundBase = (location.state as any)?.backgroundLocation || location;
     navigate(`/event/${event.id}`, { state: { backgroundLocation: backgroundBase } });
@@ -204,18 +265,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   const { upcomingEvents, pastEvents } = React.useMemo(() => {
     const now = new Date();
-    const getEventDateTime = (event: ApiEvent) => {
-      try {
-        const dateStr = event.date;
-        const timeStr = event.time ? event.time.replace(' ', '') : '00:00';
-        return new Date(`${dateStr} ${timeStr}`);
-      } catch (e) {
-        return new Date(event.date);
-      }
-    };
-
     const upcoming = filteredEvents
-      .filter(e => getEventDateTime(e) >= now)
+      .filter(e => {
+        const eventDate = getEventDateTime(e);
+        return eventDate >= now && matchesTimeFilter(eventDate, selectedTimeFilter, now);
+      })
       .sort((a, b) => getEventDateTime(a).getTime() - getEventDateTime(b).getTime());
 
     const past = filteredEvents
@@ -223,7 +277,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       .sort((a, b) => getEventDateTime(b).getTime() - getEventDateTime(a).getTime());
       
     return { upcomingEvents: upcoming, pastEvents: past };
-  }, [filteredEvents]);
+  }, [filteredEvents, selectedTimeFilter]);
 
   useEffect(() => {
     const q = locationSearch.trim();
@@ -356,8 +410,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     setMessageText('');
   };
 
-  const hasActiveFilters = selectedLocation !== 'all' || selectedCategory !== 'all' || selectedSubcategory !== '';
-  const activeFiltersCount = (selectedLocation !== 'all' ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (selectedSubcategory !== '' ? 1 : 0);
+  const hasActiveFilters = selectedLocation !== 'all' || selectedCategory !== 'all' || selectedSubcategory !== '' || selectedTimeFilter !== 'all';
+  const activeFiltersCount = (selectedLocation !== 'all' ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0) + (selectedSubcategory !== '' ? 1 : 0) + (selectedTimeFilter !== 'all' ? 1 : 0);
+  const selectedTimeFilterName = timeFilters.find(filter => filter.id === selectedTimeFilter)?.name;
 
   // Ticket Purchase Handlers
   const handlePurchaseTicket = (event: ApiEvent) => {
@@ -475,6 +530,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     setSelectedLocation('all');
                     setSelectedCategory('all');
                     setSelectedSubcategory('');
+                    setSelectedTimeFilter('all');
                   }}
                   className="px-3 py-1.5 text-purple-600 text-sm hover:bg-purple-50 rounded-lg transition-colors"
                 >
@@ -512,8 +568,67 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
           {/* Events List */}
           <div className={hasActiveFilters ? "space-y-6 mt-4" : "space-y-6 mt-2"}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-gray-900 font-bold text-lg">Upcoming Events</h3>
+            <div className="relative flex items-start justify-between gap-3">
+              {showWhenMenu && (
+                <button
+                  type="button"
+                  aria-label="Close when filter"
+                  className="fixed inset-0 z-20 cursor-default"
+                  onClick={() => setShowWhenMenu(false)}
+                />
+              )}
+              <div className="min-w-0">
+                <h3 className="text-gray-900 font-bold text-lg leading-tight">Upcoming Events</h3>
+                <p className="mt-1 text-xs font-medium text-gray-500">
+                  {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'} found
+                </p>
+              </div>
+              <div className="relative z-30 flex-shrink-0">
+                <button
+                  type="button"
+                  aria-expanded={showWhenMenu}
+                  onClick={() => setShowWhenMenu((open) => !open)}
+                  className={`flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold shadow-sm transition-all ${
+                    selectedTimeFilter !== 'all'
+                      ? 'border-purple-200 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
+                  }`}
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  <span>{selectedTimeFilterName || 'When'}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showWhenMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showWhenMenu && (
+                  <div className="absolute right-0 top-11 z-30 w-52 overflow-hidden rounded-2xl border border-gray-100 bg-white py-3 shadow-xl">
+                    <div className="px-4 pb-2 text-[10px] font-bold uppercase text-gray-500">Filter by time</div>
+                    <div className="space-y-1">
+                      {timeFilters.map((filter) => {
+                        const isSelected = selectedTimeFilter === filter.id;
+
+                        return (
+                          <button
+                            key={filter.id}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => {
+                              setSelectedTimeFilter(isSelected ? 'all' : filter.id);
+                              setShowWhenMenu(false);
+                            }}
+                            className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
+                              isSelected
+                                ? 'bg-purple-50 text-purple-700'
+                                : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {filter.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-5">
@@ -637,6 +752,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   setSelectedLocation('all');
                   setSelectedCategory('all');
                   setSelectedSubcategory('');
+                  setSelectedTimeFilter('all');
                 }}
                 className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
               >
