@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from '../utils/supabase/client';
 import { checkUsernameUnique } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import authLogoBlack from '../assets/auth-logo-black.png';
 
 interface AuthScreenProps {
   onAuthSuccess: (accessToken: string, user: any) => void;
@@ -210,12 +211,16 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
     >
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <div className="text-xs font-semibold tracking-[0.3em] text-gray-500">EVENTZ</div>
+          <img
+            src={authLogoBlack}
+            alt="Eventz"
+            className="mx-auto h-14 w-14 object-contain"
+          />
           <div className="mt-2 text-2xl font-semibold text-gray-900">
             {isLogin ? 'Sign in' : 'Join Eventz'}
           </div>
           <div className="mt-1 text-sm text-gray-600">
-            {isLogin ? 'Use your email and password to continue.' : 'Discover Events. Go Live. Get Tickets'}
+            Discover Events. Go Live. Get Tickets
           </div>
         </div>
 
@@ -250,7 +255,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
             <TabsContent value="login" className="mt-4">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-800 block text-left">Email</label>
+                  <label className="text-sm font-medium text-gray-800 block text-left">Your Email</label>
                   <input
                     name="email"
                     type="email"
@@ -258,7 +263,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                     value={formData.email}
                     onChange={handleInputChange}
                     className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
-                    placeholder="you@example.com"
+                    placeholder="Email"
                     disabled={isSubmitting}
                     autoComplete="email"
                     inputMode="email"
@@ -340,7 +345,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
             <TabsContent value="signup" className="mt-4">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-800 block text-left">Full name</label>
+                  <label className="text-sm font-medium text-gray-800 block text-left">Your Name</label>
                   <input
                     name="fullName"
                     type="text"
@@ -355,7 +360,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-800 block text-left">Email</label>
+                  <label className="text-sm font-medium text-gray-800 block text-left">Your Email</label>
                   <input
                     name="email"
                     type="email"
