@@ -205,18 +205,22 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
 
   return (
     <div
-      className={`w-full flex items-center justify-center px-4 py-10 sm:px-6 ${
-        embedded ? 'min-h-[60vh] bg-transparent' : 'min-h-[100dvh] bg-gray-50'
+      className={`w-full flex items-start justify-center px-4 pb-10 sm:px-6 ${
+        embedded
+          ? 'min-h-[60vh] bg-transparent pt-8'
+          : 'min-h-[100dvh] bg-gray-50 pt-[clamp(5rem,17vh,9rem)]'
       }`}
     >
       <div className="w-full max-w-md">
-        <div className="mb-6 text-center">
-          <img
-            src={authLogoBlack}
-            alt="Eventz"
-            className="mx-auto h-14 w-14 object-contain"
-          />
-          <div className="mt-2 text-2xl font-semibold text-gray-900">
+        <div className="mb-6 min-h-[7.25rem] text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center overflow-visible">
+            <img
+              src={authLogoBlack}
+              alt="Eventz"
+              className="h-12 w-12 scale-[1.55] object-contain"
+            />
+          </div>
+          <div className="mt-3 text-2xl font-semibold text-gray-900">
             {isLogin ? 'Sign in' : 'Join Eventz'}
           </div>
           <div className="mt-1 text-sm text-gray-600">

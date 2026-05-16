@@ -571,7 +571,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
           {/* Events List */}
           <div className={hasActiveFilters ? "space-y-6 mt-4" : "space-y-6 mt-2"}>
-            <div className="relative flex items-start justify-between gap-3">
+            <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
               {showWhenMenu && (
                 <button
                   type="button"
@@ -580,9 +580,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   onClick={() => setShowWhenMenu(false)}
                 />
               )}
-              <div className="min-w-0">
-                <h3 className="text-gray-900 font-bold text-lg leading-tight">Upcoming Events</h3>
-                <p className="mt-1 text-xs font-medium text-gray-500">
+              <div className="min-w-0 pr-1">
+                <h3 className="truncate text-gray-900 font-bold text-lg leading-tight">Upcoming Events</h3>
+                <p className="mt-1 h-4 whitespace-nowrap text-xs font-medium leading-4 text-gray-500 tabular-nums">
                   {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'} found
                 </p>
               </div>

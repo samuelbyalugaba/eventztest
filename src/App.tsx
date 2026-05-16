@@ -194,9 +194,10 @@ export default function App() {
   const profileScrollRef = useRef<HTMLDivElement>(null);
   const routeScrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to top on tab switch (except for feed)
+  // Scroll to top on actual tab/page switches, but keep the list position when
+  // opening modal routes over the current tab.
   useEffect(() => {
-    const isTabSwitch = prevTabPathRef.current !== location.pathname;
+    const isTabSwitch = prevTabPathRef.current !== effectivePath;
     if (isTabSwitch) {
       if (isEventsTab && eventsScrollRef.current) eventsScrollRef.current.scrollTop = 0;
       if (isLiveTab && liveScrollRef.current) liveScrollRef.current.scrollTop = 0;
@@ -206,8 +207,8 @@ export default function App() {
       // Also reset window scroll just in case something is using it
       window.scrollTo(0, 0);
     }
-    prevTabPathRef.current = location.pathname;
-  }, [location.pathname, isEventsTab, isLiveTab, isOwnProfileTab]);
+    prevTabPathRef.current = effectivePath;
+  }, [effectivePath, isEventsTab, isLiveTab, isOwnProfileTab]);
 
   if (isCheckingAuth) {
     return (
