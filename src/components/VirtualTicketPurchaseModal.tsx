@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { X, Tv, CheckCircle2, User, Mail, Smartphone, ArrowRight, Wallet } from 'lucide-react';
+import { X, Tv, CheckCircle2, User, Mail, ArrowRight, Wallet, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { createTicket, createTransaction, initiateSnippePayment, waitForTransactionCompletion } from '../utils/supabase/api';
+import { createTicket, createTransaction } from '../utils/supabase/api';
 import { extractCurrencyFromPrice, formatPrice } from '../utils/currencies';
-import { getMobileMoneyMinimumMessage, isBelowMobileMoneyMinimum, MOBILE_MONEY_MINIMUM_TZS } from '../utils/paymentLimits';
 import type { Event as ApiEvent } from '../utils/supabase/api';
-import { ntzsApi } from '../utils/ntzs-api';
+import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, WALLET_PAYMENT_METHODS, type WalletPaymentMethod } from '../utils/walletCheckout';
 
 interface VirtualTicketPurchaseModalProps {
   isOpen: boolean;
@@ -14,17 +13,10 @@ interface VirtualTicketPurchaseModalProps {
   event: ApiEvent;
 }
 
-const PAYMENT_PROVIDERS = [
-  { id: 'Wallet', name: 'Wallet', color: 'bg-purple-600', short: 'W' },
-  { id: 'Airtel', name: 'Airtel', color: 'bg-red-500', short: 'A' },
-  { id: 'Tigo', name: 'Tigo', color: 'bg-blue-500', short: 'T' },
-  { id: 'Halopesa', name: 'Halo', color: 'bg-orange-500', short: 'H' },
-  { id: 'Mpesa', name: 'M-Pesa', color: 'bg-red-600', short: 'M' }
-];
-
 export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTicketPurchaseModalProps) {
-  const [ticketFormData, setTicketFormData] = useState({ name: '', email: '', phone: '' });
-  const [selectedProvider, setSelectedProvider] = useState(PAYMENT_PROVIDERS[1].id); // Default to Airtel
+  const [ticketFormData, setTicketFormData] = useState({ name: '', email: '' });
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<WalletPaymentMethod>('Wallet');
+  const [paymentPhone, setPaymentPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'details' | 'success'>('details');
   const [walletBalance, setWalletBalance] = useState(0);
@@ -43,17 +35,9 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
           }));
         }
 
-        // Fetch Wallet Balance
-        // First get or create nTZS user to get the internal ID
         try {
-          // Use nTZS API for real balance
-          const nUser = await ntzsApi.getUser(user.id, user.email || '');
-          if (nUser && nUser.id) {
-            const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
-            setWalletBalance(balanceTzs || 0);
-          } else {
-            setWalletBalance(0);
-          }
+          const { balanceTzs } = await loadNtzsWalletBalance(user.id, user.email || '');
+          setWalletBalance(balanceTzs);
         } catch (err) {
           // Fallback to 0 if API fails. nTZS is the source of truth.
           setWalletBalance(0);
@@ -70,12 +54,6 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
     if (!event || !ticketFormData.name || !ticketFormData.email) {
       toast.error('Please fill in name and email');
       return;
-    }
-    
-    // Only require phone for mobile money
-    if (selectedProvider !== 'Wallet' && !ticketFormData.phone) {
-        toast.error('Please enter phone number');
-        return;
     }
 
     try {
@@ -98,96 +76,47 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         return;
       }
 
-      if (isBelowMobileMoneyMinimum(price, selectedProvider)) {
-        toast.error(getMobileMoneyMinimumMessage(price));
-        setIsSubmitting(false);
-        return;
-      }
+      const { nUser, balanceTzs } = await ensureWalletBalanceForPurchase({
+        userId: user.id,
+        email: user.email || '',
+        amount: price,
+        currency,
+        eventId: event.id,
+        paymentMethod: selectedPaymentMethod,
+        phone: paymentPhone,
+        onTopUpStarted: (topUpAmount) => {
+          toast.info(`Confirm TSh ${topUpAmount.toLocaleString()} on your phone`);
+        },
+      });
+      setWalletBalance(balanceTzs);
 
-      // Check Wallet Balance
-      if (selectedProvider === 'Wallet') {
-         if (walletBalance < price) {
-             toast.error('Insufficient wallet balance');
-             setIsSubmitting(false);
-             return;
-         }
-         
-         // Create instant transaction
-         const transaction = await createTransaction({
-            user_id: user.id,
-            event_id: event.id,
-            amount: price,
-            currency: currency,
-            provider: 'Wallet',
-             status: 'pending',
-             metadata: {
-               type: 'payment',
-               customer_name: ticketFormData.name,
-               customer_email: ticketFormData.email,
-               ticket_type: 'Virtual'
-             }
-          });
-          
-          // Deduct wallet balance via nTZS API
-          const { ntzsApi } = await import('../utils/ntzs-api');
-          const nUser = await ntzsApi.getUser(user.id, user.email || '');
-          if (!nUser?.id) throw new Error('Wallet user not found');
-          await ntzsApi.withdraw(nUser.id, price, 'wallet-payment');
+      const transaction = await createTransaction({
+        user_id: user.id,
+        event_id: event.id,
+        amount: price,
+        currency: currency,
+        provider: 'Wallet',
+        status: 'pending',
+        metadata: {
+          type: 'payment',
+          customer_name: ticketFormData.name,
+          customer_email: ticketFormData.email,
+          ticket_type: 'Virtual',
+          wallet_funding_method: selectedPaymentMethod
+        }
+      });
 
-          // Mark transaction as completed
-          const { error: updateErr } = await supabase
-            .from('transactions')
-            .update({ status: 'completed' })
-            .eq('id', transaction.id)
-            .eq('user_id', user.id);
-          if (updateErr) throw new Error('Failed to verify wallet payment');
+      const { ntzsApi } = await import('../utils/ntzs-api');
+      await ntzsApi.withdraw(nUser.id, price, 'wallet-payment');
 
-          await finalizeTicket(user.id, priceString, transaction.id);
-         
-      } else {
-          // Mobile Money Flow
-          // 2. Create Pending Transaction
-          const transactionData = {
-            user_id: user.id,
-            event_id: event.id,
-            amount: price,
-            currency: currency,
-            provider: selectedProvider,
-            status: 'pending',
-            metadata: {
-              type: 'payment',
-              customer_name: ticketFormData.name,
-              customer_email: ticketFormData.email,
-              customer_phone: ticketFormData.phone,
-              ticket_type: 'Virtual'
-            }
-          };
+      const { error: updateErr } = await supabase
+        .from('transactions')
+        .update({ status: 'completed' })
+        .eq('id', transaction.id)
+        .eq('user_id', user.id);
+      if (updateErr) throw new Error('Failed to verify wallet payment');
 
-          const transaction = await createTransaction(transactionData);
-          
-          // 3. Initiate Payment (Snippe)
-          toast.info('Initiating payment request...');
-          await initiateSnippePayment({
-            amount: price,
-            currency: currency,
-            phoneNumber: ticketFormData.phone,
-            provider: selectedProvider,
-            eventId: event.id,
-            userId: user.id,
-            metadata: { 
-              transactionId: transaction.id,
-              customer_name: ticketFormData.name,
-              customer_email: ticketFormData.email,
-              ticket_type: 'Virtual'
-            }
-          });
-
-          toast.info(`Please approve payment on your phone (${ticketFormData.phone})`);
-          const ok = await waitForTransactionCompletion(transaction.id);
-          if (!ok) throw new Error('Payment not confirmed');
-          
-          await finalizeTicket(user.id, priceString, transaction.id);
-      }
+      await finalizeTicket(user.id, priceString, transaction.id);
 
     } catch (error: any) {
       toast.error(`Payment failed: ${error.message || 'Unknown error'}`);
@@ -220,7 +149,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
       setTimeout(() => {
         onClose();
         setPaymentStep('details');
-        setTicketFormData(prev => ({ ...prev, phone: '' }));
+        setPaymentPhone('');
       }, 2500);
   };
 
@@ -231,7 +160,8 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
   const priceString = event.streaming?.virtualPrice || '0';
   const price = parseFloat(priceString.replace(/[^0-9.]/g, '')) || 0;
   const isFreeVirtual = price <= 0;
-  const isMobilePaymentBlocked = isBelowMobileMoneyMinimum(price, selectedProvider);
+  const walletShortfall = Math.max(0, price - walletBalance);
+  const needsTopUp = price > 0 && selectedPaymentMethod !== 'Wallet' && walletShortfall > 0;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -291,50 +221,56 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                 {!isFreeVirtual && (
                 <div className="space-y-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
-                    <div className="grid grid-cols-4 gap-2">
-                        {PAYMENT_PROVIDERS.map((provider) => (
+                    <div className="grid grid-cols-2 gap-2">
+                        {WALLET_PAYMENT_METHODS.map((method) => (
                             <button
-                                key={provider.id}
-                                onClick={() => setSelectedProvider(provider.id)}
-                                className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all flex flex-col items-center justify-center gap-1 ${
-                                    selectedProvider === provider.id
+                                key={method}
+                                type="button"
+                                onClick={() => setSelectedPaymentMethod(method)}
+                                className={`min-h-12 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                                    selectedPaymentMethod === method
                                     ? 'border-purple-600 bg-purple-50 text-purple-700'
                                     : 'border-gray-200 text-gray-600 hover:border-purple-200'
                                 }`}
                             >
-                                {provider.id === 'Wallet' && <Wallet className="w-3 h-3" />}
-                                {provider.name}
+                                {method}
                             </button>
                         ))}
                     </div>
-                    
-                    {selectedProvider === 'Wallet' ? (
-                       <div className={`p-4 rounded-xl border ${walletBalance >= price ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
-                          <div className="flex justify-between items-center mb-1">
-                             <span className="text-sm font-medium text-gray-700">Wallet Balance</span>
-                             <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
-                          </div>
-                          {walletBalance < price && (
-                             <p className="text-xs text-red-600 font-medium">Insufficient balance. Please deposit funds.</p>
-                          )}
-                       </div>
-                    ) : (
-                        <div className="space-y-2">
-                            <div className="relative">
-                                <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="tel"
-                                    placeholder="255 7XX XXX XXX"
-                                    value={ticketFormData.phone}
-                                    onChange={(e) => setTicketFormData({ ...ticketFormData, phone: e.target.value })}
-                                    className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
-                                />
-                            </div>
-                            {price > 0 && price < MOBILE_MONEY_MINIMUM_TZS && (
-                              <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-foreground">
-                                Mobile money starts at TSh {MOBILE_MONEY_MINIMUM_TZS.toLocaleString()}. Use Wallet for this ticket.
-                              </p>
-                            )}
+                    <div className={`p-4 rounded-xl border ${walletBalance >= price ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex justify-between items-center mb-1">
+                           <div className="flex items-center gap-2">
+                              <Wallet className="w-4 h-4 text-purple-600" />
+                              <span className="text-sm font-medium text-gray-700">nTZS Wallet</span>
+                           </div>
+                           <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
+                        </div>
+                        {walletShortfall > 0 && selectedPaymentMethod === 'Wallet' && (
+                           <p className="text-xs text-red-600 font-medium">
+                             Insufficient balance. Select Airtel Money, Mpesa, or Mixx (Tigo) to add TSh {walletShortfall.toLocaleString()} before purchase.
+                           </p>
+                        )}
+                        {walletShortfall > 0 && selectedPaymentMethod !== 'Wallet' && (
+                           <p className="text-xs text-purple-700 font-medium">
+                             TSh {walletShortfall.toLocaleString()} will be added to your wallet first.
+                           </p>
+                        )}
+                        {walletShortfall === 0 && selectedPaymentMethod !== 'Wallet' && (
+                           <p className="text-xs text-purple-700 font-medium">
+                             Your wallet balance covers this purchase.
+                           </p>
+                        )}
+                    </div>
+                    {needsTopUp && (
+                        <div className="relative">
+                            <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                            <input
+                                type="tel"
+                                placeholder="255 7XX XXX XXX"
+                                value={paymentPhone}
+                                onChange={(e) => setPaymentPhone(e.target.value)}
+                                className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+                            />
                         </div>
                     )}
                 </div>
@@ -342,9 +278,9 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
 
                 <button
                     onClick={handleTicketSubmit}
-                    disabled={isSubmitting || isMobilePaymentBlocked}
+                    disabled={isSubmitting}
                     className={`w-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-purple-200 flex items-center justify-center gap-2 transition-all ${
-                        isSubmitting || isMobilePaymentBlocked ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.02] hover:shadow-xl'
+                        isSubmitting ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.02] hover:shadow-xl'
                     }`}
                 >
                     {isSubmitting ? (
@@ -354,8 +290,8 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                             <span>
                               {isFreeVirtual
                                 ? 'Get Free Access'
-                                : isMobilePaymentBlocked
-                                  ? 'Use Wallet for this ticket'
+                                : needsTopUp
+                                  ? `Add TSh ${walletShortfall.toLocaleString()} & Pay`
                                   : `Pay ${formatPrice(event.streaming?.virtualPrice)}`}
                             </span>
                             <ArrowRight className="w-4 h-4" />

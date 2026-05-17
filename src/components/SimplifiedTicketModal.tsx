@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { X, Sparkles, Crown, ArrowRight, Smartphone, CreditCard, Ticket, Minus, Plus, Wallet } from 'lucide-react';
+import { X, Sparkles, Crown, ArrowRight, CreditCard, Ticket, Minus, Plus, Wallet, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { extractCurrencyFromPrice, currencies, formatPrice } from '../utils/currencies';
-import { createTransaction, initiateSnippePayment, waitForTransactionCompletion, createTicket } from '../utils/supabase/api';
-import { ntzsApi } from '../utils/ntzs-api';
-import { getMobileMoneyMinimumMessage, isBelowMobileMoneyMinimum, MOBILE_MONEY_MINIMUM_TZS } from '../utils/paymentLimits';
+import { createTransaction, createTicket } from '../utils/supabase/api';
 import { formatDateDMY } from '../utils/format';
+import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, WALLET_PAYMENT_METHODS, type WalletPaymentMethod } from '../utils/walletCheckout';
 
 interface TicketTier {
   name: string;
@@ -38,8 +37,8 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
   const [selections, setSelections] = useState<Record<string, number>>({});
   
   const [formData, setFormData] = useState({ name: '', email: '' });
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<WalletPaymentMethod>('Wallet');
   const [paymentPhone, setPaymentPhone] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState('Airtel');
   const [isProcessing, setIsProcessing] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
 
@@ -73,16 +72,9 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
           });
         }
 
-        // Fetch Wallet Balance
-        // First get or create nTZS user to get the internal ID
         try {
-          const nUser = await ntzsApi.getUser(user.id, user.email || '');
-          if (nUser && nUser.id) {
-            const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
-            setWalletBalance(balanceTzs || 0);
-          } else {
-            setWalletBalance(0);
-          }
+          const { balanceTzs } = await loadNtzsWalletBalance(user.id, user.email || '');
+          setWalletBalance(balanceTzs);
         } catch (err) {
           setWalletBalance(0);
         }
@@ -121,7 +113,8 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
   };
 
   const currencySymbol = getCurrencySymbol(tiers[0]?.price || '');
-  const isMobilePaymentBlocked = isBelowMobileMoneyMinimum(totalPrice, selectedProvider);
+  const walletShortfall = Math.max(0, totalPrice - walletBalance);
+  const needsTopUp = totalPrice > 0 && selectedPaymentMethod !== 'Wallet' && walletShortfall > 0;
 
   const handlePurchase = async () => {
     if (totalTickets === 0 || !formData.name || !formData.email) {
@@ -166,109 +159,49 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
         await finalizeTicketCreation(user.id, transaction.id);
         return;
       }
-    
-      // Paid events - require payment details
-      if (selectedProvider !== 'Wallet' && !paymentPhone) {
-        toast.error('Please enter phone number');
-        setIsProcessing(false);
-        return;
-      }
       
-      if (selectedProvider === 'Wallet' && walletBalance < totalPrice) {
-        toast.error('Insufficient wallet balance');
-        setIsProcessing(false);
-        return;
-      }
+      const { nUser, balanceTzs } = await ensureWalletBalanceForPurchase({
+        userId: user.id,
+        email: user.email || '',
+        amount: totalPrice,
+        currency,
+        eventId: event.id,
+        paymentMethod: selectedPaymentMethod,
+        phone: paymentPhone,
+        onTopUpStarted: (topUpAmount) => {
+          toast.info(`Confirm TSh ${topUpAmount.toLocaleString()} on your phone`);
+        },
+      });
+      setWalletBalance(balanceTzs);
 
-      if (isBelowMobileMoneyMinimum(totalPrice, selectedProvider)) {
-        toast.error(getMobileMoneyMinimumMessage(totalPrice));
-        setIsProcessing(false);
-        return;
-      }
+      const transaction = await createTransaction({
+        user_id: user.id,
+        event_id: event.id,
+        amount: totalPrice,
+        currency: currency,
+        provider: 'Wallet',
+        status: 'pending',
+        metadata: {
+          type: 'payment',
+          customer_name: formData.name,
+          customer_email: formData.email,
+          selections: JSON.stringify(selections),
+          total_quantity: totalTickets,
+          wallet_funding_method: selectedPaymentMethod
+        }
+      });
 
-      if (selectedProvider === 'Wallet') {
-         // Wallet Payment Flow
-         const transaction = await createTransaction({
-            user_id: user.id,
-            event_id: event.id,
-            amount: totalPrice,
-            currency: currency,
-            provider: 'Wallet',
-            status: 'pending',
-            metadata: {
-              type: 'payment',
-              customer_name: formData.name,
-              customer_email: formData.email,
-              selections: JSON.stringify(selections),
-              total_quantity: totalTickets
-            }
-         });
-         
-         // Deduct wallet balance via nTZS API, then mark transaction complete
-         const { ntzsApi } = await import('../utils/ntzs-api');
-         const nUser = await ntzsApi.getUser(user.id, user.email || '');
-         if (!nUser?.id) throw new Error('Wallet user not found');
-         
-         // Transfer to platform account (organizer settlement happens separately)
-         await ntzsApi.withdraw(nUser.id, totalPrice, 'wallet-payment');
+      const { ntzsApi } = await import('../utils/ntzs-api');
+      await ntzsApi.withdraw(nUser.id, totalPrice, 'wallet-payment');
 
-         // Mark transaction as completed
-         const { error: updateErr } = await supabase
-           .from('transactions')
-           .update({ status: 'completed' })
-           .eq('id', transaction.id)
-           .eq('user_id', user.id);
-         if (updateErr) throw new Error('Failed to verify wallet payment');
+      const { error: updateErr } = await supabase
+        .from('transactions')
+        .update({ status: 'completed' })
+        .eq('id', transaction.id)
+        .eq('user_id', user.id);
+      if (updateErr) throw new Error('Failed to verify wallet payment');
 
-         await finalizeTicketCreation(user.id, transaction.id);
-         
-      } else {
-          // Mobile Money Flow
-          // 1. Create Transaction
-          const transactionData = {
-            user_id: user.id,
-            event_id: event.id,
-            amount: totalPrice,
-            currency: currency,
-            provider: selectedProvider,
-            status: 'pending',
-            metadata: {
-              type: 'payment',
-              customer_name: formData.name,
-              customer_email: formData.email,
-              customer_phone: paymentPhone,
-              selections: JSON.stringify(selections), // Store breakdown
-              total_quantity: totalTickets
-            }
-          };
-
-          const transaction = await createTransaction(transactionData);
-
-          // 2. Initiate Payment
-          toast.info('Sending payment request...');
-          await initiateSnippePayment({
-            amount: totalPrice,
-            currency: currency,
-            phoneNumber: paymentPhone,
-            provider: selectedProvider,
-            eventId: event.id,
-            userId: user.id,
-            metadata: { 
-              transactionId: transaction.id,
-              customer_name: formData.name,
-              customer_email: formData.email,
-              ticket_type: Object.keys(selections).join(', '),
-              selections: JSON.stringify(selections)
-            }
-          });
-
-          // 3. Wait for Completion
-          toast.info(`Please approve payment on your phone (${paymentPhone})`);
-          const ok = await waitForTransactionCompletion(transaction.id);
-          if (!ok) throw new Error('Payment not confirmed');
-          
-          await finalizeTicketCreation(user.id, transaction.id);
-      }
+      await finalizeTicketCreation(user.id, transaction.id);
 
     } catch (error: any) {
       toast.error(error.message || 'Payment failed');
@@ -439,51 +372,59 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
               {totalPrice > 0 && (
                 <div className="space-y-3">
                   <h3 className="font-semibold text-gray-900 text-sm">Payment Method</h3>
-                  <div className="grid grid-cols-4 gap-2">
-                    {['Wallet', 'Airtel', 'Tigo', 'Halopesa', 'Mpesa'].map(p => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {WALLET_PAYMENT_METHODS.map(method => (
                       <button
-                        key={p}
-                        onClick={() => setSelectedProvider(p)}
-                        className={`py-2 px-1 rounded-lg text-xs font-medium border transition-all flex flex-col items-center justify-center gap-1 ${
-                          selectedProvider === p 
-                            ? 'border-[#8A2BE2] bg-purple-50 text-purple-700' 
+                        key={method}
+                        type="button"
+                        onClick={() => setSelectedPaymentMethod(method)}
+                        className={`min-h-12 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                          selectedPaymentMethod === method
+                            ? 'border-[#8A2BE2] bg-purple-50 text-purple-700'
                             : 'border-gray-200 text-gray-600 hover:border-purple-200'
                         }`}
                       >
-                        {p === 'Wallet' && <Wallet className="w-3 h-3" />}
-                        {p}
+                        {method}
                       </button>
                     ))}
                   </div>
-                  
-                  {selectedProvider === 'Wallet' ? (
-                     <div className={`p-4 rounded-xl border ${walletBalance >= totalPrice ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
-                        <div className="flex justify-between items-center mb-1">
-                           <span className="text-sm font-medium text-gray-700">Wallet Balance</span>
-                           <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
-                        </div>
-                        {walletBalance < totalPrice && (
-                           <p className="text-xs text-red-600 font-medium">Insufficient balance. Please deposit funds.</p>
-                        )}
-                     </div>
-                  ) : (
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <Smartphone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                          <input
-                            type="tel"
-                            placeholder="255 7XX XXX XXX"
-                            value={paymentPhone}
-                            onChange={(e) => setPaymentPhone(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
-                          />
-                        </div>
-                        {totalPrice > 0 && totalPrice < MOBILE_MONEY_MINIMUM_TZS && (
-                          <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-foreground">
-                            Mobile money starts at TSh {MOBILE_MONEY_MINIMUM_TZS.toLocaleString()}. Add more tickets or switch to Wallet.
-                          </p>
-                        )}
+                  <div className={`p-4 rounded-xl border ${walletBalance >= totalPrice ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <div className="flex items-center gap-2">
+                        <Wallet className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-gray-700">nTZS Wallet</span>
                       </div>
+                      <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
+                    </div>
+                    {walletShortfall > 0 && selectedPaymentMethod === 'Wallet' && (
+                      <p className="text-xs text-red-600 font-medium">
+                        Insufficient balance. Select Airtel Money, Mpesa, or Mixx (Tigo) to add TSh {walletShortfall.toLocaleString()} before purchase.
+                      </p>
+                    )}
+                    {walletShortfall > 0 && selectedPaymentMethod !== 'Wallet' && (
+                      <p className="text-xs text-purple-700 font-medium">
+                        TSh {walletShortfall.toLocaleString()} will be added to your wallet first.
+                      </p>
+                    )}
+                    {walletShortfall === 0 && selectedPaymentMethod !== 'Wallet' && (
+                      <p className="text-xs text-purple-700 font-medium">
+                        Your wallet balance covers this purchase.
+                      </p>
+                    )}
+                  </div>
+                  {needsTopUp && (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Smartphone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <input
+                          type="tel"
+                          placeholder="255 7XX XXX XXX"
+                          value={paymentPhone}
+                          onChange={(e) => setPaymentPhone(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
@@ -547,9 +488,9 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
               </button>
               <button
                 onClick={handlePurchase}
-                disabled={isProcessing || isMobilePaymentBlocked}
+                disabled={isProcessing}
                 className={`flex-1 bg-gradient-to-r from-[#8A2BE2] to-purple-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 ${
-                  isProcessing || isMobilePaymentBlocked ? 'opacity-70 cursor-not-allowed' : ''
+                  isProcessing ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >
                 {isProcessing ? (
@@ -562,14 +503,9 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                     <span>Get Free Tickets</span>
                     <Ticket className="w-4 h-4" />
                   </>
-                ) : isMobilePaymentBlocked ? (
-                  <>
-                    <span>Use Wallet or add tickets</span>
-                    <Wallet className="w-4 h-4" />
-                  </>
                 ) : (
                   <>
-                    <span>Pay {currencySymbol} {totalPrice.toLocaleString()}</span>
+                    <span>{needsTopUp ? `Add TSh ${walletShortfall.toLocaleString()} & Pay` : `Pay ${currencySymbol} ${totalPrice.toLocaleString()}`}</span>
                     <CreditCard className="w-4 h-4" />
                   </>
                 )}
