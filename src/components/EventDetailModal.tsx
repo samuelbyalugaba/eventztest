@@ -441,7 +441,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                     onClick={() => setShowOrganizerProfile(true)}
                     className="mt-2 text-sm text-gray-600 hover:text-[#8A2BE2] transition-colors text-left"
                   >
-                    by <span className="font-semibold">{organizerDisplayName}</span>
+                    by <span className="font-semibold text-purple-600">{organizerDisplayName}</span>
                   </button>
                 )}
               </div>

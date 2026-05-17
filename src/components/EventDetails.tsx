@@ -504,44 +504,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </div>
             </div>
 
-            {(selectedLocation !== 'all' || selectedSubcategory !== '') && (
-              <div className="flex gap-2 mb-4 mt-2 flex-wrap">
-                {selectedLocation !== 'all' && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                    <span>{String((locations.find(l => l.id === selectedLocation) as any)?.name || selectedLocation).split(',')[0]}</span>
-                    <button 
-                      onClick={() => setSelectedLocation('all')}
-                      className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                {selectedSubcategory !== '' && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                    <span>{selectedSubcategory}</span>
-                    <button 
-                      onClick={() => setSelectedSubcategory('')}
-                      className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                <button 
-                  onClick={() => {
-                    setSelectedLocation('all');
-                    setSelectedCategory('all');
-                    setSelectedSubcategory('');
-                    setSelectedTimeFilter('all');
-                  }}
-                  className="px-3 py-1.5 text-purple-600 text-sm hover:bg-purple-50 rounded-lg transition-colors"
-                >
-                  Clear all
-                </button>
-              </div>
-            )}
-
             {selectedCategory !== 'all' && (
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-3">
