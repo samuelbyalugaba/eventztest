@@ -24,7 +24,7 @@ import { FullScreenImageModal } from './feed/FullScreenImageModal';
 import { LikeAnimation, FeedAnimationStyles } from './feed/FeedAnimations';
 import { FeedContent } from './feed/FeedContent';
 
-type FilterTab = 'all' | 'organizers' | 'trending' | 'following';
+type FilterTab = 'all' | 'organizers' | 'following';
 
 interface FeedProps {
   conversations: Conversation[];
@@ -446,7 +446,6 @@ export function Feed({
 
   const filteredPosts = useMemo(() => posts.filter(post => {
     if (activeFilter === 'organizers') return post.user.isOrganizer;
-    if (activeFilter === 'trending') return post.likes > 200;
     if (activeFilter === 'following') return followingIds.has(post.user.id);
     return true;
   }), [posts, activeFilter, followingIds]);

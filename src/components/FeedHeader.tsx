@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Bell, MessageSquare, LayoutGrid, Users as UsersIcon, Star, TrendingUp } from 'lucide-react';
+import { Search, Bell, MessageSquare, LayoutGrid, Users as UsersIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import verifiedBadge from '../assets/verified-badge.png';
 
 interface FeedHeaderProps {
   currentUser?: any;
@@ -10,8 +11,8 @@ interface FeedHeaderProps {
   notifications: any[];
   exploreSearch: string;
   setExploreSearch: (value: string) => void;
-  activeFilter: 'all' | 'organizers' | 'trending' | 'following';
-  setActiveFilter: (filter: 'all' | 'organizers' | 'trending' | 'following') => void;
+  activeFilter: 'all' | 'organizers' | 'following';
+  setActiveFilter: (filter: 'all' | 'organizers' | 'following') => void;
   onToggleNotifications: () => void;
   onToggleMessages: () => void;
   showMessagesOrPost?: boolean;
@@ -233,19 +234,8 @@ export function FeedHeader({
                   : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
               }`}
             >
-              <Star className="w-4 h-4" />
+              <img src={verifiedBadge} alt="Creator badge" className="w-4 h-4 object-contain" />
               Creators
-            </button>
-            <button
-              onClick={() => setActiveFilter('trending')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
-                activeFilter === 'trending'
-                  ? 'bg-[#8A2BE2] text-white'
-                  : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              Trending
             </button>
           </div>
         </div>
