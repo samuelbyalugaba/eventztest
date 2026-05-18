@@ -270,9 +270,19 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
   const handleOrganizerProfileClick = () => {
     if (!event.organizer_id) return;
 
+    const routeState = location.state as {
+      backgroundLocation?: { pathname?: string; search?: string; hash?: string; state?: unknown };
+      closeTo?: { pathname?: string; search?: string; hash?: string; state?: unknown };
+    } | null;
+    const closeTo = routeState?.closeTo || routeState?.backgroundLocation || { pathname: '/events' };
     const returnToEvent = location.pathname.startsWith('/event/')
-      ? { pathname: location.pathname, search: location.search, hash: location.hash, state: location.state }
-      : { pathname: `/event/${event.id}` };
+      ? {
+          pathname: location.pathname,
+          search: location.search,
+          hash: location.hash,
+          state: { closeTo },
+        }
+      : { pathname: `/event/${event.id}`, state: { closeTo } };
 
     navigate(`/profile/${event.organizer_id}`, {
       replace: true,

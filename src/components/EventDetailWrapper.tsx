@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { EventDetailModal } from './EventDetailModal';
 import { getEventById } from '../utils/supabase/api';
 import { toast } from 'sonner';
@@ -10,15 +10,33 @@ interface EventDetailWrapperProps {
   onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => void;
 }
 
+type RouteTarget = {
+  pathname?: string;
+  search?: string;
+  hash?: string;
+  state?: unknown;
+};
+
 export function EventDetailWrapper({ 
   onStartConversation
 }: EventDetailWrapperProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const routeState = location.state as { backgroundLocation?: RouteTarget; closeTo?: RouteTarget } | null;
+  const closeTarget = routeState?.closeTo || routeState?.backgroundLocation || { pathname: '/events' };
+
+  const handleClose = () => {
+    navigate({
+      pathname: closeTarget.pathname || '/events',
+      search: closeTarget.search || '',
+      hash: closeTarget.hash || '',
+    }, { replace: true, state: closeTarget.state });
+  };
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -31,11 +49,11 @@ export function EventDetailWrapper({
           setEvent(fetchedEvent);
         } else {
           toast.error('Event not found');
-          navigate('/events');
+          navigate('/events', { replace: true });
         }
       } catch (error) {
         toast.error('Failed to load event');
-        navigate('/events');
+        navigate('/events', { replace: true });
       } finally {
         setLoading(false);
       }
@@ -58,13 +76,7 @@ export function EventDetailWrapper({
     <>
       <EventDetailModal
         event={event}
-        onClose={() => {
-          if (window.history.length > 2) {
-            navigate(-1);
-          } else {
-            navigate('/events');
-          }
-        }}
+        onClose={handleClose}
         onPurchaseTicket={() => setShowTicketModal(true)}
         onPurchaseNormalTicket={() => setShowPurchaseModal(true)}
         onStartConversation={onStartConversation}

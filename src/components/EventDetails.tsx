@@ -210,7 +210,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [showWhenMenu, setShowWhenMenu] = useState(false);
   const handleEventClick = (event: ApiEvent) => {
     const backgroundBase = (location.state as any)?.backgroundLocation || location;
-    navigate(`/event/${event.id}`, { state: { backgroundLocation: backgroundBase } });
+    navigate(`/event/${event.id}`, { state: { backgroundLocation: backgroundBase, closeTo: backgroundBase } });
   };
 
   const [showFilters, setShowFilters] = useState(false);

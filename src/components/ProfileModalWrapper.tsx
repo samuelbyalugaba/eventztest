@@ -23,13 +23,7 @@ export function ProfileModalWrapper({ onLogout, onCreateEvent, onEditEvent, onSt
         onStartOrganizerSetup={onStartOrganizerSetup}
         onViewPost={onViewPost}
         onBack={() => {
-          if (window.history.length > 2) {
-            navigate(-1);
-          } else if (backgroundLocation) {
-            navigate(backgroundLocation);
-          } else {
-            navigate('/feed');
-          }
+          navigate(backgroundLocation || '/feed', { replace: true });
         }}
       />
     </div>
