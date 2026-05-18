@@ -388,30 +388,22 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                       </button>
                     ))}
                   </div>
-                  <div className={`p-4 rounded-xl border ${walletBalance >= totalPrice ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
-                    <div className="flex items-center justify-between gap-3 mb-1">
-                      <div className="flex items-center gap-2">
-                        <Wallet className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm font-medium text-gray-700">nTZS Wallet</span>
+                  {selectedPaymentMethod === 'Wallet' && (
+                    <div className={`p-4 rounded-xl border ${walletBalance >= totalPrice ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="w-4 h-4 text-purple-600" />
+                          <span className="text-sm font-medium text-gray-700">Eventz Wallet</span>
+                        </div>
+                        <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
                       </div>
-                      <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
+                      {walletShortfall > 0 && (
+                        <p className="text-xs text-red-600 font-medium">
+                          Insufficient balance. Topup your wallet or pay with mobile money instead
+                        </p>
+                      )}
                     </div>
-                    {walletShortfall > 0 && selectedPaymentMethod === 'Wallet' && (
-                      <p className="text-xs text-red-600 font-medium">
-                        Insufficient balance. Select Airtel Money, Mpesa, or Mixx (Tigo) to add TSh {walletShortfall.toLocaleString()} before purchase.
-                      </p>
-                    )}
-                    {walletShortfall > 0 && selectedPaymentMethod !== 'Wallet' && (
-                      <p className="text-xs text-purple-700 font-medium">
-                        TSh {walletShortfall.toLocaleString()} will be added to your wallet first.
-                      </p>
-                    )}
-                    {walletShortfall === 0 && selectedPaymentMethod !== 'Wallet' && (
-                      <p className="text-xs text-purple-700 font-medium">
-                        Your wallet balance covers this purchase.
-                      </p>
-                    )}
-                  </div>
+                  )}
                   {needsTopUp && (
                     <div className="space-y-2">
                       <div className="relative">
@@ -505,7 +497,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                   </>
                 ) : (
                   <>
-                    <span>{needsTopUp ? `Add TSh ${walletShortfall.toLocaleString()} & Pay` : `Pay ${currencySymbol} ${totalPrice.toLocaleString()}`}</span>
+                    <span>Pay {currencySymbol} {totalPrice.toLocaleString()}</span>
                     <CreditCard className="w-4 h-4" />
                   </>
                 )}

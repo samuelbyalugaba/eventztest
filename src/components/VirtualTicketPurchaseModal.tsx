@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Tv, CheckCircle2, User, Mail, ArrowRight, Wallet, Smartphone } from 'lucide-react';
+import { X, Tv, CheckCircle2, User, Mail, ArrowRight, Wallet, Smartphone, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createTicket, createTransaction } from '../utils/supabase/api';
@@ -237,30 +237,22 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                             </button>
                         ))}
                     </div>
-                    <div className={`p-4 rounded-xl border ${walletBalance >= price ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
-                        <div className="flex justify-between items-center mb-1">
-                           <div className="flex items-center gap-2">
-                              <Wallet className="w-4 h-4 text-purple-600" />
-                              <span className="text-sm font-medium text-gray-700">nTZS Wallet</span>
-                           </div>
-                           <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
+                    {selectedPaymentMethod === 'Wallet' && (
+                        <div className={`p-4 rounded-xl border ${walletBalance >= price ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
+                            <div className="flex justify-between items-center mb-1">
+                               <div className="flex items-center gap-2">
+                                  <Wallet className="w-4 h-4 text-purple-600" />
+                                  <span className="text-sm font-medium text-gray-700">Eventz Wallet</span>
+                               </div>
+                               <span className="font-bold text-gray-900">TSh {walletBalance.toLocaleString()}</span>
+                            </div>
+                            {walletShortfall > 0 && (
+                               <p className="text-xs text-red-600 font-medium">
+                                 Insufficient balance. Topup your wallet or pay with mobile money instead
+                               </p>
+                            )}
                         </div>
-                        {walletShortfall > 0 && selectedPaymentMethod === 'Wallet' && (
-                           <p className="text-xs text-red-600 font-medium">
-                             Insufficient balance. Select Airtel Money, Mpesa, or Mixx (Tigo) to add TSh {walletShortfall.toLocaleString()} before purchase.
-                           </p>
-                        )}
-                        {walletShortfall > 0 && selectedPaymentMethod !== 'Wallet' && (
-                           <p className="text-xs text-purple-700 font-medium">
-                             TSh {walletShortfall.toLocaleString()} will be added to your wallet first.
-                           </p>
-                        )}
-                        {walletShortfall === 0 && selectedPaymentMethod !== 'Wallet' && (
-                           <p className="text-xs text-purple-700 font-medium">
-                             Your wallet balance covers this purchase.
-                           </p>
-                        )}
-                    </div>
+                    )}
                     {needsTopUp && (
                         <div className="relative">
                             <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
@@ -290,11 +282,13 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                             <span>
                               {isFreeVirtual
                                 ? 'Get Free Access'
-                                : needsTopUp
-                                  ? `Add TSh ${walletShortfall.toLocaleString()} & Pay`
-                                  : `Pay ${formatPrice(event.streaming?.virtualPrice)}`}
+                                : `Pay ${formatPrice(event.streaming?.virtualPrice)}`}
                             </span>
-                            <ArrowRight className="w-4 h-4" />
+                            {isFreeVirtual ? (
+                              <ArrowRight className="w-4 h-4" />
+                            ) : (
+                              <CreditCard className="w-4 h-4" />
+                            )}
                         </>
                     )}
                 </button>
