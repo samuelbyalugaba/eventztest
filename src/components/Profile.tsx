@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { deleteEvent, Ticket, ApiPost, getFollowers, getFollowing, toggleFollow } from '../utils/supabase/api';
@@ -56,8 +56,21 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const { userId: userIdParam } = useParams<{ userId: string }>();
   const userId = userIdProp || userIdParam;
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnToEvent = (location.state as { returnToEvent?: { pathname?: string; search?: string; hash?: string } } | null)?.returnToEvent;
 
-  const handleBack = onBack || (userId ? () => navigate(-1) : undefined);
+  const handleBack = onBack || (userId ? () => {
+    if (returnToEvent?.pathname) {
+      navigate({
+        pathname: returnToEvent.pathname,
+        search: returnToEvent.search || '',
+        hash: returnToEvent.hash || '',
+      }, { replace: true });
+      return;
+    }
+
+    navigate(-1);
+  } : undefined);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('media');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -220,7 +233,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   };
 
   return (
-    <div className="bg-white min-h-screen pb-16 pt-6 px-6">
+    <div className="bg-white min-h-screen pb-16 px-5 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6">
       <ProfileHeader
         isLoading={isLoading}
         profileImage={profileImage}

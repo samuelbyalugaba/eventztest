@@ -264,20 +264,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     });
   }, [events, selectedLocation, selectedCategory, selectedSubcategory]);
 
-  const { upcomingEvents, pastEvents } = React.useMemo(() => {
+  const upcomingEvents = React.useMemo(() => {
     const now = new Date();
-    const upcoming = filteredEvents
+    return filteredEvents
       .filter(e => {
         const eventDate = getEventDateTime(e);
         return eventDate >= now && matchesTimeFilter(eventDate, selectedTimeFilter, now);
       })
       .sort((a, b) => getEventDateTime(a).getTime() - getEventDateTime(b).getTime());
-
-    const past = filteredEvents
-      .filter(e => getEventDateTime(e) < now)
-      .sort((a, b) => getEventDateTime(b).getTime() - getEventDateTime(a).getTime());
-      
-    return { upcomingEvents: upcoming, pastEvents: past };
   }, [filteredEvents, selectedTimeFilter]);
 
   useEffect(() => {
@@ -610,39 +604,17 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             </div>
 
             {upcomingEvents.length === 0 && hasLoadedEvents && !isFetching && (
-              <>
-                <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                    <Calendar className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-gray-900 font-medium mb-1">No upcoming events</h3>
-                  <p className="text-gray-500 text-sm max-w-[200px]">Check back later or try adjusting your filters</p>
+              <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Calendar className="w-8 h-8 text-gray-400" />
                 </div>
-                {pastEvents.length === 0 && filteredEvents.length > 0 && (
-                  <p className="text-center text-sm font-semibold text-gray-900">
-                    Other Events
-                  </p>
-                )}
-              </>
+                <h3 className="text-gray-900 font-medium mb-1">No upcoming events</h3>
+                <p className="text-gray-500 text-sm max-w-[200px]">Check back later or try adjusting your filters</p>
+              </div>
             )}
 
             {events.length === 0 && (!hasLoadedEvents || isFetching) && (
               <EventGridSkeleton count={6} />
-            )}
-
-            {!isFetching && upcomingEvents.length === 0 && pastEvents.length === 0 && filteredEvents.length > 0 && (
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-5 mb-8">
-                {filteredEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onClick={handleEventClick}
-                    currentUserId={currentUserId}
-                    onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
-                    onDeleteEvent={handleDeleteEvent}
-                  />
-                ))}
-              </div>
             )}
           </div>
         </div>
