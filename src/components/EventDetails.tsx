@@ -29,7 +29,6 @@ const locations = [
 type LocationOption = {
   id: string;
   name: string;
-  flag?: string;
   icon?: React.ReactNode;
 };
 

@@ -66,6 +66,10 @@ export const PostCard = React.memo(function PostCard({
   const [isLowInternet, setIsLowInternet] = useState(false);
 
   useEffect(() => {
+    setIsSaved(post.isSaved);
+  }, [post.isSaved]);
+
+  useEffect(() => {
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
     if (connection) {
       const updateConnection = () => {

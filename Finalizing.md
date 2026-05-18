@@ -43,12 +43,12 @@
 
 | Feature | Status | Notes |
 | :--- | :--- | :--- |
-| **User Auth** | ✅ Working | Supabase Auth (Email/Password). |
-| **Events & Tickets** | ⚠️ Verification Needed | Core logic exists. Payment provider switched to Snippe; needs end-to-end testing. |
-| **Social Feed** | ✅ Working | Posts, Comments, Likes working. Code is monolithic (`Feed.tsx`). |
-| **Chat/Messaging** | ✅ Working | Real-time chat via Supabase subscriptions. |
-| **Live Streaming** | ❌ **Broken/Missing** | **UI Only.** "Go Live" updates a status but doesn't stream video. No RTMP server integration. |
-| **Wallet/Payments** | ⚠️ Verification Needed | Snippe integration code is done, but needs verification. |
+| **User Auth** |  Working | Supabase Auth (Email/Password). |
+| **Events & Tickets** |  Verification Needed | Core logic exists. Payment provider switched to Snippe; needs end-to-end testing. |
+| **Social Feed** |  Working | Posts, Comments, Likes working. Code is monolithic (`Feed.tsx`). |
+| **Chat/Messaging** |  Working | Real-time chat via Supabase subscriptions. |
+| **Live Streaming** |  **Broken/Missing** | **UI Only.** "Go Live" updates a status but doesn't stream video. No RTMP server integration. |
+| **Wallet/Payments** |  Verification Needed | Snippe integration code is done, but needs verification. |
 
 ---
 

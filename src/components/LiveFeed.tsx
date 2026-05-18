@@ -191,7 +191,7 @@ export function LiveFeed() {
                     return <Icon className="w-3.5 h-3.5 text-gray-700" />;
                   })()
                 ) : (
-                  <span className="text-sm">{(selectedLocationView as any)?.flag || '🇹🇿'}</span>
+                  <MapPin className="w-3.5 h-3.5 text-gray-700" />
                 )}
                 <span className="text-xs font-medium text-gray-700 hidden sm:block">
                   {(selectedLocationView as any)?.name ||

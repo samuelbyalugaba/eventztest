@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Eye, Users, Share2, Calendar, MapPin, DollarSign, Ticket, Activity, ArrowUp, ArrowDown, Download, Loader2, Target } from 'lucide-react';
+import { X, Eye, Users, Share2, Calendar, MapPin, DollarSign, Ticket, Activity, ArrowUp, ArrowDown, Download, Loader2, Target, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getEventAnalytics } from '../utils/supabase/api';
 
@@ -75,7 +75,7 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => {
-                  toast.success('Analytics exported! 📊');
+                  toast.success('Analytics exported');
                 }}
                 className="p-2.5 hover:bg-white/20 backdrop-blur-md rounded-lg transition-colors group"
                 title="Export Analytics"
@@ -302,11 +302,11 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
                 <h3 className="text-gray-900 text-lg mb-3">Insights & Recommendations</h3>
                 <ul className="space-y-2 text-gray-700 text-sm">
                   <li className="flex items-start gap-2">
-                    <span className="text-purple-600 mt-1">✓</span>
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
                     <span>Your event is performing <strong>well</strong> compared to average events</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-purple-600 mt-1">✓</span>
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
                     <span>Most of your audience is from <strong>{(analytics?.demographics?.locations || [])[0]?.city || 'your area'}</strong>. Consider local partnerships</span>
                   </li>
                 </ul>
@@ -319,7 +319,7 @@ export function EventAnalyticsModal({ event, onClose }: EventAnalyticsModalProps
         <div className="sticky bottom-0 bg-white px-6 py-4 border-t border-gray-200 rounded-b-3xl flex gap-3">
           <button
             onClick={() => {
-              toast.success('Report generated! 📄');
+              toast.success('Report generated');
             }}
             className="flex-1 px-6 py-3 border-2 border-purple-600 text-purple-600 rounded-xl hover:bg-purple-50 transition-all flex items-center justify-center gap-2"
           >

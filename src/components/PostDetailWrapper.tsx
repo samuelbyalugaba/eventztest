@@ -237,11 +237,12 @@ export function PostDetailWrapper() {
       onSave={async (id) => {
         if (!currentUser) return;
         try {
-          await toggleSavePost(id, currentUser.id);
+          const saved = await toggleSavePost(id, currentUser.id);
           setPost((prev: any) => ({
              ...prev,
-             isSaved: !prev.isSaved
+             isSaved: saved
           }));
+          window.dispatchEvent(new Event('savedPostsUpdated'));
         } catch (e) { console.error(e); }
       }}
       onEditCaption={handleEditCaption}

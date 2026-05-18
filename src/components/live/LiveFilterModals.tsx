@@ -109,7 +109,7 @@ export function LiveFilterModals({
                       {location.icon ? (
                         <location.icon className={`w-6 h-6 ${selectedLocation === location.id ? 'text-white' : 'text-gray-700'}`} />
                       ) : (
-                        <span className="text-2xl">{location.flag}</span>
+                        <MapPin className={`w-6 h-6 ${selectedLocation === location.id ? 'text-white' : 'text-gray-700'}`} />
                       )}
                       <span>{location.name}</span>
                     </button>

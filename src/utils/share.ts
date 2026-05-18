@@ -71,7 +71,7 @@ export const copyLinkToClipboard = async (url?: string): Promise<boolean> => {
   const shareUrl = url || window.location.href;
   try {
     await navigator.clipboard.writeText(shareUrl);
-    toast.success('Link copied to clipboard! 🔗');
+    toast.success('Link copied to clipboard');
     return true;
   } catch (err) {
     toast.error('Failed to copy link');

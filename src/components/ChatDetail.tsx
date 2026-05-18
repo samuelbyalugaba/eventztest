@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2, CheckCheck } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Message, Profile, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage, deleteMessage } from '../utils/supabase/api';
 import { toast } from 'sonner';
@@ -329,7 +329,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                        </button>
                      )}
                      {isMe && msg.is_read && (
-                       <span className="text-blue-500 text-[10px] font-bold">✓✓</span>
+                       <CheckCheck className="w-3 h-3 text-blue-500" />
                      )}
                   </div>
                 </div>

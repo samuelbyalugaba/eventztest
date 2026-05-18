@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Image as ImageIcon, Loader2, MapPin, Smile, Calendar, Clock } from 'lucide-react';
+import { X, Image as ImageIcon, Loader2, MapPin, Calendar, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createPost, uploadImage, getProfile } from '../utils/supabase/api';
@@ -21,7 +21,6 @@ export default function CreatePostPage() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [locationTag, setLocationTag] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [locationDraft, setLocationDraft] = useState('');
@@ -71,25 +70,6 @@ export default function CreatePostPage() {
   }, []);
 
   const hasSingleVideoPost = media.length === 1 && media[0]?.kind === 'video';
-
-  const emojis = ['😀','😁','😂','🥹','😍','😘','😎','🤝','🙏','🔥','🎉','✨','💯','📍','🎵','🎬','🏆','⭐','❤️','💜','👍','👏'];
-
-  const insertAtCursor = (text: string) => {
-    const el = textareaRef.current;
-    if (!el) {
-      setContent(prev => prev + text);
-      return;
-    }
-    const start = el.selectionStart ?? content.length;
-    const end = el.selectionEnd ?? content.length;
-    const next = content.slice(0, start) + text + content.slice(end);
-    setContent(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      const nextPos = start + text.length;
-      el.setSelectionRange(nextPos, nextPos);
-    });
-  };
 
   const dataUrlToFile = async (dataUrl: string, filename: string) => {
     const res = await fetch(dataUrl);
@@ -223,8 +203,8 @@ export default function CreatePostPage() {
       }
 
       const extraLines: string[] = [];
-      if (locationTag.trim()) extraLines.push(`📍 ${locationTag.trim()}`);
-      if (scheduledAt.trim()) extraLines.push(`🗓️ ${scheduledAt.trim()}`);
+      if (locationTag.trim()) extraLines.push(`Location: ${locationTag.trim()}`);
+      if (scheduledAt.trim()) extraLines.push(`Scheduled: ${scheduledAt.trim()}`);
       const finalContent = [content.trim(), ...extraLines].filter(Boolean).join('\n\n');
 
       let mediaUrls: string[] = [];
@@ -471,24 +451,11 @@ export default function CreatePostPage() {
           </button>
           <button
             className="p-3 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
-            title="Emoji"
-            type="button"
-            onClick={() => {
-              setShowEmojiPicker(v => !v);
-              setShowLocationModal(false);
-              setShowScheduleModal(false);
-            }}
-          >
-            <Smile className="w-6 h-6" />
-          </button>
-          <button
-            className="p-3 text-[#8A2BE2] hover:bg-purple-50 rounded-full transition-colors"
             title="Location"
             type="button"
             onClick={() => {
               setLocationDraft(locationTag);
               setShowLocationModal(true);
-              setShowEmojiPicker(false);
               setShowScheduleModal(false);
             }}
           >
@@ -501,32 +468,11 @@ export default function CreatePostPage() {
             onClick={() => {
               setScheduleDraft(scheduledAt);
               setShowScheduleModal(true);
-              setShowEmojiPicker(false);
               setShowLocationModal(false);
             }}
           >
             <Calendar className="w-6 h-6" />
           </button>
-
-          {showEmojiPicker && (
-            <div className="absolute bottom-12 left-0 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl p-2 z-20">
-              <div className="grid grid-cols-8 gap-1">
-                {emojis.map((e) => (
-                  <button
-                    key={e}
-                    type="button"
-                    className="h-8 w-8 rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center"
-                    onClick={() => {
-                      insertAtCursor(e);
-                      setShowEmojiPicker(false);
-                    }}
-                  >
-                    <span className="text-base">{e}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <input

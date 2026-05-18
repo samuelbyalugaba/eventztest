@@ -380,7 +380,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     user: m.user?.full_name || (m.user as any)?.username || 'Guest',
     text: m.message,
     avatar: m.user?.avatar_url,
-    isGift: m.message.startsWith('🎁'),
+    isGift: m.message.startsWith('[Gift]'),
   }));
 
   // ===== RENDER =====

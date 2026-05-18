@@ -361,14 +361,32 @@ export function Feed({
 
   const toggleSave = useCallback(async (postId: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    if (!currentUser) {
+      toast.error('Please sign in');
+      throw new Error('User must be signed in to save posts');
+    }
+    let previousSaved = false;
     setPosts(prev => prev.map(post => {
-      if (post.id === postId) { if (!post.isSaved) toast.success('Saved for later! 📌'); return { ...post, isSaved: !post.isSaved }; }
+      if (post.id === postId) {
+        previousSaved = post.isSaved;
+        return { ...post, isSaved: !post.isSaved };
+      }
       return post;
     }));
     setSelectedPost(prev => (prev && prev.id === postId) ? { ...prev, isSaved: !prev.isSaved } : prev);
-    if (currentUser) {
-      try { await toggleSavePost(postId, currentUser.id); }
-      catch (error) { console.error('Error toggling save:', error); toast.error('Failed to update saved post'); }
+    try {
+      const saved = await toggleSavePost(postId, currentUser.id);
+      setPosts(prev => prev.map(post => post.id === postId ? { ...post, isSaved: saved } : post));
+      setSelectedPost(prev => (prev && prev.id === postId) ? { ...prev, isSaved: saved } : prev);
+      window.dispatchEvent(new Event('savedPostsUpdated'));
+      if (saved) toast.success('Post saved!');
+    }
+    catch (error) {
+      console.error('Error toggling save:', error);
+      setPosts(prev => prev.map(post => post.id === postId ? { ...post, isSaved: previousSaved } : post));
+      setSelectedPost(prev => (prev && prev.id === postId) ? { ...prev, isSaved: previousSaved } : prev);
+      toast.error('Failed to update saved post');
+      throw error;
     }
   }, [currentUser, setPosts]);
 

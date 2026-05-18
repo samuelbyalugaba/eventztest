@@ -245,7 +245,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         streaming_settings: streamingSettings
       });
       await refreshProfile();
-      toast.success('Streaming settings updated! 📹');
+      toast.success('Streaming settings updated');
     } catch (error) {
       toast.error('Failed to save streaming settings');
     }
@@ -259,7 +259,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         privacy_settings: privacySettings
       });
       await refreshProfile();
-      toast.success('Privacy settings updated! 🔒');
+      toast.success('Privacy settings updated');
     } catch (error) {
       toast.error('Failed to save privacy settings');
     }
@@ -286,7 +286,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         payment_settings: paymentData
       });
       await refreshProfile();
-      toast.success('Payment information saved securely! 💳');
+      toast.success('Payment information saved securely');
     } catch (error) {
       toast.error('Failed to save payment information');
     }
@@ -611,7 +611,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   {[
                     { key: 'autoRecord', title: 'Auto-Record Streams', desc: 'Save streams automatically' },
                     { key: 'chatEnabled', title: 'Live Chat', desc: 'Enable chat during streams' },
-                    { key: 'reactionsEnabled', title: 'Live Reactions', desc: 'Allow emoji reactions' },
+                    { key: 'reactionsEnabled', title: 'Live Reactions', desc: 'Allow live reactions' },
                     { key: 'multiCamera', title: 'Multi-Camera', desc: 'Support multiple angles' },
                     { key: 'lowLatency', title: 'Low Latency Mode', desc: 'Reduce stream delay' },
                   ].map((item) => {
