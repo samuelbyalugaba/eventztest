@@ -271,10 +271,11 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     if (!event.organizer_id) return;
 
     const returnToEvent = location.pathname.startsWith('/event/')
-      ? { pathname: location.pathname, search: location.search, hash: location.hash }
+      ? { pathname: location.pathname, search: location.search, hash: location.hash, state: location.state }
       : { pathname: `/event/${event.id}` };
 
     navigate(`/profile/${event.organizer_id}`, {
+      replace: true,
       state: { returnToEvent },
     });
   };

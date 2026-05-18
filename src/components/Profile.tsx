@@ -57,7 +57,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const userId = userIdProp || userIdParam;
   const navigate = useNavigate();
   const location = useLocation();
-  const returnToEvent = (location.state as { returnToEvent?: { pathname?: string; search?: string; hash?: string } } | null)?.returnToEvent;
+  const returnToEvent = (location.state as { returnToEvent?: { pathname?: string; search?: string; hash?: string; state?: unknown } } | null)?.returnToEvent;
 
   const handleBack = onBack || (userId ? () => {
     if (returnToEvent?.pathname) {
@@ -65,7 +65,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         pathname: returnToEvent.pathname,
         search: returnToEvent.search || '',
         hash: returnToEvent.hash || '',
-      }, { replace: true });
+      }, { replace: true, state: returnToEvent.state });
       return;
     }
 
