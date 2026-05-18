@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getFollowedUserIds, getNotifications, getPosts, getProfile, type Notification } from '../utils/supabase/api';
@@ -9,6 +9,7 @@ let feedCacheMemory: { posts: any[]; timestamp: number } | null = null;
 
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
+const FEED_PAGE_SIZE = 20;
 
 export function useFeedData(initialCurrentUser?: any) {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -20,6 +21,8 @@ export function useFeedData(initialCurrentUser?: any) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+  const nextOffsetRef = useRef(0);
+  const isLoadingMoreRef = useRef(false);
 
   useEffect(() => {
     setCurrentUser(initialCurrentUser || null);
@@ -50,8 +53,10 @@ export function useFeedData(initialCurrentUser?: any) {
         try { const following = await getFollowedUserIds(user.id); setFollowingIds(new Set(following)); } catch (e) { console.error('Error loading following:', e); }
       }
 
-      const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: 0 });
-      setHasMore(!fresh || fresh.length >= 20);
+      const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset: 0 });
+      const freshCount = fresh?.length ?? 0;
+      nextOffsetRef.current = freshCount;
+      setHasMore(freshCount === FEED_PAGE_SIZE);
       const mapped = fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [];
 
       setPosts((prev) => {
@@ -75,22 +80,39 @@ export function useFeedData(initialCurrentUser?: any) {
   };
 
   const handleLoadMore = async () => {
-    if (isLoadingMore || !hasMore) return;
+    if (isLoadingMoreRef.current || isLoadingMore || !hasMore) return;
+    isLoadingMoreRef.current = true;
     setIsLoadingMore(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const fresh = await getPosts({ currentUserId: user?.id, limit: 20, offset: posts.length });
-      if (!fresh || fresh.length < 20) setHasMore(false);
-      if (fresh && fresh.length > 0) {
-        const mapped = mapPostsToViewModel(fresh);
-        setPosts((prev) => {
-          const existingIds = new Set(prev.map((p) => p.id));
-          return [...prev, ...mapped.filter((p) => !existingIds.has(p.id))];
-        });
+      const offset = Math.max(nextOffsetRef.current, posts.length);
+      const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset });
+      const freshCount = fresh?.length ?? 0;
+      nextOffsetRef.current = offset + freshCount;
+
+      if (!fresh || freshCount === 0) {
+        setHasMore(false);
+        return;
       }
+
+      const mapped = mapPostsToViewModel(fresh);
+      const existingIds = new Set(posts.map((p) => p.id));
+      const uniqueMapped = mapped.filter((p) => !existingIds.has(p.id));
+
+      if (uniqueMapped.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      setPosts((prev) => {
+        const latestIds = new Set(prev.map((p) => p.id));
+        return [...prev, ...mapped.filter((p) => !latestIds.has(p.id))];
+      });
+      setHasMore(freshCount === FEED_PAGE_SIZE);
     } catch (error) {
       console.error('Error loading more posts:', error);
     } finally {
+      isLoadingMoreRef.current = false;
       setIsLoadingMore(false);
     }
   };

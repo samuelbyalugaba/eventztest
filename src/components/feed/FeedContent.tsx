@@ -42,6 +42,7 @@ export function FeedContent({
   filteredPosts,
   isRestoringScroll,
   hasMore,
+  isLoadingMore,
   audioUnlocked,
   isPaused,
   onProfileClick,
@@ -125,37 +126,43 @@ export function FeedContent({
         </>
       ) : (
         <>
-          {filteredPosts.map((post, index) => (
-            <div
-              key={post.id}
-              id={`post-${post.id}`}
-              style={{
-                animation: isRestoringScroll ? 'none' : `slideUp 0.4s ease-out ${index * 0.08}s both`,
-                opacity: isRestoringScroll ? 1 : undefined,
-              }}
-            >
-              <PostCard
-                post={post}
-                onLike={(id) => onLike(id)}
-                onSave={(id) => onSave(id)}
-                onShare={(p) => onShare(p)}
-                onProfileClick={(user) => onProfileClick(user)}
-                onMessage={(user) => onMessage(user)}
-                audioUnlocked={audioUnlocked}
-                onViewPost={(startTime, isMuted) => onViewPost(post, startTime, isMuted)}
-                onViewComments={() => onViewComments(post)}
-                isPaused={isPaused}
-              />
-            </div>
-          ))}
+          {filteredPosts.map((post, index) => {
+            const shouldAnimate = !isRestoringScroll && index < 8;
+
+            return (
+              <div
+                key={post.id}
+                id={`post-${post.id}`}
+                style={{
+                  animation: shouldAnimate ? `slideUp 0.28s ease-out ${index * 0.03}s both` : undefined,
+                  opacity: isRestoringScroll ? 1 : undefined,
+                }}
+              >
+                <PostCard
+                  post={post}
+                  onLike={(id) => onLike(id)}
+                  onSave={(id) => onSave(id)}
+                  onShare={(p) => onShare(p)}
+                  onProfileClick={(user) => onProfileClick(user)}
+                  onMessage={(user) => onMessage(user)}
+                  audioUnlocked={audioUnlocked}
+                  onViewPost={(startTime, isMuted) => onViewPost(post, startTime, isMuted)}
+                  onViewComments={() => onViewComments(post)}
+                  isPaused={isPaused}
+                />
+              </div>
+            );
+          })}
         </>
       )}
 
       {hasMore && (
-        <div id="feed-sentinel" className="py-6">
-          <div className="flex justify-center">
-            <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
-          </div>
+        <div id="feed-sentinel" className={isLoadingMore ? 'py-6' : 'h-8'} aria-hidden={!isLoadingMore}>
+          {isLoadingMore && (
+            <div className="flex justify-center">
+              <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
         </div>
       )}
 
