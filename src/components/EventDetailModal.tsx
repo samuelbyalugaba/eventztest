@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles } from 'lucide-react';
 import { formatDateDMY } from '../utils/format';
@@ -32,6 +32,7 @@ const locations = [
 
 export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onTierSelect }: EventDetailModalProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
   const [hasVirtualAccess, setHasVirtualAccess] = useState(false);
   const [isCheckingVirtualAccess, setIsCheckingVirtualAccess] = useState(false);
@@ -260,12 +261,23 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     return () => window.removeEventListener('virtualAccessPurchased', onPurchased as EventListener);
   }, [event.id]);
 
-  const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [mediaViewerType, setMediaViewerType] = useState<'photo' | 'video'>('photo');
   const [showLiveStream, setShowLiveStream] = useState(false);
+
+  const handleOrganizerProfileClick = () => {
+    if (!event.organizer_id) return;
+
+    const returnToEvent = location.pathname.startsWith('/event/')
+      ? { pathname: location.pathname, search: location.search, hash: location.hash }
+      : { pathname: `/event/${event.id}` };
+
+    navigate(`/profile/${event.organizer_id}`, {
+      state: { returnToEvent },
+    });
+  };
 
   // Convert event highlights to format expected by MediaViewer
   const photosForViewer = [
@@ -401,15 +413,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             className="w-full h-full object-cover"
           />
           
-          {/* Organizer Profile Navigation */}
-          {showOrganizerProfile && event.organizer_id && (
-            (() => {
-              navigate(`/profile/${event.organizer_id}`);
-              setShowOrganizerProfile(false);
-              return null;
-            })()
-          )}
-          
           {/* Back Button */}
           <button
             onClick={onClose}
@@ -438,7 +441,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 <h2 className="text-gray-900 text-2xl font-bold">{event.title}</h2>
                 {(event.organizer || event.organizer_id) && (
                   <button
-                    onClick={() => setShowOrganizerProfile(true)}
+                    onClick={handleOrganizerProfileClick}
                     className="mt-2 text-sm text-gray-600 hover:text-[#8A2BE2] transition-colors text-left"
                   >
                     by <span className="font-semibold text-purple-600">{organizerDisplayName}</span>
