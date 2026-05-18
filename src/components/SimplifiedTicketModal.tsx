@@ -497,7 +497,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                   </>
                 ) : (
                   <>
-                    <span>{needsTopUp ? `Add TSh ${walletShortfall.toLocaleString()} & Pay` : `Pay ${currencySymbol} ${totalPrice.toLocaleString()}`}</span>
+                    <span>Pay {currencySymbol} {totalPrice.toLocaleString()}</span>
                     <CreditCard className="w-4 h-4" />
                   </>
                 )}

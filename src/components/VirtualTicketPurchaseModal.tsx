@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Tv, CheckCircle2, User, Mail, ArrowRight, Wallet, Smartphone } from 'lucide-react';
+import { X, Tv, CheckCircle2, User, Mail, ArrowRight, Wallet, Smartphone, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createTicket, createTransaction } from '../utils/supabase/api';
@@ -282,11 +282,13 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                             <span>
                               {isFreeVirtual
                                 ? 'Get Free Access'
-                                : needsTopUp
-                                  ? `Add TSh ${walletShortfall.toLocaleString()} & Pay`
-                                  : `Pay ${formatPrice(event.streaming?.virtualPrice)}`}
+                                : `Pay ${formatPrice(event.streaming?.virtualPrice)}`}
                             </span>
-                            <ArrowRight className="w-4 h-4" />
+                            {isFreeVirtual ? (
+                              <ArrowRight className="w-4 h-4" />
+                            ) : (
+                              <CreditCard className="w-4 h-4" />
+                            )}
                         </>
                     )}
                 </button>
