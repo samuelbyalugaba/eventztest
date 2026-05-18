@@ -25,6 +25,7 @@ import { LikeAnimation, FeedAnimationStyles } from './feed/FeedAnimations';
 import { FeedContent } from './feed/FeedContent';
 
 type FilterTab = 'all' | 'organizers' | 'following';
+const DIRECT_MESSAGE_CLOSE_TO_FEED = '__eventz_close_to_feed__';
 
 interface FeedProps {
   conversations: Conversation[];
@@ -64,7 +65,8 @@ export function Feed({
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const [renderCount, setRenderCount] = useState(20);
+  const [directMessageReturnTo, setDirectMessageReturnTo] = useState<string | null>(null);
+  const [isOpeningDirectMessage, setIsOpeningDirectMessage] = useState(false);
   const [exploreSearch, setExploreSearch] = useState('');
   const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
   const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
@@ -103,6 +105,14 @@ export function Feed({
     currentUserId: currentUser?.id,
     onMarkAsRead,
   });
+
+  useEffect(() => {
+    if (location.pathname === '/feed') return;
+    setShowMessages(false);
+    setActiveConversation(null);
+    setDirectMessageReturnTo(null);
+    setIsOpeningDirectMessage(false);
+  }, [location.pathname, setActiveConversation, setShowMessages]);
 
   // Force pause highlight player if background is paused
   useEffect(() => {
@@ -200,25 +210,41 @@ export function Feed({
     return () => { cancelAnimationFrame(rafId); };
   }, [isLoading, posts.length]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (handledNavKeyRef.current === location.key) return;
     handledNavKeyRef.current = location.key;
     const state = (location.state || {}) as any;
     if (!state?.openMessages && !state?.userToMessage) return;
-    if (state.openMessages) setShowMessages(true);
     if (state.userToMessage) {
       (async () => {
+        setIsOpeningDirectMessage(true);
+        setShowNotifications(false);
+        setActiveConversation(null);
+        setShowMessages(false);
         try {
-          setShowMessages(true);
           const conv = await onStartConversation(state.userToMessage);
-          if (conv) setActiveConversation(conv);
+          if (conv) {
+            setActiveConversation(conv);
+            setDirectMessageReturnTo(typeof state.returnTo === 'string' ? state.returnTo : null);
+            setShowMessages(true);
+          } else if (state.openMessages) {
+            setDirectMessageReturnTo(null);
+            setShowMessages(true);
+          }
         } catch (e) { console.error('Failed to start conversation from navigation state', e); }
-        finally { navigate(location.pathname, { replace: true }); }
+        finally {
+          setIsOpeningDirectMessage(false);
+          navigate(location.pathname, { replace: true });
+        }
       })();
     } else {
+      setActiveConversation(null);
+      if (state.openMessages) setShowMessages(true);
+      setDirectMessageReturnTo(null);
+      setIsOpeningDirectMessage(false);
       navigate(location.pathname, { replace: true });
     }
-  }, [location.key, location.pathname, location.state, navigate, onStartConversation]);
+  }, [location.key, location.pathname, location.state, navigate, onStartConversation, setActiveConversation, setShowMessages]);
 
   useEffect(() => {
     const performSearch = async () => {
@@ -308,15 +334,23 @@ export function Feed({
   );
 
   useEffect(() => {
+    if (!feedScrollContainer || !hasMore) return;
     const sentinel = document.getElementById('feed-sentinel');
     if (!sentinel) return;
+    let didRequest = false;
     const observer = new IntersectionObserver(
-      (entries) => { entries.forEach((entry) => { if (entry.isIntersecting) { setRenderCount((c) => c + 20); if (hasMore && !isLoadingMore) handleLoadMore(); } }); },
-      { threshold: 0.1, root: feedScrollContainer ?? null }
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting) || isLoadingMore || didRequest) return;
+        didRequest = true;
+        void Promise.resolve(handleLoadMore()).finally(() => {
+          didRequest = false;
+        });
+      },
+      { threshold: 0, rootMargin: '240px 0px', root: feedScrollContainer }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [renderCount, posts.length, activeFilter, hasMore, isLoadingMore, feedScrollContainer]);
+  }, [posts.length, activeFilter, hasMore, isLoadingMore, feedScrollContainer, handleLoadMore]);
 
   useEffect(() => {
     if (currentUser) {
@@ -450,11 +484,17 @@ export function Feed({
     e?.stopPropagation();
     if (!currentUser) { toast.error('Please sign in to start a conversation'); return; }
     const toastId = toast.loading('Opening chat...');
+    setIsOpeningDirectMessage(true);
+    setDirectMessageReturnTo(DIRECT_MESSAGE_CLOSE_TO_FEED);
+    setSelectedPost(null);
+    setShowMessages(false);
+    setActiveConversation(null);
     try {
       const conversation = await onStartConversation(user);
-      if (conversation) { setSelectedPost(null); setActiveConversation(conversation); setShowMessages(true); toast.dismiss(toastId); }
-      else toast.error('Could not start conversation', { id: toastId });
-    } catch (error) { console.error('Error starting conversation:', error); toast.error('Failed to start conversation', { id: toastId }); }
+      if (conversation) { setActiveConversation(conversation); setShowMessages(true); toast.dismiss(toastId); }
+      else { setDirectMessageReturnTo(null); toast.error('Could not start conversation', { id: toastId }); }
+    } catch (error) { setDirectMessageReturnTo(null); console.error('Error starting conversation:', error); toast.error('Failed to start conversation', { id: toastId }); }
+    finally { setIsOpeningDirectMessage(false); }
   }, [currentUser, onStartConversation, setActiveConversation, setShowMessages]);
 
   const handleOpenUserProfile = useCallback((user: { id: string; name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean; isOrganizerPage?: boolean }, e?: React.MouseEvent) => {
@@ -502,18 +542,45 @@ export function Feed({
   const handleToggleNotifications = useCallback(() => {
     setShowNotifications(prev => !prev);
     setShowMessages(false);
-  }, [setShowMessages]);
+    setActiveConversation(null);
+    setDirectMessageReturnTo(null);
+    setIsOpeningDirectMessage(false);
+  }, [setActiveConversation, setShowMessages]);
   const handleToggleMessages = useCallback(() => {
+    setActiveConversation(null);
     setShowMessages(prev => !prev);
     setShowNotifications(false);
-  }, [setShowMessages]);
+    setDirectMessageReturnTo(null);
+    setIsOpeningDirectMessage(false);
+  }, [setActiveConversation, setShowMessages]);
 
   // Stable post-detail-modal callbacks
   const handleClosePostModal = useCallback(() => setSelectedPost(null), []);
   const handleClosePlayingVideo = useCallback(() => setPlayingVideo(null), []);
   const handleCloseFullScreenImage = useCallback(() => setFullScreenImage(null), []);
   const handleCloseNotifications = useCallback(() => setShowNotifications(false), []);
-  const handleCloseMessages = useCallback(() => setShowMessages(false), [setShowMessages]);
+  const handleCloseMessages = useCallback(() => {
+    setShowMessages(false);
+    setActiveConversation(null);
+    setDirectMessageReturnTo(null);
+    setIsOpeningDirectMessage(false);
+  }, [setActiveConversation, setShowMessages]);
+  const handleChatBack = useCallback(() => {
+    if (directMessageReturnTo) {
+      const target = directMessageReturnTo;
+      setDirectMessageReturnTo(null);
+      setActiveConversation(null);
+      setShowMessages(false);
+      setIsOpeningDirectMessage(false);
+      if (target === DIRECT_MESSAGE_CLOSE_TO_FEED) {
+        return;
+      }
+      navigate(target, { replace: true });
+      return;
+    }
+
+    setActiveConversation(null);
+  }, [directMessageReturnTo, navigate, setActiveConversation, setShowMessages]);
   const handleCloseShareModal = useCallback(() => {
     setShowShareModal(false);
     setShareModalData(null);
@@ -525,8 +592,8 @@ export function Feed({
 
   // Memoized derived value to avoid recomputing isPaused on every render
   const isFeedPaused = useMemo(
-    () => isPaused || !!selectedPost || !!playingVideo || !!fullScreenImage || showNotifications || showComments || showShareModal,
-    [isPaused, selectedPost, playingVideo, fullScreenImage, showNotifications, showComments, showShareModal]
+    () => isPaused || !!selectedPost || !!playingVideo || !!fullScreenImage || showNotifications || showMessages || isOpeningDirectMessage || showComments || showShareModal,
+    [isPaused, selectedPost, playingVideo, fullScreenImage, showNotifications, showMessages, isOpeningDirectMessage, showComments, showShareModal]
   );
 
   return (
@@ -544,7 +611,7 @@ export function Feed({
           setActiveFilter={setActiveFilter}
           onToggleNotifications={handleToggleNotifications}
           onToggleMessages={handleToggleMessages}
-          showMessagesOrPost={showMessages || !!selectedPost}
+          showMessagesOrPost={showMessages || isOpeningDirectMessage || !!selectedPost}
           scrollContainer={feedScrollContainer}
         />
 
@@ -615,12 +682,19 @@ export function Feed({
       )}
 
       {/* Messages Panel */}
-      {showMessages && (
+      {isOpeningDirectMessage && (
+        <div className="fixed inset-0 h-[100dvh] bg-white z-[70] flex flex-col items-center justify-center">
+          <div className="w-10 h-10 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-sm font-semibold text-gray-900">Opening chat</p>
+        </div>
+      )}
+
+      {showMessages && !isOpeningDirectMessage && (
         !activeConversation ? (
           <ChatList
             conversations={globalConversations}
-            onSelectConversation={(conv) => { setActiveConversation(conv); if (conv.unreadCount > 0 && onMarkAsRead) onMarkAsRead(conv.id); }}
-            onStartNewChat={async (user) => { const conv = await onStartConversation(user); if (conv) setActiveConversation(conv); }}
+            onSelectConversation={(conv) => { setDirectMessageReturnTo(null); setActiveConversation(conv); if (conv.unreadCount > 0 && onMarkAsRead) onMarkAsRead(conv.id); }}
+            onStartNewChat={async (user) => { const conv = await onStartConversation(user); if (conv) { setDirectMessageReturnTo(null); setActiveConversation(conv); } }}
             onClose={handleCloseMessages}
             onlineUsers={onlineUsers}
             onDeleteConversation={onDeleteConversation}
@@ -630,8 +704,9 @@ export function Feed({
             conversationId={activeConversation.id}
             recipient={{ id: activeConversation.user.id || '', username: activeConversation.user.username, full_name: activeConversation.user.name, avatar_url: activeConversation.user.avatar, verified: activeConversation.user.verified, is_organizer: activeConversation.user.isOrganizer, updated_at: new Date().toISOString() } as any}
             currentUser={{ id: currentUser?.id || '' }}
-            onBack={() => setActiveConversation(null)}
+            onBack={handleChatBack}
             onViewProfile={() => {
+              setDirectMessageReturnTo(null);
               navigate(`/profile/${activeConversation.user.id}`);
               handleCloseMessages();
             }}

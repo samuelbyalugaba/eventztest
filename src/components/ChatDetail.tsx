@@ -211,7 +211,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
         style={{ top: offsetTop }}
       >
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
+          <button onClick={onBack} aria-label="Back" className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6 text-gray-900" />
           </button>
           

@@ -60,14 +60,14 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
       <div className="px-5 pt-6 pb-2">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <button onClick={handleBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
+            <button onClick={handleBack} aria-label="Back" className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
               <ArrowLeft className="w-6 h-6 text-gray-900" />
             </button>
             <h1 className="text-2xl font-bold text-gray-900">{isSearching ? 'New Chat' : 'Messages'}</h1>
           </div>
           
           {!isSearching && (
-            <button onClick={handleStartNewChat} className="p-2 hover:bg-gray-100 rounded-full">
+            <button onClick={handleStartNewChat} aria-label="New chat" className="p-2 hover:bg-gray-100 rounded-full">
               <PlusCircle className="w-6 h-6 text-blue-600" />
             </button>
           )}
@@ -157,7 +157,16 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
                 return (
                   <div 
                     key={conv.id} 
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open conversation with ${conv.user.name}`}
                     onClick={() => onSelectConversation(conv)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectConversation(conv);
+                      }
+                    }}
                     className="flex items-start gap-4 cursor-pointer active:opacity-70 transition-opacity"
                   >
                     <div className="relative">
@@ -191,6 +200,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
                             </div>
                           )}
                           <button 
+                            aria-label={`Delete conversation with ${conv.user.name}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (confirm('Are you sure you want to delete this conversation?')) {

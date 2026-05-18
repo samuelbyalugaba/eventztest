@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, Star, ChevronLeft } from 'lucide-react';
+import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase, getProfile, uploadImage, checkUsernameUnique, becomeOrganizer } from '../utils/supabase/api';
 import { searchNominatim } from '../utils/nominatim';
 import { CREATOR_CATEGORIES } from '../utils/categories';
+import creatorBadge from '../assets/verified-badge.png';
 
 interface OrganizerProfileSetupProps {
   onComplete: () => void;
@@ -44,6 +45,13 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
   const filteredCategories = CREATOR_CATEGORIES.filter(c => 
     c.toLowerCase().includes(categorySearch.toLowerCase())
   );
+  const popularCreatorCategories = [
+    { label: 'DJ', value: 'DJ' },
+    { label: 'Artist', value: 'Artist' },
+    { label: 'Musician', value: 'Musician' },
+    { label: 'Nightclub', value: 'Nightclub' },
+    { label: 'Event organizer', value: 'Event Organizer' },
+  ];
 
   const searchLocations = async (query: string) => {
     if (query.length < 3) {
@@ -166,66 +174,142 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
   return (
     <div className="bg-white min-h-screen flex flex-col">
       {/* Mobile Header */}
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-5 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {onBack && (
             <button 
               onClick={onBack}
               className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
             >
-              <ChevronLeft className="w-6 h-6 text-gray-900" />
+              <ChevronLeft className="w-5 h-5 text-gray-900" />
             </button>
           )}
           <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Creator Profile</h1>
-            <p className="text-xs text-gray-500 font-medium">Setup your public profile</p>
+            <h1 className="text-base font-semibold text-gray-900">Creator Profile</h1>
+            <p className="text-[11px] text-gray-500 font-medium">Setup your public profile</p>
           </div>
         </div>
-        <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center text-purple-600 shadow-sm border border-purple-100">
-          <Star className="w-5 h-5 fill-current" />
+        <div className="w-10 h-10 flex items-center justify-center">
+          <img src={creatorBadge} alt="Creator badge" className="w-8 h-8 object-contain" />
         </div>
       </div>
 
-      <div className="flex-1 px-6 pt-8 pb-32 max-w-lg mx-auto w-full">
-        {/* Avatar Section - Modern & Minimal */}
-        <div className="flex flex-col items-center mb-10">
-          <div className="relative group cursor-pointer" onClick={onUploadClick}>
-            <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-50 border-4 border-white shadow-xl shadow-purple-100 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-300">
+      <div className="flex-1 px-6 pt-5 pb-28 max-w-lg mx-auto w-full">
+        {/* Category First */}
+        <section className="mb-8" ref={categoryRef}>
+          <h2 className="text-lg font-semibold text-gray-900 mb-1.5">What best describes you?</h2>
+          <p className="text-sm leading-5 text-gray-500 mb-4">
+            Search or pick a category.
+          </p>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={categorySearch}
+              onChange={(e) => {
+                setCategorySearch(e.target.value);
+                setShowCategoryDropdown(true);
+                if (category && e.target.value !== category) setCategory('');
+              }}
+              onFocus={() => setShowCategoryDropdown(true)}
+              placeholder="e.g. DJ, Artist, Club, Promoter"
+              className="w-full pl-11 pr-10 py-3.5 bg-gray-50 border border-gray-100 focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
+            />
+            <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+
+            {showCategoryDropdown && (
+              <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl max-h-60 overflow-y-auto scrollbar-hide py-1.5 animate-in fade-in zoom-in duration-200">
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setCategory(c);
+                        setCategorySearch(c);
+                        setShowCategoryDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${category === c ? 'text-purple-600 font-semibold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
+                    >
+                      {c}
+                      {category === c && <Check className="w-4 h-4" />}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-5 py-4 text-sm text-gray-400 text-center italic">No categories found</div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="mt-5">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-gray-500 uppercase mb-3">Popular on EVENTZ</p>
+            <div className="flex flex-wrap gap-2">
+              {popularCreatorCategories.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => {
+                    setCategory(item.value);
+                    setCategorySearch(item.value);
+                    setShowCategoryDropdown(false);
+                  }}
+                  className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                    category === item.value
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 bg-white text-gray-700 active:bg-gray-50'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Form Fields - Mobile Native Look */}
+        <section className="space-y-5">
+          <h2 className="text-sm font-semibold text-gray-900">Profile details</h2>
+
+          <button
+            type="button"
+            onClick={onUploadClick}
+            className="w-full flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3.5 text-left active:bg-gray-100 transition-colors"
+          >
+            <div className="w-14 h-14 rounded-full overflow-hidden bg-white border border-gray-100 flex items-center justify-center flex-shrink-0">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Creator" className="w-full h-full object-cover" />
               ) : (
-                <User className="w-12 h-12 text-gray-300" />
+                <User className="w-6 h-6 text-gray-300" />
               )}
             </div>
-            <div className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg border-4 border-white transform transition-transform group-hover:scale-110">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900">Profile photo</p>
+              <p className="text-xs text-gray-500 mt-0.5">Add or change photo</p>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-sm flex-shrink-0">
               <Camera className="w-4 h-4" />
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
-          </div>
-          <p className="mt-4 text-sm font-medium text-gray-500">Tap to upload photo</p>
-        </div>
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
 
-        {/* Form Fields - Mobile Native Look */}
-        <div className="space-y-6">
           {/* Name Input */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900 ml-1">Display Name</label>
+            <label className="text-xs font-semibold text-gray-900 ml-1">Display Name</label>
             <div className="relative">
               <input
                 type="text"
                 value={organizerName}
                 onChange={(e) => setOrganizerName(e.target.value)}
                 placeholder="e.g. The Night Club"
-                className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
               />
             </div>
           </div>
 
           {/* Username Input */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900 ml-1">Username</label>
+            <label className="text-xs font-semibold text-gray-900 ml-1">Username</label>
             <div className="relative">
-              <AtSign className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 value={username}
@@ -235,7 +319,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
                 }}
                 onBlur={checkHandle}
                 placeholder="username"
-                className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
                 {checking ? (
@@ -252,55 +336,11 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
             )}
           </div>
 
-          {/* Category Dropdown */}
-          <div className="space-y-2" ref={categoryRef}>
-            <label className="text-sm font-semibold text-gray-900 ml-1">Category</label>
-            <div className="relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={categorySearch}
-                onChange={(e) => {
-                  setCategorySearch(e.target.value);
-                  setShowCategoryDropdown(true);
-                  if (category && e.target.value !== category) setCategory('');
-                }}
-                onFocus={() => setShowCategoryDropdown(true)}
-                placeholder="Select category"
-                className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
-              />
-              <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
-              
-              {showCategoryDropdown && (
-                <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto scrollbar-hide py-2 animate-in fade-in zoom-in duration-200">
-                  {filteredCategories.length > 0 ? (
-                    filteredCategories.map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => {
-                          setCategory(c);
-                          setCategorySearch(c);
-                          setShowCategoryDropdown(false);
-                        }}
-                        className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${category === c ? 'text-purple-600 font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
-                      >
-                        {c}
-                        {category === c && <Check className="w-4 h-4" />}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-5 py-4 text-sm text-gray-400 text-center italic">No categories found</div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Location Search */}
           <div className="space-y-2" ref={locationRef}>
-            <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
+            <label className="text-xs font-semibold text-gray-900 ml-1">Location</label>
             <div className="relative">
-              <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 value={location}
@@ -310,14 +350,14 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
                 }}
                 onFocus={() => location.length >= 3 && setShowLocationDropdown(true)}
                 placeholder="City, Country"
-                className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all"
+                className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
               />
               {loadingLocations && (
                 <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 animate-spin" />
               )}
               
               {showLocationDropdown && locationSuggestions.length > 0 && (
-                <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto py-2 animate-in fade-in zoom-in duration-200">
+                <div className="absolute z-30 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl max-h-60 overflow-y-auto py-1.5 animate-in fade-in zoom-in duration-200">
                   {locationSuggestions.map((loc, idx) => (
                     <button
                       key={idx}
@@ -341,16 +381,16 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
 
           {/* Bio */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900 ml-1">Bio</label>
+            <label className="text-xs font-semibold text-gray-900 ml-1">Bio</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell your story..."
               rows={4}
-              className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
+              className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
             />
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Sticky Bottom Action Bar */}
@@ -358,10 +398,10 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
         <div className="max-w-lg mx-auto">
           <button
             onClick={onSubmit}
-            className="w-full bg-[#8A2BE2] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-purple-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="w-full bg-[#8A2BE2] text-white py-3.5 rounded-xl font-semibold text-base shadow-lg shadow-purple-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <span>Complete Setup</span>
-            <Check className="w-5 h-5" />
+            <Check className="w-4 h-4" />
           </button>
         </div>
       </div>

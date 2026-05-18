@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getMessages } from '../utils/supabase/api';
 import type { Conversation, Message } from '../types';
 
@@ -10,6 +10,11 @@ export function useFeedConversationState(params: {
   const { globalConversations, currentUserId, onMarkAsRead } = params;
   const [showMessages, setShowMessages] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const activeConversationIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversation?.id ?? null;
+  }, [activeConversation?.id]);
 
   useEffect(() => {
     if (!activeConversation) return;
@@ -21,6 +26,7 @@ export function useFeedConversationState(params: {
       const loadMsgs = async () => {
         try {
           const msgs = await getMessages(updatedConv.id);
+          if (activeConversationIdRef.current !== updatedConv.id) return;
           const formattedMsgs: Message[] = msgs.map((m: any) => ({
             id: m.id,
             senderId: m.sender_id === currentUserId ? 0 : parseInt(m.sender_id, 10) || 1,

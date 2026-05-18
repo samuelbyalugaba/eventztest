@@ -151,6 +151,7 @@ export function FeedHeader({
           </div>
           <div className="flex items-center gap-2">
             <button
+              aria-label="Notifications"
               className={`p-2.5 rounded-xl transition-colors relative ${showNotifications ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
               onClick={() => {
                 if (!currentUser) {
@@ -167,6 +168,7 @@ export function FeedHeader({
               )}
             </button>
             <button
+              aria-label="Messages"
               className={`p-2.5 rounded-xl transition-colors relative ${showMessages ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
               onClick={() => {
                 if (!currentUser) {

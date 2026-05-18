@@ -299,6 +299,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           navigate('/feed', {
             state: {
               openMessages: true,
+              returnTo: `${location.pathname}${location.search}${location.hash}`,
               userToMessage: { id: userId, name: displayName, username: userProfile?.username || '', avatar: userProfile?.avatar_url || '', verified: !!userProfile?.verified, isOrganizer: !!userProfile?.is_organizer }
             }
           });
