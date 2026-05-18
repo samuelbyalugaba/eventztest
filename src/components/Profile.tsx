@@ -99,6 +99,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     
     publishedEvents,
     savedEvents,
+    savedPosts,
     attendedEvents,
     ticketEvents,
     userPosts,
@@ -318,7 +319,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         onOpenPost={handleOpenPost}
         isLoadingSavedEvents={isLoadingSavedEvents}
         savedEvents={savedEvents}
+        savedPosts={savedPosts}
         onEventClick={(e) => setSelectedEvent(e)}
+        onOpenSavedPost={handleOpenPost}
         currentUserId={currentUser?.id}
         onEditEvent={onEditEvent}
         onDeleteEvent={handleDeleteEvent}

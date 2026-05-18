@@ -272,7 +272,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       } else {
         localStorage.setItem('eventz-privacy', JSON.stringify(privacy));
       }
-      toast.success('Privacy settings updated! 🔒');
+      toast.success('Privacy settings updated');
       setCurrentView('main');
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['privacy_settings'] } }));
     } catch (error) {

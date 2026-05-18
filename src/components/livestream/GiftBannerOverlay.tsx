@@ -15,7 +15,7 @@ export function GiftBannerOverlay({ banners }: GiftBannerOverlayProps) {
           className="flex items-center gap-3 bg-yellow-500/15 backdrop-blur-xl rounded-2xl px-3 py-2.5 border border-yellow-500/20 animate-in slide-in-from-left duration-500 shadow-lg"
         >
           <div className="w-8 h-8 rounded-full bg-yellow-500/80 flex items-center justify-center text-lg shadow-lg">
-            {banner.gift.emoji}
+            <span className="text-xs font-bold">{banner.gift.iconLabel}</span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">

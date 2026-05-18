@@ -1,6 +1,12 @@
 import { memo } from 'react';
-import { Calendar, MapPin, Tv } from 'lucide-react';
+import { Calendar, MapPin, MoreVertical, Pencil, Tv } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 import { formatDateDMY } from '../utils/format';
 
@@ -11,12 +17,20 @@ interface EventCardProps {
   currentUserId?: string | null;
   onEditEvent?: (event: ApiEvent) => void;
   onDeleteEvent?: (event: ApiEvent) => void;
+  showOwnerActions?: boolean;
 }
 
-export const EventCard = memo(function EventCard({ event, onClick, className = '' }: EventCardProps) {
+export const EventCard = memo(function EventCard({
+  event,
+  onClick,
+  className = '',
+  onEditEvent,
+  showOwnerActions = false,
+}: EventCardProps) {
   // Use passed organizer data if available, otherwise fallback to "Event Organizer"
   // Avoiding internal fetches to prevent N+1 request problem
   const organizerName = event.organizer?.full_name || 'Event Organizer';
+  const canEdit = showOwnerActions && !!onEditEvent;
 
   return (
     <div
@@ -31,6 +45,34 @@ export const EventCard = memo(function EventCard({ event, onClick, className = '
           displayWidth={400}
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
         />
+        {canEdit && (
+          <div className="absolute top-2 right-2 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Event actions"
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-8 h-8 rounded-full bg-black/55 text-white backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-black/70 active:scale-95 transition-all"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-50 min-w-[140px]">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditEvent(event);
+                  }}
+                  className="gap-2"
+                >
+                  <Pencil className="w-4 h-4" />
+                  <span>Edit event</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
         {/* Streaming Badge */}
         {event.streaming?.available && (
           <div className="absolute bottom-2 right-2">

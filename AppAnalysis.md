@@ -24,7 +24,7 @@ The application demonstrates a solid foundation for a social MVP but suffers fro
 
 ---
 
-## 3. Security Analysis (🚨 CRITICAL)
+## 3. Security Analysis ( CRITICAL)
 
 ### 3.1. Payment Bypass Vulnerability
 **Severity: CRITICAL**

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { getProfile, getUserTickets, getSavedEvents, getFollowersCount, getFollowingCount, getProfilePostsGrid, subscribeToSavedEvents, getOrganizerStats, getOrganizerEvents, checkIsFollowing, getProfileStreamedVideos } from '../utils/supabase/api';
+import { getProfile, getUserTickets, getSavedEvents, getSavedPosts, getFollowersCount, getFollowingCount, getProfilePostsGrid, subscribeToSavedEvents, subscribeToSavedPosts, getOrganizerStats, getOrganizerEvents, checkIsFollowing, getProfileStreamedVideos } from '../utils/supabase/api';
 import type { ApiPost, Profile as UserProfile, Ticket, Event as AppEvent, CloudflareStream } from '../utils/supabase/api';
 import { useProfileStore } from '../store/profileStore';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +19,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const [organizerStats, setOrganizerStats] = useState<any>(isOwnProfileCheck && cachedOrgStats ? cachedOrgStats : null);
   const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
   const [savedEvents, setSavedEvents] = useState<SavedEvent[]>([]);
+  const [savedPosts, setSavedPosts] = useState<ApiPost[]>([]);
   const [attendedEvents, setAttendedEvents] = useState<AppEvent[]>([]);
   const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
   const [userPosts, setUserPosts] = useState<ApiPost[]>([]);
@@ -87,6 +88,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
         setOrganizerStats(cachedData?.organizerStats ?? null);
         setPublishedEvents([]);
         setSavedEvents([]);
+        setSavedPosts([]);
         setTicketEvents([]);
         setAttendedEvents([]);
         setUserPosts(Array.isArray(cachedData?.posts) ? cachedData.posts : []);
@@ -204,8 +206,12 @@ export function useProfileData(userId?: string, activeTab?: string) {
     if (!targetUserId) return;
     try {
       setIsLoadingSavedEvents(true);
-      const saved = await getSavedEvents(targetUserId);
+      const [saved, posts] = await Promise.all([
+        getSavedEvents(targetUserId),
+        getSavedPosts(targetUserId),
+      ]);
       if (saved) setSavedEvents(saved as unknown as SavedEvent[]);
+      if (posts) setSavedPosts(posts);
       savedEventsLoadedRef.current = true;
     } finally {
       setIsLoadingSavedEvents(false);
@@ -253,9 +259,17 @@ export function useProfileData(userId?: string, activeTab?: string) {
 
   useEffect(() => {
     const handleProfileUpdated = () => { void loadData(); };
+    const handleSavedPostsUpdated = () => {
+      savedEventsLoadedRef.current = false;
+      if (activeTab === 'saved') void loadSavedEventsIfNeeded();
+    };
     window.addEventListener('profileUpdated', handleProfileUpdated as EventListener);
-    return () => { window.removeEventListener('profileUpdated', handleProfileUpdated as EventListener); };
-  }, [userId, isOwnProfile, authUser?.id]);
+    window.addEventListener('savedPostsUpdated', handleSavedPostsUpdated as EventListener);
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdated as EventListener);
+      window.removeEventListener('savedPostsUpdated', handleSavedPostsUpdated as EventListener);
+    };
+  }, [userId, isOwnProfile, authUser?.id, activeTab]);
 
   useEffect(() => {
     if (activeTab === 'upcoming') void loadOrganizerEventsIfNeeded();
@@ -307,27 +321,33 @@ export function useProfileData(userId?: string, activeTab?: string) {
 
   useEffect(() => {
     void loadData();
-    let subscription: any = null;
+    let savedEventsSubscription: any = null;
+    let savedPostsSubscription: any = null;
     const setupSubscription = async () => {
       const user = authUser;
       if (isOwnProfile && user) {
-        subscription = subscribeToSavedEvents(user.id, async () => {
+        const refreshSavedItems = async () => {
           try {
-            const saved = await getSavedEvents(user.id);
-            if (saved) {
-              setSavedEvents(saved as unknown as SavedEvent[]);
-              savedEventsLoadedRef.current = true;
-            }
+            const [saved, posts] = await Promise.all([
+              getSavedEvents(user.id),
+              getSavedPosts(user.id),
+            ]);
+            if (saved) setSavedEvents(saved as unknown as SavedEvent[]);
+            if (posts) setSavedPosts(posts);
+            savedEventsLoadedRef.current = true;
           } catch (e) {
-            console.error('Error refreshing saved events:', e);
+            console.error('Error refreshing saved items:', e);
           }
-        });
-        savedEventsSubscriptionRef.current = subscription;
+        };
+        savedEventsSubscription = subscribeToSavedEvents(user.id, refreshSavedItems);
+        savedPostsSubscription = subscribeToSavedPosts(user.id, refreshSavedItems);
+        savedEventsSubscriptionRef.current = savedEventsSubscription;
       }
     };
     void setupSubscription();
     return () => {
-      if (subscription) subscription.unsubscribe?.();
+      if (savedEventsSubscription) savedEventsSubscription.unsubscribe?.();
+      if (savedPostsSubscription) savedPostsSubscription.unsubscribe?.();
       savedEventsSubscriptionRef.current = null;
     };
   }, [userId, isOwnProfile, authUser?.id]);
@@ -338,6 +358,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
     organizerStats,
     publishedEvents,
     savedEvents,
+    savedPosts,
     attendedEvents,
     ticketEvents,
     userPosts,

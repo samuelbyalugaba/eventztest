@@ -244,7 +244,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
               user: m.user?.full_name || m.user?.username || 'User',
               text: m.message,
               avatar: m.user?.avatar_url,
-              isGift: m.message?.startsWith('🎁'),
+              isGift: m.message?.startsWith('[Gift]'),
             }))
           );
         }
@@ -257,11 +257,11 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         user: msg.user?.full_name || (msg.user as any)?.username || 'User',
         text: msg.message,
         avatar: msg.user?.avatar_url,
-        isGift: msg.message?.startsWith('🎁'),
+        isGift: msg.message?.startsWith('[Gift]'),
       };
       setMessages((prev) => addMessage(prev, newMsg));
 
-      if (msg.message?.startsWith('🎁')) {
+      if (msg.message?.startsWith('[Gift]')) {
         const giftMatch = GIFT_OPTIONS.find((g) => msg.message.includes(g.amount.toString()));
         if (giftMatch) {
           setGiftBanners((prev) => [
@@ -606,7 +606,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     setIsSendingGift(true);
     try {
       await sendGift(stream.id, gift.amount, 'TZS');
-      toast.success(`Sent ${gift.emoji} ${gift.name}!`);
+      toast.success(`Sent ${gift.name}`);
       setShowGiftPicker(false);
       const newHearts = Array.from({ length: 6 }, () => generateHeart());
       setHearts((p) => [...p, ...newHearts]);

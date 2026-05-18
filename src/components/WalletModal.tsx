@@ -363,8 +363,8 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       case 'deposit': return t.status === 'pending' ? 'Deposit (Pending)' : 'Deposit';
       case 'top-up': return 'Top Up';
       case 'withdrawal': return 'Withdrawal';
-      case 'gift': return '🎁 Gift Sent';
-      case 'gift-received': return '🎁 Gift Received';
+      case 'gift': return 'Gift Sent';
+      case 'gift-received': return 'Gift Received';
       case 'transfer': return 'Transfer';
       case 'payment': return 'Payment';
       default: return 'Transaction';

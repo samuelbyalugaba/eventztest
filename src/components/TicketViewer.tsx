@@ -53,7 +53,7 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
       link.click();
       
       toast.dismiss(toastId);
-      toast.success('Ticket downloaded! 📥', {
+      toast.success('Ticket downloaded', {
         description: 'Your ticket has been saved to your device',
         duration: 2000,
       });
@@ -93,7 +93,7 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
       } else {
         // Fallback to clipboard
         await navigator.clipboard.writeText(`${window.location.origin}`);
-        toast.success('Link copied to clipboard! 🔗', {
+        toast.success('Link copied to clipboard', {
           description: 'Share your ticket link with friends',
           duration: 2000,
         });
@@ -241,7 +241,7 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
             {/* Important Notice */}
             <div className="bg-white/10 rounded-xl p-4 border border-white/20">
               <p className="text-white/90 text-xs leading-relaxed">
-                📱 <span className="font-semibold">Show this QR code at the entrance.</span> Screenshot or save this ticket for offline access. Valid for one-time entry only.
+                <span className="font-semibold">Show this QR code at the entrance.</span> Screenshot or save this ticket for offline access. Valid for one-time entry only.
               </p>
             </div>
           </div>

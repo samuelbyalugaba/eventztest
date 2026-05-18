@@ -267,7 +267,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     try {
       const publicUrl = await uploadImage(file, 'events');
       handleInputChange('coverImage', publicUrl);
-      toast.success('Cover image uploaded! 📸', { id: toastId });
+      toast.success('Cover image uploaded', { id: toastId });
     } catch {
       toast.error('Failed to upload image', { id: toastId });
     }
@@ -306,7 +306,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         await updateEvent(savedEventId, eventData);
         eventsStore.invalidate();
         setCurrentStatus('published');
-        toast.success('Event updated successfully! ✏️', { description: 'Your changes have been saved' });
+        toast.success('Event updated successfully', { description: 'Your changes have been saved' });
         window.dispatchEvent(new Event('eventsUpdated'));
         if (onBack) onBack();
       } else {

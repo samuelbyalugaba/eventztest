@@ -1287,6 +1287,50 @@ export const getSavedEvents = async (userId: string) => {
   }));
 };
 
+export const getSavedPosts = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('saved_posts')
+    .select(`
+      created_at,
+      post:posts (
+        *,
+        user:profiles(*),
+        event:events(*),
+        likes:post_likes(count),
+        comments:post_comments(count)
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  const posts = (data || [])
+    .map((item: any) => item.post)
+    .filter(Boolean);
+  const postIds = posts.map((post: any) => post.id);
+  const likedPostIds = new Set<number>();
+
+  if (postIds.length > 0) {
+    const { data: likes, error: likesError } = await supabase
+      .from('post_likes')
+      .select('post_id')
+      .eq('user_id', userId)
+      .in('post_id', postIds);
+
+    if (likesError) throw likesError;
+    likes?.forEach((like) => likedPostIds.add(like.post_id));
+  }
+
+  return posts.map((post: any) => ({
+    ...post,
+    likes_count: post.likes?.[0]?.count || 0,
+    comments_count: post.comments?.[0]?.count || 0,
+    is_liked: likedPostIds.has(post.id),
+    is_saved: true,
+  })) as ApiPost[];
+};
+
 export const toggleSaveEvent = async (eventId: number, userId: string) => {
   const { data: existing } = await supabase
     .from('saved_events')
@@ -1339,6 +1383,24 @@ export const subscribeToSavedEvents = (userId: string, callback: () => void) => 
         event: '*',
         schema: 'public',
         table: 'saved_events',
+        filter: `user_id=eq.${userId}`
+      },
+      () => {
+        callback();
+      }
+    )
+    .subscribe();
+};
+
+export const subscribeToSavedPosts = (userId: string, callback: () => void) => {
+  return supabase
+    .channel(`saved_posts:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'saved_posts',
         filter: `user_id=eq.${userId}`
       },
       () => {
@@ -1859,7 +1921,7 @@ export const sendGift = async (eventId: number, amount: number, currency: string
   }
 
   // Send a special chat message
-  await sendStreamMessage(eventId, `🎁 Sent a gift of ${currency} ${amount.toLocaleString()}!`);
+  await sendStreamMessage(eventId, `[Gift] Sent a gift of ${currency} ${amount.toLocaleString()}.`);
 
   return data;
 };

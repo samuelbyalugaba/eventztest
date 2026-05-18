@@ -2,7 +2,7 @@
 
 This checklist outlines the critical steps required to transition Eventz PWA from an "AI MVP" to a secure, globally scalable application.
 
-## 🚨 Phase 1: Critical Security (MUST FIX IMMEDIATELY)
+##  Phase 1: Critical Security (MUST FIX IMMEDIATELY)
 
 The application is currently vulnerable to financial fraud and data manipulation. These issues must be resolved before any real-world usage.
 
@@ -25,7 +25,7 @@ The application is currently vulnerable to financial fraud and data manipulation
 
 ---
 
-## 🚀 Phase 2: Scalability & Performance (Preparing for 1M+ Users)
+##  Phase 2: Scalability & Performance (Preparing for 1M+ Users)
 
 To handle global traffic, the application logic must be decoupled from the database bottlenecks.
 
@@ -48,7 +48,7 @@ To handle global traffic, the application logic must be decoupled from the datab
 
 ---
 
-## 🛠 Phase 3: Maintainability & Code Quality
+##  Phase 3: Maintainability & Code Quality
 
 To sustain development velocity as the team grows.
 

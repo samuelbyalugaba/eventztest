@@ -18,7 +18,9 @@ interface ProfileContentProps {
   // Saved
   isLoadingSavedEvents: boolean;
   savedEvents: (AppEvent & { isSaved: boolean; hasReminder: boolean })[];
+  savedPosts: ApiPost[];
   onEventClick: (event: AppEvent) => void;
+  onOpenSavedPost: (post: ApiPost) => void;
   currentUserId?: string;
   onEditEvent?: (event: any) => void;
   onDeleteEvent: (event: AppEvent) => void;
@@ -47,7 +49,9 @@ export function ProfileContent({
   onOpenPost,
   isLoadingSavedEvents,
   savedEvents,
+  savedPosts,
   onEventClick,
+  onOpenSavedPost,
   currentUserId,
   onEditEvent,
   onDeleteEvent,
@@ -79,10 +83,13 @@ export function ProfileContent({
         <SavedTab
           isLoading={isLoadingSavedEvents}
           events={savedEvents}
+          posts={savedPosts}
           onEventClick={onEventClick}
+          onOpenPost={onOpenSavedPost}
           currentUserId={currentUserId}
           onEditEvent={onEditEvent}
           onDeleteEvent={onDeleteEvent}
+          isPaused={isPaused}
         />
       )}
 
@@ -95,6 +102,7 @@ export function ProfileContent({
           onEditEvent={onEditEvent}
           onDeleteEvent={onDeleteEvent}
           onCreateEvent={onCreateEvent}
+          canManageEvents={isOwnProfile}
         />
       )}
 
@@ -285,9 +293,9 @@ function MediaTab({ isLoading, posts, hasMore, isLoadingMore, onLoadMore, onOpen
   );
 }
 
-function SavedTab({ isLoading, events, onEventClick, currentUserId, onEditEvent, onDeleteEvent }: {
-  isLoading: boolean; events: (AppEvent & { isSaved: boolean; hasReminder: boolean })[];
-  onEventClick: (e: AppEvent) => void; currentUserId?: string; onEditEvent?: (e: any) => void; onDeleteEvent: (e: AppEvent) => void;
+function SavedTab({ isLoading, events, posts, onEventClick, onOpenPost, currentUserId, onEditEvent, onDeleteEvent, isPaused }: {
+  isLoading: boolean; events: (AppEvent & { isSaved: boolean; hasReminder: boolean })[]; posts: ApiPost[];
+  onEventClick: (e: AppEvent) => void; onOpenPost: (p: ApiPost) => void; currentUserId?: string; onEditEvent?: (e: any) => void; onDeleteEvent: (e: AppEvent) => void; isPaused: boolean;
 }) {
   if (isLoading) {
     return (
@@ -298,40 +306,63 @@ function SavedTab({ isLoading, events, onEventClick, currentUserId, onEditEvent,
     );
   }
 
-  if (events.length === 0) {
+  if (events.length === 0 && posts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6">
         <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
           <Bookmark className="w-8 h-8 text-gray-300" />
         </div>
-        <h3 className="text-gray-900 mb-2">No Saved Events Yet</h3>
+        <h3 className="text-gray-900 mb-2">No Saved Items Yet</h3>
         <p className="text-gray-600 text-center text-sm max-w-xs leading-relaxed">
-          Discover amazing events and tap the bookmark icon to save them here
+          Save posts and events to find them here later
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {events.map((event) => (
-        <EventCard
-          key={event.id}
-          event={event}
-          onClick={(e) => onEventClick(e)}
-          currentUserId={currentUserId}
-          onEditEvent={onEditEvent}
-          onDeleteEvent={onDeleteEvent}
-          className="border border-gray-100 hover:shadow-md transition-all"
-        />
-      ))}
+    <div className="space-y-6">
+      {posts.length > 0 && (
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900">Saved Posts</h3>
+          <MediaTab
+            isLoading={false}
+            posts={posts}
+            hasMore={false}
+            isLoadingMore={false}
+            onLoadMore={() => {}}
+            onOpenPost={onOpenPost}
+            isOwnProfile={false}
+            isPaused={isPaused}
+          />
+        </section>
+      )}
+
+      {events.length > 0 && (
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900">Saved Events</h3>
+          <div className="space-y-4">
+            {events.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                onClick={(e) => onEventClick(e)}
+                currentUserId={currentUserId}
+                onEditEvent={onEditEvent}
+                onDeleteEvent={onDeleteEvent}
+                className="border border-gray-100 hover:shadow-md transition-all"
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
-function UpcomingTab({ isLoading, events, onEventClick, currentUserId, onEditEvent, onDeleteEvent, onCreateEvent }: {
+function UpcomingTab({ isLoading, events, onEventClick, currentUserId, onEditEvent, onDeleteEvent, onCreateEvent, canManageEvents }: {
   isLoading: boolean; events: any[]; onEventClick: (e: AppEvent) => void;
-  currentUserId?: string; onEditEvent?: (e: any) => void; onDeleteEvent: (e: AppEvent) => void; onCreateEvent?: () => void;
+  currentUserId?: string; onEditEvent?: (e: any) => void; onDeleteEvent: (e: AppEvent) => void; onCreateEvent?: () => void; canManageEvents: boolean;
 }) {
   if (isLoading) {
     return (
@@ -372,6 +403,7 @@ function UpcomingTab({ isLoading, events, onEventClick, currentUserId, onEditEve
           currentUserId={currentUserId}
           onEditEvent={onEditEvent}
           onDeleteEvent={onDeleteEvent}
+          showOwnerActions={canManageEvents && !!onEditEvent}
           className="border border-gray-100 hover:shadow-md transition-all"
         />
       ))}

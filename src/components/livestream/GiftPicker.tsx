@@ -45,7 +45,7 @@ export function GiftPicker({ isOpen, onClose, onSendGift, isSending }: GiftPicke
                 boxShadow: selectedGift?.id === gift.id ? `0 0 20px ${gift.color}30` : 'none',
               }}
             >
-              <span className="text-2xl">{gift.emoji}</span>
+              <span className="text-sm font-bold" style={{ color: gift.color }}>{gift.iconLabel}</span>
               <span className="text-white/90 text-[10px] font-semibold">{gift.name}</span>
               <span className="text-white/50 text-[9px]">TZS {gift.amount.toLocaleString()}</span>
             </button>
@@ -72,7 +72,7 @@ export function GiftPicker({ isOpen, onClose, onSendGift, isSending }: GiftPicke
               Sending...
             </span>
           ) : selectedGift ? (
-            `Send ${selectedGift.emoji} ${selectedGift.name} — TZS ${selectedGift.amount.toLocaleString()}`
+            `Send ${selectedGift.name} - TZS ${selectedGift.amount.toLocaleString()}`
           ) : (
             'Select a gift'
           )}
