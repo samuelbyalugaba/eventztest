@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Calendar, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles } from 'lucide-react';
+import { MapPin, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles } from 'lucide-react';
 import { formatDateDMY } from '../utils/format';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
@@ -29,6 +29,31 @@ const locations = [
   { id: 'zanzibar', name: 'Zanzibar, Tanzania' },
   { id: 'newyork', name: 'New York, USA' },
 ];
+
+function DetailCalendarIcon() {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+      className="h-9 w-9 flex-shrink-0"
+      fill="none"
+    >
+      <path
+        d="M9 12.5C9 9.5 11.5 7 14.5 7h19C36.5 7 39 9.5 39 12.5v22C39 37.5 36.5 40 33.5 40h-19C11.5 40 9 37.5 9 34.5v-22Z"
+        fill="#FFFFFF"
+        stroke="#D1D5DB"
+        strokeWidth="2"
+      />
+      <path
+        d="M9 13C9 9.7 11.7 7 15 7h18c3.3 0 6 2.7 6 6v7H9v-7Z"
+        fill="#8A2BE2"
+      />
+      <path d="M16 5v8M32 5v8" stroke="#111827" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M15 27h5M24 27h5M33 27h2M15 34h5M30 35l-4-4 1.9-1.9 2.1 2.1 5.2-5.2 1.8 1.9L30 35Z" fill="#CBD5E1" />
+      <path d="M30 35l-4-4 1.9-1.9 2.1 2.1 5.2-5.2 1.8 1.9L30 35Z" fill="#8A2BE2" />
+    </svg>
+  );
+}
 
 export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseNormalTicket, onTierSelect }: EventDetailModalProps) {
   const navigate = useNavigate();
@@ -479,8 +504,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           <div className="mb-6 space-y-4">
             {/* Date & Time */}
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+                <DetailCalendarIcon />
               </div>
               <div className="flex-1">
                 <p className="text-gray-600 text-sm">Date & Time</p>
@@ -491,8 +516,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
             {/* Location */}
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-8 h-8 text-[#8A2BE2]" strokeWidth={2.2} />
               </div>
               <div className="flex-1">
                 <p className="text-gray-600 text-sm">Location</p>
