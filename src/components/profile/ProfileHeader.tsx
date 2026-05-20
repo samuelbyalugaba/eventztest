@@ -1,5 +1,6 @@
 import { ChevronLeft, Radio } from 'lucide-react';
 import { UserAvatar } from '../UserAvatar';
+import creatorBadge from '../../assets/verified-badge.png';
 
 interface ProfileHeaderProps {
   isLoading: boolean;
@@ -26,6 +27,8 @@ export function ProfileHeader({
   onGoLive,
   sidebarSlot,
 }: ProfileHeaderProps) {
+  const showCreatorBadge = isVerified || isOrganizer;
+
   if (isOwnProfile) {
     return (
       <div className="flex items-center justify-between mb-4">
@@ -60,9 +63,9 @@ export function ProfileHeader({
                   <h1 className="text-xl font-semibold text-gray-900 leading-tight truncate">
                     {displayName || 'User'}
                   </h1>
-                  {isVerified && (
+                  {showCreatorBadge && (
                     <img
-                      src="/src/assets/verified-badge.png"
+                      src={creatorBadge}
                       alt="Creator badge"
                       className="w-4 h-4 object-contain flex-shrink-0 drop-shadow-sm pointer-events-none select-none"
                       style={{ visibility: 'visible', opacity: 1, display: 'inline-block' }}
@@ -157,9 +160,9 @@ export function ProfileHeader({
                 <h1 className="truncate text-xl font-semibold leading-tight text-gray-900">
                   {displayName || 'User'}
                 </h1>
-                {isVerified && (
+                {showCreatorBadge && (
                   <img
-                    src="/src/assets/verified-badge.png"
+                    src={creatorBadge}
                     alt="Creator badge"
                     className="h-4 w-4 flex-shrink-0 object-contain drop-shadow-sm pointer-events-none select-none"
                     style={{ visibility: 'visible', opacity: 1, display: 'inline-block' }}

@@ -15,7 +15,13 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+declare global {
+  var __eventzAuthContext: React.Context<AuthContextType | undefined> | undefined;
+}
+
+const AuthContext =
+  globalThis.__eventzAuthContext ??
+  (globalThis.__eventzAuthContext = createContext<AuthContextType | undefined>(undefined));
 
 const slugifyUsername = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
 const buildUsernameCandidates = (seed: string) => {
