@@ -58,6 +58,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const navigate = useNavigate();
   const location = useLocation();
   const returnToEvent = (location.state as { returnToEvent?: { pathname?: string; search?: string; hash?: string; state?: unknown } } | null)?.returnToEvent;
+  const currentRouteTarget = {
+    pathname: location.pathname,
+    search: location.search,
+    hash: location.hash,
+    state: location.state,
+  };
 
   const handleBack = onBack || (userId ? () => {
     if (returnToEvent?.pathname) {
@@ -297,9 +303,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         onMessage={() => {
           if (!currentUser) { toast.error('Please sign in to message'); return; }
           navigate('/feed', {
+            replace: true,
             state: {
               openMessages: true,
-              returnTo: `${location.pathname}${location.search}${location.hash}`,
+              returnTo: currentRouteTarget,
               userToMessage: { id: userId, name: displayName, username: userProfile?.username || '', avatar: userProfile?.avatar_url || '', verified: !!userProfile?.verified, isOrganizer: !!userProfile?.is_organizer }
             }
           });

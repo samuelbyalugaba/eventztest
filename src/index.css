@@ -7,7 +7,14 @@
     width: 100%;
     margin: 0;
     padding: 0;
+  }
+
+  html, body {
     overflow-x: hidden;
+  }
+
+  #root {
+    overflow: hidden;
   }
 
   /* Force Agora video containers to fill their parent */

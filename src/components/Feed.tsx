@@ -27,6 +27,73 @@ import { FeedContent } from './feed/FeedContent';
 type FilterTab = 'all' | 'organizers' | 'following';
 const DIRECT_MESSAGE_CLOSE_TO_FEED = '__eventz_close_to_feed__';
 
+type RouteTarget = {
+  pathname: string;
+  search?: string;
+  hash?: string;
+  state?: unknown;
+};
+
+type DirectMessageReturnTo = typeof DIRECT_MESSAGE_CLOSE_TO_FEED | RouteTarget;
+
+const toDirectMessageReturnTo = (value: unknown): DirectMessageReturnTo | null => {
+  if (!value) return null;
+  if (value === DIRECT_MESSAGE_CLOSE_TO_FEED) return DIRECT_MESSAGE_CLOSE_TO_FEED;
+  if (typeof value === 'string') {
+    try {
+      const parsed = new URL(value, window.location.origin);
+      return { pathname: parsed.pathname, search: parsed.search, hash: parsed.hash };
+    } catch {
+      return { pathname: value };
+    }
+  }
+  if (typeof value === 'object' && typeof (value as RouteTarget).pathname === 'string') {
+    const target = value as RouteTarget;
+    return {
+      pathname: target.pathname,
+      search: target.search || '',
+      hash: target.hash || '',
+      state: target.state,
+    };
+  }
+  return null;
+};
+
+function DirectMessageSkeleton() {
+  return (
+    <div className="fixed inset-0 h-[100dvh] bg-white z-[70] flex flex-col animate-in fade-in duration-200">
+      <div className="h-14 px-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
+        <div className="h-9 w-9 rounded-full bg-gray-100 animate-pulse" />
+        <div className="h-10 w-10 rounded-full bg-gray-100 animate-pulse" />
+        <div className="space-y-2 flex-1">
+          <div className="h-3.5 w-32 rounded bg-gray-100 animate-pulse" />
+          <div className="h-2.5 w-20 rounded bg-gray-100 animate-pulse" />
+        </div>
+      </div>
+      <div className="flex-1 bg-gray-50 px-4 py-6 space-y-5 overflow-hidden">
+        <div className="mx-auto h-6 w-20 rounded-lg bg-white shadow-sm animate-pulse" />
+        <div className="max-w-[74%] space-y-2">
+          <div className="h-11 rounded-2xl rounded-bl-md bg-white border border-gray-100 shadow-sm animate-pulse" />
+          <div className="h-2.5 w-14 rounded bg-gray-200 animate-pulse" />
+        </div>
+        <div className="ml-auto max-w-[68%] space-y-2">
+          <div className="h-12 rounded-2xl rounded-br-md bg-blue-100 animate-pulse" />
+          <div className="ml-auto h-2.5 w-14 rounded bg-gray-200 animate-pulse" />
+        </div>
+        <div className="max-w-[58%] space-y-2">
+          <div className="h-10 rounded-2xl rounded-bl-md bg-white border border-gray-100 shadow-sm animate-pulse" />
+          <div className="h-2.5 w-12 rounded bg-gray-200 animate-pulse" />
+        </div>
+      </div>
+      <div className="p-3 border-t border-gray-100 bg-white flex items-center gap-2 flex-shrink-0">
+        <div className="h-10 w-10 rounded-full bg-gray-100 animate-pulse" />
+        <div className="h-10 flex-1 rounded-full bg-gray-100 animate-pulse" />
+        <div className="h-10 w-10 rounded-full bg-gray-100 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 interface FeedProps {
   conversations: Conversation[];
   onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
@@ -65,7 +132,7 @@ export function Feed({
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const [directMessageReturnTo, setDirectMessageReturnTo] = useState<string | null>(null);
+  const [directMessageReturnTo, setDirectMessageReturnTo] = useState<DirectMessageReturnTo | null>(null);
   const [isOpeningDirectMessage, setIsOpeningDirectMessage] = useState(false);
   const [exploreSearch, setExploreSearch] = useState('');
   const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
@@ -225,7 +292,7 @@ export function Feed({
           const conv = await onStartConversation(state.userToMessage);
           if (conv) {
             setActiveConversation(conv);
-            setDirectMessageReturnTo(typeof state.returnTo === 'string' ? state.returnTo : null);
+            setDirectMessageReturnTo(toDirectMessageReturnTo(state.returnTo));
             setShowMessages(true);
           } else if (state.openMessages) {
             setDirectMessageReturnTo(null);
@@ -483,7 +550,6 @@ export function Feed({
   const handleStartConversationLocal = useCallback(async (user: { name: string; username: string; avatar: string; verified: boolean; isOrganizer?: boolean }, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!currentUser) { toast.error('Please sign in to start a conversation'); return; }
-    const toastId = toast.loading('Opening chat...');
     setIsOpeningDirectMessage(true);
     setDirectMessageReturnTo(DIRECT_MESSAGE_CLOSE_TO_FEED);
     setSelectedPost(null);
@@ -491,9 +557,9 @@ export function Feed({
     setActiveConversation(null);
     try {
       const conversation = await onStartConversation(user);
-      if (conversation) { setActiveConversation(conversation); setShowMessages(true); toast.dismiss(toastId); }
-      else { setDirectMessageReturnTo(null); toast.error('Could not start conversation', { id: toastId }); }
-    } catch (error) { setDirectMessageReturnTo(null); console.error('Error starting conversation:', error); toast.error('Failed to start conversation', { id: toastId }); }
+      if (conversation) { setActiveConversation(conversation); setShowMessages(true); }
+      else { setDirectMessageReturnTo(null); toast.error('Could not start conversation'); }
+    } catch (error) { setDirectMessageReturnTo(null); console.error('Error starting conversation:', error); toast.error('Failed to start conversation'); }
     finally { setIsOpeningDirectMessage(false); }
   }, [currentUser, onStartConversation, setActiveConversation, setShowMessages]);
 
@@ -566,16 +632,26 @@ export function Feed({
     setIsOpeningDirectMessage(false);
   }, [setActiveConversation, setShowMessages]);
   const handleChatBack = useCallback(() => {
-    if (directMessageReturnTo) {
-      const target = directMessageReturnTo;
+    const closeChatState = () => {
       setDirectMessageReturnTo(null);
       setActiveConversation(null);
       setShowMessages(false);
       setIsOpeningDirectMessage(false);
+    };
+
+    if (directMessageReturnTo) {
+      const target = directMessageReturnTo;
       if (target === DIRECT_MESSAGE_CLOSE_TO_FEED) {
+        closeChatState();
         return;
       }
-      navigate(target, { replace: true });
+
+      navigate({
+        pathname: target.pathname,
+        search: target.search || '',
+        hash: target.hash || '',
+      }, { replace: true, state: target.state });
+      window.setTimeout(closeChatState, 0);
       return;
     }
 
@@ -683,10 +759,7 @@ export function Feed({
 
       {/* Messages Panel */}
       {isOpeningDirectMessage && (
-        <div className="fixed inset-0 h-[100dvh] bg-white z-[70] flex flex-col items-center justify-center">
-          <div className="w-10 h-10 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-sm font-semibold text-gray-900">Opening chat</p>
-        </div>
+        <DirectMessageSkeleton />
       )}
 
       {showMessages && !isOpeningDirectMessage && (

@@ -5,6 +5,7 @@ import { getEventById } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { SimplifiedTicketModal } from './SimplifiedTicketModal';
+import { RouteFallback } from './skeletons/PageSkeletons';
 
 interface EventDetailWrapperProps {
   onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => void;
@@ -63,11 +64,7 @@ export function EventDetailWrapper({
   }, [id, navigate]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <RouteFallback />;
   }
 
   if (!event) return null;

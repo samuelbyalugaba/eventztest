@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, DollarSign, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles } from 'lucide-react';
+import { MapPin, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles } from 'lucide-react';
 import { formatDateDMY } from '../utils/format';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
@@ -508,7 +508,6 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 <DetailCalendarIcon />
               </div>
               <div className="flex-1">
-                <p className="text-gray-600 text-sm">Date & Time</p>
                 <p className="text-gray-900">{formatDateDMY(event.date)}</p>
                 <p className="text-gray-700 text-sm">{event.time}</p>
               </div>
@@ -599,12 +598,12 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
           {/* Price & Attendees Info */}
           <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-gray-600 text-sm mb-1">Ticket Price</p>
                 <p className="text-gray-900">{formatEventPrice(event.price_range)}</p>
               </div>
-              <div className="flex items-center gap-2 text-purple-600">
+              <div className="mt-0.5 flex shrink-0 items-center gap-2 text-purple-600">
                 <Users className="w-5 h-5" />
                 <span className="text-sm">{(event.attendees || 0).toLocaleString()} attending</span>
               </div>
@@ -614,8 +613,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           {/* Ticket Tiers Section - DYNAMIC PRICING */}
           {event.ticket_tiers && event.ticket_tiers.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-gray-900 font-semibold mb-3 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-purple-600" />
+              <h3 className="text-gray-900 font-semibold mb-3">
                 Ticket Prices
               </h3>
               <div className="space-y-2">

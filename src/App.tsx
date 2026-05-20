@@ -187,6 +187,7 @@ export default function App() {
   const isFeedTab = effectivePath === '/feed';
   const isLiveTab = effectivePath === '/live';
   const isOwnProfileTab = effectivePath === '/profile';
+  const isKeepAliveTab = isEventsTab || isFeedTab || isLiveTab || isOwnProfileTab;
 
   // Refs to manage scroll position of each tab
   const eventsScrollRef = useRef<HTMLDivElement>(null);
@@ -223,7 +224,7 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="h-[100dvh] overflow-y-auto bg-gray-50">
         <Toaster position="top-center" richColors={false} closeButton />
         <AuthScreen onAuthSuccess={handleAuthSuccess} />
       </div>
@@ -231,7 +232,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-[100dvh] overflow-hidden bg-gray-50">
       <Toaster 
         position="top-center" 
         richColors={false} 
@@ -263,7 +264,7 @@ export default function App() {
       />
       <DesktopSidebar />
       <RightRail />
-      <div className={`max-w-7xl mx-auto lg:max-w-none lg:ml-64 xl:ml-72 xl:mr-80 ${shouldHideBottomNav ? 'pb-20 lg:pb-0' : 'pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
+      <div className="h-[100dvh] overflow-hidden max-w-7xl mx-auto lg:max-w-none lg:ml-64 xl:ml-72 xl:mr-80">
         {/* Keep-alive tab views with lazy loading */}
         <div 
           ref={eventsScrollRef}
@@ -278,7 +279,7 @@ export default function App() {
             />
           </Suspense>
         </div>
-        <div style={{ display: isFeedTab ? 'block' : 'none' }}>
+        <div style={{ display: isFeedTab ? 'block' : 'none' }} className="h-[100dvh] overflow-hidden">
           <Suspense fallback={<FeedPageSkeleton />}>
             <Feed
               conversations={conversations}
@@ -323,6 +324,7 @@ export default function App() {
 
         <div 
           ref={routeScrollRef}
+          style={{ display: isKeepAliveTab ? 'none' : 'block' }}
           className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
         >
           <Routes location={backgroundLocation || location}>
