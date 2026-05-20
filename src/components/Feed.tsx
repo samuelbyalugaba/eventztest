@@ -674,7 +674,7 @@ export function Feed({
 
   return (
     <>
-      <div ref={feedContainerRef} className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white pb-20">
+      <div ref={feedContainerRef} className="relative h-[100dvh] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
         <FeedHeader
           currentUser={currentUser}
           showNotifications={showNotifications}
@@ -696,15 +696,16 @@ export function Feed({
             (feedScrollRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
             setFeedScrollContainer(el);
           }}
-          className="overflow-y-auto h-[100dvh] overscroll-behavior-y-contain"
+          className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain touch-pan-y"
           style={{
             paddingTop: feedHeaderHeight > 0 ? `${feedHeaderHeight}px` : '7rem',
+            WebkitOverflowScrolling: 'touch',
             visibility: isRestoringScroll ? 'hidden' : 'visible',
             pointerEvents: isRestoringScroll ? 'none' : 'auto',
           }}
         >
           <div id="top-sentinel" className="w-full h-px pointer-events-none" />
-          <div className="max-w-2xl xl:max-w-[640px] mx-auto px-4 py-4 space-y-4">
+          <div className="max-w-2xl xl:max-w-[640px] mx-auto px-4 pt-4 pb-[calc(8rem+env(safe-area-inset-bottom))] space-y-4">
             <FeedContent
               exploreSearch={exploreSearch}
               isSearchingProfiles={isSearchingProfiles}
