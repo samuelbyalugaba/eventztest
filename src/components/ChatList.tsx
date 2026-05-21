@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
+import { Search, ArrowLeft, PlusCircle, Trash2, MessageSquare } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Conversation } from '../types';
 import { searchProfiles } from '../utils/supabase/api';
@@ -18,12 +18,14 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
-  const filteredConversations = conversations.filter(conv => {
+  const visibleConversations = conversations.filter(conv => conv.hasMessages === true);
+  const filteredConversations = visibleConversations.filter(conv => {
     return (
       conv.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       conv.user.username.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
+  const hasOnlyEmptyConversations = conversations.length > 0 && visibleConversations.length === 0;
 
   const handleSearch = async (term: string) => {
     setSearchTerm(term);
@@ -152,8 +154,25 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
               ))
             ) : (
               // Conversations List
-              filteredConversations.map((conv) => {
+              filteredConversations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                    <MessageSquare className="h-7 w-7 text-gray-400" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">
+                    {searchTerm ? 'No matching chats' : 'No active chats'}
+                  </h3>
+                  <p className="mt-2 max-w-xs text-sm text-gray-500">
+                    {searchTerm
+                      ? 'Try searching for another person or message.'
+                      : hasOnlyEmptyConversations
+                        ? 'Chats will appear here after a message is sent.'
+                        : 'Start a conversation from a profile to begin messaging.'}
+                  </p>
+                </div>
+              ) : filteredConversations.map((conv) => {
                 const isOnline = onlineUsers.some(u => u.id === conv.user.id);
+                const previewText = conv.lastMessage.text || 'Attachment';
                 return (
                   <div 
                     key={conv.id} 
@@ -191,7 +210,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
                         <p className={`text-sm truncate pr-4 ${
                           (conv.unreadCount || 0) > 0 ? 'text-gray-900 font-semibold' : 'text-gray-500'
                         }`}>
-                          {conv.lastMessage.text || 'No messages yet'}
+                          {previewText}
                         </p>
                         <div className="flex items-center gap-2">
                           {(conv.unreadCount || 0) > 0 && (

@@ -194,8 +194,21 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     sessionStorage.setItem('eventz_profile_scroll', String(window.scrollY));
     sessionStorage.setItem('eventz_profile_post_id', String(post.id));
 
+    const postAuthor = post.user;
+    const hasPostAuthor = !!(postAuthor?.id || postAuthor?.full_name || postAuthor?.username || postAuthor?.avatar_url);
     let postUser;
-    if (isOwnProfile) {
+    if (hasPostAuthor) {
+      const isOrganizerPage = !!post.posted_as_organizer;
+      postUser = {
+        id: postAuthor?.id || post.user_id || 'unknown',
+        name: postAuthor?.full_name || postAuthor?.username || 'Unknown User',
+        username: postAuthor?.username || '@unknown',
+        avatar: postAuthor?.avatar_url || '',
+        verified: postAuthor?.verified || false,
+        isOrganizer: postAuthor?.is_organizer || isOrganizerPage,
+        isOrganizerPage,
+      };
+    } else if (isOwnProfile) {
       const currentProfileIsOrganizer = userProfile?.is_organizer || false;
       postUser = { id: currentUser?.id, name: displayName, username: userProfile?.username || '@user', avatar: profileImage || '', verified: userProfile?.verified || false, isOrganizer: currentProfileIsOrganizer, isOrganizerPage: currentProfileIsOrganizer };
     } else {
