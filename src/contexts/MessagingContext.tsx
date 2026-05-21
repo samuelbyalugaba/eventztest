@@ -81,6 +81,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
                 : '',
               isRead: c.last_message?.is_read || false,
             },
+            hasMessages: !!c.last_message,
             unreadCount: c.unread_count || 0,
             messages: [],
           };
@@ -127,6 +128,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
           ...conv,
           messages: [...conv.messages, appMsg],
           lastMessage: { text: appMsg.text, timestamp: 'Just now', isRead: appMsg.read },
+          hasMessages: true,
           unreadCount: newMessage.sender_id !== currentUser.id ? (conv.unreadCount || 0) + 1 : (conv.unreadCount || 0),
         };
         const next = [...prev];
@@ -182,7 +184,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
             verified: user.verified,
             isOrganizer: user.isOrganizer,
           },
-          lastMessage: { text: 'Start a conversation...', timestamp: 'Now', isRead: true },
+          lastMessage: { text: '', timestamp: '', isRead: true },
+          hasMessages: false,
           unreadCount: 0,
           messages: [],
         };
@@ -195,6 +198,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
 
   const handleSendMessage = useCallback(async (conversationId: number, messageText: string) => {
     if (!messageText.trim() || !currentUser) return;
+    const previousConversation = conversations.find(conv => conv.id === conversationId);
     const tempId = Date.now();
     const tempMsg: Message = {
       id: tempId, senderId: 0, text: messageText,
@@ -205,6 +209,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       ...conv,
       messages: [...conv.messages, tempMsg],
       lastMessage: { text: tempMsg.text, timestamp: 'Just now', isRead: true },
+      hasMessages: true,
     } : conv));
     try {
       const sent = await sendMessage(conversationId, messageText);
@@ -218,15 +223,19 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
           ...conv,
           messages: conv.messages.map(m => m.id === tempId ? real : m),
           lastMessage: { text: real.text, timestamp: 'Just now', isRead: true },
+          hasMessages: true,
         } : conv));
       }
     } catch {
       setConversations(prev => prev.map(conv => conv.id === conversationId ? {
-        ...conv, messages: conv.messages.filter(m => m.id !== tempId),
+        ...conv,
+        messages: conv.messages.filter(m => m.id !== tempId),
+        lastMessage: previousConversation?.lastMessage || conv.lastMessage,
+        hasMessages: previousConversation?.hasMessages || false,
       } : conv));
       toast.error('Failed to send message');
     }
-  }, [currentUser]);
+  }, [currentUser, conversations]);
 
   const handleMarkAsRead = useCallback(async (conversationId: number) => {
     if (!currentUser) return;
@@ -270,6 +279,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
                 timestamp: c.last_message ? new Date(c.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
                 isRead: c.last_message?.is_read || false,
               },
+              hasMessages: !!c.last_message,
               unreadCount: c.unread_count || 0,
               messages: msgs.map((m: any) => ({
                 id: m.id,

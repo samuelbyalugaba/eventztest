@@ -36,6 +36,7 @@ export interface Conversation {
     timestamp: string;
     isRead: boolean;
   };
+  hasMessages?: boolean;
   unreadCount: number;
   messages: Message[];
 }
