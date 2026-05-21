@@ -298,19 +298,24 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     const routeState = location.state as {
       backgroundLocation?: { pathname?: string; search?: string; hash?: string; state?: unknown };
       closeTo?: { pathname?: string; search?: string; hash?: string; state?: unknown };
+      eventSnapshot?: ApiEvent;
     } | null;
     const closeTo = routeState?.closeTo || routeState?.backgroundLocation || { pathname: '/events' };
+    const eventRouteState = {
+      ...routeState,
+      closeTo,
+      eventSnapshot: event,
+    };
     const returnToEvent = location.pathname.startsWith('/event/')
       ? {
           pathname: location.pathname,
           search: location.search,
           hash: location.hash,
-          state: { closeTo },
+          state: eventRouteState,
         }
-      : { pathname: `/event/${event.id}`, state: { closeTo } };
+      : { pathname: `/event/${event.id}`, state: eventRouteState };
 
     navigate(`/profile/${event.organizer_id}`, {
-      replace: true,
       state: { returnToEvent },
     });
   };
