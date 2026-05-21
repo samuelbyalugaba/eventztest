@@ -311,7 +311,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             return;
           }
 
-          const toastId = toast.loading('Opening chat...');
           setIsStartingMessage(true);
           try {
             const conversation = await onStartConversation({
@@ -324,13 +323,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             });
 
             if (conversation) {
-              toast.dismiss(toastId);
               navigate(`/messages/${conversation.id}`, { state: { returnTo: currentRouteTarget } });
             } else {
-              toast.error('Could not start conversation', { id: toastId });
+              toast.error('Could not start conversation');
             }
           } catch {
-            toast.error('Failed to start conversation', { id: toastId });
+            toast.error('Failed to start conversation');
           } finally {
             setIsStartingMessage(false);
           }
