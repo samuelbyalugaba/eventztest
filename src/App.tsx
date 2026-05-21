@@ -23,6 +23,7 @@ const ProfileModalWrapper = lazy(() => import('./components/ProfileModalWrapper'
 const EventDetailWrapper = lazy(() => import('./components/EventDetailWrapper').then(m => ({ default: m.EventDetailWrapper })));
 const LiveStreamPage = lazy(() => import('./components/LiveStreamPage').then(m => ({ default: m.LiveStreamPage })));
 const CreatePostPage = lazy(() => import('./components/CreatePostPage'));
+const MessagesPage = lazy(() => import('./components/MessagesPage'));
 
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -41,17 +42,13 @@ export default function App() {
     user: currentUser,
     isAuthenticated,
     isLoading: isCheckingAuth,
-    isOrganizer,
   } = useAuth();
 
   const {
     conversations,
-    onlineFriends,
     hasLiveEvents,
     startConversation: handleStartConversation,
     sendMessage: handleSendMessage,
-    markAsRead: handleMarkAsRead,
-    deleteConversation: handleDeleteConversation,
   } = useMessaging();
 
   const handleAuthSuccess = (_token: string, _user: any) => {
@@ -178,7 +175,8 @@ export default function App() {
     location.pathname.startsWith('/edit-event') ||
     (location.pathname.startsWith('/post') && !isPostModal) ||
     (location.pathname.startsWith('/event/') && !isEventModal) ||
-    location.pathname.startsWith('/live/');
+    location.pathname.startsWith('/live/') ||
+    location.pathname.startsWith('/messages');
 
   const backgroundLocation = location.state?.backgroundLocation;
   const effectiveLocation = backgroundLocation || location;
@@ -284,13 +282,7 @@ export default function App() {
             <Feed
               conversations={conversations}
               onStartConversation={handleStartConversation}
-              onSendMessage={handleSendMessage}
-              onMarkAsRead={handleMarkAsRead}
-              onlineUsers={onlineFriends}
-              onDeleteConversation={handleDeleteConversation}
               currentUser={currentUser}
-              isOrganizer={isOrganizer}
-              onCreateEvent={handleCreateEvent}
               onViewPost={handleViewPost}
               isPaused={!isFeedTab || !!backgroundLocation}
             />
@@ -316,6 +308,7 @@ export default function App() {
               onCreateEvent={handleCreateEvent}
               onEditEvent={handleEditEvent}
               onStartOrganizerSetup={handleStartOrganizerSetup}
+              onStartConversation={handleStartConversation}
               onViewPost={handleViewPost}
               isPaused={!isOwnProfileTab || !!backgroundLocation}
             />
@@ -340,6 +333,7 @@ export default function App() {
                   onCreateEvent={handleCreateEvent}
                   onEditEvent={handleEditEvent}
                   onStartOrganizerSetup={handleStartOrganizerSetup}
+                  onStartConversation={handleStartConversation}
                   onViewPost={handleViewPost}
                   isPaused={!!backgroundLocation}
                 />
@@ -359,6 +353,12 @@ export default function App() {
             } />
             <Route path="/live/:id" element={
               <Suspense fallback={<RouteFallback />}><LiveStreamPage /></Suspense>
+            } />
+            <Route path="/messages" element={
+              <Suspense fallback={<RouteFallback />}><MessagesPage /></Suspense>
+            } />
+            <Route path="/messages/:conversationId" element={
+              <Suspense fallback={<RouteFallback />}><MessagesPage /></Suspense>
             } />
             <Route path="/compose/post" element={
               <Suspense fallback={<RouteFallback />}><CreatePostPage /></Suspense>
@@ -382,6 +382,7 @@ export default function App() {
                 onCreateEvent={handleCreateEvent}
                 onEditEvent={handleEditEvent}
                 onStartOrganizerSetup={handleStartOrganizerSetup}
+                onStartConversation={handleStartConversation}
                 onViewPost={handleViewPost}
               />
             </Suspense>
@@ -393,6 +394,7 @@ export default function App() {
                 onCreateEvent={handleCreateEvent}
                 onEditEvent={handleEditEvent}
                 onStartOrganizerSetup={handleStartOrganizerSetup}
+                onStartConversation={handleStartConversation}
                 onViewPost={handleViewPost}
               />
             </Suspense>
