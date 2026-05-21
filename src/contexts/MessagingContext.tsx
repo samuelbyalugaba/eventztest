@@ -33,6 +33,7 @@ interface StartConversationUser {
 
 interface MessagingContextValue {
   conversations: Conversation[];
+  isLoadingConversations: boolean;
   onlineFriends: OnlineFriend[];
   hasLiveEvents: boolean;
   startConversation: (user: StartConversationUser) => Promise<Conversation | null>;
@@ -46,6 +47,7 @@ const MessagingContext = createContext<MessagingContextValue | null>(null);
 export function MessagingProvider({ children }: { children: ReactNode }) {
   const { user: currentUser, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [onlineFriends, setOnlineFriends] = useState<OnlineFriend[]>([]);
   const [hasLiveEvents, setHasLiveEvents] = useState(false);
 
@@ -53,9 +55,11 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || !currentUser) {
       setConversations([]);
+      setIsLoadingConversations(false);
       return;
     }
     (async () => {
+      setIsLoadingConversations(true);
       try {
         const apiConvs = await getConversations(currentUser.id);
         const formatted: Conversation[] = apiConvs.map((c: any) => {
@@ -83,6 +87,9 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
         });
         setConversations(formatted);
       } catch {/* silent */}
+      finally {
+        setIsLoadingConversations(false);
+      }
     })();
   }, [isAuthenticated, currentUser]);
 
@@ -281,13 +288,14 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<MessagingContextValue>(() => ({
     conversations,
+    isLoadingConversations,
     onlineFriends,
     hasLiveEvents,
     startConversation: handleStartConversation,
     sendMessage: handleSendMessage,
     markAsRead: handleMarkAsRead,
     deleteConversation: handleDeleteConversation,
-  }), [conversations, onlineFriends, hasLiveEvents, handleStartConversation, handleSendMessage, handleMarkAsRead, handleDeleteConversation]);
+  }), [conversations, isLoadingConversations, onlineFriends, hasLiveEvents, handleStartConversation, handleSendMessage, handleMarkAsRead, handleDeleteConversation]);
 
   return <MessagingContext.Provider value={value}>{children}</MessagingContext.Provider>;
 }
