@@ -1,14 +1,48 @@
-import { useState, useEffect } from 'react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Upload, Calendar, MapPin, Tag, Eye, Save, Music, GraduationCap, Church, Briefcase, Dumbbell, Palette, CheckCircle, ArrowLeft, Plus, Trash2, X, Tv } from 'lucide-react';
+import { useEffect, useMemo, useState, type ChangeEvent, type ComponentType } from 'react';
+import {
+  ArrowLeft,
+  BarChart3,
+  Bolt,
+  Briefcase,
+  Calendar,
+  Camera,
+  Check,
+  CheckCircle,
+  ChevronDown,
+  Church,
+  Crown,
+  Dumbbell,
+  Eye,
+  GraduationCap,
+  Info,
+  MapPin,
+  Mic,
+  Minus,
+  Music,
+  Palette,
+  Plus,
+  Settings,
+  Shirt,
+  Sparkles,
+  Tag,
+  Ticket,
+  Trash2,
+  Tv,
+  Upload,
+  Users,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { ShareModal } from './ShareModal';
+import { ImageWithFallback } from './figma/ImageWithFallback';
 import { supabase } from '../utils/supabase/client';
 import { currencies, extractCurrencyFromPrice } from '../utils/currencies';
-import { createEvent, updateEvent, uploadImage, getProfile, getEventAnalytics } from '../utils/supabase/api';
+import { createEvent, getEventAnalytics, getProfile, updateEvent, uploadImage } from '../utils/supabase/api';
 import { eventsStore } from '../store/eventStore';
 import { EventPreview } from './create-event/EventPreview';
 import { EventSuccessScreen } from './create-event/EventSuccessScreen';
+
+type IconType = ComponentType<{ className?: string }>;
+type TicketMode = 'tiers' | 'free';
 
 interface TicketTier {
   name: string;
@@ -16,6 +50,18 @@ interface TicketTier {
   priceNumeric: number;
   available: number;
   features: string[];
+  color?: string;
+  badge?: string;
+  saleEnds?: string;
+  registrationRequired?: boolean;
+}
+
+interface EventSettings {
+  liveStream: boolean;
+  virtualTickets: boolean;
+  audienceGifting: boolean;
+  promoCodes: boolean;
+  idVerification: boolean;
 }
 
 interface EventForm {
@@ -28,10 +74,14 @@ interface EventForm {
   price: string;
   description: string;
   coverImage: string | null;
+  ticketMode: TicketMode;
   ticketTiers: TicketTier[];
   currency: string;
+  expectedGuests: number;
+  requireRegistration: boolean;
+  freePerks: string[];
+  settings: EventSettings;
   streaming: {
-    available: boolean;
     virtualPrice: string;
     virtualPriceNumeric: number;
     quality: 'HD' | '4K' | 'SD';
@@ -43,264 +93,592 @@ interface CreateEventProps {
   event?: any;
 }
 
-const eventCategories = [
-  { name: 'Entertainment', icon: Music, gradient: 'from-purple-600 to-pink-600' },
-  { name: 'Culture', icon: Palette, gradient: 'from-cyan-500 to-blue-600' },
-  { name: 'Religion', icon: Church, gradient: 'from-amber-500 to-orange-600' },
-  { name: 'Education', icon: GraduationCap, gradient: 'from-green-500 to-emerald-600' },
-  { name: 'Business & Tech', icon: Briefcase, gradient: 'from-indigo-600 to-purple-600' },
-  { name: 'Sports & Fitness', icon: Dumbbell, gradient: 'from-red-500 to-pink-600' },
+const TIER_COLORS = ['#7C3AED', '#F59E0B', '#10B981', '#EC4899', '#06B6D4', '#F97316'];
+const CREATE_CURRENCY_CODES = ['TZS', 'KES', 'UGX', 'USD', 'GBP', 'EUR', 'ZAR'];
+const DEFAULT_FREE_PERKS = ['Free entry', 'Networking'];
+const DEFAULT_PERKS = [
+  'General entry',
+  'Priority entry',
+  'Reserved seating',
+  'Digital pass',
+  'Event programme',
+  'Free drink',
+  'Meet and greet',
+  'Backstage access',
 ];
 
-const subcategoriesMap: Record<string, string[]> = {
-  'Entertainment': ['Concerts', 'Live Performances', 'Music Festival', 'Themed Parties', 'Club Nights', 'Bars & Lounges'],
-  'Culture': ['Festivals', 'Arts', 'Food & Drink', 'Local Traditions', 'Fashion Events'],
-  'Education': ['Workshops', 'Seminars', 'Webinars'],
-  'Religion': ['Religious Gatherings', 'Spiritual Events'],
-  'Business & Tech': ['Startup Events', 'Networking', 'Tech Talks'],
-  'Sports & Fitness': ['Competitions', 'Fitness Classes', 'Sports Events'],
+const eventCategories: {
+  name: string;
+  icon: IconType;
+  subcategories: { name: string; icon: IconType }[];
+}[] = [
+  {
+    name: 'Entertainment',
+    icon: Music,
+    subcategories: [
+      { name: 'Concerts', icon: Mic },
+      { name: 'Club Nights', icon: Sparkles },
+      { name: 'Live Performances', icon: Music },
+      { name: 'Nightlife', icon: Sparkles },
+      { name: 'Themed Parties', icon: Crown },
+      { name: 'Comedy Shows', icon: Mic },
+    ],
+  },
+  {
+    name: 'Education',
+    icon: GraduationCap,
+    subcategories: [
+      { name: 'Workshops', icon: Settings },
+      { name: 'Seminars', icon: GraduationCap },
+      { name: 'Webinars', icon: Tv },
+      { name: 'Bootcamps', icon: Bolt },
+      { name: 'Talks and Panels', icon: Users },
+      { name: 'Masterclasses', icon: CheckCircle },
+    ],
+  },
+  {
+    name: 'Business & Tech',
+    icon: Briefcase,
+    subcategories: [
+      { name: 'Startup Events', icon: Bolt },
+      { name: 'Networking', icon: Users },
+      { name: 'Conferences', icon: Briefcase },
+      { name: 'Talks and Panels', icon: Users },
+      { name: 'Product Launches', icon: Sparkles },
+      { name: 'Trade Shows', icon: Settings },
+    ],
+  },
+  {
+    name: 'Culture',
+    icon: Palette,
+    subcategories: [
+      { name: 'Festivals', icon: Sparkles },
+      { name: 'Arts and Exhibitions', icon: Palette },
+      { name: 'Theatre', icon: Users },
+      { name: 'Food and Drink', icon: Crown },
+      { name: 'Local Traditions', icon: Church },
+      { name: 'Film and Cinema', icon: Tv },
+    ],
+  },
+  {
+    name: 'Religion',
+    icon: Church,
+    subcategories: [
+      { name: 'Worship and Services', icon: Church },
+      { name: 'Youth and Community', icon: Users },
+      { name: 'Spiritual Retreats', icon: Sparkles },
+      { name: 'Religious Celebrations', icon: CheckCircle },
+    ],
+  },
+  {
+    name: 'Sports & Fitness',
+    icon: Dumbbell,
+    subcategories: [
+      { name: 'Fitness and Wellness', icon: Dumbbell },
+      { name: 'Tournaments', icon: Crown },
+      { name: 'Live Matches', icon: Users },
+      { name: 'Marathons and Runs', icon: Dumbbell },
+      { name: 'Sports Camps', icon: Settings },
+    ],
+  },
+  {
+    name: 'Fashion',
+    icon: Shirt,
+    subcategories: [
+      { name: 'Runway Shows', icon: Sparkles },
+      { name: 'Pop-Up Markets', icon: Shirt },
+      { name: 'Style and Beauty', icon: Palette },
+      { name: 'Brand Launches', icon: Bolt },
+      { name: 'Fashion Weeks', icon: Calendar },
+    ],
+  },
+];
+
+const createCurrencies = CREATE_CURRENCY_CODES
+  .map((code) => currencies.find((currency) => currency.code === code))
+  .filter((currency): currency is (typeof currencies)[number] => Boolean(currency));
+
+const getCurrency = (code: string) => createCurrencies.find((currency) => currency.code === code) || createCurrencies[0];
+
+const getCurrencySymbol = (code: string) => getCurrency(code)?.symbol || code;
+
+const parseMoney = (value: unknown) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  return parseFloat(String(value || '').replace(/[^0-9.]/g, '')) || 0;
+};
+
+const formatMoney = (amount: number, currencyCode: string) => {
+  const symbol = getCurrencySymbol(currencyCode);
+  return amount > 0 ? `${symbol} ${amount.toLocaleString()}` : `${symbol} 0`;
+};
+
+const normalizeIncomingTiers = (event: any, currencyCode: string): TicketTier[] => {
+  const rawTiers = Array.isArray(event?.ticket_tiers) ? event.ticket_tiers : [];
+
+  if (rawTiers.length > 0) {
+    return rawTiers.map((tier: any, index: number) => {
+      const priceNumeric = typeof tier.priceNumeric === 'number' ? tier.priceNumeric : parseMoney(tier.price);
+      return {
+        name: tier.name || (priceNumeric > 0 ? 'Ticket' : 'Free Entry'),
+        price: tier.price || (priceNumeric > 0 ? formatMoney(priceNumeric, currencyCode) : 'Free'),
+        priceNumeric,
+        available: Math.max(0, Number(tier.available ?? tier.quantity ?? 100) || 0),
+        features: Array.isArray(tier.features) ? tier.features.filter(Boolean) : [],
+        color: tier.color || TIER_COLORS[index % TIER_COLORS.length],
+        badge: tier.badge,
+        saleEnds: tier.saleEnds,
+        registrationRequired: tier.registrationRequired,
+      };
+    });
+  }
+
+  const existingPrice = event?.price_range || event?.price;
+  const numeric = parseMoney(existingPrice);
+  if (existingPrice && String(existingPrice).toLowerCase() !== 'free' && numeric > 0) {
+    return [
+      {
+        name: 'General Admission',
+        price: formatMoney(numeric, currencyCode),
+        priceNumeric: numeric,
+        available: Number(event?.attendees) || 100,
+        features: ['General entry'],
+        color: TIER_COLORS[0],
+        badge: 'GA',
+      },
+    ];
+  }
+
+  return [];
+};
+
+const calculatePriceRange = (tiers: TicketTier[], currencyCode: string): string => {
+  const validPrices = tiers
+    .map((tier) => Number(tier.priceNumeric))
+    .filter((price) => Number.isFinite(price) && price > 0);
+
+  if (validPrices.length === 0) return '';
+
+  const min = Math.min(...validPrices);
+  const max = Math.max(...validPrices);
+  return min === max ? formatMoney(min, currencyCode) : `${formatMoney(min, currencyCode)} - ${formatMoney(max, currencyCode)}`;
+};
+
+const getInitialCurrency = (event: any) => {
+  const direct = event?.currency;
+    if (typeof direct === 'string' && CREATE_CURRENCY_CODES.includes(direct.trim())) return direct.trim();
+
+  const tierPrice = Array.isArray(event?.ticket_tiers) ? event.ticket_tiers.find((tier: any) => tier?.price)?.price : null;
+  if (typeof tierPrice === 'string' && tierPrice.trim()) {
+    const detected = extractCurrencyFromPrice(tierPrice);
+    return CREATE_CURRENCY_CODES.includes(detected) ? detected : 'TZS';
+  }
+
+  const priceRange = event?.price_range || event?.price;
+  if (typeof priceRange === 'string' && priceRange.trim()) {
+    const detected = extractCurrencyFromPrice(priceRange);
+    return CREATE_CURRENCY_CODES.includes(detected) ? detected : 'TZS';
+  }
+
+  return 'TZS';
+};
+
+const isFreeEvent = (event: any) => {
+  const priceRange = String(event?.price_range || event?.price || '').trim().toLowerCase();
+  const rawTiers = Array.isArray(event?.ticket_tiers) ? event.ticket_tiers : [];
+  return priceRange === 'free' || (rawTiers.length > 0 && rawTiers.every((tier: any) => parseMoney(tier?.priceNumeric ?? tier?.price) === 0));
 };
 
 export function CreateEvent({ onBack, event }: CreateEventProps) {
-  const calculatePriceRange = (tiers: TicketTier[], currencyCode: string): string => {
-    if (!tiers || tiers.length === 0) return '';
-    const validPrices = tiers
-      .map(tier => {
-        const price = tier.priceNumeric;
-        if (typeof price !== 'number' || isNaN(price) || price <= 0) return null;
-        return price;
-      })
-      .filter((p): p is number => p !== null);
-    if (validPrices.length === 0) return '';
-    const min = Math.min(...validPrices);
-    const max = Math.max(...validPrices);
-    const currency = currencies.find(c => c.code === currencyCode);
-    const symbol = currency?.symbol || currencyCode;
-    return min === max
-      ? `${symbol} ${min.toLocaleString()}`
-      : `${symbol} ${min.toLocaleString()} - ${symbol} ${max.toLocaleString()}`;
-  };
+  const [formData, setFormData] = useState<EventForm>(() => {
+    const initialCurrency = getInitialCurrency(event);
+    const incomingTiers = normalizeIncomingTiers(event, initialCurrency);
+    const freeMode = isFreeEvent(event);
+    const freeTier = incomingTiers.find((tier) => tier.priceNumeric === 0) || incomingTiers[0];
+    const streaming: any = event?.streaming || {};
+    const streamingFeatures = Array.isArray(streaming.features) ? streaming.features : [];
 
-  const initialCurrency = (() => {
-    const direct = (event as any)?.currency;
-    if (typeof direct === 'string' && direct.trim()) return direct.trim();
-    const tierPrice = (event as any)?.ticket_tiers?.[0]?.price;
-    if (typeof tierPrice === 'string' && tierPrice.trim()) return extractCurrencyFromPrice(tierPrice);
-    const priceRange = (event as any)?.price_range || (event as any)?.price;
-    if (typeof priceRange === 'string' && priceRange.trim()) return extractCurrencyFromPrice(priceRange);
-    return 'TZS';
-  })();
-
-  const normalizeManualPrice = (value: string, currencyCode: string) => {
-    const input = String(value ?? '').trim();
-    if (!input) return '';
-    if (input.toLowerCase() === 'free') return 'Free';
-    const currency = currencies.find(c => c.code === currencyCode);
-    const symbol = currency?.symbol || currencyCode;
-    const includesCurrency = currencies.some(c => {
-      if (!c.symbol) return false;
-      return input.includes(c.symbol) || new RegExp(`\\b${c.code}\\b`, 'i').test(input);
-    });
-    if (includesCurrency) return input;
-    const parts = input.split(/\s*-\s*/).filter(Boolean);
-    if (parts.length === 2) {
-      const left = parseFloat(parts[0].replace(/[^0-9.]/g, ''));
-      const right = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
-      if (!isNaN(left) && !isNaN(right) && left > 0 && right > 0) {
-        const mn = Math.min(left, right);
-        const mx = Math.max(left, right);
-        return `${symbol} ${mn.toLocaleString()} - ${symbol} ${mx.toLocaleString()}`;
-      }
-      return input;
-    }
-    const numeric = parseFloat(input.replace(/[^0-9.]/g, ''));
-    if (!isNaN(numeric) && numeric > 0) return `${symbol} ${numeric.toLocaleString()}`;
-    return input;
-  };
-
-  const [formData, setFormData] = useState<EventForm>({
-    title: event?.title || '',
-    category: event?.category || 'Entertainment',
-    subcategory: event?.subcategory || '',
-    date: event?.date || '',
-    time: event?.time || '',
-    location: event?.location || '',
-    price: (() => {
-      if (event?.ticket_tiers && event.ticket_tiers.length > 0) {
-        const tiers = event.ticket_tiers.map((t: any) => ({
-          name: t.name || '', price: t.price || '',
-          priceNumeric: t.priceNumeric ?? (parseFloat(String(t.price || '0').replace(/[^0-9.]/g, '')) || 0),
-          available: t.available || 100, features: t.features || []
-        }));
-        return calculatePriceRange(tiers, initialCurrency) || '';
-      }
-      return event?.price_range || event?.price || '';
-    })(),
-    description: event?.description || '',
-    coverImage: event?.image_url || event?.coverImage || null,
-    ticketTiers: event?.ticket_tiers || [],
-    currency: initialCurrency,
-    streaming: {
-      available: event?.streaming?.available || false,
-      virtualPrice: event?.streaming?.virtualPrice || '',
-      virtualPriceNumeric: parseFloat(event?.streaming?.virtualPrice?.replace(/[^0-9.]/g, '') || '0'),
-      quality: event?.streaming?.quality || 'HD',
-    }
+    return {
+      title: event?.title || '',
+      category: event?.category || '',
+      subcategory: event?.subcategory || '',
+      date: event?.date || '',
+      time: event?.time || '',
+      location: event?.location || '',
+      price: event?.price_range || event?.price || '',
+      description: event?.description || '',
+      coverImage: event?.image_url || event?.coverImage || null,
+      ticketMode: freeMode ? 'free' : 'tiers',
+      ticketTiers: incomingTiers,
+      currency: initialCurrency,
+      expectedGuests: Math.max(0, Number(freeTier?.available ?? event?.attendees ?? 0) || 0),
+      requireRegistration: typeof freeTier?.registrationRequired === 'boolean' ? freeTier.registrationRequired : true,
+      freePerks: freeTier?.features?.length ? freeTier.features : (event && freeMode ? DEFAULT_FREE_PERKS : []),
+      settings: {
+        liveStream: streamingFeatures.includes('live_stream') || !!streaming.available,
+        virtualTickets: streamingFeatures.includes('virtual_tickets') || !!streaming.virtualPrice,
+        audienceGifting: streamingFeatures.includes('audience_gifting'),
+        promoCodes: streamingFeatures.includes('promo_codes'),
+        idVerification: streamingFeatures.includes('id_verification'),
+      },
+      streaming: {
+        virtualPrice: streaming.virtualPrice || '',
+        virtualPriceNumeric: parseMoney(streaming.virtualPrice),
+        quality: streaming.quality || 'HD',
+      },
+    };
   });
-
-  const handleCurrencyChange = (currencyCode: string) => {
-    setFormData(prev => {
-      const currencyData = currencies.find(c => c.code === currencyCode);
-      const symbol = currencyData?.symbol || currencyCode;
-      const newTiers = prev.ticketTiers.map(tier => ({
-        ...tier,
-        price: (tier.priceNumeric > 0 && !isNaN(tier.priceNumeric))
-          ? `${symbol} ${tier.priceNumeric.toLocaleString()}` : `${symbol} 0`
-      }));
-      const newPriceRange = calculatePriceRange(newTiers, currencyCode);
-      return { ...prev, currency: currencyCode, ticketTiers: newTiers, price: prev.ticketTiers.length > 0 ? newPriceRange : prev.price };
-    });
-  };
-
-  const handleAddTier = () => {
-    setFormData(prev => {
-      const currency = currencies.find(c => c.code === prev.currency);
-      const symbol = currency?.symbol || prev.currency;
-      const newTier: TicketTier = { name: '', price: `${symbol} 0`, priceNumeric: 0, available: 100, features: [] };
-      const newTiers = [...prev.ticketTiers, newTier];
-      return { ...prev, ticketTiers: newTiers, price: calculatePriceRange(newTiers, prev.currency) };
-    });
-  };
-
-  const handleRemoveTier = (index: number) => {
-    setFormData(prev => {
-      const newTiers = [...prev.ticketTiers];
-      newTiers.splice(index, 1);
-      return { ...prev, ticketTiers: newTiers, price: newTiers.length > 0 ? calculatePriceRange(newTiers, prev.currency) : '' };
-    });
-  };
-
-  const handleUpdateTier = (index: number, field: keyof TicketTier, value: any) => {
-    setFormData(prev => {
-      const newTiers = [...prev.ticketTiers];
-      const updatedTier = { ...newTiers[index], [field]: value };
-      if (field === 'priceNumeric') {
-        const currency = currencies.find(c => c.code === prev.currency);
-        const symbol = currency?.symbol || prev.currency;
-        const numericValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
-        updatedTier.priceNumeric = numericValue;
-        updatedTier.price = numericValue > 0 ? `${symbol} ${numericValue.toLocaleString()}` : `${symbol} 0`;
-      }
-      newTiers[index] = updatedTier;
-      return { ...prev, ticketTiers: newTiers, price: calculatePriceRange(newTiers, prev.currency) };
-    });
-  };
 
   const [savedEventId, setSavedEventId] = useState<number | undefined>(event?.id);
   const [currentStatus, setCurrentStatus] = useState<string>(event?.status || 'draft');
   const [showPreview, setShowPreview] = useState(false);
   const [showSuccessScreen, setShowSuccessScreen] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const isEditing = !!savedEventId;
   const [userProfile, setUserProfile] = useState<any>(null);
   const [analytics, setAnalytics] = useState<any>(null);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [tierFeatureDrafts, setTierFeatureDrafts] = useState<Record<number, string>>({});
+  const [freePerkDraft, setFreePerkDraft] = useState('');
+
+  const isEditing = !!savedEventId;
+  const selectedCategory = eventCategories.find((category) => category.name === formData.category);
+  const SelectedCategoryIcon = selectedCategory?.icon || Tag;
+  const revenueTotal = useMemo(
+    () => formData.ticketTiers.reduce((sum, tier) => sum + Math.max(0, Number(tier.priceNumeric) || 0) * Math.max(0, Number(tier.available) || 0), 0),
+    [formData.ticketTiers],
+  );
+  const computedPrice = formData.ticketMode === 'free' ? 'Free' : calculatePriceRange(formData.ticketTiers, formData.currency);
 
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) { const profile = await getProfile(user.id); setUserProfile(profile); }
+      if (user) {
+        const profile = await getProfile(user.id);
+        setUserProfile(profile);
+      }
     };
+
     fetchProfile();
   }, []);
 
   useEffect(() => {
-    if (showSuccessScreen && savedEventId) {
-      const fetchAnalytics = async () => {
-        try { const data = await getEventAnalytics(savedEventId); setAnalytics(data); } catch { /* skip */ }
-      };
-      fetchAnalytics();
-    }
+    if (!showSuccessScreen || !savedEventId) return;
+
+    const fetchAnalytics = async () => {
+      try {
+        const data = await getEventAnalytics(savedEventId);
+        setAnalytics(data);
+      } catch {
+        /* Analytics are nice to have, not a blocker. */
+      }
+    };
+
+    fetchAnalytics();
   }, [showSuccessScreen, savedEventId]);
 
-  // Auto-save
+  const updateForm = <K extends keyof EventForm>(field: K, value: EventForm[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const serializeTicketTiers = (data: EventForm) => {
+    if (data.ticketMode === 'free') {
+      return [
+        {
+          name: 'Free Entry',
+          price: 'Free',
+          priceNumeric: 0,
+          available: Math.max(1, Number(data.expectedGuests) || 1),
+          features: data.freePerks.filter(Boolean),
+          color: TIER_COLORS[2],
+          registrationRequired: data.requireRegistration,
+        },
+      ];
+    }
+
+    return data.ticketTiers.map((tier, index) => {
+      const priceNumeric = Math.max(0, Number(tier.priceNumeric) || 0);
+      return {
+        name: tier.name.trim() || `Ticket ${index + 1}`,
+        price: formatMoney(priceNumeric, data.currency),
+        priceNumeric,
+        available: Math.max(0, Number(tier.available) || 0),
+        features: tier.features.filter(Boolean),
+        color: tier.color || TIER_COLORS[index % TIER_COLORS.length],
+      };
+    });
+  };
+
+  const buildStreamingPayload = (data: EventForm) => {
+    const features: string[] = [];
+    if (data.settings.liveStream) features.push('live_stream');
+    if (data.settings.virtualTickets) features.push('virtual_tickets');
+    if (data.settings.audienceGifting) features.push('audience_gifting');
+    if (data.settings.promoCodes) features.push('promo_codes');
+    if (data.settings.idVerification) features.push('id_verification');
+
+    const virtualPrice = data.settings.virtualTickets
+      ? formatMoney(Math.max(0, Number(data.streaming.virtualPriceNumeric) || 0), data.currency)
+      : '';
+
+    return {
+      available: data.settings.liveStream || data.settings.virtualTickets,
+      quality: data.streaming.quality,
+      virtualPrice,
+      features,
+    };
+  };
+
+  const buildEventData = (status: 'draft' | 'published', userId: string) => {
+    const ticketTiers = serializeTicketTiers(formData);
+    const priceRange = formData.ticketMode === 'free' ? 'Free' : calculatePriceRange(formData.ticketTiers, formData.currency);
+
+    return {
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      date: formData.date,
+      time: formData.time,
+      location: formData.location.trim(),
+      category: formData.category,
+      subcategory: formData.subcategory,
+      image_url: formData.coverImage || '',
+      price_range: priceRange,
+      organizer_id: userId,
+      status,
+      attendees: formData.ticketMode === 'free' ? Math.max(0, Number(formData.expectedGuests) || 0) : undefined,
+      ticket_tiers: ticketTiers,
+      streaming: buildStreamingPayload(formData),
+    };
+  };
+
   useEffect(() => {
     const autoSave = async () => {
-      if (!formData.title || isSubmitting || currentStatus === 'published' || showSuccessScreen) return;
+      if (!formData.title.trim() || !formData.date || !formData.category || isSubmitting || currentStatus === 'published' || showSuccessScreen) return;
+
       setIsAutoSaving(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const priceRange = formData.ticketTiers.length > 0
-          ? calculatePriceRange(formData.ticketTiers, formData.currency)
-          : normalizeManualPrice(formData.price, formData.currency);
-        const eventData = {
-          title: formData.title, description: formData.description, date: formData.date, time: formData.time,
-          location: formData.location, category: formData.category || 'Entertainment', subcategory: formData.subcategory,
-          image_url: formData.coverImage || '', price_range: priceRange, organizer_id: user.id, status: 'draft' as const,
-          ticket_tiers: formData.ticketTiers,
-          streaming: { available: formData.streaming.available, quality: formData.streaming.quality, virtualPrice: formData.streaming.virtualPrice }
-        };
-        if (savedEventId) { await updateEvent(savedEventId, eventData); }
-        else { const newEvent = await createEvent(eventData); setSavedEventId(newEvent.id); }
-      } catch { /* skip */ } finally { setIsAutoSaving(false); }
+
+        const eventData = buildEventData('draft', user.id);
+        if (savedEventId) {
+          await updateEvent(savedEventId, eventData);
+        } else {
+          const newEvent = await createEvent(eventData as any);
+          setSavedEventId(newEvent.id);
+        }
+      } catch {
+        /* Draft saves should never interrupt event creation. */
+      } finally {
+        setIsAutoSaving(false);
+      }
     };
-    const timeoutId = setTimeout(autoSave, 3000);
-    return () => clearTimeout(timeoutId);
+
+    const timeoutId = window.setTimeout(autoSave, 3000);
+    return () => window.clearTimeout(timeoutId);
   }, [formData, savedEventId, isSubmitting, currentStatus, showSuccessScreen]);
 
-  const handleInputChange = (field: keyof EventForm, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleCurrencyChange = (currencyCode: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      currency: currencyCode,
+      ticketTiers: prev.ticketTiers.map((tier) => ({
+        ...tier,
+        price: formatMoney(tier.priceNumeric, currencyCode),
+      })),
+      streaming: {
+        ...prev.streaming,
+        virtualPrice: prev.streaming.virtualPriceNumeric > 0 ? formatMoney(prev.streaming.virtualPriceNumeric, currencyCode) : '',
+      },
+    }));
   };
 
   const handleCategoryChange = (categoryName: string) => {
     setFormData((prev) => ({ ...prev, category: categoryName, subcategory: '' }));
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Please upload an image file'); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error('Image size should be less than 10MB'); return; }
-    const toastId = toast.loading('Uploading image...');
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image size should be less than 10MB');
+      return;
+    }
+
+    const toastId = toast.loading('Uploading cover image...');
     try {
       const publicUrl = await uploadImage(file, 'events');
-      handleInputChange('coverImage', publicUrl);
+      updateForm('coverImage', publicUrl);
       toast.success('Cover image uploaded', { id: toastId });
     } catch {
       toast.error('Failed to upload image', { id: toastId });
+    } finally {
+      e.target.value = '';
     }
   };
 
-  const handlePublish = async () => {
-    if (!formData.title || !formData.date) { toast.error('Please fill in all required fields (Title, Date)'); return; }
-    if (!formData.category) { toast.error('Please select a category'); return; }
+  const handleUpdateTier = (index: number, field: keyof TicketTier, value: string | number | string[]) => {
+    setFormData((prev) => {
+      const ticketTiers = [...prev.ticketTiers];
+      const nextTier = { ...ticketTiers[index] };
 
-    let finalPrice = '';
-    if (formData.ticketTiers.length > 0) {
-      finalPrice = calculatePriceRange(formData.ticketTiers, formData.currency);
-      if (!finalPrice) { toast.error('Please add prices to your ticket tiers'); return; }
-    } else {
-      finalPrice = normalizeManualPrice(formData.price, formData.currency);
-      if (!finalPrice) { toast.error('Please set a price or add ticket tiers with prices'); return; }
+      if (field === 'priceNumeric') {
+        const priceNumeric = Math.max(0, Number(value) || 0);
+        nextTier.priceNumeric = priceNumeric;
+        nextTier.price = formatMoney(priceNumeric, prev.currency);
+      } else if (field === 'available') {
+        nextTier.available = Math.max(0, Number(value) || 0);
+      } else {
+        (nextTier as any)[field] = value;
+      }
+
+      ticketTiers[index] = nextTier;
+      return { ...prev, ticketTiers, price: calculatePriceRange(ticketTiers, prev.currency) };
+    });
+  };
+
+  const handleAdjustTierCapacity = (index: number, delta: number) => {
+    setFormData((prev) => {
+      const ticketTiers = [...prev.ticketTiers];
+      const nextTier = { ...ticketTiers[index] };
+      nextTier.available = Math.max(0, (Number(nextTier.available) || 0) + delta);
+      ticketTiers[index] = nextTier;
+      return { ...prev, ticketTiers };
+    });
+  };
+
+  const handleAddTier = () => {
+    setFormData((prev) => {
+      const index = prev.ticketTiers.length;
+      const newTier: TicketTier = {
+        name: '',
+        price: formatMoney(0, prev.currency),
+        priceNumeric: 0,
+        available: 0,
+        features: [],
+        color: TIER_COLORS[index % TIER_COLORS.length],
+      };
+
+      return { ...prev, ticketTiers: [...prev.ticketTiers, newTier] };
+    });
+  };
+
+  const handleRemoveTier = (index: number) => {
+    setFormData((prev) => {
+      const ticketTiers = prev.ticketTiers.filter((_, tierIndex) => tierIndex !== index);
+      return { ...prev, ticketTiers };
+    });
+  };
+
+  const toggleTierFeature = (index: number, feature: string) => {
+    const tier = formData.ticketTiers[index];
+    if (!tier) return;
+
+    const features = tier.features.includes(feature)
+      ? tier.features.filter((item) => item !== feature)
+      : [...tier.features, feature];
+    handleUpdateTier(index, 'features', features);
+  };
+
+  const addTierFeature = (index: number) => {
+    const value = tierFeatureDrafts[index]?.trim();
+    if (!value) return;
+
+    const tier = formData.ticketTiers[index];
+    if (!tier || tier.features.includes(value)) return;
+
+    handleUpdateTier(index, 'features', [...tier.features, value]);
+    setTierFeatureDrafts((prev) => ({ ...prev, [index]: '' }));
+  };
+
+  const toggleFreePerk = (perk: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      freePerks: prev.freePerks.includes(perk)
+        ? prev.freePerks.filter((item) => item !== perk)
+        : [...prev.freePerks, perk],
+    }));
+  };
+
+  const addFreePerk = () => {
+    const value = freePerkDraft.trim();
+    if (!value || formData.freePerks.includes(value)) return;
+
+    setFormData((prev) => ({ ...prev, freePerks: [...prev.freePerks, value] }));
+    setFreePerkDraft('');
+  };
+
+  const handleSettingChange = (field: keyof EventSettings, value: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        [field]: value,
+        ...(field === 'liveStream' && !value ? { audienceGifting: false } : {}),
+      },
+    }));
+  };
+
+  const validateForPublish = () => {
+    if (!formData.title.trim()) {
+      toast.error('Please add an event name');
+      return false;
+    }
+
+    if (!formData.date) {
+      toast.error('Please choose an event date');
+      return false;
+    }
+
+    if (!formData.location.trim()) {
+      toast.error('Please add a venue or location');
+      return false;
+    }
+
+    if (!formData.category) {
+      toast.error('Please select a category');
+      return false;
     }
 
     const selectedDate = new Date(formData.date);
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) { toast.error('Event date cannot be in the past'); return; }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (selectedDate < today) {
+      toast.error('Event date cannot be in the past');
+      return false;
+    }
+
+    if (formData.ticketMode === 'tiers') {
+      const validTiers = formData.ticketTiers.filter((tier) => tier.name.trim() && tier.priceNumeric > 0 && tier.available > 0);
+      if (validTiers.length === 0) {
+        toast.error('Add at least one ticket tier with price and capacity');
+        return false;
+      }
+    } else if (!formData.expectedGuests || formData.expectedGuests < 1) {
+      toast.error('Set an expected guest count for free entry');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handlePublish = async () => {
+    if (!validateForPublish()) return;
 
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error('Please sign in to publish events'); return; }
-      const eventData = {
-        title: formData.title, description: formData.description, date: formData.date, time: formData.time,
-        location: formData.location, category: formData.category || 'Entertainment', subcategory: formData.subcategory,
-        image_url: formData.coverImage || '', price_range: finalPrice, organizer_id: user.id, status: 'published' as const,
-        ticket_tiers: formData.ticketTiers,
-        streaming: { available: formData.streaming.available, quality: formData.streaming.quality, virtualPrice: formData.streaming.virtualPrice }
-      };
+      if (!user) {
+        toast.error('Please sign in to publish events');
+        return;
+      }
+
+      const eventData = buildEventData('published', user.id);
 
       if (isEditing && savedEventId) {
         await updateEvent(savedEventId, eventData);
@@ -310,7 +688,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         window.dispatchEvent(new Event('eventsUpdated'));
         if (onBack) onBack();
       } else {
-        const newEvent = await createEvent(eventData);
+        const newEvent = await createEvent(eventData as any);
         eventsStore.invalidate();
         setSavedEventId(newEvent.id);
         setCurrentStatus('published');
@@ -325,14 +703,10 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     }
   };
 
-  // Preview Screen
   if (showPreview) {
-    const previewPriceRange = formData.ticketTiers.length > 0
-      ? calculatePriceRange(formData.ticketTiers, formData.currency)
-      : normalizeManualPrice(formData.price, formData.currency);
     return (
       <EventPreview
-        formData={{ ...formData, price: previewPriceRange }}
+        formData={{ ...formData, price: computedPrice }}
         userProfile={userProfile}
         savedEventId={savedEventId}
         isEditing={isEditing}
@@ -343,306 +717,573 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     );
   }
 
-  // Success Screen
   if (showSuccessScreen) {
-    return <EventSuccessScreen formData={formData} analytics={analytics} onBack={onBack} />;
+    return <EventSuccessScreen formData={{ ...formData, price: computedPrice }} analytics={analytics} onBack={onBack} />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
-      {/* Header */}
-      <div className="bg-white sticky top-0 z-50 border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <button onClick={onBack} className="h-10 w-10 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors" aria-label="Back">
-              <ArrowLeft className="w-5 h-5 text-gray-900" />
+    <div className="min-h-screen bg-[#F2F2F7] pb-24 text-[#1C1C1E]">
+      <div className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[460px] items-center justify-between gap-3 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              onClick={onBack}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-gray-900 hover:bg-gray-100"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{isEditing ? 'Edit Event' : 'Create Event'}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 truncate">{isEditing ? 'Update details and save changes' : 'Create a new event and publish when ready'}</p>
+              <h1 className="truncate text-base font-semibold">{isEditing ? 'Edit Event' : 'Create Event'}</h1>
+              <p className="truncate text-xs text-gray-500">{isAutoSaving ? 'Saving draft...' : 'One clean flow from idea to tickets'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowPreview(true)} className="h-10 w-10 inline-flex items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 transition-colors" aria-label="Preview">
-              <Eye className="w-5 h-5" />
-            </button>
-            <button onClick={handlePublish} disabled={isSubmitting} className="h-10 px-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors inline-flex items-center gap-2 disabled:opacity-70">
-              {isSubmitting ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : isAutoSaving ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span className="text-xs">Saving...</span>
-                </div>
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {isEditing ? 'Save' : 'Publish'}
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => setShowPreview(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-700 hover:bg-gray-100"
+              aria-label="Preview"
+            >
+              <Eye className="h-5 w-5" />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 sm:p-6">
-          {/* Category Selection */}
-          <div className="mb-8">
-            <label className="block text-gray-900 mb-4">Select Event Category</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {eventCategories.map((cat) => {
-                const Icon = cat.icon;
-                const isSelected = formData.category === cat.name;
-                return (
-                  <button key={cat.name} onClick={() => handleCategoryChange(cat.name)} className={`relative p-4 rounded-xl border-2 transition-all ${isSelected ? 'border-purple-600 bg-purple-50 shadow-lg scale-105' : 'border-gray-200 bg-white hover:border-purple-300 hover:shadow-md'}`}>
-                    {isSelected && <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center"><CheckCircle className="w-4 h-4 text-white" /></div>}
-                    <div className={`w-12 h-12 ${isSelected ? 'bg-gray-900' : 'bg-gray-100'} rounded-xl flex items-center justify-center mb-3 mx-auto`}>
-                      <Icon className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-gray-900'}`} />
-                    </div>
-                    <p className={`text-sm text-center ${isSelected ? 'text-purple-700' : 'text-gray-700'}`}>{cat.name}</p>
-                  </button>
-                );
-              })}
-            </div>
+      <main className="mx-auto max-w-[460px] px-3 py-4">
+        <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+          <div className="relative h-40 bg-gradient-to-br from-purple-600 to-violet-900">
+            {formData.coverImage && (
+              <>
+                <ImageWithFallback src={formData.coverImage} alt={formData.title || 'Event cover'} className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+              </>
+            )}
+            <label className="absolute bottom-4 left-4 inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/35 bg-white/10 px-3 py-2 text-xs font-medium text-white backdrop-blur hover:bg-white/15">
+              {formData.coverImage ? <Upload className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+              {formData.coverImage ? 'Change cover' : 'Add cover image'}
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="sr-only" />
+            </label>
+            {formData.coverImage && (
+              <button
+                type="button"
+                onClick={() => updateForm('coverImage', null)}
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/55"
+                aria-label="Remove cover image"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
-          {/* Subcategory Selection */}
-          <div className="mb-8">
-            <label className="block text-gray-900 mb-4">Select Event Subcategory</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {subcategoriesMap[formData.category]?.map((subcat) => {
-                const isSelected = formData.subcategory === subcat;
-                return (
-                  <button key={subcat} onClick={() => handleInputChange('subcategory', subcat)} className={`relative p-4 rounded-xl border-2 transition-all ${isSelected ? 'border-purple-600 bg-purple-50 shadow-lg scale-105' : 'border-gray-200 bg-white hover:border-purple-300 hover:shadow-md'}`}>
-                    {isSelected && <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center"><CheckCircle className="w-4 h-4 text-white" /></div>}
-                    <div className={`w-12 h-12 ${isSelected ? 'bg-gray-900' : 'bg-gray-100'} rounded-xl flex items-center justify-center mb-3 mx-auto`}>
-                      <Tag className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-gray-900'}`} />
-                    </div>
-                    <p className={`text-sm text-center ${isSelected ? 'text-purple-700' : 'text-gray-700'}`}>{subcat}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Cover Image Upload */}
-          <div className="mb-6">
-            <label className="block text-gray-900 mb-3">Cover Image</label>
-            <div className="relative w-full h-64 border-2 border-dashed border-gray-300 rounded-xl hover:border-purple-400 transition-colors cursor-pointer group overflow-hidden">
-              {formData.coverImage ? (
-                <>
-                  <ImageWithFallback src={formData.coverImage} alt="Cover" className="w-full h-full object-cover" />
-                  <button onClick={() => handleInputChange('coverImage', '')} className="absolute top-4 right-4 w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center hover:bg-purple-700 transition-all shadow-lg opacity-0 group-hover:opacity-100">
-                    <Upload className="w-6 h-6 text-white" />
-                  </button>
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all"></div>
-                </>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 group-hover:bg-purple-50 transition-colors">
-                  <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mb-4">
-                    <Upload className="w-8 h-8 text-purple-600" />
-                  </div>
-                  <p className="text-gray-700">Click to upload cover image</p>
-                  <p className="text-gray-500 text-sm">JPG, PNG up to 10MB</p>
-                </div>
-              )}
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-            </div>
-          </div>
-
-          {/* Title */}
-          <div className="mb-6">
-            <label className="block text-gray-900 mb-3">Event Title</label>
-            <input type="text" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} placeholder="e.g., Summer Music Festival 2025" className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all" />
-          </div>
-
-          {/* Date & Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <div className="space-y-5 p-4">
             <div>
-              <label className="block text-gray-900 mb-3">Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input type="date" value={formData.date} onChange={(e) => handleInputChange('date', e.target.value)} className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all" />
+              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Event name</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => updateForm('title', e.target.value)}
+                placeholder="e.g. Nairobi Jazz Night"
+                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => updateForm('date', e.target.value)}
+                    className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Time</label>
+                <input
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => updateForm('time', e.target.value)}
+                  className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                />
               </div>
             </div>
+
             <div>
-              <label className="block text-gray-900 mb-3">Time</label>
-              <input type="time" value={formData.time} onChange={(e) => handleInputChange('time', e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all" />
+              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Venue / Location</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => updateForm('location', e.target.value)}
+                  placeholder="e.g. Mlimani City Hall, Dar es Salaam"
+                  className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Location */}
-          <div className="mb-6">
-            <label className="block text-gray-900 mb-3">Location</label>
-            <div className="relative">
-              <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input type="text" value={formData.location} onChange={(e) => handleInputChange('location', e.target.value)} placeholder="e.g., Mlimani City Hall, Dar es Salaam" className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all" />
+            <div>
+              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Category</label>
+              <button
+                type="button"
+                onClick={() => setCategoryOpen((open) => !open)}
+                className="flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 text-left text-sm outline-none transition hover:border-purple-200"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <SelectedCategoryIcon className="h-4 w-4 shrink-0 text-purple-600" />
+                  <span className={`truncate ${formData.category ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {formData.category || 'Select a category'}
+                    {formData.subcategory ? ` > ${formData.subcategory}` : ''}
+                  </span>
+                </span>
+                <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition ${categoryOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {categoryOpen && (
+                <div className="mt-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg shadow-black/5">
+                  <div className="grid grid-cols-3 gap-2">
+                    {eventCategories.map((category) => {
+                      const Icon = category.icon;
+                      const active = formData.category === category.name;
+                      return (
+                        <button
+                          key={category.name}
+                          type="button"
+                          onClick={() => handleCategoryChange(category.name)}
+                          className={`min-h-[76px] rounded-xl border p-2 text-center transition ${
+                            active ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-purple-200'
+                          }`}
+                        >
+                          <Icon className={`mx-auto mb-2 h-5 w-5 ${active ? 'text-purple-600' : 'text-gray-500'}`} />
+                          <span className="block text-[11px] font-medium leading-tight">{category.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {selectedCategory && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedCategory.subcategories.map((subcategory) => {
+                  const active = formData.subcategory === subcategory.name;
+                  return (
+                    <button
+                      key={subcategory.name}
+                      type="button"
+                      onClick={() => {
+                        updateForm('subcategory', subcategory.name);
+                        setCategoryOpen(false);
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        active ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-200'
+                      }`}
+                    >
+                      {subcategory.name}
+                    </button>
+                  );
+                })}
+                </div>
+              )}
             </div>
-          </div>
 
-          {/* Ticket Pricing */}
-          <div className="mb-6">
-            <label className="block text-gray-900 mb-3">Ticket Pricing</label>
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Currency</label>
-              <select value={formData.currency} onChange={(e) => handleCurrencyChange(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white appearance-none">
-                {currencies.map((c) => <option key={c.code} value={c.code}>{c.code} - {c.name} ({c.symbol})</option>)}
+            <div className="h-px bg-gray-200" />
+
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex rounded-full border border-gray-200 bg-gray-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => updateForm('ticketMode', 'tiers')}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition ${
+                    formData.ticketMode === 'tiers' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
+                  }`}
+                >
+                  <Ticket className="h-3.5 w-3.5" />
+                  Ticket tiers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateForm('ticketMode', 'free')}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition ${
+                    formData.ticketMode === 'free' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
+                  }`}
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Free entry
+                </button>
+              </div>
+
+              <select
+                value={formData.currency}
+                onChange={(e) => handleCurrencyChange(e.target.value)}
+                className="h-8 max-w-[98px] rounded-full border border-gray-200 bg-gray-100 px-3 text-xs font-semibold text-gray-700 outline-none focus:border-purple-500"
+                aria-label="Currency"
+              >
+                {createCurrencies.map((currency) => (
+                  <option key={currency.code} value={currency.code}>
+                    {currency.code}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Tiers */}
-            {formData.ticketTiers.length > 0 && (
-              <div className="space-y-4 mb-4">
+            {formData.ticketMode === 'tiers' ? (
+              <div className="space-y-3">
+                {formData.ticketTiers.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center">
+                    <p className="text-sm font-semibold text-gray-800">No ticket tiers yet</p>
+                    <p className="mt-1 text-xs text-gray-500">Add the first tier when you know the real price and capacity.</p>
+                  </div>
+                )}
+
                 {formData.ticketTiers.map((tier, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group animate-in fade-in slide-in-from-top-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Ticket Name</label>
-                        <input type="text" value={tier.name} onChange={(e) => handleUpdateTier(index, 'name', e.target.value)} placeholder="e.g. VIP, Regular" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Price ({currencies.find(c => c.code === formData.currency)?.symbol || formData.currency})</label>
-                        <input type="number" value={tier.priceNumeric === undefined || isNaN(tier.priceNumeric) ? '' : tier.priceNumeric} onChange={(e) => handleUpdateTier(index, 'priceNumeric', parseFloat(e.target.value))} placeholder="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500" />
-                      </div>
+                  <div key={`${tier.name}-${index}`} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+                    <div className="mb-3 flex items-center gap-2">
+                      <div className="h-7 w-1 rounded-full" style={{ backgroundColor: tier.color || TIER_COLORS[index % TIER_COLORS.length] }} />
+                      <input
+                        type="text"
+                        value={tier.name}
+                        onChange={(e) => handleUpdateTier(index, 'name', e.target.value)}
+                        placeholder="Tier name"
+                        className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none"
+                        aria-label="Ticket tier name"
+                      />
+                      <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-purple-700">
+                        {tier.badge || 'TIER'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTier(index)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100"
+                        aria-label={`Remove ${tier.name || 'ticket tier'}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Quantity Available</label>
-                        <input type="number" value={tier.available} onChange={(e) => handleUpdateTier(index, 'available', parseInt(e.target.value))} placeholder="100" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500" />
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Price ({formData.currency})</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={Number.isNaN(tier.priceNumeric) ? '' : tier.priceNumeric}
+                          onChange={(e) => handleUpdateTier(index, 'priceNumeric', e.target.value)}
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-purple-500"
+                        />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Features</label>
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap gap-2 min-h-[24px]">
-                            {tier.features.map((feature, fIdx) => (
-                              <span key={fIdx} className="bg-purple-50 text-purple-700 border border-purple-100 px-2 py-1 rounded-md text-xs flex items-center gap-1">
-                                {feature}
-                                <button onClick={() => { const nf = [...tier.features]; nf.splice(fIdx, 1); handleUpdateTier(index, 'features', nf); }} className="hover:text-red-500 transition-colors"><X className="w-3 h-3" /></button>
-                              </span>
-                            ))}
-                          </div>
-                          <div className="flex gap-2">
-                            <input type="text" placeholder="Add features (comma separated)" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  const val = e.currentTarget.value;
-                                  const nf = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                                  if (nf.length > 0) { handleUpdateTier(index, 'features', [...tier.features, ...nf]); e.currentTarget.value = ''; }
-                                }
-                              }}
-                            />
-                            <button onClick={(e) => {
-                              const input = (e.currentTarget as HTMLElement).previousElementSibling as HTMLInputElement;
-                              const val = input.value;
-                              const nf = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                              if (nf.length > 0) { handleUpdateTier(index, 'features', [...tier.features, ...nf]); input.value = ''; }
-                            }} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-purple-100 hover:text-purple-600 transition-colors"><Plus className="w-4 h-4" /></button>
-                          </div>
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Capacity</label>
+                        <div className="flex h-10 items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustTierCapacity(index, -10)}
+                            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-gray-600 shadow-sm"
+                            aria-label="Decrease capacity"
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <span className="min-w-10 text-center text-sm font-semibold">{tier.available}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustTierCapacity(index, 10)}
+                            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-gray-600 shadow-sm"
+                            aria-label="Increase capacity"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </div>
                     </div>
-                    <button onClick={() => handleRemoveTier(index)} className="absolute -top-2 -right-2 bg-white text-red-500 p-1 rounded-full shadow-md border border-gray-100 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button>
+
+                    {tier.name.toLowerCase().includes('early') && (
+                      <div className="mt-3">
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Sale ends</label>
+                        <input
+                          type="date"
+                          value={tier.saleEnds || ''}
+                          onChange={(e) => handleUpdateTier(index, 'saleEnds', e.target.value)}
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-purple-500"
+                        />
+                      </div>
+                    )}
+
+                    <div className="mt-3">
+                      <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Perks</label>
+                      <div className="flex flex-wrap gap-2">
+                        {DEFAULT_PERKS.map((feature) => {
+                          const active = tier.features.includes(feature);
+                          return (
+                            <button
+                              key={feature}
+                              type="button"
+                              onClick={() => toggleTierFeature(index, feature)}
+                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-[11px] font-medium ${
+                                active ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-600'
+                              }`}
+                            >
+                              {active && <Check className="h-3 w-3" />}
+                              {feature}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-2 flex gap-2">
+                        <input
+                          type="text"
+                          value={tierFeatureDrafts[index] || ''}
+                          onChange={(e) => setTierFeatureDrafts((prev) => ({ ...prev, [index]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addTierFeature(index);
+                            }
+                          }}
+                          placeholder="Custom perk"
+                          className="h-9 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-purple-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addTierFeature(index)}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-dashed border-purple-300 text-purple-600"
+                          aria-label="Add custom perk"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={handleAddTier}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-purple-300 bg-purple-50/50 text-sm font-semibold text-purple-700 hover:bg-purple-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add tier
+                </button>
+
+                <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+                  <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                    <BarChart3 className="h-4 w-4 text-purple-600" />
+                    Live revenue estimate
+                  </div>
+                  {formData.ticketTiers.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {formData.ticketTiers.map((tier, index) => {
+                      const subtotal = (Number(tier.priceNumeric) || 0) * (Number(tier.available) || 0);
+                      return (
+                        <div key={`revenue-${tier.name}-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-2 text-center">
+                          <p className="truncate text-[11px] font-medium" style={{ color: tier.color || TIER_COLORS[index % TIER_COLORS.length] }}>
+                            {tier.name || `Tier ${index + 1}`}
+                          </p>
+                          <p className="mt-1 text-sm font-semibold">{formData.currency} {subtotal.toLocaleString()}</p>
+                        </div>
+                      );
+                    })}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center text-xs text-gray-500">
+                      Revenue appears after tiers are added.
+                    </div>
+                  )}
+                  <div className="mt-3 flex items-center justify-between border-t border-gray-200 pt-3">
+                    <span className="text-xs font-medium text-gray-600">Potential gross</span>
+                    <span className="text-xl font-bold text-purple-800">{formData.currency} {revenueTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-4 border-b border-gray-100 pb-3">
+                  <div>
+                    <p className="text-sm font-semibold">Expected guests</p>
+                    <p className="mt-0.5 text-xs text-gray-500">Approximate number attending</p>
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.expectedGuests || ''}
+                    onChange={(e) => updateForm('expectedGuests', Math.max(1, Number(e.target.value) || 1))}
+                    className="h-10 w-24 rounded-lg border border-gray-200 bg-gray-50 px-3 text-center text-sm outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-4 border-b border-gray-100 py-3">
+                  <div>
+                    <p className="text-sm font-semibold">Require registration</p>
+                    <p className="mt-0.5 text-xs text-gray-500">Guests confirm their spot in advance</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateForm('requireRegistration', !formData.requireRegistration)}
+                    className={`relative h-6 w-11 rounded-full transition ${formData.requireRegistration ? 'bg-purple-600' : 'bg-gray-300'}`}
+                    aria-pressed={formData.requireRegistration}
+                    aria-label="Toggle registration requirement"
+                  >
+                    <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${formData.requireRegistration ? 'left-6' : 'left-1'}`} />
+                  </button>
+                </div>
+
+                <div className="pt-3">
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-gray-500">What's included</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Free entry', 'Refreshments', 'Networking', 'Certificate'].map((perk) => {
+                      const active = formData.freePerks.includes(perk);
+                      return (
+                        <button
+                          key={perk}
+                          type="button"
+                          onClick={() => toggleFreePerk(perk)}
+                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-[11px] font-medium ${
+                            active ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-600'
+                          }`}
+                        >
+                          {active && <Check className="h-3 w-3" />}
+                          {perk}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      type="text"
+                      value={freePerkDraft}
+                      onChange={(e) => setFreePerkDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addFreePerk();
+                        }
+                      }}
+                      placeholder="Custom inclusion"
+                      className="h-9 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-purple-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={addFreePerk}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-dashed border-purple-300 text-purple-600"
+                      aria-label="Add custom inclusion"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-start gap-2 rounded-xl bg-purple-50 p-3 text-xs leading-5 text-purple-900">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-purple-600" />
+                  <p>Guests receive a free EVENTZ confirmation. Payment is skipped, and registration can stay optional.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="h-px bg-gray-200" />
+
+            <div>
+              <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                <Settings className="h-4 w-4 text-purple-600" />
+                Event settings
+              </div>
+              <div className="divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white px-3 shadow-sm">
+                {[
+                  {
+                    key: 'liveStream' as const,
+                    label: 'Live stream',
+                    sub: 'Broadcast this event on EVENTZ',
+                  },
+                  {
+                    key: 'virtualTickets' as const,
+                    label: 'Virtual tickets',
+                    sub: 'Sell online access globally',
+                  },
+                  {
+                    key: 'audienceGifting' as const,
+                    label: 'Audience gifting',
+                    sub: 'Fans can send gifts during live stream',
+                    disabled: !formData.settings.liveStream,
+                  },
+                  {
+                    key: 'promoCodes' as const,
+                    label: 'Promo codes',
+                    sub: 'Enable discount codes',
+                  },
+                  {
+                    key: 'idVerification' as const,
+                    label: 'ID verification',
+                    sub: 'Require ID at entry',
+                  },
+                ].map((setting) => (
+                  <div key={setting.key} className={`flex items-center justify-between gap-4 py-3 ${setting.disabled ? 'opacity-50' : ''}`}>
+                    <div>
+                      <p className="text-sm font-medium">{setting.label}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">{setting.sub}</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={setting.disabled}
+                      onClick={() => handleSettingChange(setting.key, !formData.settings[setting.key])}
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition ${formData.settings[setting.key] ? 'bg-purple-600' : 'bg-gray-300'} disabled:cursor-not-allowed`}
+                      aria-pressed={formData.settings[setting.key]}
+                      aria-label={`Toggle ${setting.label}`}
+                    >
+                      <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${formData.settings[setting.key] ? 'left-6' : 'left-1'}`} />
+                    </button>
                   </div>
                 ))}
               </div>
-            )}
 
-            <button onClick={handleAddTier} className="flex items-center gap-2 text-purple-600 font-medium hover:text-purple-700 transition-colors mb-4"><Plus className="w-4 h-4" /> Add Ticket Type</button>
-
-            {/* Price Range Display/Input */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Price Range
-                {formData.ticketTiers.length > 0 && <span className="ml-2 text-xs font-normal text-gray-500">(Auto-calculated)</span>}
-              </label>
-              {formData.ticketTiers.length > 0 ? (
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <span className="text-purple-600 font-bold text-lg">{currencies.find(c => c.code === formData.currency)?.symbol || formData.currency}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-gray-900">{calculatePriceRange(formData.ticketTiers, formData.currency) || 'Enter prices above'}</span>
-                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">Auto</span>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">{calculatePriceRange(formData.ticketTiers, formData.currency) ? 'Based on your ticket tiers above' : 'Add prices to your ticket tiers above'}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-5 h-5 text-gray-400 font-bold text-sm pointer-events-none">
-                    {currencies.find(c => c.code === formData.currency)?.symbol || '$'}
-                  </div>
-                  <input type="text" value={formData.price} onChange={(e) => handleInputChange('price', e.target.value)} placeholder="e.g., $45 - $120 or Free" className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white" />
+              {formData.settings.virtualTickets && (
+                <div className="mt-3 rounded-2xl border border-purple-100 bg-purple-50 p-3">
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-purple-700">Virtual ticket price ({formData.currency})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={Number.isNaN(formData.streaming.virtualPriceNumeric) ? '' : formData.streaming.virtualPriceNumeric}
+                    onChange={(e) => {
+                      const amount = Math.max(0, Number(e.target.value) || 0);
+                      setFormData((prev) => ({
+                        ...prev,
+                        streaming: {
+                          ...prev.streaming,
+                          virtualPriceNumeric: amount,
+                          virtualPrice: formatMoney(amount, prev.currency),
+                        },
+                      }));
+                    }}
+                    className="h-10 w-full rounded-xl border border-purple-100 bg-white px-3 text-sm outline-none focus:border-purple-500"
+                  />
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Virtual Access / Streaming */}
-          <div className="mb-6 bg-purple-50 p-6 rounded-2xl border border-purple-100">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center">
-                  <Tv className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-gray-900 font-semibold">Virtual Access</h3>
-                  <p className="text-gray-600 text-sm">Enable live streaming for this event</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={formData.streaming.available}
-                  onChange={(e) => setFormData(prev => ({ ...prev, streaming: { ...prev.streaming, available: e.target.checked } }))} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-              </label>
+            <div>
+              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => updateForm('description', e.target.value)}
+                placeholder="Tell guests what to expect..."
+                rows={4}
+                className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+              />
             </div>
-            {formData.streaming.available && (
-              <div className="animate-in fade-in slide-in-from-top-2">
-                <label className="block text-gray-900 mb-3 text-sm font-medium">Virtual Ticket Price ({currencies.find(c => c.code === formData.currency)?.symbol || formData.currency})</label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-5 h-5 text-gray-400 font-bold text-sm pointer-events-none">
-                    {currencies.find(c => c.code === formData.currency)?.symbol || '$'}
-                  </div>
-                  <input type="number" value={formData.streaming.virtualPriceNumeric || ''} onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    const currency = currencies.find(c => c.code === formData.currency) || { symbol: formData.currency };
-                    setFormData(prev => ({ ...prev, streaming: { ...prev.streaming, virtualPriceNumeric: val, virtualPrice: isNaN(val) ? '' : `${currency.symbol} ${val.toLocaleString()}` } }));
-                  }} placeholder="0" className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white" />
-                </div>
-                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3 text-green-500" />
-                  Virtual ticket holders will get a unique link to join the stream.
-                </p>
-              </div>
-            )}
-          </div>
 
-          {/* Description */}
-          <div className="mb-8">
-            <label className="block text-gray-900 mb-3">Description</label>
-            <textarea value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} placeholder="Tell people what your event is about..." rows={6} className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all resize-none" />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 sticky bottom-20 bg-white py-4 border-t border-gray-200">
-            {onBack && (
-              <button onClick={onBack} className="flex-1 flex items-center justify-center gap-1.5 border-2 border-gray-300 text-gray-700 py-3 rounded-xl hover:bg-gray-50 transition-colors min-w-0">
-                <ArrowLeft className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm font-medium truncate">Back</span>
-              </button>
-            )}
-            <button onClick={() => setShowPreview(!showPreview)} className="flex-1 flex items-center justify-center gap-1.5 border-2 border-cyan-500 text-cyan-600 py-3 rounded-xl hover:bg-cyan-50 transition-colors min-w-0">
-              <span className="text-sm font-medium truncate">Preview</span>
-            </button>
-            <button onClick={handlePublish} className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700 transition-colors font-medium min-w-0">
-              <span className="text-sm truncate">{isEditing ? 'Update' : 'Publish'}</span>
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={isSubmitting}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-purple-600 text-sm font-bold text-white shadow-lg shadow-purple-200 hover:bg-purple-700 disabled:opacity-70"
+            >
+              {isSubmitting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Bolt className="h-4 w-4" />}
+              {isEditing ? 'Save event' : 'Publish event'}
             </button>
           </div>
-        </div>
-      </div>
-
-      <ShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} title={formData.title} text={`${formData.date} at ${formData.location}\nPrice: ${formData.price}`} url={window.location.href} />
+        </section>
+      </main>
     </div>
   );
 }
