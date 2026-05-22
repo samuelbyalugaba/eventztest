@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { EventGridSkeleton } from './skeletons/EventCardSkeleton';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Calendar, CalendarDays, ChevronDown, ChevronLeft, X, Filter, Search, Send, Star, CheckCircle2, MessageCircle, Music2, GraduationCap, BriefcaseBusiness, Palette, Landmark, Dumbbell } from 'lucide-react';
+import { Calendar, CalendarDays, ChevronDown, ChevronLeft, X, Filter, Search, Send, Star, CheckCircle2, MessageCircle, Music2, GraduationCap, BriefcaseBusiness, Palette, Landmark, Dumbbell, Shirt, LocateFixed, Check } from 'lucide-react';
 import { EventCard } from './EventCard';
 import { toast } from 'sonner';
 import { Conversation } from '../types';
@@ -18,18 +18,17 @@ import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/n
 
 import { eventsStore } from '../store/eventStore';
 
-const locations = [
-  { id: 'all', name: 'Worldwide' },
-  { id: 'Atlanta', name: 'Atlanta, USA' },
-  { id: 'Dar es Salaam', name: 'Dar es Salaam, Tanzania' },
-  { id: 'Zanzibar', name: 'Zanzibar, Tanzania' },
-  { id: 'New York', name: 'New York, USA' },
-];
-
 type LocationOption = {
   id: string;
   name: string;
   icon?: React.ReactNode;
+};
+
+type CountryOption = {
+  code: string;
+  name: string;
+  cities: string[];
+  timeZones?: string[];
 };
 
 type CategoryOption = {
@@ -55,6 +54,7 @@ const categories: CategoryOption[] = [
   { id: 'culture', name: 'Culture', icon: Palette, subcategories: ['Festivals', 'Arts', 'Theater', 'Food & Drink', 'Local Traditions', 'Fashion Events'] },
   { id: 'religion', name: 'Religion', icon: Landmark, subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
   { id: 'sports & fitness', name: 'Sports & Fitness', chipName: 'Sports', icon: Dumbbell, subcategories: ['Fitness Classes', 'Competitions', 'Sports Events'] },
+  { id: 'fashion', name: 'Fashion', icon: Shirt, subcategories: ['Runway Shows', 'Pop-Up Markets', 'Style and Beauty', 'Brand Launches', 'Fashion Weeks'] },
 ];
 
 const timeFilters: TimeFilterOption[] = [
@@ -64,6 +64,74 @@ const timeFilters: TimeFilterOption[] = [
   { id: 'weekend', name: 'This Weekend' },
   { id: 'month', name: 'This Month' },
 ];
+
+const COUNTRY_OPTIONS: CountryOption[] = [
+  { code: 'TZ', name: 'Tanzania', cities: ['Dar es Salaam', 'Zanzibar', 'Arusha', 'Mwanza', 'Dodoma', 'Moshi', 'Tanga'], timeZones: ['Africa/Dar_es_Salaam'] },
+  { code: 'KE', name: 'Kenya', cities: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Malindi'], timeZones: ['Africa/Nairobi'] },
+  { code: 'UG', name: 'Uganda', cities: ['Kampala', 'Entebbe', 'Gulu', 'Jinja', 'Mbarara'], timeZones: ['Africa/Kampala'] },
+  { code: 'RW', name: 'Rwanda', cities: ['Kigali', 'Butare', 'Gisenyi', 'Musanze'], timeZones: ['Africa/Kigali'] },
+  { code: 'ET', name: 'Ethiopia', cities: ['Addis Ababa', 'Dire Dawa', 'Bahir Dar', 'Hawassa'], timeZones: ['Africa/Addis_Ababa'] },
+  { code: 'NG', name: 'Nigeria', cities: ['Lagos', 'Abuja', 'Port Harcourt', 'Ibadan', 'Kano'], timeZones: ['Africa/Lagos'] },
+  { code: 'ZA', name: 'South Africa', cities: ['Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Stellenbosch'], timeZones: ['Africa/Johannesburg'] },
+  { code: 'GB', name: 'United Kingdom', cities: ['London', 'Manchester', 'Birmingham', 'Edinburgh', 'Leeds'], timeZones: ['Europe/London'] },
+  { code: 'US', name: 'United States', cities: ['New York', 'Los Angeles', 'Atlanta', 'Chicago', 'Houston', 'Miami'], timeZones: ['America/New_York', 'America/Los_Angeles', 'America/Chicago', 'America/Denver'] },
+  { code: 'AE', name: 'UAE', cities: ['Dubai', 'Abu Dhabi', 'Sharjah'], timeZones: ['Asia/Dubai'] },
+];
+
+const DEFAULT_COUNTRY_CODE = 'TZ';
+
+const getCountryOption = (code: string) =>
+  COUNTRY_OPTIONS.find((country) => country.code === code) || COUNTRY_OPTIONS[0];
+
+const inferDeviceCountryCode = () => {
+  if (typeof Intl !== 'undefined') {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const match = COUNTRY_OPTIONS.find((country) => country.timeZones?.includes(timeZone));
+    if (match) return match.code;
+  }
+
+  if (typeof navigator !== 'undefined') {
+    const locales = [navigator.language, ...(navigator.languages || [])].filter(Boolean);
+    for (const locale of locales) {
+      const region = locale.split('-').pop()?.toUpperCase();
+      if (region && COUNTRY_OPTIONS.some((country) => country.code === region)) {
+        return region;
+      }
+    }
+  }
+
+  return DEFAULT_COUNTRY_CODE;
+};
+
+const extractReverseCity = (address: Record<string, string | undefined> = {}) =>
+  String(
+    address.city ||
+      address.town ||
+      address.village ||
+      address.municipality ||
+      address.county ||
+      address.state ||
+      ''
+  ).trim();
+
+const eventMatchesLocation = (event: ApiEvent, selectedLocation: string) => {
+  if (selectedLocation === 'all') return true;
+
+  const selected = normalizePlaceName(selectedLocation);
+  const eventCity = normalizePlaceName(String((event as any)?.city || ''));
+  const eventLocation = normalizePlaceName(String((event as any)?.location || ''));
+  const eventLocationParts = eventLocation
+    .split(',')
+    .map((part) => normalizePlaceName(part))
+    .filter(Boolean);
+
+  return (
+    eventCity === selected ||
+    eventCity.includes(selected) ||
+    eventLocationParts.some((part) => part === selected || part.includes(selected)) ||
+    eventLocation.includes(selected)
+  );
+};
 
 const startOfDay = (date: Date) => {
   const next = new Date(date);
@@ -216,6 +284,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [locationSearch, setLocationSearch] = useState('');
   const [remoteLocationOptions, setRemoteLocationOptions] = useState<LocationOption[]>([]);
   const [isSearchingLocations, setIsSearchingLocations] = useState(false);
+  const [selectedCountryCode, setSelectedCountryCode] = useState(() => inferDeviceCountryCode());
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [detectStatus, setDetectStatus] = useState('Ready');
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [eventToPurchase, setEventToPurchase] = useState<ApiEvent | null>(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -249,10 +320,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   const filteredEvents = React.useMemo(() => {
     return events.filter(event => {
-      const eventCity = String((event as any)?.city || '').trim();
-      const locationMatch =
-        selectedLocation === 'all' ||
-        (eventCity !== '' && normalizePlaceName(eventCity) === normalizePlaceName(selectedLocation));
+      const locationMatch = eventMatchesLocation(event, selectedLocation);
       const categoryMatch =
         selectedCategory === 'all' ||
         String((event as any).category || '').toLowerCase() === selectedCategory.toLowerCase();
@@ -328,15 +396,110 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     return out;
   };
 
-  const localMatches: LocationOption[] = (locations as any).filter((location: any) => {
-    if (location.id === 'all') return false;
-    return String(location.name || '').toLowerCase().includes(locationSearch.toLowerCase());
-  });
+  const selectedCountry = getCountryOption(selectedCountryCode);
+  const detectedCountryCode = inferDeviceCountryCode();
+  const countryCityOptions: LocationOption[] = selectedCountry.cities.map((city) => ({ id: city, name: city }));
+  const selectedLocationOption: LocationOption[] =
+    selectedLocation !== 'all' &&
+    !countryCityOptions.some((location) => normalizePlaceName(location.id) === normalizePlaceName(selectedLocation))
+      ? [{ id: selectedLocation, name: selectedLocation }]
+      : [];
+  const localMatches: LocationOption[] = countryCityOptions.filter((location) =>
+    String(location.name || '').toLowerCase().includes(locationSearch.toLowerCase())
+  );
 
   const displayedLocations: LocationOption[] =
     locationSearch.trim() === ''
-      ? (locations as any)
-      : mergeUniqueById([locations[0] as any, ...localMatches, ...remoteLocationOptions]);
+      ? mergeUniqueById([...selectedLocationOption, ...countryCityOptions])
+      : mergeUniqueById([...selectedLocationOption, ...localMatches, ...remoteLocationOptions]);
+  const selectedCityIsInCountry = countryCityOptions.some(
+    (location) => normalizePlaceName(location.id) === normalizePlaceName(selectedLocation)
+  );
+  const hasSelectedCity = selectedLocation !== 'all';
+  const locationBannerTitle = hasSelectedCity
+    ? selectedCityIsInCountry
+      ? `${selectedLocation}, ${selectedCountry.name}`
+      : selectedLocation
+    : selectedCountry.name;
+  const locationBannerSub = hasSelectedCity
+    ? detectStatus === 'Located'
+      ? `Detected from current location in ${selectedCountry.name}`
+      : selectedCityIsInCountry
+        ? `Selected city in ${selectedCountry.name}`
+        : 'Selected city'
+    : selectedCountryCode === detectedCountryCode
+      ? 'Based on device settings'
+      : 'Selected country';
+
+  const handleCountryChange = (code: string) => {
+    setSelectedCountryCode(code);
+    setShowCountryPicker(false);
+    setSelectedLocation('all');
+    setLocationSearch('');
+    setDetectStatus('Ready');
+  };
+
+  const handleLocationSelect = (locationId: string) => {
+    setSelectedLocation(selectedLocation === locationId ? 'all' : locationId);
+    setDetectStatus('Ready');
+  };
+
+  const clearFilters = () => {
+    setSelectedLocation('all');
+    setSelectedCategory('all');
+    setSelectedSubcategory('');
+    setSelectedTimeFilter('all');
+    setLocationSearch('');
+    setDetectStatus('Ready');
+    setShowCountryPicker(false);
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setDetectStatus('Unavailable');
+      return;
+    }
+
+    setDetectStatus('Detecting...');
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const url = new URL('https://nominatim.openstreetmap.org/reverse');
+          url.searchParams.set('format', 'json');
+          url.searchParams.set('lat', String(coords.latitude));
+          url.searchParams.set('lon', String(coords.longitude));
+          url.searchParams.set('addressdetails', '1');
+
+          const res = await fetch(url.toString());
+          if (!res.ok) throw new Error('Location lookup failed');
+
+          const data = await res.json();
+          const address = data?.address || {};
+          const countryCode = String(address.country_code || '').toUpperCase();
+          const nextCountry = COUNTRY_OPTIONS.some((country) => country.code === countryCode)
+            ? countryCode
+            : selectedCountryCode;
+          const city = extractReverseCity(address);
+
+          setSelectedCountryCode(nextCountry);
+          setLocationSearch('');
+          if (city) {
+            setSelectedLocation(city);
+            setDetectStatus('Located');
+          } else {
+            setSelectedLocation('all');
+            setDetectStatus('City unavailable');
+          }
+        } catch (error) {
+          setDetectStatus('Lookup failed');
+        }
+      },
+      (error) => {
+        setDetectStatus(error.code === error.PERMISSION_DENIED ? 'Permission denied' : 'Unavailable');
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+  };
 
   const [selectedEvent, setSelectedEvent] = useState<ApiEvent | null>(null);
 
@@ -621,67 +784,149 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
       {/* Filter Panel Sheet */}
       {showFilters && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={() => setShowFilters(false)}>
-          <div className="w-full max-w-4xl bg-white rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-gray-200">
-              <h2 className="text-gray-900">Filter Events</h2>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 pt-10 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setShowFilters(false)}
+        >
+          <div
+            className="w-full max-w-none overflow-hidden rounded-t-[24px] bg-white shadow-[0_-16px_48px_rgba(0,0,0,0.18)] animate-in slide-in-from-bottom duration-300 sm:max-w-[504px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 pb-4 pt-5">
+              <h2 className="text-[17px] font-bold tracking-tight text-gray-950">Filter Events</h2>
               <button 
                 onClick={() => setShowFilters(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+                type="button"
+                aria-label="Close filters"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-900"
               >
-                <X className="w-5 h-5 text-gray-600" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="p-5 max-h-[70vh] overflow-y-auto">
+            <div className="mx-5 h-px bg-gray-100" />
+
+            <div className="max-h-[72vh] overflow-y-auto px-5 py-5">
               <div className="mb-6">
-                <h3 className="text-gray-900 text-sm mb-3">Location</h3>
-                <div className="relative">
+                <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.09em] text-gray-400">Location</div>
+
+                <div className="mb-3 rounded-xl border border-purple-100 bg-purple-50 px-3.5 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-purple-700 shadow-sm">
+                        {selectedCountry.code}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-bold text-gray-950">{locationBannerTitle}</div>
+                        <div className="text-[11px] font-medium text-purple-600">
+                          {locationBannerSub}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCountryPicker((open) => !open)}
+                      className="shrink-0 text-[11px] font-bold text-purple-700 transition-colors hover:text-purple-900"
+                    >
+                      {showCountryPicker ? 'Done' : 'Change'}
+                    </button>
+                  </div>
+
+                  {showCountryPicker && (
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {COUNTRY_OPTIONS.map((country) => {
+                        const active = selectedCountryCode === country.code;
+                        return (
+                          <button
+                            key={country.code}
+                            type="button"
+                            onClick={() => handleCountryChange(country.code)}
+                            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-all ${
+                              active
+                                ? 'border-purple-500 bg-white text-purple-700'
+                                : 'border-purple-100 bg-white/70 text-gray-700 hover:border-purple-200'
+                            }`}
+                          >
+                            <span className="w-6 text-[11px] font-bold">{country.code}</span>
+                            <span className="min-w-0 flex-1 truncate text-xs font-semibold">{country.name}</span>
+                            {active && <Check className="h-3.5 w-3.5 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="relative mb-3">
                   <input
                     type="text"
-                    placeholder="Search locations..."
+                    placeholder="Search city..."
                     value={locationSearch}
                     onChange={(e) => setLocationSearch(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-600 focus:outline-none"
+                    className="w-full rounded-[10px] border border-gray-200 bg-gray-100 px-3.5 py-2.5 pr-10 text-sm font-medium text-gray-950 placeholder:text-gray-400 transition-all focus:border-purple-600 focus:bg-white focus:outline-none"
                   />
-                  <div className="absolute top-3 right-3">
-                    <Search className="w-5 h-5 text-gray-500" />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Search className="h-4 w-4 text-gray-400" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-2">
+
+                <button
+                  type="button"
+                  onClick={handleUseCurrentLocation}
+                  className="mb-3 flex w-full items-center gap-2.5 rounded-[10px] border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-left transition-all hover:border-purple-200 hover:bg-purple-50"
+                >
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">
+                    <LocateFixed className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm font-semibold text-gray-700">Use my current location</span>
+                  <span className="shrink-0 text-[11px] font-medium text-gray-400">{detectStatus}</span>
+                </button>
+
+                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.07em] text-gray-400">
+                  {locationSearch.trim() ? 'Matching cities' : `Popular cities in ${selectedCountry.name}`}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
                   {displayedLocations.map((location) => (
                     <button
                       key={location.id}
-                      onClick={() => setSelectedLocation(location.id)}
-                      className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm transition-all border ${
+                      type="button"
+                      onClick={() => handleLocationSelect(location.id)}
+                      className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
                         selectedLocation === location.id
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-md'
-                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                          ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-200 hover:bg-purple-50 hover:text-purple-700'
                       }`}
                     >
-                      <span>{location.name}</span>
+                      {location.name}
                     </button>
                   ))}
                 </div>
                 {isSearchingLocations && (
-                  <div className="mt-2 text-xs text-gray-500">Searching…</div>
+                  <div className="mt-2 text-xs font-medium text-gray-500">Searching...</div>
+                )}
+                {!isSearchingLocations && displayedLocations.length === 0 && (
+                  <div className="mt-2 rounded-lg border border-dashed border-gray-200 px-3 py-2 text-center text-xs font-medium text-gray-500">
+                    No matching cities yet.
+                  </div>
                 )}
               </div>
 
-              <div className="mb-6">
-                <h3 className="text-gray-900 text-sm mb-3">Categories</h3>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="mx-0 mb-5 h-px bg-gray-100" />
+
+              <div className="mb-1">
+                <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.09em] text-gray-400">Category</div>
+                <div className="flex flex-wrap gap-1.5">
                   {categories.map((category) => (
                     <button
                       key={category.id}
+                      type="button"
                       onClick={() => handleCategorySelect(category.id)}
-                      className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm transition-all border ${
+                      className={`whitespace-nowrap rounded-lg border px-3.5 py-2 text-xs font-semibold transition-all ${
                         selectedCategory === category.id
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-md'
-                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                          ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-200 hover:bg-purple-50 hover:text-purple-700'
                       }`}
                     >
-                      {category.icon && <category.icon className="w-4 h-4" />}
                       <span>{category.name}</span>
                     </button>
                   ))}
@@ -689,23 +934,20 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </div>
             </div>
 
-            <div className="p-5 border-t border-gray-200 flex gap-3">
+            <div className="flex gap-2.5 px-5 pb-5 pt-3">
               <button 
-                onClick={() => {
-                  setSelectedLocation('all');
-                  setSelectedCategory('all');
-                  setSelectedSubcategory('');
-                  setSelectedTimeFilter('all');
-                }}
-                className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                type="button"
+                onClick={clearFilters}
+                className="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-gray-500 transition-colors hover:border-purple-200 hover:text-purple-700"
               >
-                Clear All
+                Clear all
               </button>
               <button 
+                type="button"
                 onClick={() => setShowFilters(false)}
-                className="flex-1 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
+                className="flex-[2] rounded-xl bg-purple-600 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(124,58,237,0.28)] transition-colors hover:bg-purple-700"
               >
-                Show {filteredEvents.length} Events
+                Show {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'}
               </button>
             </div>
           </div>
@@ -741,6 +983,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             setSelectedLocation(venue.name);
             setSelectedCategory('all');
             setSelectedSubcategory('');
+            setDetectStatus('Ready');
           }}
         />
       )}
