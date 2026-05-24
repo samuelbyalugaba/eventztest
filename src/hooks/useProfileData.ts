@@ -41,6 +41,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const savedEventsLoadedRef = useRef(false);
   const ticketsLoadedRef = useRef(false);
   const organizerEventsLoadedRef = useRef(false);
+  const organizerEventsSeqRef = useRef(0);
   const streamedVideosLoadedRef = useRef(false);
   const savedEventsSubscriptionRef = useRef<any>(null);
 
@@ -182,21 +183,23 @@ export function useProfileData(userId?: string, activeTab?: string) {
     }
   };
 
-  const loadOrganizerEventsIfNeeded = async (isOrganizerOverride?: boolean) => {
+  const loadOrganizerEventsIfNeeded = async (isOrganizerOverride?: boolean, force = false) => {
     const isOrg = isOrganizerOverride !== undefined ? isOrganizerOverride : userProfile?.is_organizer;
-    if (!isOrg || isLoadingOrganizerEvents || organizerEventsLoadedRef.current) return;
+    if (!isOrg || (!force && (isLoadingOrganizerEvents || organizerEventsLoadedRef.current))) return;
     const targetUserId = userId || currentUser?.id;
     if (!targetUserId) return;
+    const seq = ++organizerEventsSeqRef.current;
     try {
       setIsLoadingOrganizerEvents(true);
       const events = await getOrganizerEvents(targetUserId);
+      if (seq !== organizerEventsSeqRef.current) return;
       if (events) {
         const mapEvent = (e: any) => ({ ...e, coverImage: e.image_url || e.coverImage, price: e.price_range || e.price });
         setPublishedEvents(events.map(mapEvent));
       }
       organizerEventsLoadedRef.current = true;
     } finally {
-      setIsLoadingOrganizerEvents(false);
+      if (seq === organizerEventsSeqRef.current) setIsLoadingOrganizerEvents(false);
     }
   };
 
@@ -263,13 +266,19 @@ export function useProfileData(userId?: string, activeTab?: string) {
       savedEventsLoadedRef.current = false;
       if (activeTab === 'saved') void loadSavedEventsIfNeeded();
     };
+    const handleEventsUpdated = () => {
+      organizerEventsLoadedRef.current = false;
+      void loadOrganizerEventsIfNeeded(true, true);
+    };
     window.addEventListener('profileUpdated', handleProfileUpdated as EventListener);
     window.addEventListener('savedPostsUpdated', handleSavedPostsUpdated as EventListener);
+    window.addEventListener('eventsUpdated', handleEventsUpdated as EventListener);
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdated as EventListener);
       window.removeEventListener('savedPostsUpdated', handleSavedPostsUpdated as EventListener);
+      window.removeEventListener('eventsUpdated', handleEventsUpdated as EventListener);
     };
-  }, [userId, isOwnProfile, authUser?.id, activeTab]);
+  }, [userId, isOwnProfile, authUser?.id, activeTab, currentUser?.id]);
 
   useEffect(() => {
     if (activeTab === 'upcoming') void loadOrganizerEventsIfNeeded();

@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Calendar, MapPin, MoreVertical, Pencil, Tv } from 'lucide-react';
+import { Calendar, MapPin, MoreVertical, Pencil, Trash2, Tv } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import {
   DropdownMenu,
@@ -25,12 +25,13 @@ export const EventCard = memo(function EventCard({
   onClick,
   className = '',
   onEditEvent,
+  onDeleteEvent,
   showOwnerActions = false,
 }: EventCardProps) {
   // Use passed organizer data if available, otherwise fallback to "Event Organizer"
   // Avoiding internal fetches to prevent N+1 request problem
   const organizerName = event.organizer?.full_name || 'Event Organizer';
-  const canEdit = showOwnerActions && !!onEditEvent;
+  const canManage = showOwnerActions && (!!onEditEvent || !!onDeleteEvent);
 
   return (
     <div
@@ -45,7 +46,7 @@ export const EventCard = memo(function EventCard({
           displayWidth={400}
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
         />
-        {canEdit && (
+        {canManage && (
           <div className="absolute top-2 right-2 z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -58,17 +59,32 @@ export const EventCard = memo(function EventCard({
                   <MoreVertical className="w-4 h-4" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="z-50 min-w-[140px]">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditEvent(event);
-                  }}
-                  className="gap-2"
-                >
-                  <Pencil className="w-4 h-4" />
-                  <span>Edit event</span>
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="z-50 min-w-[150px]">
+                {onEditEvent && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditEvent(event);
+                    }}
+                    className="gap-2"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    <span>Edit event</span>
+                  </DropdownMenuItem>
+                )}
+                {onDeleteEvent && (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteEvent(event);
+                    }}
+                    className="gap-2 text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete event</span>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

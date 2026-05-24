@@ -1,4 +1,4 @@
-import { X, User, Shield, HelpCircle, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar, Search, ChevronDown, Loader2 } from 'lucide-react';
+import { X, User, Shield, HelpCircle, ChevronRight, Mail, Phone, MapPin, Camera, Save, Check, MessageCircle, Heart, AtSign, Calendar, Search, ChevronDown, Loader2, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
@@ -109,6 +109,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
 
 
   const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY_SETTINGS);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -277,6 +278,58 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['privacy_settings'] } }));
     } catch (error) {
       toast.error('Failed to save privacy settings');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) {
+      toast.error('You must be logged in to delete your account');
+      return;
+    }
+
+    const confirmed = window.confirm('Delete your EVENTZ account? This removes your profile and signs you out. This action cannot be undone.');
+    if (!confirmed) return;
+
+    const typed = window.prompt('Type DELETE to permanently delete your account.');
+    if (typed !== 'DELETE') {
+      toast.error('Account deletion cancelled');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        method: 'POST',
+        body: {},
+      });
+
+      if (error) {
+        let message = error.message || 'Failed to delete account';
+        const response = (error as any)?.context;
+        if (response?.json) {
+          try {
+            const body = await response.json();
+            message = body?.error || message;
+          } catch {}
+        }
+        throw new Error(message);
+      }
+
+      if ((data as any)?.error) {
+        throw new Error((data as any).error);
+      }
+
+      await supabase.auth.signOut();
+      localStorage.removeItem('eventz-user-profile');
+      localStorage.removeItem('eventz-privacy');
+      toast.success('Account deleted');
+      handleOpenChange(false);
+      window.dispatchEvent(new Event('profileUpdated'));
+      window.location.assign('/events');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to delete account');
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -717,6 +770,37 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                     </button>
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400">
+                  Account
+                </p>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-left shadow-sm transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
+                      {isDeletingAccount ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-red-600">
+                        {isDeletingAccount ? 'Deleting account...' : 'Delete account'}
+                      </p>
+                      <p className="mt-0.5 text-xs leading-snug text-gray-500">
+                        Permanently remove your profile, hosted events, posts, and saved items.
+                      </p>
+                    </div>
+                    {!isDeletingAccount && <ChevronRight className="h-5 w-5 shrink-0 text-gray-300" />}
+                  </div>
+                </button>
               </div>
 
               {/* Save Button */}

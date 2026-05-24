@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type ComponentType } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentType } from 'react';
 import {
   ArrowLeft,
   BarChart3,
@@ -10,6 +10,7 @@ import {
   CheckCircle,
   ChevronDown,
   Church,
+  Clock,
   Crown,
   Dumbbell,
   Eye,
@@ -20,6 +21,7 @@ import {
   Minus,
   Music,
   Palette,
+  Phone,
   Plus,
   Settings,
   Shirt,
@@ -59,8 +61,7 @@ interface TicketTier {
 interface EventSettings {
   liveStream: boolean;
   virtualTickets: boolean;
-  audienceGifting: boolean;
-  promoCodes: boolean;
+  externalTicketing: boolean;
   idVerification: boolean;
 }
 
@@ -80,6 +81,7 @@ interface EventForm {
   expectedGuests: number;
   requireRegistration: boolean;
   freePerks: string[];
+  externalTicketingPhone: string;
   settings: EventSettings;
   streaming: {
     virtualPrice: string;
@@ -288,6 +290,34 @@ const isFreeEvent = (event: any) => {
   return priceRange === 'free' || (rawTiers.length > 0 && rawTiers.every((tier: any) => parseMoney(tier?.priceNumeric ?? tier?.price) === 0));
 };
 
+const getExternalTicketingPhone = (streaming: any) => {
+  if (typeof streaming?.externalTicketing?.phone === 'string') return streaming.externalTicketing.phone;
+  if (typeof streaming?.externalTicketingPhone === 'string') return streaming.externalTicketingPhone;
+  return '';
+};
+
+const formatDateFieldValue = (value: string) => {
+  if (!value) return 'mm/dd/yyyy';
+
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return value;
+
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const monthName = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(date);
+  return `${day} ${monthName} ${year}`;
+};
+
+const formatTimeFieldValue = (value: string) => {
+  if (!value) return '--:--';
+
+  const [hours = '', minutes = ''] = value.split(':');
+  if (!hours || !minutes) return value;
+
+  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+};
+
 export function CreateEvent({ onBack, event }: CreateEventProps) {
   const [formData, setFormData] = useState<EventForm>(() => {
     const initialCurrency = getInitialCurrency(event);
@@ -313,11 +343,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       expectedGuests: Math.max(0, Number(freeTier?.available ?? event?.attendees ?? 0) || 0),
       requireRegistration: typeof freeTier?.registrationRequired === 'boolean' ? freeTier.registrationRequired : true,
       freePerks: freeTier?.features?.length ? freeTier.features : (event && freeMode ? DEFAULT_FREE_PERKS : []),
+      externalTicketingPhone: getExternalTicketingPhone(streaming),
       settings: {
         liveStream: streamingFeatures.includes('live_stream') || !!streaming.available,
         virtualTickets: streamingFeatures.includes('virtual_tickets') || !!streaming.virtualPrice,
-        audienceGifting: streamingFeatures.includes('audience_gifting'),
-        promoCodes: streamingFeatures.includes('promo_codes'),
+        externalTicketing: streamingFeatures.includes('external_ticketing') || !!streaming.externalTicketing?.enabled,
         idVerification: streamingFeatures.includes('id_verification'),
       },
       streaming: {
@@ -339,6 +369,8 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [tierFeatureDrafts, setTierFeatureDrafts] = useState<Record<number, string>>({});
   const [freePerkDraft, setFreePerkDraft] = useState('');
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!savedEventId;
   const selectedCategory = eventCategories.find((category) => category.name === formData.category);
@@ -412,8 +444,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     const features: string[] = [];
     if (data.settings.liveStream) features.push('live_stream');
     if (data.settings.virtualTickets) features.push('virtual_tickets');
-    if (data.settings.audienceGifting) features.push('audience_gifting');
-    if (data.settings.promoCodes) features.push('promo_codes');
+    if (data.settings.externalTicketing) features.push('external_ticketing');
     if (data.settings.idVerification) features.push('id_verification');
 
     const virtualPrice = data.settings.virtualTickets
@@ -425,6 +456,10 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       quality: data.streaming.quality,
       virtualPrice,
       features,
+      externalTicketing: {
+        enabled: data.settings.externalTicketing,
+        phone: data.settings.externalTicketing ? data.externalTicketingPhone.trim() : '',
+      },
     };
   };
 
@@ -619,7 +654,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       settings: {
         ...prev.settings,
         [field]: value,
-        ...(field === 'liveStream' && !value ? { audienceGifting: false } : {}),
       },
     }));
   };
@@ -661,6 +695,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       }
     } else if (!formData.expectedGuests || formData.expectedGuests < 1) {
       toast.error('Set an expected guest count for free entry');
+      return false;
+    }
+
+    if (formData.settings.externalTicketing && !formData.externalTicketingPhone.trim()) {
+      toast.error('Add the phone number buyers should contact for ticketing');
       return false;
     }
 
@@ -791,24 +830,37 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <label className="relative flex h-11 w-full cursor-pointer items-center rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-100">
+                  <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <span className={`pointer-events-none min-w-0 truncate leading-none ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {formatDateFieldValue(formData.date)}
+                  </span>
                   <input
+                    ref={dateInputRef}
                     type="date"
                     value={formData.date}
                     onChange={(e) => updateForm('date', e.target.value)}
-                    className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    aria-label="Event date"
                   />
-                </div>
+                </label>
               </div>
               <div>
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Time</label>
-                <input
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) => updateForm('time', e.target.value)}
-                  className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
-                />
+                <label className="relative flex h-11 w-full cursor-pointer items-center rounded-xl border border-gray-200 bg-white px-3 pr-10 text-sm outline-none transition focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-100">
+                  <span className={`pointer-events-none min-w-0 truncate leading-none ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {formatTimeFieldValue(formData.time)}
+                  </span>
+                  <Clock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                  <input
+                    ref={timeInputRef}
+                    type="time"
+                    value={formData.time}
+                    onChange={(e) => updateForm('time', e.target.value)}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    aria-label="Event time"
+                  />
+                </label>
               </div>
             </div>
 
@@ -936,7 +988,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 {formData.ticketTiers.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center">
                     <p className="text-sm font-semibold text-gray-800">No ticket tiers yet</p>
-                    <p className="mt-1 text-xs text-gray-500">Add the first tier when you know the real price and capacity.</p>
+                    <p className="mt-1 text-xs text-gray-500">Host. Sell Tickets. Go Live</p>
                   </div>
                 )}
 
@@ -1202,15 +1254,9 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     sub: 'Sell online access globally',
                   },
                   {
-                    key: 'audienceGifting' as const,
-                    label: 'Audience gifting',
-                    sub: 'Fans can send gifts during live stream',
-                    disabled: !formData.settings.liveStream,
-                  },
-                  {
-                    key: 'promoCodes' as const,
-                    label: 'Promo codes',
-                    sub: 'Enable discount codes',
+                    key: 'externalTicketing' as const,
+                    label: 'Use external ticketing',
+                    sub: 'Display price only - buyers will contact you for ticketing',
                   },
                   {
                     key: 'idVerification' as const,
@@ -1218,16 +1264,15 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     sub: 'Require ID at entry',
                   },
                 ].map((setting) => (
-                  <div key={setting.key} className={`flex items-center justify-between gap-4 py-3 ${setting.disabled ? 'opacity-50' : ''}`}>
+                  <div key={setting.key} className="flex items-center justify-between gap-4 py-3">
                     <div>
                       <p className="text-sm font-medium">{setting.label}</p>
                       <p className="mt-0.5 text-xs text-gray-500">{setting.sub}</p>
                     </div>
                     <button
                       type="button"
-                      disabled={setting.disabled}
                       onClick={() => handleSettingChange(setting.key, !formData.settings[setting.key])}
-                      className={`relative h-6 w-11 shrink-0 rounded-full transition ${formData.settings[setting.key] ? 'bg-purple-600' : 'bg-gray-300'} disabled:cursor-not-allowed`}
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition ${formData.settings[setting.key] ? 'bg-purple-600' : 'bg-gray-300'}`}
                       aria-pressed={formData.settings[setting.key]}
                       aria-label={`Toggle ${setting.label}`}
                     >
@@ -1257,6 +1302,22 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     }}
                     className="h-10 w-full rounded-xl border border-purple-100 bg-white px-3 text-sm outline-none focus:border-purple-500"
                   />
+                </div>
+              )}
+
+              {formData.settings.externalTicketing && (
+                <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Ticketing contact phone</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={formData.externalTicketingPhone}
+                      onChange={(e) => updateForm('externalTicketingPhone', e.target.value)}
+                      placeholder="+255 7XX XXX XXX"
+                      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm outline-none focus:border-purple-500 focus:bg-white"
+                    />
+                  </div>
                 </div>
               )}
             </div>

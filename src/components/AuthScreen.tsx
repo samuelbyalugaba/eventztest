@@ -208,7 +208,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
       className={`w-full flex items-start justify-center px-4 pb-10 sm:px-6 ${
         embedded
           ? 'min-h-[60vh] bg-transparent pt-8'
-          : 'min-h-[100dvh] bg-gray-50 pt-[clamp(5rem,17vh,9rem)]'
+          : 'min-h-[100dvh] bg-gray-50 pt-[clamp(4rem,13vh,7.5rem)]'
       }`}
     >
       <div className="w-full max-w-md">
