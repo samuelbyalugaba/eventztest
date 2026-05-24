@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type ComponentType } from 'react';
 import {
   ArrowLeft,
   BarChart3,
@@ -47,6 +47,7 @@ type IconType = ComponentType<{ className?: string }>;
 type TicketMode = 'tiers' | 'free';
 
 interface TicketTier {
+  clientId?: string;
   name: string;
   price: string;
   priceNumeric: number;
@@ -204,9 +205,72 @@ const getCurrency = (code: string) => createCurrencies.find((currency) => curren
 
 const getCurrencySymbol = (code: string) => getCurrency(code)?.symbol || code;
 
+let tierClientIdCounter = 0;
+const createTierClientId = () => `ticket-tier-${Date.now()}-${tierClientIdCounter++}`;
+
 const parseMoney = (value: unknown) => {
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
   return parseFloat(String(value || '').replace(/[^0-9.]/g, '')) || 0;
+};
+
+const pad2 = (value: number) => String(value).padStart(2, '0');
+
+const normalizeDateInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  let year = 0;
+  let month = 0;
+  let day = 0;
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const slashMatch = trimmed.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})$/);
+
+  if (isoMatch) {
+    year = Number(isoMatch[1]);
+    month = Number(isoMatch[2]);
+    day = Number(isoMatch[3]);
+  } else if (slashMatch) {
+    month = Number(slashMatch[1]);
+    day = Number(slashMatch[2]);
+    year = Number(slashMatch[3]);
+  } else {
+    return '';
+  }
+
+  const date = new Date(year, month - 1, day);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return '';
+  }
+
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+};
+
+const formatDateDraft = (value: string) => {
+  const normalized = normalizeDateInput(value);
+  if (!normalized) return value || '';
+  const [year, month, day] = normalized.split('-');
+  return `${month}/${day}/${year}`;
+};
+
+const normalizeTimeInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  const compactMatch = trimmed.match(/^(\d{1,2})(\d{2})$/);
+  const colonMatch = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  const match = colonMatch || compactMatch;
+  if (!match) return '';
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return '';
+
+  return `${pad2(hours)}:${pad2(minutes)}`;
 };
 
 const formatMoney = (amount: number, currencyCode: string) => {
@@ -221,6 +285,7 @@ const normalizeIncomingTiers = (event: any, currencyCode: string): TicketTier[] 
     return rawTiers.map((tier: any, index: number) => {
       const priceNumeric = typeof tier.priceNumeric === 'number' ? tier.priceNumeric : parseMoney(tier.price);
       return {
+        clientId: createTierClientId(),
         name: tier.name || (priceNumeric > 0 ? 'Ticket' : 'Free Entry'),
         price: tier.price || (priceNumeric > 0 ? formatMoney(priceNumeric, currencyCode) : 'Free'),
         priceNumeric,
@@ -239,6 +304,7 @@ const normalizeIncomingTiers = (event: any, currencyCode: string): TicketTier[] 
   if (existingPrice && String(existingPrice).toLowerCase() !== 'free' && numeric > 0) {
     return [
       {
+        clientId: createTierClientId(),
         name: 'General Admission',
         price: formatMoney(numeric, currencyCode),
         priceNumeric: numeric,
@@ -296,28 +362,6 @@ const getExternalTicketingPhone = (streaming: any) => {
   return '';
 };
 
-const formatDateFieldValue = (value: string) => {
-  if (!value) return 'mm/dd/yyyy';
-
-  const [year, month, day] = value.split('-').map(Number);
-  if (!year || !month || !day) return value;
-
-  const date = new Date(year, month - 1, day);
-  if (Number.isNaN(date.getTime())) return value;
-
-  const monthName = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(date);
-  return `${day} ${monthName} ${year}`;
-};
-
-const formatTimeFieldValue = (value: string) => {
-  if (!value) return '--:--';
-
-  const [hours = '', minutes = ''] = value.split(':');
-  if (!hours || !minutes) return value;
-
-  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-};
-
 export function CreateEvent({ onBack, event }: CreateEventProps) {
   const [formData, setFormData] = useState<EventForm>(() => {
     const initialCurrency = getInitialCurrency(event);
@@ -357,6 +401,8 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       },
     };
   });
+  const [dateDraft, setDateDraft] = useState(() => formatDateDraft(event?.date || ''));
+  const [timeDraft, setTimeDraft] = useState(() => (typeof event?.time === 'string' ? event.time.slice(0, 5) : ''));
 
   const [savedEventId, setSavedEventId] = useState<number | undefined>(event?.id);
   const [currentStatus, setCurrentStatus] = useState<string>(event?.status || 'draft');
@@ -369,8 +415,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [tierFeatureDrafts, setTierFeatureDrafts] = useState<Record<number, string>>({});
   const [freePerkDraft, setFreePerkDraft] = useState('');
-  const dateInputRef = useRef<HTMLInputElement>(null);
-  const timeInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!savedEventId;
   const selectedCategory = eventCategories.find((category) => category.name === formData.category);
@@ -410,6 +454,26 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   const updateForm = <K extends keyof EventForm>(field: K, value: EventForm[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDateDraftChange = (value: string) => {
+    setDateDraft(value);
+    updateForm('date', normalizeDateInput(value));
+  };
+
+  const handleDateDraftBlur = () => {
+    const normalized = normalizeDateInput(dateDraft);
+    if (normalized) setDateDraft(formatDateDraft(normalized));
+  };
+
+  const handleTimeDraftChange = (value: string) => {
+    setTimeDraft(value);
+    updateForm('time', normalizeTimeInput(value));
+  };
+
+  const handleTimeDraftBlur = () => {
+    const normalized = normalizeTimeInput(timeDraft);
+    if (normalized) setTimeDraft(normalized);
   };
 
   const serializeTicketTiers = (data: EventForm) => {
@@ -591,6 +655,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     setFormData((prev) => {
       const index = prev.ticketTiers.length;
       const newTier: TicketTier = {
+        clientId: createTierClientId(),
         name: '',
         price: formatMoney(0, prev.currency),
         priceNumeric: 0,
@@ -665,7 +730,12 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     }
 
     if (!formData.date) {
-      toast.error('Please choose an event date');
+      toast.error(dateDraft.trim() ? 'Use date format MM/DD/YYYY' : 'Please choose an event date');
+      return false;
+    }
+
+    if (timeDraft.trim() && !formData.time) {
+      toast.error('Use time format HH:MM');
       return false;
     }
 
@@ -830,37 +900,35 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Date</label>
-                <label className="relative flex h-11 w-full cursor-pointer items-center rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-100">
+                <div className="relative">
                   <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <span className={`pointer-events-none min-w-0 truncate leading-none ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}>
-                    {formatDateFieldValue(formData.date)}
-                  </span>
                   <input
-                    ref={dateInputRef}
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => updateForm('date', e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    type="text"
+                    inputMode="numeric"
+                    value={dateDraft}
+                    onChange={(e) => handleDateDraftChange(e.target.value)}
+                    onBlur={handleDateDraftBlur}
+                    placeholder="mm/dd/yyyy"
+                    className={`h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}
                     aria-label="Event date"
                   />
-                </label>
+                </div>
               </div>
               <div>
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Time</label>
-                <label className="relative flex h-11 w-full cursor-pointer items-center rounded-xl border border-gray-200 bg-white px-3 pr-10 text-sm outline-none transition focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-100">
-                  <span className={`pointer-events-none min-w-0 truncate leading-none ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}>
-                    {formatTimeFieldValue(formData.time)}
-                  </span>
+                <div className="relative">
                   <Clock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                   <input
-                    ref={timeInputRef}
-                    type="time"
-                    value={formData.time}
-                    onChange={(e) => updateForm('time', e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    type="text"
+                    inputMode="numeric"
+                    value={timeDraft}
+                    onChange={(e) => handleTimeDraftChange(e.target.value)}
+                    onBlur={handleTimeDraftBlur}
+                    placeholder="--:--"
+                    className={`h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 pr-10 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}
                     aria-label="Event time"
                   />
-                </label>
+                </div>
               </div>
             </div>
 
@@ -993,7 +1061,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 )}
 
                 {formData.ticketTiers.map((tier, index) => (
-                  <div key={`${tier.name}-${index}`} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+                  <div key={tier.clientId || `ticket-tier-${index}`} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
                     <div className="mb-3 flex items-center gap-2">
                       <div className="h-7 w-1 rounded-full" style={{ backgroundColor: tier.color || TIER_COLORS[index % TIER_COLORS.length] }} />
                       <input
@@ -1023,14 +1091,16 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                         <input
                           type="number"
                           min="0"
-                          value={Number.isNaN(tier.priceNumeric) ? '' : tier.priceNumeric}
+                          inputMode="decimal"
+                          value={tier.priceNumeric > 0 ? tier.priceNumeric : ''}
                           onChange={(e) => handleUpdateTier(index, 'priceNumeric', e.target.value)}
+                          placeholder="0"
                           className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-purple-500"
                         />
                       </div>
                       <div>
                         <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Capacity</label>
-                        <div className="flex h-10 items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-2">
+                        <div className="flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 focus-within:border-purple-500">
                           <button
                             type="button"
                             onClick={() => handleAdjustTierCapacity(index, -10)}
@@ -1039,7 +1109,16 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                           >
                             <Minus className="h-3.5 w-3.5" />
                           </button>
-                          <span className="min-w-10 text-center text-sm font-semibold">{tier.available}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            inputMode="numeric"
+                            value={tier.available > 0 ? tier.available : ''}
+                            onChange={(e) => handleUpdateTier(index, 'available', e.target.value)}
+                            placeholder="0"
+                            className="h-8 min-w-0 flex-1 bg-transparent text-center text-sm font-semibold outline-none"
+                            aria-label="Ticket capacity"
+                          />
                           <button
                             type="button"
                             onClick={() => handleAdjustTierCapacity(index, 10)}
@@ -1130,7 +1209,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                       {formData.ticketTiers.map((tier, index) => {
                       const subtotal = (Number(tier.priceNumeric) || 0) * (Number(tier.available) || 0);
                       return (
-                        <div key={`revenue-${tier.name}-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-2 text-center">
+                        <div key={tier.clientId ? `revenue-${tier.clientId}` : `revenue-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-2 text-center">
                           <p className="truncate text-[11px] font-medium" style={{ color: tier.color || TIER_COLORS[index % TIER_COLORS.length] }}>
                             {tier.name || `Tier ${index + 1}`}
                           </p>
@@ -1160,8 +1239,10 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                   <input
                     type="number"
                     min="1"
-                    value={formData.expectedGuests || ''}
-                    onChange={(e) => updateForm('expectedGuests', Math.max(1, Number(e.target.value) || 1))}
+                    inputMode="numeric"
+                    value={formData.expectedGuests > 0 ? formData.expectedGuests : ''}
+                    onChange={(e) => updateForm('expectedGuests', Math.max(0, Number(e.target.value) || 0))}
+                    placeholder="0"
                     className="h-10 w-24 rounded-lg border border-gray-200 bg-gray-50 px-3 text-center text-sm outline-none focus:border-purple-500"
                   />
                 </div>
