@@ -774,7 +774,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             </button>
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold">{isEditing ? 'Edit Event' : 'Create Event'}</h1>
-              <p className="truncate text-xs text-gray-500">{isAutoSaving ? 'Saving draft...' : 'One clean flow from idea to tickets'}</p>
+              <p className="truncate text-xs text-gray-500">{isAutoSaving ? 'Saving draft...' : 'Host. Sell Tickets. Go Live'}</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
