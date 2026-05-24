@@ -154,6 +154,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       setPublishedEvents(prev => prev.filter(e => e.id !== event.id));
       setSavedEvents(prev => prev.filter(e => e.id !== event.id));
       if (selectedEvent?.id === event.id) setSelectedEvent(null);
+      window.dispatchEvent(new Event('eventsUpdated'));
       toast.success('Event deleted');
     } catch (error: any) {
       toast.error(error?.message || 'Failed to delete event');

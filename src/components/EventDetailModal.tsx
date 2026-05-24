@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles } from 'lucide-react';
+import { MapPin, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles, Phone } from 'lucide-react';
 import { formatDateDMY } from '../utils/format';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
@@ -66,6 +66,28 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     return parseFloat(String(priceString).replace(/[^0-9.]/g, '')) || 0;
   })();
   const requiresVirtualAccess = !!event.streaming?.available && virtualPriceNumber > 0;
+  const externalTicketing = !!(
+    event.streaming?.features?.includes('external_ticketing') ||
+    event.streaming?.externalTicketing?.enabled
+  );
+  const externalTicketingPhone = String(
+    event.streaming?.externalTicketing?.phone ||
+    (event.streaming as any)?.externalTicketingPhone ||
+    event.organizer?.phone ||
+    ''
+  ).trim();
+  const externalTicketingHref = externalTicketingPhone
+    ? `tel:${externalTicketingPhone.replace(/[^\d+]/g, '')}`
+    : '';
+
+  const handleExternalTicketing = () => {
+    if (externalTicketingHref) {
+      window.location.href = externalTicketingHref;
+      return;
+    }
+
+    toast.info('Contact the organizer for ticketing details');
+  };
   
   const isEventPast = (() => {
     try {
@@ -625,8 +647,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 {event.ticket_tiers.map((tier, index) => (
                   <div 
                     key={index} 
-                    onClick={() => onTierSelect && onTierSelect(event, tier.name)}
-                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors cursor-pointer"
+                    onClick={() => !externalTicketing && onTierSelect && onTierSelect(event, tier.name)}
+                    className={`flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100 transition-colors ${externalTicketing ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100'}`}
                   >
                     <div className="flex items-center gap-3">
                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
@@ -738,25 +760,44 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               
               <div className="space-y-3">
                 {/* Standard Ticket */}
-                <button
-                  onClick={() => !isEventPast && onPurchaseNormalTicket(event)}
-                  disabled={isEventPast}
-                  className={`w-full bg-white border-2 border-purple-100 rounded-xl p-4 flex items-center justify-between transition-all shadow-sm group ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-600 hover:shadow-md'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
-                      <Ticket className="w-5 h-5 text-purple-600 group-hover:text-white" />
+                {externalTicketing ? (
+                  <button
+                    onClick={() => !isEventPast && handleExternalTicketing()}
+                    disabled={isEventPast}
+                    className={`w-full bg-white border-2 border-purple-100 rounded-xl p-4 flex items-center justify-between transition-all shadow-sm group ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-600 hover:shadow-md'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
+                        <Phone className="w-5 h-5 text-purple-600 group-hover:text-white" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-gray-900 font-medium">Contact for ticketing</p>
+                        <p className="text-gray-500 text-xs">{externalTicketingPhone || 'Contact organizer'}</p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <p className="text-gray-900 font-medium">Standard Entry</p>
-                      <p className="text-gray-500 text-xs">General admission access</p>
+                    <span className="text-purple-600 font-bold">{formatEventPrice(event.price_range)}</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => !isEventPast && onPurchaseNormalTicket(event)}
+                    disabled={isEventPast}
+                    className={`w-full bg-white border-2 border-purple-100 rounded-xl p-4 flex items-center justify-between transition-all shadow-sm group ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-600 hover:shadow-md'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
+                        <Ticket className="w-5 h-5 text-purple-600 group-hover:text-white" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-gray-900 font-medium">Standard Entry</p>
+                        <p className="text-gray-500 text-xs">General admission access</p>
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-purple-600 font-bold">{formatEventPrice(event.price_range)}</span>
-                </button>
+                    <span className="text-purple-600 font-bold">{formatEventPrice(event.price_range)}</span>
+                  </button>
+                )}
                 
                 {/* VIP Ticket Option - If applicable */}
-                {(event as any).vipPrice && (
+                {!externalTicketing && (event as any).vipPrice && (
                   <button
                     onClick={() => !isEventPast && onPurchaseTicket(event)}
                     disabled={isEventPast}
@@ -796,13 +837,23 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
            </button>
          ) : (
            !isEventPast && (
-             <button 
-               onClick={() => onPurchaseNormalTicket(event)}
-               className="flex-1 bg-[#8A2BE2] text-white py-3 rounded-xl font-medium hover:bg-[#7b26c9] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
-             >
-               <Ticket className="w-5 h-5" />
-              {event.price_range === 'Free' ? 'Register' : 'Get Tickets Now'}
-            </button>
+             externalTicketing ? (
+               <button
+                 onClick={handleExternalTicketing}
+                 className="flex-1 bg-[#8A2BE2] text-white py-3 rounded-xl font-medium hover:bg-[#7b26c9] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+               >
+                 <Phone className="w-5 h-5" />
+                 Contact for ticketing
+               </button>
+             ) : (
+               <button
+                 onClick={() => onPurchaseNormalTicket(event)}
+                 className="flex-1 bg-[#8A2BE2] text-white py-3 rounded-xl font-medium hover:bg-[#7b26c9] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+               >
+                 <Ticket className="w-5 h-5" />
+                {event.price_range === 'Free' ? 'Register' : 'Get Tickets Now'}
+              </button>
+             )
            )
          )}
          

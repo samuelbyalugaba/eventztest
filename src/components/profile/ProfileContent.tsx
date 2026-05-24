@@ -403,7 +403,7 @@ function UpcomingTab({ isLoading, events, onEventClick, currentUserId, onEditEve
           currentUserId={currentUserId}
           onEditEvent={onEditEvent}
           onDeleteEvent={onDeleteEvent}
-          showOwnerActions={canManageEvents && !!onEditEvent}
+          showOwnerActions={canManageEvents && (!!onEditEvent || !!onDeleteEvent)}
           className="border border-gray-100 hover:shadow-md transition-all"
         />
       ))}

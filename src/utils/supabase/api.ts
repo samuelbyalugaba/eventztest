@@ -114,6 +114,10 @@ export type Event = {
     endedAt?: string | number;
     lastRecordedAt?: string | number;
     cf_live_input_uid?: string;
+    externalTicketing?: {
+      enabled: boolean;
+      phone?: string;
+    };
   };
   ticket_tiers?: {
     name: string;
