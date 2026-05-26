@@ -24,6 +24,14 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Eventz needs camera access to scan tickets and let organizers stream live video.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Eventz uses your location to suggest nearby events and relevant city filters.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Eventz needs microphone access so organizers can include audio in live streams.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Eventz lets you choose photos from your library for profiles, posts, and events.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

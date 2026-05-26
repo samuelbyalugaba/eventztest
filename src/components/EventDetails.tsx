@@ -428,7 +428,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         ? `Selected city in ${selectedCountry.name}`
         : 'Selected city'
     : selectedCountryCode === detectedCountryCode
-      ? 'Based on device settings'
+      ? 'Based on your device'
       : 'Selected country';
 
   const handleCountryChange = (code: string) => {
