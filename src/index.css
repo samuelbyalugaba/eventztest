@@ -36,6 +36,24 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  .native-picker-field {
+    position: relative;
+    color-scheme: light;
+  }
+
+  .native-picker-field::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    cursor: pointer;
+    opacity: 0;
+  }
+
+  .native-picker-field::-webkit-date-and-time-value {
+    text-align: left;
+  }
 }
 
 @keyframes floatUp {
