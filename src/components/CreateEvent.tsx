@@ -809,7 +809,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             </button>
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold">{isEditing ? 'Edit Event' : 'Create Event'}</h1>
-              <p className="truncate text-xs text-gray-500">{isAutoSaving ? 'Saving draft...' : 'Host. Sell Tickets. Go Live'}</p>
+              <p className="truncate text-xs text-gray-500">{isAutoSaving ? 'Saving draft...' : 'Host. Go Live. Sell Tickets'}</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -862,7 +862,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 min-[460px]:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Date</label>
                 <div className="relative">
@@ -876,7 +876,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     }}
                     onPaste={(e) => e.preventDefault()}
                     onDrop={(e) => e.preventDefault()}
-                    className={`native-picker-field h-12 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 pr-10 text-base outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 min-[460px]:h-11 min-[460px]:text-sm ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}
+                    className={`native-picker-field h-12 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 pr-10 text-base outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 md:h-11 md:text-sm ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}
                     aria-label="Event date"
                   />
                   <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -895,7 +895,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     }}
                     onPaste={(e) => e.preventDefault()}
                     onDrop={(e) => e.preventDefault()}
-                    className={`native-picker-field h-12 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 pr-10 text-base outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 min-[460px]:h-11 min-[460px]:text-sm ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}
+                    className={`native-picker-field h-12 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 pr-10 text-base outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 md:h-11 md:text-sm ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}
                     aria-label="Event time"
                   />
                   <Clock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -1027,7 +1027,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 {formData.ticketTiers.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center">
                     <p className="text-sm font-semibold text-gray-800">No ticket tiers yet</p>
-                    <p className="mt-1 text-xs text-gray-500">Host. Sell Tickets. Go Live</p>
+                    <p className="mt-1 text-xs text-gray-500">Customize tiers, Pricing, and Capacity</p>
                   </div>
                 )}
 
