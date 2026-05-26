@@ -104,10 +104,6 @@ const DEFAULT_PERKS = [
   'Priority entry',
   'Reserved seating',
   'Digital pass',
-  'Event programme',
-  'Free drink',
-  'Meet and greet',
-  'Backstage access',
 ];
 
 const eventCategories: {
@@ -660,9 +656,17 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     if (!value) return;
 
     const tier = formData.ticketTiers[index];
-    if (!tier || tier.features.includes(value)) return;
+    if (!tier) return;
 
-    handleUpdateTier(index, 'features', [...tier.features, value]);
+    const matchedDefaultPerk = DEFAULT_PERKS.find((perk) => perk.toLowerCase() === value.toLowerCase());
+    const feature = matchedDefaultPerk || value;
+    const alreadyAdded = tier.features.some((item) => item.toLowerCase() === feature.toLowerCase());
+    if (alreadyAdded) {
+      setTierFeatureDrafts((prev) => ({ ...prev, [index]: '' }));
+      return;
+    }
+
+    handleUpdateTier(index, 'features', [...tier.features, feature]);
     setTierFeatureDrafts((prev) => ({ ...prev, [index]: '' }));
   };
 
@@ -1031,7 +1035,13 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                   </div>
                 )}
 
-                {formData.ticketTiers.map((tier, index) => (
+                {formData.ticketTiers.map((tier, index) => {
+                  const customFeatures = tier.features.filter(
+                    (feature) => !DEFAULT_PERKS.some((perk) => perk.toLowerCase() === feature.toLowerCase()),
+                  );
+                  const tierFeatureDraft = tierFeatureDrafts[index] || '';
+
+                  return (
                   <div key={tier.clientId || `ticket-tier-${index}`} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
                     <div className="mb-3 flex items-center gap-2">
                       <div className="h-7 w-1 rounded-full" style={{ backgroundColor: tier.color || TIER_COLORS[index % TIER_COLORS.length] }} />
@@ -1116,7 +1126,23 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
                     <div className="mt-3">
                       <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Perks</label>
-                      <div className="flex flex-wrap gap-2">
+                      {customFeatures.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-2 rounded-xl border border-purple-100 bg-purple-50/60 p-2">
+                          {customFeatures.map((feature) => (
+                            <button
+                              key={feature}
+                              type="button"
+                              onClick={() => toggleTierFeature(index, feature)}
+                              className="inline-flex min-w-0 items-center gap-1 rounded-full bg-white px-2.5 py-1.5 text-[11px] font-semibold text-purple-700 shadow-sm"
+                              aria-label={`Remove ${feature}`}
+                            >
+                              <span className="truncate">{feature}</span>
+                              <X className="h-3 w-3 shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2">
                         {DEFAULT_PERKS.map((feature) => {
                           const active = tier.features.includes(feature);
                           return (
@@ -1124,12 +1150,13 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                               key={feature}
                               type="button"
                               onClick={() => toggleTierFeature(index, feature)}
-                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-[11px] font-medium ${
+                              aria-pressed={active}
+                              className={`inline-flex h-9 min-w-0 items-center justify-start gap-1.5 rounded-lg border px-2.5 text-left text-[11px] font-medium transition ${
                                 active ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-600'
                               }`}
                             >
-                              {active && <Check className="h-3 w-3" />}
-                              {feature}
+                              {active && <Check className="h-3 w-3 shrink-0" />}
+                              <span className="truncate">{feature}</span>
                             </button>
                           );
                         })}
@@ -1137,7 +1164,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                       <div className="mt-2 flex gap-2">
                         <input
                           type="text"
-                          value={tierFeatureDrafts[index] || ''}
+                          value={tierFeatureDraft}
                           onChange={(e) => setTierFeatureDrafts((prev) => ({ ...prev, [index]: e.target.value }))}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
@@ -1146,20 +1173,23 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                             }
                           }}
                           placeholder="Custom perk"
-                          className="h-9 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-purple-400"
+                          className="h-10 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-purple-400"
                         />
                         <button
                           type="button"
                           onClick={() => addTierFeature(index)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-dashed border-purple-300 text-purple-600"
+                          disabled={!tierFeatureDraft.trim()}
+                          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-dashed border-purple-300 px-3 text-xs font-semibold text-purple-700 transition enabled:bg-purple-50 enabled:hover:bg-purple-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-300"
                           aria-label="Add custom perk"
                         >
                           <Plus className="h-4 w-4" />
+                          Add
                         </button>
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 <button
                   type="button"
