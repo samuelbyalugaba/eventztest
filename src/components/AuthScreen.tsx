@@ -224,7 +224,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
             {isLogin ? 'Sign in' : 'Join Eventz'}
           </div>
           <div className="mt-1 text-sm text-gray-600">
-            Discover Events. Go Live. Get Tickets
+            Discover Events. Live Stream. Get Tickets
           </div>
         </div>
 
