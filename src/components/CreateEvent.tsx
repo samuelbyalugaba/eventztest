@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type ComponentType } from 'react';
 import {
   ArrowLeft,
   BarChart3,
@@ -250,13 +250,6 @@ const normalizeDateInput = (value: string) => {
   return `${year}-${pad2(month)}-${pad2(day)}`;
 };
 
-const formatDateDraft = (value: string) => {
-  const normalized = normalizeDateInput(value);
-  if (!normalized) return value || '';
-  const [year, month, day] = normalized.split('-');
-  return `${month}/${day}/${year}`;
-};
-
 const normalizeTimeInput = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) return '';
@@ -271,23 +264,6 @@ const normalizeTimeInput = (value: string) => {
   if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return '';
 
   return `${pad2(hours)}:${pad2(minutes)}`;
-};
-
-const openNativePicker = (input: HTMLInputElement | null) => {
-  if (!input) return;
-
-  const picker = input as HTMLInputElement & { showPicker?: () => void };
-  try {
-    if (typeof picker.showPicker === 'function') {
-      picker.showPicker();
-      return;
-    }
-  } catch {
-    /* Fall back to click below when showPicker is unavailable or blocked. */
-  }
-
-  input.focus();
-  input.click();
 };
 
 const formatMoney = (amount: number, currencyCode: string) => {
@@ -418,11 +394,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       },
     };
   });
-  const [dateDraft, setDateDraft] = useState(() => formatDateDraft(event?.date || ''));
-  const [timeDraft, setTimeDraft] = useState(() => (typeof event?.time === 'string' ? event.time.slice(0, 5) : ''));
-  const nativeDateInputRef = useRef<HTMLInputElement | null>(null);
-  const nativeTimeInputRef = useRef<HTMLInputElement | null>(null);
-
   const [savedEventId, setSavedEventId] = useState<number | undefined>(event?.id);
   const [currentStatus, setCurrentStatus] = useState<string>(event?.status || 'draft');
   const [showPreview, setShowPreview] = useState(false);
@@ -473,38 +444,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   const updateForm = <K extends keyof EventForm>(field: K, value: EventForm[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleDateDraftChange = (value: string) => {
-    setDateDraft(value);
-    updateForm('date', normalizeDateInput(value));
-  };
-
-  const handleDateDraftBlur = () => {
-    const normalized = normalizeDateInput(dateDraft);
-    if (normalized) setDateDraft(formatDateDraft(normalized));
-  };
-
-  const handleNativeDateChange = (value: string) => {
-    const normalized = normalizeDateInput(value);
-    setDateDraft(normalized ? formatDateDraft(normalized) : '');
-    updateForm('date', normalized);
-  };
-
-  const handleTimeDraftChange = (value: string) => {
-    setTimeDraft(value);
-    updateForm('time', normalizeTimeInput(value));
-  };
-
-  const handleTimeDraftBlur = () => {
-    const normalized = normalizeTimeInput(timeDraft);
-    if (normalized) setTimeDraft(normalized);
-  };
-
-  const handleNativeTimeChange = (value: string) => {
-    const normalized = normalizeTimeInput(value);
-    setTimeDraft(normalized);
-    updateForm('time', normalized);
   };
 
   const serializeTicketTiers = (data: EventForm) => {
@@ -761,12 +700,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
     }
 
     if (!formData.date) {
-      toast.error(dateDraft.trim() ? 'Use date format MM/DD/YYYY' : 'Please choose an event date');
-      return false;
-    }
-
-    if (timeDraft.trim() && !formData.time) {
-      toast.error('Use time format HH:MM');
+      toast.error('Please choose an event date');
       return false;
     }
 
@@ -932,67 +866,39 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               <div>
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Date</label>
                 <div className="relative">
-                  <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
-                    type="text"
-                    inputMode="numeric"
-                    value={dateDraft}
-                    onChange={(e) => handleDateDraftChange(e.target.value)}
-                    onBlur={handleDateDraftBlur}
-                    placeholder="mm/dd/yyyy"
-                    className={`h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white pl-10 pr-11 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}
-                    aria-label="Event date"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => openNativePicker(nativeDateInputRef.current)}
-                    className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-100"
-                    aria-label="Select event date"
-                  >
-                    <Calendar className="h-4 w-4" />
-                  </button>
-                  <input
-                    ref={nativeDateInputRef}
                     type="date"
                     value={formData.date}
-                    onChange={(e) => handleNativeDateChange(e.target.value)}
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 cursor-pointer opacity-0"
+                    onChange={(e) => updateForm('date', normalizeDateInput(e.target.value))}
+                    onBeforeInput={(e) => e.preventDefault()}
+                    onKeyDown={(e) => {
+                      if (!['Tab', 'Shift', 'Enter', 'Escape', ' '].includes(e.key)) e.preventDefault();
+                    }}
+                    onPaste={(e) => e.preventDefault()}
+                    onDrop={(e) => e.preventDefault()}
+                    className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 pr-10 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}
+                    aria-label="Event date"
                   />
+                  <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                 </div>
               </div>
               <div>
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Time</label>
                 <div className="relative">
-                  <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
-                    type="text"
-                    inputMode="numeric"
-                    value={timeDraft}
-                    onChange={(e) => handleTimeDraftChange(e.target.value)}
-                    onBlur={handleTimeDraftBlur}
-                    placeholder="--:--"
-                    className={`h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white pl-10 pr-11 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}
-                    aria-label="Event time"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => openNativePicker(nativeTimeInputRef.current)}
-                    className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-100"
-                    aria-label="Select event time"
-                  >
-                    <Clock className="h-4 w-4" />
-                  </button>
-                  <input
-                    ref={nativeTimeInputRef}
                     type="time"
                     value={formData.time}
-                    onChange={(e) => handleNativeTimeChange(e.target.value)}
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 cursor-pointer opacity-0"
+                    onChange={(e) => updateForm('time', normalizeTimeInput(e.target.value))}
+                    onBeforeInput={(e) => e.preventDefault()}
+                    onKeyDown={(e) => {
+                      if (!['Tab', 'Shift', 'Enter', 'Escape', ' '].includes(e.key)) e.preventDefault();
+                    }}
+                    onPaste={(e) => e.preventDefault()}
+                    onDrop={(e) => e.preventDefault()}
+                    className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 pr-10 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}
+                    aria-label="Event time"
                   />
+                  <Clock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                 </div>
               </div>
             </div>
