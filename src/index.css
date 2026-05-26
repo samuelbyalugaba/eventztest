@@ -38,8 +38,25 @@
   }
 
   .native-picker-field {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    display: block;
+    min-width: 0;
     position: relative;
     color-scheme: light;
+    line-height: 1.25;
+  }
+
+  .native-picker-field::-webkit-datetime-edit {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .native-picker-field::-webkit-datetime-edit-fields-wrapper {
+    min-width: 0;
+    width: 100%;
   }
 
   .native-picker-field::-webkit-calendar-picker-indicator {
@@ -52,7 +69,10 @@
   }
 
   .native-picker-field::-webkit-date-and-time-value {
+    display: block;
+    min-width: 0;
     text-align: left;
+    width: 100%;
   }
 }
 
