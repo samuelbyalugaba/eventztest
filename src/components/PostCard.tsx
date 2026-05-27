@@ -322,15 +322,15 @@ export const PostCard = React.memo(function PostCard({
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6 hover:shadow-md transition-shadow duration-300 p-4">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4 hover:shadow-md transition-shadow duration-300 p-3">
       
       {/* 1. HEADER */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2.5">
           <UserAvatar 
             src={displayProfile.avatar} 
             name={displayProfile.name} 
-            size="md"
+            size="sm"
             verified={post.user.verified}
             className="ring-2 ring-purple-50 cursor-pointer"
             onClick={() => onProfileClick(displayProfile as any)}
@@ -360,17 +360,17 @@ export const PostCard = React.memo(function PostCard({
         <div className="flex items-center gap-1">
           <button 
             onClick={handleSave}
-            className={`p-2 rounded-full transition-colors active:scale-75 ${isSaved ? 'text-purple-600 bg-purple-50' : 'text-gray-400 hover:bg-gray-50'}`}
+            className={`p-1.5 rounded-full transition-colors active:scale-75 ${isSaved ? 'text-purple-600 bg-purple-50' : 'text-gray-400 hover:bg-gray-50'}`}
             aria-label={isSaved ? "Unsave post" : "Save post"}
           >
-            <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-purple-600' : ''}`} />
+            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-purple-600' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* 2. MEDIA CONTENT */}
       <div 
-        className="relative overflow-hidden group rounded-2xl bg-gray-50 cursor-pointer"
+        className="relative overflow-hidden group rounded-xl bg-gray-50 cursor-pointer"
         onClick={(e) => { 
           e.stopPropagation(); 
           const startTime = videoRef.current?.currentTime || 0;
@@ -576,13 +576,13 @@ export const PostCard = React.memo(function PostCard({
       </div>
 
       {/* 3. FOOTER ACTION BAR */}
-      <div className="mt-4 bg-purple-50 rounded-2xl p-2 flex items-center justify-between gap-2">
+      <div className="mt-3 bg-purple-50 rounded-xl p-1.5 flex items-center justify-between gap-1.5">
         <button 
           onClick={handleLike}
-          className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          className="flex-1 w-0 bg-white rounded-full py-1.5 px-2.5 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all"
         >
-           <ThumbsUp className={`w-5 h-5 ${isLiked ? 'text-purple-600 fill-purple-600' : 'text-gray-600'}`} />
-           <span className={`text-sm font-bold ${isLiked ? 'text-purple-600' : 'text-gray-700'}`}>{likesCount}</span>
+           <ThumbsUp className={`w-4 h-4 ${isLiked ? 'text-purple-600 fill-purple-600' : 'text-gray-600'}`} />
+           <span className={`text-xs font-bold ${isLiked ? 'text-purple-600' : 'text-gray-700'}`}>{likesCount}</span>
         </button>
 
         <button 
@@ -590,24 +590,24 @@ export const PostCard = React.memo(function PostCard({
             e.stopPropagation(); 
             onViewComments?.(); 
           }}
-          className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          className="flex-1 w-0 bg-white rounded-full py-1.5 px-2.5 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all"
         >
-          <CommentIcon className="w-5 h-5" color="#4b5563" />
-          <span className="text-sm font-bold text-gray-700">{commentsCount}</span>
+          <CommentIcon className="w-4 h-4" color="#4b5563" />
+          <span className="text-xs font-bold text-gray-700">{commentsCount}</span>
         </button>
 
         <button 
           onClick={() => onShare(post)}
-          className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          className="flex-1 w-0 bg-white rounded-full py-1.5 px-2.5 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all"
         >
-          <Share2 className="w-5 h-5 text-gray-600" />
+          <Share2 className="w-4 h-4 text-gray-600" />
         </button>
         
          <button 
            onClick={() => onMessage?.(post.user)}
-           className="flex-1 w-0 bg-white rounded-full py-2 px-3 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+           className="flex-1 w-0 bg-white rounded-full py-1.5 px-2.5 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all"
          >
-          <MessageSquare className="w-5 h-5 text-gray-600" /> 
+          <MessageSquare className="w-4 h-4 text-gray-600" />
         </button>
 
       </div>
@@ -616,14 +616,14 @@ export const PostCard = React.memo(function PostCard({
       {post.content.text && (
         <div className="mt-3 px-1">
           <p 
-            className={`text-gray-800 text-[15px] leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-3'}`}
+            className={`text-gray-800 text-sm leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-3'}`}
           >
             {post.content.text}
           </p>
           {(post.content.text.length > 100 || post.content.text.split('\n').length > 3) && (
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-500 text-sm mt-1 hover:text-gray-700 font-medium"
+              className="text-gray-500 text-xs mt-1 hover:text-gray-700 font-medium"
             >
               {isExpanded ? 'Show less' : 'Show more'}
             </button>

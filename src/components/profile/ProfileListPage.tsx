@@ -131,22 +131,22 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
   return (
     <div className="min-h-screen bg-white pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 pt-[env(safe-area-inset-top)]">
-        <div className="px-5 py-4">
-          <div className="flex items-center gap-4">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="h-11 w-11 rounded-full bg-gray-50 flex items-center justify-center active:scale-95 transition"
+              className="h-9 w-9 rounded-full bg-gray-50 flex items-center justify-center active:scale-95 transition"
               aria-label="Go back"
             >
-              <ArrowLeft className="h-5 w-5 text-gray-900" />
+              <ArrowLeft className="h-4 w-4 text-gray-900" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-gray-950 leading-tight">
+              <h1 className="text-lg font-bold text-gray-950 leading-tight">
                 {profile?.full_name || 'Profile'}
               </h1>
               {profile?.username && (
-                <p className="text-sm text-gray-500 truncate">{formatUsername(profile.username)}</p>
+                <p className="text-xs text-gray-500 truncate">{formatUsername(profile.username)}</p>
               )}
             </div>
           </div>
@@ -156,7 +156,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
           <button
             type="button"
             onClick={() => navigate(paths.followers, { replace: true })}
-            className={`py-3 text-lg font-semibold border-b-4 transition ${
+            className={`py-2.5 text-sm font-semibold border-b-2 transition ${
               type === 'followers'
                 ? 'border-purple-600 text-purple-700'
                 : 'border-transparent text-gray-700'
@@ -167,7 +167,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
           <button
             type="button"
             onClick={() => navigate(paths.following, { replace: true })}
-            className={`py-3 text-lg font-semibold border-b-4 transition ${
+            className={`py-2.5 text-sm font-semibold border-b-2 transition ${
               type === 'following'
                 ? 'border-purple-600 text-purple-700'
                 : 'border-transparent text-gray-700'
@@ -178,33 +178,33 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
         </div>
       </header>
 
-      <main className="px-5 py-5">
-        <div className="relative mb-5">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+      <main className="px-4 py-4">
+        <div className="relative mb-4">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search..."
-            className="h-14 w-full rounded-2xl border border-gray-200 bg-gray-50 pl-12 pr-4 text-base text-gray-900 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-4 focus:ring-purple-100"
+            className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-4 focus:ring-purple-100"
           />
         </div>
 
         {isLoading ? (
           <div className="space-y-5">
             {[0, 1, 2, 3].map((item) => (
-              <div key={item} className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-gray-100 animate-pulse" />
+              <div key={item} className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-gray-100 animate-pulse" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-5 w-40 rounded bg-gray-100 animate-pulse" />
+                  <div className="h-4 w-36 rounded bg-gray-100 animate-pulse" />
                   <div className="h-4 w-28 rounded bg-gray-100 animate-pulse" />
                 </div>
-                <div className="h-11 w-24 rounded-xl bg-gray-100 animate-pulse" />
+                <div className="h-9 w-20 rounded-lg bg-gray-100 animate-pulse" />
               </div>
             ))}
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div className="py-16 text-center">
+          <div className="py-12 text-center">
             <p className="text-sm font-semibold text-gray-900">{emptyText}</p>
             <p className="mt-1 text-sm text-gray-500">People will appear here once there is activity.</p>
           </div>
@@ -223,25 +223,25 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') navigate(`/profile/${person.id}`);
                   }}
-                  className="flex items-center gap-4 rounded-2xl px-1 py-3 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="flex items-center gap-3 rounded-xl px-1 py-2.5 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <UserAvatar
                     src={person.avatar_url}
                     name={person.full_name || person.username || 'User'}
-                    size="2xl"
+                    size="lg"
                     verified={!!person.verified}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p className="truncate text-lg font-semibold text-gray-950">
+                      <p className="truncate text-sm font-semibold text-gray-950">
                         {person.full_name || person.username || 'User'}
                       </p>
                       {person.is_organizer && (
-                        <img src={verifiedBadge} alt="Verified" className="h-4 w-4 flex-shrink-0" loading="lazy" decoding="async" />
+                        <img src={verifiedBadge} alt="Verified" className="h-3.5 w-3.5 flex-shrink-0" loading="lazy" decoding="async" />
                       )}
                     </div>
                     {person.username && (
-                      <p className="truncate text-sm text-gray-500">{formatUsername(person.username)}</p>
+                      <p className="truncate text-xs text-gray-500">{formatUsername(person.username)}</p>
                     )}
                   </div>
                   {!isSelf && (
@@ -252,7 +252,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
                         event.stopPropagation();
                         void handleToggleFollow(person);
                       }}
-                      className={`h-11 min-w-[94px] rounded-xl border px-4 text-sm font-semibold transition active:scale-95 disabled:opacity-60 ${
+                      className={`h-9 min-w-[78px] rounded-lg border px-3 text-xs font-semibold transition active:scale-95 disabled:opacity-60 ${
                         isFollowingPerson
                           ? 'border-gray-200 bg-gray-50 text-gray-900'
                           : 'border-purple-600 bg-purple-600 text-white'

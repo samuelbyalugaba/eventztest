@@ -136,35 +136,35 @@ export function HostedPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 pt-[env(safe-area-inset-top)]">
-        <div className="flex items-center justify-between gap-4 px-5 py-4">
-          <div className="flex min-w-0 items-center gap-4">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="h-11 w-11 rounded-full bg-gray-50 flex items-center justify-center active:scale-95 transition"
+              className="h-9 w-9 rounded-full bg-gray-50 flex items-center justify-center active:scale-95 transition"
               aria-label="Go back"
             >
-              <ArrowLeft className="h-5 w-5 text-gray-900" />
+              <ArrowLeft className="h-4 w-4 text-gray-900" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-3xl font-bold leading-tight text-gray-950">Hosted</h1>
+              <h1 className="text-xl font-bold leading-tight text-gray-950">Hosted</h1>
               {profile?.full_name && (
-                <p className="truncate text-sm text-gray-500">{profile.full_name}</p>
+                <p className="truncate text-xs text-gray-500">{profile.full_name}</p>
               )}
             </div>
           </div>
-          <div className="rounded-full bg-purple-100 px-4 py-2 text-base font-bold text-purple-700">
+          <div className="rounded-full bg-purple-100 px-3 py-1.5 text-sm font-bold text-purple-700">
             {pastEvents.length} {pastEvents.length === 1 ? 'event' : 'events'}
           </div>
         </div>
       </header>
 
-      <main className="px-5 py-5">
-        <div className="mb-5 flex gap-3">
+      <main className="px-4 py-4">
+        <div className="mb-4 flex gap-2.5">
           <button
             type="button"
             onClick={() => setActiveView('events')}
-            className={`h-14 flex-1 rounded-2xl px-4 text-lg font-bold transition active:scale-[0.98] ${
+            className={`h-11 flex-1 rounded-xl px-3 text-sm font-bold transition active:scale-[0.98] ${
               activeView === 'events'
                 ? 'bg-white text-gray-950 shadow-sm'
                 : 'bg-white/70 text-gray-500'
@@ -175,7 +175,7 @@ export function HostedPage() {
           <button
             type="button"
             onClick={() => setActiveView('streams')}
-            className={`h-14 flex-1 rounded-2xl px-4 text-lg font-bold transition active:scale-[0.98] ${
+            className={`h-11 flex-1 rounded-xl px-3 text-sm font-bold transition active:scale-[0.98] ${
               activeView === 'streams'
                 ? 'bg-white text-gray-950 shadow-sm'
                 : 'bg-white/70 text-gray-500'
@@ -185,21 +185,21 @@ export function HostedPage() {
           </button>
         </div>
 
-        <div className="relative mb-5">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+        <div className="relative mb-4">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder={activeView === 'events' ? 'Search hosted events...' : 'Search streams...'}
-            className="h-14 w-full rounded-2xl border border-gray-200 bg-white pl-12 pr-4 py-3 text-base text-gray-900 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-4 focus:ring-purple-100"
+            className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-4 focus:ring-purple-100"
           />
         </div>
 
         {isLoading ? (
           <div className="space-y-6">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="overflow-hidden rounded-3xl bg-white shadow-sm">
+              <div key={item} className="overflow-hidden rounded-2xl bg-white shadow-sm">
                 <div className="aspect-[1.75] bg-gray-100 animate-pulse" />
                 <div className="space-y-3 p-5">
                   <div className="h-5 w-40 rounded bg-gray-100 animate-pulse" />
@@ -210,7 +210,7 @@ export function HostedPage() {
           </div>
         ) : activeView === 'events' ? (
           <section>
-            <h2 className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-gray-500">Past Events</h2>
+            <h2 className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-gray-500">Past Events</h2>
             {filteredEvents.length === 0 ? (
               <EmptyHostedState
                 title="No past events yet"
@@ -231,7 +231,7 @@ export function HostedPage() {
           </section>
         ) : (
           <section>
-            <h2 className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-gray-500">Streams</h2>
+            <h2 className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-gray-500">Streams</h2>
             {filteredStreams.length === 0 ? (
               <EmptyHostedState
                 title="No streams yet"
@@ -272,7 +272,7 @@ function HostedEventCard({
       onKeyDown={(keyboardEvent) => {
         if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') onOpen();
       }}
-      className="overflow-hidden rounded-3xl bg-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.55)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500"
+      className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500"
     >
       <div className="relative aspect-[1.75] overflow-hidden bg-gradient-to-br from-purple-950 via-purple-700 to-indigo-600">
         <ImageWithFallback
@@ -282,24 +282,24 @@ function HostedEventCard({
         />
         <div className="absolute inset-0 bg-black/15" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30">
-            <PlaySquare className="h-8 w-8 text-white" />
+          <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30">
+            <PlaySquare className="h-6 w-6 text-white" />
           </div>
         </div>
-        <div className={`absolute right-4 top-4 rounded-full px-4 py-2 text-sm font-bold text-white ${
+        <div className={`absolute right-3 top-3 rounded-full px-3 py-1.5 text-xs font-bold text-white ${
           hasStream ? 'bg-purple-600/85' : 'bg-black/35'
         }`}>
           {hasStream ? 'Stream available' : 'No stream'}
         </div>
       </div>
-      <div className="flex items-end justify-between gap-4 p-5">
+      <div className="flex items-end justify-between gap-3 p-4">
         <div className="min-w-0">
-          <p className="mb-1 text-sm font-bold uppercase tracking-[0.16em] text-purple-700">
+          <p className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-purple-700">
             {eventDateLabel(event.date)}
           </p>
-          <h3 className="line-clamp-2 text-2xl font-bold leading-tight text-gray-950">{event.title}</h3>
+          <h3 className="line-clamp-2 text-lg font-bold leading-tight text-gray-950">{event.title}</h3>
         </div>
-        <span className="flex-shrink-0 text-lg font-bold text-purple-700">Details ›</span>
+        <span className="flex-shrink-0 text-sm font-bold text-purple-700">Details ›</span>
       </div>
     </article>
   );
@@ -324,7 +324,7 @@ function HostedStreamCard({
       onKeyDown={(keyboardEvent) => {
         if (canOpen && (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ')) onOpen();
       }}
-      className={`overflow-hidden rounded-3xl bg-white shadow-[0_16px_40px_-28px_rgba(15,23,42,0.55)] focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+      className={`overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] focus:outline-none focus:ring-2 focus:ring-purple-500 ${
         canOpen ? 'cursor-pointer' : ''
       }`}
     >
@@ -337,24 +337,24 @@ function HostedStreamCard({
         />
         <div className="absolute inset-0 bg-black/20" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30">
-            <PlaySquare className="h-8 w-8 text-white" />
+          <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30">
+            <PlaySquare className="h-6 w-6 text-white" />
           </div>
         </div>
-        <div className={`absolute right-4 top-4 rounded-full px-4 py-2 text-sm font-bold text-white ${
+        <div className={`absolute right-3 top-3 rounded-full px-3 py-1.5 text-xs font-bold text-white ${
           hasPlayback ? 'bg-purple-600/85' : 'bg-black/35'
         }`}>
           {hasPlayback ? 'Playback ready' : 'No playback'}
         </div>
       </div>
-      <div className="p-5">
-        <p className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-purple-700">
-          <Calendar className="h-4 w-4" />
+      <div className="p-4">
+        <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-purple-700">
+          <Calendar className="h-3.5 w-3.5" />
           {streamDateLabel(stream.created_at)}
         </p>
-        <h3 className="line-clamp-2 text-2xl font-bold leading-tight text-gray-950">{title}</h3>
+        <h3 className="line-clamp-2 text-lg font-bold leading-tight text-gray-950">{title}</h3>
         {stream.event?.location && (
-          <p className="mt-2 truncate text-sm text-gray-500">{stream.event.location}</p>
+          <p className="mt-1.5 truncate text-xs text-gray-500">{stream.event.location}</p>
         )}
       </div>
     </article>
@@ -363,12 +363,12 @@ function HostedStreamCard({
 
 function EmptyHostedState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-3xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-50">
-        <PlaySquare className="h-8 w-8 text-purple-500" />
+    <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-5 py-10 text-center">
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-50">
+        <PlaySquare className="h-6 w-6 text-purple-500" />
       </div>
       <p className="font-semibold text-gray-950">{title}</p>
-      <p className="mx-auto mt-1 max-w-xs text-sm leading-6 text-gray-500">{body}</p>
+      <p className="mx-auto mt-1 max-w-xs text-xs leading-5 text-gray-500">{body}</p>
     </div>
   );
 }

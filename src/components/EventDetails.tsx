@@ -592,35 +592,35 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <div className="pb-24">
+      <div className="pb-20">
         {/* 3. Search & Events List */}
-        <div className="px-4 pb-8 pt-0">
+        <div className="px-3 pb-6 pt-0">
           {/* Header */}
-          <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(1rem+env(safe-area-inset-top))] pb-4 -mx-4 px-4 transition-all rounded-b-[32px]">
-            <div className="flex items-center justify-between mb-4">
+          <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 -mx-3 px-3 transition-all rounded-b-[24px]">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex flex-col">
-                <h1 className="text-gray-900 text-2xl font-bold tracking-tight">EVENTZ</h1>
-                <p className="text-gray-600 text-sm">Discover amazing events happening around you</p>
+                <h1 className="text-gray-900 text-xl font-bold tracking-tight">EVENTZ</h1>
+                <p className="text-gray-600 text-xs">Discover amazing events happening around you</p>
               </div>
             </div>
 
             {/* Search Bar & Filter */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input 
                   type="text" 
                   placeholder="Search events..." 
-                  className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#8A2BE2] focus:ring-4 focus:ring-[#8A2BE2]/10 transition-all shadow-sm"
+                  className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-100 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#8A2BE2] focus:ring-4 focus:ring-[#8A2BE2]/10 transition-all shadow-sm"
                   onClick={() => setShowSearchModal(true)}
                   readOnly
                 />
               </div>
               <button 
                 onClick={() => setShowFilters(true)}
-                className="p-3.5 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-all shadow-sm relative group"
+                className="p-2.5 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition-all shadow-sm relative group"
               >
-                <Filter className="w-5 h-5 text-gray-600 group-hover:text-[#8A2BE2] transition-colors" />
+                <Filter className="w-4 h-4 text-gray-600 group-hover:text-[#8A2BE2] transition-colors" />
                 {hasActiveFilters && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#8A2BE2] text-white text-[10px] rounded-full flex items-center justify-center shadow-md">
                     {activeFiltersCount}
@@ -631,8 +631,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
 
           {/* Filters */}
-          <div className="mt-4">
-            <div className="-mx-4 overflow-x-auto px-4 pb-2 scrollbar-hide">
+          <div className="mt-3">
+            <div className="-mx-3 overflow-x-auto px-3 pb-2 scrollbar-hide">
               <div className="flex w-max items-center gap-2">
                 {categories.map((category) => {
                   const Icon = category.icon;
@@ -697,7 +697,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 />
               )}
               <div className="min-w-0 pr-1">
-                <h3 className="truncate text-gray-900 font-bold text-lg leading-tight">Upcoming Events</h3>
+                <h3 className="truncate text-gray-900 font-bold text-base leading-tight">Upcoming Events</h3>
                 <p className="mt-1 h-4 whitespace-nowrap text-xs font-medium leading-4 text-gray-500 tabular-nums">
                   {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'} found
                 </p>
@@ -764,12 +764,12 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             </div>
 
             {upcomingEvents.length === 0 && hasLoadedEvents && !isFetching && (
-              <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                  <Calendar className="w-8 h-8 text-gray-400" />
+              <div className="flex flex-col items-center justify-center py-10 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                  <Calendar className="w-6 h-6 text-gray-400" />
                 </div>
                 <h3 className="text-gray-900 font-medium mb-1">No upcoming events</h3>
-                <p className="text-gray-500 text-sm max-w-[200px]">Check back later or try adjusting your filters</p>
+                <p className="text-gray-500 text-xs max-w-[200px]">Check back later or try adjusting your filters</p>
               </div>
             )}
 

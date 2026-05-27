@@ -572,7 +572,7 @@ export function Feed({
           }}
         >
           <div id="top-sentinel" className="w-full h-px pointer-events-none" />
-          <div className="max-w-2xl xl:max-w-[640px] mx-auto px-4 pt-4 pb-[calc(8rem+env(safe-area-inset-bottom))] space-y-4">
+          <div className="max-w-2xl xl:max-w-[640px] mx-auto px-3 pt-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] space-y-3">
             <FeedContent
               exploreSearch={exploreSearch}
               isSearchingProfiles={isSearchingProfiles}
