@@ -2,9 +2,8 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { deleteEvent, Ticket, ApiPost, getFollowers, getFollowing, toggleFollow } from '../utils/supabase/api';
+import { deleteEvent, Ticket, ApiPost, toggleFollow } from '../utils/supabase/api';
 import type { Event as AppEvent } from '../utils/supabase/api';
-import { UserListModal } from './UserListModal';
 import { TicketListModal } from './TicketListModal';
 import { Conversation, Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
@@ -94,10 +93,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [showProfessionalDashboard, setShowProfessionalDashboard] = useState(false);
 
   const [showEventListModal, setShowEventListModal] = useState(false);
-  const [showFollowersModal, setShowFollowersModal] = useState(false);
-  const [showFollowingModal, setShowFollowingModal] = useState(false);
-  const [followList, setFollowList] = useState<any[]>([]);
-  const [isLoadingFollowList, setIsLoadingFollowList] = useState(false);
   
 
   const {
@@ -161,36 +156,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     }
   };
 
-  const handleShowFollowers = async () => {
-    const targetUserId = userId || currentUser?.id;
-    if (!targetUserId) return;
-    setShowFollowersModal(true);
-    setIsLoadingFollowList(true);
-    try {
-      const followers = await getFollowers(targetUserId);
-      setFollowList(followers);
-    } catch (err) {
-      toast.error('Failed to load followers');
-    } finally {
-      setIsLoadingFollowList(false);
-    }
-  };
-
-  const handleShowFollowing = async () => {
-    const targetUserId = userId || currentUser?.id;
-    if (!targetUserId) return;
-    setShowFollowingModal(true);
-    setIsLoadingFollowList(true);
-    try {
-      const following = await getFollowing(targetUserId);
-      setFollowList(following);
-    } catch (err) {
-      toast.error('Failed to load following');
-    } finally {
-      setIsLoadingFollowList(false);
-    }
-  };
-
   const handleOpenPost = (post: ApiPost) => {
     sessionStorage.setItem('eventz_profile_scroll', String(window.scrollY));
     sessionStorage.setItem('eventz_profile_post_id', String(post.id));
@@ -241,6 +206,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const pastHostedEventIds = new Set(pastHostedEvents.map((event) => event.id));
   const additionalHostedStreams = streamedVideos.filter((stream) => !stream.event_id || !pastHostedEventIds.has(stream.event_id));
   const hostedCount = pastHostedEvents.length + additionalHostedStreams.length;
+  const profileSubpagePath = (section: 'hosted' | 'followers' | 'following') => (
+    userId ? `/profile/${userId}/${section}` : `/${section}`
+  );
 
   const handleFollow = async () => {
     const targetUserId = userId || currentUser?.id;
@@ -255,7 +223,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   };
 
   return (
-    <div className="bg-white min-h-screen pb-16 px-5 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-6">
+    <div className="bg-white min-h-screen pb-14 px-4 pt-[calc(0.6rem+env(safe-area-inset-top))] sm:px-5">
       <ProfileHeader
         isLoading={isLoading}
         profileImage={profileImage}
@@ -300,10 +268,14 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         following={followStats.following}
         dataReady={!isLoading}
         onHostedClick={() => {
-          setShowEventListModal(true);
+          if (isOrganizer) {
+            navigate(profileSubpagePath('hosted'));
+          } else {
+            setShowEventListModal(true);
+          }
         }}
-        onFollowersClick={handleShowFollowers}
-        onFollowingClick={handleShowFollowing}
+        onFollowersClick={() => navigate(profileSubpagePath('followers'))}
+        onFollowingClick={() => navigate(profileSubpagePath('following'))}
       />
 
       <ProfileActions
@@ -383,10 +355,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {isOwnProfile && (
         <button
           onClick={() => navigate('/compose/post')}
-          className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-6 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-5 w-11 h-11 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
           title="Share a post"
         >
-          <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
+          <Camera className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
         </button>
       )}
 
@@ -438,23 +410,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             }}
           />
         )}
-      {showFollowersModal && (
-        <UserListModal isOpen={showFollowersModal} onClose={() => setShowFollowersModal(false)} title="Followers" users={followList} loading={isLoadingFollowList}
-          onUserSelect={(user) => {
-            navigate(`/profile/${user.id}`);
-            setShowFollowersModal(false);
-          }}
-        />
-      )}
-      {showFollowingModal && (
-        <UserListModal isOpen={showFollowingModal} onClose={() => setShowFollowingModal(false)} title="Following" users={followList} loading={isLoadingFollowList}
-          onUserSelect={(user) => {
-            navigate(`/profile/${user.id}`);
-            setShowFollowingModal(false);
-          }}
-        />
-      )}
-
     </div>
   );
 }

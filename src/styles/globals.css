@@ -1,7 +1,7 @@
 @variant dark (&:is(.dark *));
 
 :root {
-  --font-size: 16px;
+  --font-size: 14px;
   --background: #FAFAFA;
   --foreground: #1A1A1A;
   --card: #ffffff;
@@ -207,6 +207,12 @@
 
 html {
   font-size: var(--font-size);
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 15px;
+  }
 }
 
 /* Hide scrollbar for subcategory horizontal scroll */

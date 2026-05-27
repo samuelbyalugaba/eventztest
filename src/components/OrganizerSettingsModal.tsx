@@ -220,7 +220,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         organizer_type: finalOrganizerType,
         avatar_url: profileData.avatarUrl,
         bio: profileData.bio,
-        location: profileData.location,
+        location: profileData.location.trim(),
         website: profileData.website,
         contact_email: profileData.email,
         phone: profileData.phone,
@@ -436,7 +436,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   {/* Location & Website Row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-900 ml-1">Location</label>
+                      <label className="text-sm font-semibold text-gray-900 ml-1">Location <span className="font-medium text-gray-400">(optional)</span></label>
                       <div className="relative">
                         <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
@@ -444,7 +444,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           value={profileData.location}
                           onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
                           className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
-                          placeholder="City, Country"
+                          placeholder="City, Country (optional)"
                         />
                       </div>
                     </div>

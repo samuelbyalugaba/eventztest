@@ -144,6 +144,21 @@ export function PostDetailPage({
     textareaRef.current?.focus();
   };
 
+  const handleCommentProfileClick = (comment: any, e: React.MouseEvent) => {
+    const user = comment.user;
+    const userId = user?.id || comment.user_id;
+    if (!userId || userId === 'unknown') return;
+
+    onProfileClick({
+      id: userId,
+      name: user?.name || 'User',
+      username: user?.username || '',
+      avatar: user?.avatar || '',
+      verified: !!user?.verified,
+      isOrganizer: !!(user?.isOrganizer || user?.is_organizer),
+    }, e);
+  };
+
   const isOwner = currentUser && (
     String(currentUser.id) === String(post.user?.id) || 
     String(currentUser.id) === String(post.user_id)
@@ -608,19 +623,30 @@ export function PostDetailPage({
                   <div key={comment.id} className="space-y-4">
                     {/* Parent Comment */}
                     <div className="flex gap-3">
-                      <UserAvatar
-                        src={comment.user.avatar}
-                        name={comment.user.name}
-                        className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
-                      />
+                      <button
+                        type="button"
+                        onClick={(e) => handleCommentProfileClick(comment, e)}
+                        className="mt-1 h-8 w-8 flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        aria-label={`Open ${comment.user.name}'s profile`}
+                      >
+                        <UserAvatar
+                          src={comment.user.avatar}
+                          name={comment.user.name}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      </button>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-gray-900 text-xs font-bold flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => handleCommentProfileClick(comment, e)}
+                            className="flex items-center gap-1 text-xs font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                          >
                             {comment.user.name}
                             {comment.user.is_organizer && (
                               <img src={verifiedBadge} alt="Verified" className="w-3 h-3 select-none" loading="lazy" decoding="async" />
                             )}
-                          </span>
+                          </button>
                           <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
                         </div>
                         <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>
@@ -644,19 +670,30 @@ export function PostDetailPage({
                     {/* Replies */}
                     {replies.filter((r: any) => r.parent_id === comment.id).map((reply: any) => (
                       <div key={reply.id} className="flex gap-3 ml-11">
-                        <UserAvatar
-                          src={reply.user.avatar}
-                          name={reply.user.name}
-                          className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-1"
-                        />
+                        <button
+                          type="button"
+                          onClick={(e) => handleCommentProfileClick(reply, e)}
+                          className="mt-1 h-6 w-6 flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                          aria-label={`Open ${reply.user.name}'s profile`}
+                        >
+                          <UserAvatar
+                            src={reply.user.avatar}
+                            name={reply.user.name}
+                            className="h-6 w-6 rounded-full object-cover"
+                          />
+                        </button>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-gray-900 text-[11px] font-bold flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => handleCommentProfileClick(reply, e)}
+                              className="flex items-center gap-1 text-[11px] font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            >
                               {reply.user.name}
                               {reply.user.is_organizer && (
                                 <img src={verifiedBadge} alt="Verified" className="w-2.5 h-2.5 select-none" loading="lazy" decoding="async" />
                               )}
-                            </span>
+                            </button>
                             <span className="text-gray-400 text-[9px]">{reply.timestamp}</span>
                           </div>
                           <p className="text-gray-700 text-xs leading-snug">{reply.text}</p>

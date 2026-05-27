@@ -18,7 +18,7 @@ const storageKey = (eventId: number) => `${STORAGE_PREFIX}${eventId}`;
 export const getCachedEventDetail = (eventId: number): ApiEvent | null => {
   const fromMemory = memoryCache.get(eventId);
   if (isFresh(fromMemory)) {
-    return fromMemory.event;
+    return fromMemory?.event || null;
   }
 
   if (typeof sessionStorage === 'undefined') {

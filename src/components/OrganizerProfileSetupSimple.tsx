@@ -131,9 +131,9 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
   };
  
   const onSubmit = async () => {
-    if (!organizerName || !username || !category || !location) {
+    if (!organizerName || !username || !category) {
       toast.error('Please fill in all required fields', {
-        description: 'Name, username, category, and location are required',
+        description: 'Name, username, and category are required',
       });
       return;
     }
@@ -154,7 +154,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
         full_name: organizerName,
         username: username,
         organizer_type: category,
-        location: location,
+        location: location.trim(),
         bio: bio,
         avatar_url: avatarUrl,
         contact_email: user.email || undefined
@@ -338,7 +338,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
 
           {/* Location Search */}
           <div className="space-y-2" ref={locationRef}>
-            <label className="text-xs font-semibold text-gray-900 ml-1">Location</label>
+            <label className="text-xs font-semibold text-gray-900 ml-1">Location <span className="font-medium text-gray-400">(optional)</span></label>
             <div className="relative">
               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -349,7 +349,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
                   searchLocations(e.target.value);
                 }}
                 onFocus={() => location.length >= 3 && setShowLocationDropdown(true)}
-                placeholder="City, Country"
+                placeholder="City, Country (optional)"
                 className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
               />
               {loadingLocations && (

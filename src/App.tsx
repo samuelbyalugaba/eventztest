@@ -17,6 +17,8 @@ const EventDetails = lazy(() => import('./components/EventDetails').then(m => ({
 const LiveFeed = lazy(() => import('./components/LiveFeed').then(m => ({ default: m.LiveFeed })));
 const Feed = lazy(() => import('./components/Feed').then(m => ({ default: m.Feed })));
 const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
+const HostedPage = lazy(() => import('./components/profile/HostedPage').then(m => ({ default: m.HostedPage })));
+const ProfileListPage = lazy(() => import('./components/profile/ProfileListPage').then(m => ({ default: m.ProfileListPage })));
 const CreateEventWrapper = lazy(() => import('./components/CreateEventWrapper').then(m => ({ default: m.CreateEventWrapper })));
 const PostDetailWrapper = lazy(() => import('./components/PostDetailWrapper').then(m => ({ default: m.PostDetailWrapper })));
 const ProfileModalWrapper = lazy(() => import('./components/ProfileModalWrapper').then(m => ({ default: m.ProfileModalWrapper })));
@@ -169,16 +171,24 @@ export default function App() {
     }
   };
 
-  const isPostModal = location.pathname.startsWith('/post/') && location.state?.backgroundLocation;
-  const isEventModal = location.pathname.startsWith('/event/') && location.state?.backgroundLocation;
+  const backgroundLocation = location.state?.backgroundLocation;
+  const isProfileSubpagePath = (path?: string) => {
+    if (!path) return false;
+    return path === '/hosted' ||
+      path === '/followers' ||
+      path === '/following' ||
+      /^\/profile\/[^/]+\/(hosted|followers|following)$/.test(path);
+  };
+  const isPostModal = location.pathname.startsWith('/post/') && backgroundLocation;
+  const isEventModal = location.pathname.startsWith('/event/') && backgroundLocation;
   const shouldHideBottomNav = location.pathname.startsWith('/create') ||
     location.pathname.startsWith('/edit-event') ||
     (location.pathname.startsWith('/post') && !isPostModal) ||
     (location.pathname.startsWith('/event/') && !isEventModal) ||
     location.pathname.startsWith('/live/') ||
-    location.pathname.startsWith('/messages');
-
-  const backgroundLocation = location.state?.backgroundLocation;
+    location.pathname.startsWith('/messages') ||
+    isProfileSubpagePath(location.pathname) ||
+    isProfileSubpagePath(backgroundLocation?.pathname);
   const effectiveLocation = backgroundLocation || location;
   const effectivePath = effectiveLocation.pathname;
   const isEventsTab = effectivePath === '/events' || effectivePath === '/';
@@ -223,7 +233,7 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <div className="h-[100dvh] overflow-y-auto bg-gray-50">
-        <Toaster position="top-center" richColors={false} closeButton />
+        <Toaster position="top-center" richColors={false} closeButton toastOptions={{ duration: 2500 }} />
         <AuthScreen onAuthSuccess={handleAuthSuccess} />
       </div>
     );
@@ -236,6 +246,7 @@ export default function App() {
         richColors={false} 
         closeButton
         toastOptions={{
+          duration: 2500,
           className: 'font-sans',
           style: {
             background: 'rgba(255, 255, 255, 0.95)',
@@ -326,6 +337,15 @@ export default function App() {
             <Route path="/feed" element={null} />
             <Route path="/live" element={null} />
             <Route path="/profile" element={null} />
+            <Route path="/hosted" element={
+              <Suspense fallback={<RouteFallback />}><HostedPage /></Suspense>
+            } />
+            <Route path="/followers" element={
+              <Suspense fallback={<RouteFallback />}><ProfileListPage type="followers" /></Suspense>
+            } />
+            <Route path="/following" element={
+              <Suspense fallback={<RouteFallback />}><ProfileListPage type="following" /></Suspense>
+            } />
             <Route path="/profile/:userId" element={
               <Suspense fallback={<GenericPageSkeleton />}>
                 <Profile
@@ -338,6 +358,15 @@ export default function App() {
                   isPaused={!!backgroundLocation}
                 />
               </Suspense>
+            } />
+            <Route path="/profile/:userId/hosted" element={
+              <Suspense fallback={<RouteFallback />}><HostedPage /></Suspense>
+            } />
+            <Route path="/profile/:userId/followers" element={
+              <Suspense fallback={<RouteFallback />}><ProfileListPage type="followers" /></Suspense>
+            } />
+            <Route path="/profile/:userId/following" element={
+              <Suspense fallback={<RouteFallback />}><ProfileListPage type="following" /></Suspense>
             } />
             <Route path="/create" element={
               <Suspense fallback={<RouteFallback />}><CreateEventWrapper /></Suspense>
@@ -405,45 +434,45 @@ export default function App() {
       {!shouldHideBottomNav && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 pb-[env(safe-area-inset-bottom)] lg:hidden">
           <div className="max-w-7xl mx-auto px-2 sm:px-4">
-            <div className="flex justify-around items-center h-16">
+            <div className="flex justify-around items-center h-14">
               <Link
                 to="/events"
-                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
+                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
                   location.pathname === '/events' || location.pathname === '/' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
-                <Calendar className="w-6 h-6" />
-                <span className="text-xs">Events</span>
+                <Calendar className="w-5 h-5" />
+                <span className="text-[11px]">Events</span>
               </Link>
               <Link
                 to="/live"
-                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors relative ${
+                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors relative ${
                   location.pathname === '/live' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
-                <Radio className="w-6 h-6" />
-                <span className="text-xs">Live</span>
+                <Radio className="w-5 h-5" />
+                <span className="text-[11px]">Live</span>
                 {hasLiveEvents && (
                   <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                 )}
               </Link>
               <Link
                 to="/feed"
-                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
+                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
                   location.pathname === '/feed' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
-                <Rss className="w-6 h-6" />
-                <span className="text-xs">Feed</span>
+                <Rss className="w-5 h-5" />
+                <span className="text-[11px]">Feed</span>
               </Link>
               <Link
                 to="/profile"
-                className={`flex flex-col items-center gap-1 px-2 sm:px-4 py-2 transition-colors ${
+                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
                   location.pathname === '/profile' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
-                <User className="w-6 h-6" />
-                <span className="text-xs">Profile</span>
+                <User className="w-5 h-5" />
+                <span className="text-[11px]">Profile</span>
               </Link>
             </div>
           </div>
