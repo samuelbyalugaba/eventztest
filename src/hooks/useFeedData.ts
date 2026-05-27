@@ -11,6 +11,31 @@ const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
 const FEED_PAGE_SIZE = 20;
 
+export const removePostFromFeedCache = (postId: number) => {
+  feedCacheMemory = feedCacheMemory
+    ? { ...feedCacheMemory, posts: feedCacheMemory.posts.filter((post) => post.id !== postId) }
+    : null;
+
+  try {
+    const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
+    if (!cachedRaw) return;
+
+    const cached = JSON.parse(cachedRaw);
+    if (!Array.isArray(cached.posts)) return;
+
+    localStorage.setItem(
+      FEED_CACHE_KEY,
+      JSON.stringify({
+        ...cached,
+        posts: cached.posts.filter((post: Post) => post.id !== postId),
+        timestamp: Date.now(),
+      }),
+    );
+  } catch {
+    localStorage.removeItem(FEED_CACHE_KEY);
+  }
+};
+
 export function useFeedData(initialCurrentUser?: any) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [hasMore, setHasMore] = useState(true);
@@ -60,7 +85,7 @@ export function useFeedData(initialCurrentUser?: any) {
       const mapped = fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [];
 
       setPosts((prev) => {
-        if (sessionStorage.getItem('feedScrollPos') && prev.length > mapped.length) {
+        if (useCacheFirst && sessionStorage.getItem('feedScrollPos') && prev.length > mapped.length) {
           const merged = [...prev];
           mapped.forEach((post, i) => { merged[i] = post; });
           return merged;
@@ -119,7 +144,14 @@ export function useFeedData(initialCurrentUser?: any) {
 
   useEffect(() => {
     void loadPosts(true);
-    const handlePostsUpdated = () => { void loadPosts(false); };
+    const handlePostsUpdated = (event: Event) => {
+      const deletedPostId = (event as CustomEvent<{ deletedPostId?: number }>).detail?.deletedPostId;
+      if (typeof deletedPostId === 'number') {
+        removePostFromFeedCache(deletedPostId);
+        setPosts((prev) => prev.filter((post) => post.id !== deletedPostId));
+      }
+      void loadPosts(false);
+    };
     window.addEventListener('postsUpdated', handlePostsUpdated);
     return () => { window.removeEventListener('postsUpdated', handlePostsUpdated); };
   }, []);

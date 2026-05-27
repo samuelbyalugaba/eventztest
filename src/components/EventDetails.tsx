@@ -530,7 +530,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       return;
     }
     
-    const toastId = toast.loading('Opening chat...');
     try {
       const conversation = await onStartConversation(user);
       if (conversation) {
@@ -538,12 +537,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         setSelectedUser(null);
         setActiveConversation(conversation);
         setShowMessages(true);
-        toast.dismiss(toastId);
       } else {
-        toast.error('Could not start conversation', { id: toastId });
+        toast.error('Could not start conversation');
       }
     } catch (error) {
-      toast.error('Failed to start conversation', { id: toastId });
+      toast.error('Failed to start conversation');
     }
   };
 

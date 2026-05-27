@@ -98,8 +98,11 @@ export function PostDetailWrapper() {
               const comments = commentsData.map((c: any) => ({
                 id: c.id,
                 user: {
+                  id: c.user?.id || c.user_id,
                   name: c.user?.full_name || c.user?.username || 'User',
+                  username: c.user?.username || '',
                   avatar: c.user?.avatar_url || '',
+                  verified: c.user?.verified || false,
                   is_organizer: c.user?.is_organizer || false
                 },
                 text: c.text,
@@ -135,8 +138,11 @@ export function PostDetailWrapper() {
       const newComment = {
         id: newCommentData.id,
         user: {
+          id: newCommentData.user?.id || currentUser.id,
           name: displayName,
+          username: newCommentData.user?.username || userProfile?.username || '',
           avatar: displayAvatar,
+          verified: newCommentData.user?.verified || userProfile?.verified || false,
           is_organizer: userProfile?.is_organizer || false
         },
         text: newCommentData.text,

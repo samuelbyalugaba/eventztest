@@ -12,6 +12,28 @@ type MediaItem = {
   kind: 'image' | 'video';
 };
 
+const SUPPORTED_VIDEO_TYPES = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/ogg',
+  'video/quicktime',
+  'video/x-m4v',
+  'video/3gpp',
+]);
+const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v', '3gp', '3gpp']);
+const SUPPORTED_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
+const MAX_VIDEO_SIZE_MB = 100;
+
+const getFileExtension = (file: File) => (file.name.split('.').pop() || '').toLowerCase();
+const isSupportedVideoFile = (file: File) => {
+  const ext = getFileExtension(file);
+  return SUPPORTED_VIDEO_TYPES.has(file.type) || SUPPORTED_VIDEO_EXTENSIONS.has(ext);
+};
+const isSupportedImageFile = (file: File) => {
+  const ext = getFileExtension(file);
+  return file.type.startsWith('image/') || SUPPORTED_IMAGE_EXTENSIONS.has(ext);
+};
+
 export default function CreatePostPage() {
   const navigate = useNavigate();
   const [content, setContent] = useState('');
@@ -120,11 +142,11 @@ export default function CreatePostPage() {
 
     const next: MediaItem[] = [];
     for (const file of files.slice(0, remaining)) {
-      const isVideo = file.type.startsWith('video/');
-      const isImage = file.type.startsWith('image/');
+      const isVideo = isSupportedVideoFile(file);
+      const isImage = isSupportedImageFile(file);
       if (!isVideo && !isImage) continue;
-      if (isVideo && file.size > 50 * 1024 * 1024) {
-        toast.error('Video must be less than 50MB');
+      if (isVideo && file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+        toast.error(`Video must be less than ${MAX_VIDEO_SIZE_MB}MB`);
         continue;
       }
       next.push({ file, url: URL.createObjectURL(file), kind: isVideo ? 'video' : 'image' });
@@ -211,10 +233,12 @@ export default function CreatePostPage() {
 
       if (media.length > 0) {
         try {
-          const uploadPromises = media.map(m => uploadImage(m.file, 'posts', `user_${user.id}`));
-          mediaUrls = await Promise.all(uploadPromises);
-        } catch (error) {
-          throw new Error('Failed to upload media');
+          mediaUrls = [];
+          for (const item of media) {
+            mediaUrls.push(await uploadImage(item.file, 'posts', `user_${user.id}`));
+          }
+        } catch (error: any) {
+          throw new Error(error?.message || 'Failed to upload media');
         }
       }
 
@@ -249,8 +273,8 @@ export default function CreatePostPage() {
       toast.success('Post created successfully');
       window.dispatchEvent(new Event('postsUpdated'));
       navigate('/feed');
-    } catch (error) {
-      toast.error('Failed to create post');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to create post');
     } finally {
       setIsSubmitting(false);
     }

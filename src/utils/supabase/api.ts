@@ -955,21 +955,49 @@ export const deleteFile = async (bucket: 'events' | 'avatars' | 'posts', url: st
 };
 
 export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'posts', path?: string) => {
-  // Validate file type
-  const allowedTypes = [
-    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-    'video/mp4', 'video/webm'
-  ];
-  if (!allowedTypes.includes(file.type)) {
-    throw new Error('Invalid file type. Only JPEG, PNG, WebP, GIF, MP4, and WebM are allowed.');
+  const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+  const contentTypeByExtension: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    ogg: 'video/ogg',
+    ogv: 'video/ogg',
+    mov: 'video/quicktime',
+    m4v: 'video/x-m4v',
+    '3gp': 'video/3gpp',
+    '3gpp': 'video/3gpp',
+  };
+  const allowedTypes = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime',
+    'video/x-m4v',
+    'video/3gpp',
+  ]);
+  const declaredContentType = file.type || '';
+  const inferredContentType = contentTypeByExtension[fileExt] || '';
+  const contentType = allowedTypes.has(declaredContentType) ? declaredContentType : inferredContentType;
+
+  if (!allowedTypes.has(contentType)) {
+    throw new Error('Invalid file type. Please upload JPG, PNG, WebP, GIF, MP4, WebM, MOV, M4V, 3GP, or OGG.');
   }
 
   // Optimize images before upload (resize large images, compress)
-  const isVideo = file.type.startsWith('video/');
-  let optimizedFile = file;
+  const isVideo = contentType.startsWith('video/');
+  const uploadFile = file.type === contentType ? file : new File([file], file.name, { type: contentType });
+  let optimizedFile = uploadFile;
   if (!isVideo) {
     const { optimizeForUpload } = await import('../imageOptimize');
-    optimizedFile = await optimizeForUpload(file);
+    optimizedFile = await optimizeForUpload(uploadFile);
   }
 
   // Validate file size (100MB limit for videos, 10MB for images)
@@ -979,18 +1007,15 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
     throw new Error(`File size too large. Maximum size is ${isVideo ? '100MB' : '10MB'}.`);
   }
 
-  const fileExt = (optimizedFile.name.split('.').pop() || '').toLowerCase();
-  if (isVideo && fileExt === 'mov') {
-    throw new Error('MOV videos are not supported. Please upload MP4 (H.264) or WebM.');
-  }
-  const fileName = `${crypto.randomUUID()}_${Date.now()}.${fileExt}`;
+  const optimizedFileExt = (optimizedFile.name.split('.').pop() || fileExt || 'bin').toLowerCase();
+  const fileName = `${crypto.randomUUID()}_${Date.now()}.${optimizedFileExt}`;
   const filePath = path ? `${path}/${fileName}` : fileName;
 
   const tryUpload = async (targetBucket: 'events' | 'avatars' | 'posts') => {
     const { error: uploadError } = await supabase.storage
       .from(targetBucket)
       .upload(filePath, optimizedFile, {
-        contentType: optimizedFile.type,
+        contentType: optimizedFile.type || contentType,
         upsert: false
       });
 
@@ -1615,7 +1640,7 @@ export const deletePost = async (postId: number) => {
   // 1. Fetch post to get image URLs
   const { data: post } = await supabase
     .from('posts')
-    .select('image_urls')
+    .select('image_urls, video_url')
     .eq('id', postId)
     .single();
 
@@ -1630,6 +1655,17 @@ export const deletePost = async (postId: number) => {
   // 3. Delete images from storage (Best effort)
   if (post?.image_urls && Array.isArray(post.image_urls)) {
     await Promise.all(post.image_urls.map(url => deleteFile('posts', url)));
+  }
+  if (post?.video_url) {
+    await deleteFile('posts', post.video_url);
+  }
+
+  try {
+    localStorage.removeItem('eventz-feed-cache-v1');
+    sessionStorage.removeItem('feedScrollPos');
+    sessionStorage.removeItem('feedLastPostId');
+  } catch {
+    // Cache cleanup is best-effort; the database deletion already succeeded.
   }
 };
 

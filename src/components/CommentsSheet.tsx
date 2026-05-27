@@ -13,6 +13,7 @@ interface CommentsSheetProps {
   userProfile?: any;
   onComment: (postId: number, text: string, parentId?: number) => void;
   onLikeComment?: (commentId: number) => void;
+  onOpenUserProfile?: (user: any) => void;
 }
 
 export function CommentsSheet({
@@ -22,7 +23,8 @@ export function CommentsSheet({
   currentUser,
   userProfile,
   onComment,
-  onLikeComment
+  onLikeComment,
+  onOpenUserProfile
 }: CommentsSheetProps) {
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: number, name: string } | null>(null);
@@ -39,6 +41,23 @@ export function CommentsSheet({
   const handleReply = (comment: any) => {
     setReplyingTo({ id: comment.id, name: comment.user.name });
     textareaRef.current?.focus();
+  };
+
+  const handleOpenCommentUser = (comment: any) => {
+    const user = comment.user;
+    const userId = user?.id || comment.user_id;
+    if (!userId || userId === 'unknown') return;
+    if (!onOpenUserProfile) return;
+
+    onClose();
+    onOpenUserProfile({
+      id: userId,
+      name: user?.name || 'User',
+      username: user?.username || '',
+      avatar: user?.avatar || '',
+      verified: !!user?.verified,
+      isOrganizer: !!(user?.isOrganizer || user?.is_organizer),
+    });
   };
 
   const comments = post.comments || [];
@@ -71,19 +90,30 @@ export function CommentsSheet({
               <div key={comment.id} className="space-y-4">
                 {/* Parent Comment */}
                 <div className="flex gap-3">
-                  <UserAvatar
-                    src={comment.user.avatar}
-                    name={comment.user.name}
-                    className="w-10 h-10 rounded-full object-cover flex-shrink-0 mt-0.5"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCommentUser(comment)}
+                    className="mt-0.5 h-10 w-10 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    aria-label={`Open ${comment.user.name}'s profile`}
+                  >
+                    <UserAvatar
+                      src={comment.user.avatar}
+                      name={comment.user.name}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  </button>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-gray-900 text-sm font-bold flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCommentUser(comment)}
+                        className="flex items-center gap-1 text-sm font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                      >
                         {comment.user.name}
                         {comment.user.is_organizer && (
                           <img src={verifiedBadge} alt="Verified" className="w-3.5 h-3.5 select-none" loading="lazy" decoding="async" />
                         )}
-                      </span>
+                      </button>
                       <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
                     </div>
                     <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
@@ -108,19 +138,30 @@ export function CommentsSheet({
                 {/* Replies */}
                 {replies.filter((r: any) => r.parent_id === comment.id).map((reply: any) => (
                   <div key={reply.id} className="flex gap-3 ml-12">
-                    <UserAvatar
-                      src={reply.user.avatar}
-                      name={reply.user.name}
-                      className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => handleOpenCommentUser(reply)}
+                      className="mt-0.5 h-8 w-8 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                      aria-label={`Open ${reply.user.name}'s profile`}
+                    >
+                      <UserAvatar
+                        src={reply.user.avatar}
+                        name={reply.user.name}
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    </button>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-gray-900 text-sm font-bold flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCommentUser(reply)}
+                          className="flex items-center gap-1 text-sm font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        >
                           {reply.user.name}
                           {reply.user.is_organizer && (
                             <img src={verifiedBadge} alt="Verified" className="w-3 h-3 select-none" loading="lazy" decoding="async" />
                           )}
-                        </span>
+                        </button>
                         <span className="text-gray-400 text-[10px]">{reply.timestamp}</span>
                       </div>
                       <p className="text-gray-700 text-sm leading-relaxed">{reply.text}</p>

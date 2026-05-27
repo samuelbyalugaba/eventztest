@@ -73,6 +73,37 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      const isRecoverableBundleError = isDynamicImportError(this.state.error);
+
+      if (isRecoverableBundleError) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+            <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full">
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Refreshing EVENTZ</h1>
+              <p className="text-gray-600 mb-6">
+                The app is updating. Refresh once to load the latest version.
+              </p>
+              {import.meta.env.DEV && (
+                <div className="bg-gray-100 p-4 rounded overflow-auto mb-6 max-h-48">
+                  <code className="text-sm text-gray-700 break-words">
+                    {this.state.error?.message}
+                  </code>
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+                  window.location.reload();
+                }}
+                className="w-full bg-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-purple-700 transition-colors"
+              >
+                Refresh now
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
           <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">

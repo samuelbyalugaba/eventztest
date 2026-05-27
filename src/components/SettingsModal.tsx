@@ -236,7 +236,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
           bio: profileData.bio,
           birthdate: profileData.birthdate,
           avatar_url: profileData.avatarUrl,
-          ...(isCreatorProfile ? { location: profileData.location, organizer_type: profileData.category } : {}),
+          ...(isCreatorProfile ? { location: profileData.location.trim(), organizer_type: profileData.category } : {}),
         });
         await refreshProfile();
       } else {
@@ -540,7 +540,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                     </div>
 
                     <div className="space-y-2" ref={locationRef}>
-                      <label className="text-sm font-medium text-gray-700">Location</label>
+                      <label className="text-sm font-medium text-gray-700">Location <span className="font-normal text-gray-400">(optional)</span></label>
                       <div className="relative">
                         <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
@@ -551,7 +551,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                             searchLocations(e.target.value);
                           }}
                           onFocus={() => profileData.location.length >= 3 && setShowLocationDropdown(true)}
-                          placeholder="City, Country"
+                          placeholder="City, Country (optional)"
                           className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
                         />
                         {loadingLocations && (

@@ -8,7 +8,7 @@ import { formatTimeAgo } from '../utils/format';
 import { Post, HighlightClip, Conversation } from '../types';
 import { PostDetailModal } from './PostDetailModal';
 import { handleShare } from '../utils/share';
-import { useFeedData } from '../hooks/useFeedData';
+import { removePostFromFeedCache, useFeedData } from '../hooks/useFeedData';
 
 import { ShareModal } from './ShareModal';
 import { FeedHeader } from './FeedHeader';
@@ -228,7 +228,14 @@ export function Feed({
           const comments = await getPostComments(selectedPost.id);
           const mappedComments = (comments || []).map((c: any) => ({
             id: c.id,
-            user: { name: c.user?.full_name || c.user?.username || 'User', avatar: c.user?.avatar_url || '' },
+            user: {
+              id: c.user?.id || c.user_id,
+              name: c.user?.full_name || c.user?.username || 'User',
+              username: c.user?.username || '',
+              avatar: c.user?.avatar_url || '',
+              verified: c.user?.verified || false,
+              is_organizer: c.user?.is_organizer || false,
+            },
             text: c.text,
             timestamp: formatTimeAgo(c.created_at)
           }));
@@ -258,7 +265,14 @@ export function Feed({
           if (commentsData) {
             const mappedComments = commentsData.map((c: any) => ({
               id: c.id,
-              user: { name: c.user?.full_name || c.user?.username || 'User', avatar: c.user?.avatar_url || '', is_organizer: c.user?.is_organizer || false },
+              user: {
+                id: c.user?.id || c.user_id,
+                name: c.user?.full_name || c.user?.username || 'User',
+                username: c.user?.username || '',
+                avatar: c.user?.avatar_url || '',
+                verified: c.user?.verified || false,
+                is_organizer: c.user?.is_organizer || false,
+              },
               text: c.text,
               timestamp: formatTimeAgo(c.created_at)
             }));
@@ -381,7 +395,12 @@ export function Feed({
     let previousPosts: Post[] = [];
     setPosts(prev => { previousPosts = prev; return prev.filter(p => p.id !== postId); });
     setSelectedPost(prev => (prev && prev.id === postId) ? null : prev);
-    try { await deletePost(postId); toast.success('Post deleted'); }
+    try {
+      await deletePost(postId);
+      removePostFromFeedCache(postId);
+      window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { deletedPostId: postId } }));
+      toast.success('Post deleted');
+    }
     catch (error) { console.error('Error deleting post:', error); toast.error('Failed to delete post'); setPosts(previousPosts); }
   }, [setPosts]);
 
@@ -392,7 +411,14 @@ export function Feed({
       const newCommentData = await createPostComment(postId, currentUser.id, text.trim(), parentId);
       const newComment: any = {
         id: newCommentData.id,
-        user: { name: newCommentData.user?.full_name || newCommentData.user?.username || 'Unknown', avatar: newCommentData.user?.avatar_url, is_organizer: newCommentData.user?.is_organizer || false },
+        user: {
+          id: newCommentData.user?.id || currentUser.id,
+          name: newCommentData.user?.full_name || newCommentData.user?.username || 'Unknown',
+          username: newCommentData.user?.username || '',
+          avatar: newCommentData.user?.avatar_url,
+          verified: newCommentData.user?.verified || false,
+          is_organizer: newCommentData.user?.is_organizer || false,
+        },
         text: newCommentData.text, timestamp: 'Just now', parent_id: newCommentData.parent_id, likes_count: 0, is_liked: false
       };
       setPosts(prev => prev.map(post => post.id === postId ? { ...post, comments: [...(post.comments || []), newComment], comments_count: (post.comments_count || 0) + 1 } : post));
@@ -462,7 +488,14 @@ export function Feed({
       if (comments) {
         const mapped = comments.map((c: any) => ({
           id: c.id,
-          user: { name: c.user?.full_name || c.user?.username || 'User', avatar: c.user?.avatar_url || '', is_organizer: c.user?.is_organizer || false },
+          user: {
+            id: c.user?.id || c.user_id,
+            name: c.user?.full_name || c.user?.username || 'User',
+            username: c.user?.username || '',
+            avatar: c.user?.avatar_url || '',
+            verified: c.user?.verified || false,
+            is_organizer: c.user?.is_organizer || false,
+          },
           text: c.text, timestamp: formatTimeAgo(c.created_at), parent_id: c.parent_id, likes_count: c.likes_count || 0, is_liked: c.is_liked || false
         }));
         setPosts(prev => prev.map(p => p.id !== post.id ? p : { ...p, comments: mapped, comments_count: comments.length } as any));
@@ -631,6 +664,7 @@ export function Feed({
           userProfile={currentUserProfile}
           onComment={handlePostComment}
           onLikeComment={handleLikeComment}
+          onOpenUserProfile={handleOpenUserProfile}
         />
       )}
 
