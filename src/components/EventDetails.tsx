@@ -599,8 +599,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 -mx-3 px-3 transition-all rounded-b-[24px]">
             <div className="flex items-center justify-between mb-3">
               <div className="flex flex-col">
-                <h1 className="text-gray-900 text-xl font-bold tracking-tight">EVENTZ</h1>
-                <p className="text-gray-600 text-xs">Discover amazing events happening around you</p>
+                <h1 className="text-gray-900 text-2xl font-bold tracking-tight">EVENTZ</h1>
+                <p className="text-gray-600 text-sm">Discover amazing events happening around you</p>
               </div>
             </div>
 

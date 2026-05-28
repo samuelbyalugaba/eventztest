@@ -185,8 +185,8 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
             </button>
           )}
           <div>
-            <h1 className="text-base font-semibold text-gray-900">Creator Profile</h1>
-            <p className="text-[11px] text-gray-500 font-medium">Setup your public profile</p>
+            <h1 className="text-base font-semibold text-gray-900">Set up your creator profile</h1>
+            <p className="text-xs text-gray-500 font-medium">Go live, host events & grow your audience</p>
           </div>
         </div>
         <div className="w-10 h-10 flex items-center justify-center">

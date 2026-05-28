@@ -330,7 +330,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 {isGoogleSubmitting ? (
                   <span className="inline-flex items-center justify-center">
                     <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                    Redirecting...
+                    Signing in...
                   </span>
                 ) : (
                   <>
@@ -435,7 +435,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 {isGoogleSubmitting ? (
                   <span className="inline-flex items-center justify-center">
                     <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                    Redirecting...
+                    Signing in...
                   </span>
                 ) : (
                   <>

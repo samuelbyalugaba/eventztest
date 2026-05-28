@@ -222,12 +222,12 @@ function MediaTab({ isLoading, posts, hasMore, isLoadingMore, onLoadMore, onOpen
 
   if (posts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-          <ImageIcon className="w-6 h-6 text-gray-300" />
+      <div className="flex flex-col items-center justify-center py-14 text-center">
+        <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+          <ImageIcon className="w-7 h-7 text-gray-300" />
         </div>
-        <p className="text-gray-900 font-medium mb-1">No posts yet</p>
-        {isOwnProfile && <p className="text-gray-500 text-xs max-w-xs mx-auto">Share event photos and videos</p>}
+        <p className="text-gray-900 text-base font-semibold mb-1">No posts yet</p>
+        {isOwnProfile && <p className="text-gray-500 text-sm max-w-xs mx-auto">Share event photos and videos</p>}
       </div>
     );
   }

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Bell, MessageSquare, LayoutGrid, Users as UsersIcon } from 'lucide-react';
+import { Search, Bell, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
-import verifiedBadge from '../assets/verified-badge.png';
 
 interface FeedHeaderProps {
   currentUser?: any;
@@ -11,8 +10,6 @@ interface FeedHeaderProps {
   notifications: any[];
   exploreSearch: string;
   setExploreSearch: (value: string) => void;
-  activeFilter: 'all' | 'organizers' | 'following';
-  setActiveFilter: (filter: 'all' | 'organizers' | 'following') => void;
   onToggleNotifications: () => void;
   onToggleMessages: () => void;
   showMessagesOrPost?: boolean;
@@ -28,8 +25,6 @@ export function FeedHeader({
   notifications,
   exploreSearch,
   setExploreSearch,
-  activeFilter,
-  setActiveFilter,
   onToggleNotifications,
   onToggleMessages,
   showMessagesOrPost = false,
@@ -145,7 +140,7 @@ export function FeedHeader({
         {/* Brand Section - Always visible */}
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-gray-900 text-lg font-bold transition-all duration-300">
+            <h1 className="text-gray-900 text-xl font-bold transition-all duration-300">
               <span className='text-purple-600'>Community</span> Explore
             </h1>
           </div>
@@ -202,43 +197,6 @@ export function FeedHeader({
                 className="w-full pl-10 pr-3 py-2.5 bg-gray-100/60 hover:bg-gray-100 focus:bg-white border border-transparent rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none transition-all text-sm font-medium"
               />
             </div>
-          </div>
-
-          {/* Unique Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            <button
-              onClick={() => setActiveFilter('all')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs transition-all whitespace-nowrap ${
-                activeFilter === 'all'
-                  ? 'bg-[#8A2BE2] text-white'
-                  : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              All
-            </button>
-            <button
-              onClick={() => setActiveFilter('following')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs transition-all whitespace-nowrap ${
-                activeFilter === 'following'
-                  ? 'bg-[#8A2BE2] text-white'
-                  : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
-              }`}
-            >
-              <UsersIcon className="w-3.5 h-3.5" />
-              Following
-            </button>
-            <button
-              onClick={() => setActiveFilter('organizers')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-xs transition-all whitespace-nowrap ${
-                activeFilter === 'organizers'
-                  ? 'bg-[#8A2BE2] text-white'
-                  : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300'
-              }`}
-            >
-              <img src={verifiedBadge} alt="Creator badge" className="w-3.5 h-3.5 object-contain" />
-              Creators
-            </button>
           </div>
         </div>
       </div>
