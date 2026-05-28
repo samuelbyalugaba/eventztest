@@ -33,8 +33,8 @@ export function ProfileSidebar({
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
-        <button className="p-1.5 text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
-          <Menu className="w-6 h-6" />
+        <button className="p-2 text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
+          <Menu className="w-7 h-7" />
         </button>
       </SheetTrigger>
       <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 bg-white border-l border-gray-100 h-[75vh] bottom-auto overflow-hidden">
@@ -43,18 +43,18 @@ export function ProfileSidebar({
           Navigation menu for wallet, dashboard, settings, and logout.
         </SheetDescription>
         <div className="flex flex-col h-full">
-          <div className="p-4 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden ring-1 ring-gray-100">
+          <div className="p-5 border-b border-gray-100">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden ring-1 ring-gray-100">
                 {profileImage ? (
                   <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
-                  <UserAvatar name={displayName} className="w-full h-full text-sm" />
+                  <UserAvatar name={displayName} className="w-full h-full text-base" />
                 )}
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 text-sm leading-tight">{displayName}</h3>
-                <p className="text-gray-500 text-xs">@{username || 'user'}</p>
+                <h3 className="font-bold text-gray-900 text-base leading-tight">{displayName}</h3>
+                <p className="text-gray-500 text-sm">@{username || 'user'}</p>
               </div>
             </div>
           </div>
@@ -74,10 +74,10 @@ export function ProfileSidebar({
                 onOpenChange(false);
                 onLogout?.().then(() => toast.success('Logged out'));
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors"
+              className="w-full flex items-center gap-3.5 px-5 py-3.5 text-red-600 hover:bg-red-50 transition-colors"
             >
-              <LogOut className="w-4 h-4 stroke-[1.5]" />
-              <span className="font-medium text-sm">Log out</span>
+              <LogOut className="w-5 h-5 stroke-[1.5]" />
+              <span className="font-medium text-[15px]">Log out</span>
             </button>
           </div>
         </div>
@@ -90,11 +90,11 @@ function SidebarButton({ icon, label, onClick }: { icon: React.ReactNode; label:
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors group"
+      className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors group"
     >
-      <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900">
+      <div className="flex items-center gap-3.5 text-gray-700 group-hover:text-gray-900">
         {icon}
-        <span className="font-medium text-sm">{label}</span>
+        <span className="font-medium text-[15px]">{label}</span>
       </div>
       <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
     </button>

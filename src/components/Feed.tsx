@@ -21,8 +21,6 @@ import { FullScreenImageModal } from './feed/FullScreenImageModal';
 import { LikeAnimation, FeedAnimationStyles } from './feed/FeedAnimations';
 import { FeedContent } from './feed/FeedContent';
 
-type FilterTab = 'all' | 'organizers' | 'following';
-
 type RouteTarget = {
   pathname: string;
   search?: string;
@@ -53,7 +51,6 @@ export function Feed({
     hash: location.hash,
     state: location.state,
   }), [location.hash, location.pathname, location.search, location.state]);
-  const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -83,7 +80,6 @@ export function Feed({
     isLoadingMore,
     currentUser,
     isLoading,
-    followingIds,
     notifications,
     notificationsLoading,
     currentUserProfile,
@@ -306,7 +302,7 @@ export function Feed({
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [posts.length, activeFilter, hasMore, isLoadingMore, feedScrollContainer, handleLoadMore]);
+  }, [posts.length, hasMore, isLoadingMore, feedScrollContainer, handleLoadMore]);
 
   useEffect(() => {
     if (currentUser) {
@@ -467,11 +463,7 @@ export function Feed({
     navigate(`/profile/${user.id}`);
   }, [navigate]);
 
-  const filteredPosts = useMemo(() => posts.filter(post => {
-    if (activeFilter === 'organizers') return post.user.isOrganizer;
-    if (activeFilter === 'following') return followingIds.has(post.user.id);
-    return true;
-  }), [posts, activeFilter, followingIds]);
+  const filteredPosts = posts;
 
   const handlePostClick = useCallback((post: Post, startTime?: number, isMuted?: boolean) => {
     const scrollPos = feedScrollRef.current?.scrollTop ?? window.scrollY;
@@ -550,8 +542,6 @@ export function Feed({
           notifications={notifications}
           exploreSearch={exploreSearch}
           setExploreSearch={setExploreSearch}
-          activeFilter={activeFilter}
-          setActiveFilter={setActiveFilter}
           onToggleNotifications={handleToggleNotifications}
           onToggleMessages={handleToggleMessages}
           showMessagesOrPost={!!selectedPost}

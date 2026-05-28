@@ -52,19 +52,19 @@ export function ProfileActions({
       return (
         <div
           onClick={onStartOrganizerSetup}
-          className="group mb-5 rounded-xl p-2.5 flex items-center justify-between cursor-pointer border border-gray-100 bg-gradient-to-br from-white to-purple-50/40 hover:to-purple-50/70 hover:border-purple-200/60 hover:shadow-md transition-all active:scale-[0.99]"
+          className="group mb-5 rounded-xl p-3 flex items-center justify-between cursor-pointer border border-gray-100 bg-gradient-to-br from-white to-purple-50/40 hover:to-purple-50/70 hover:border-purple-200/60 hover:shadow-md transition-all active:scale-[0.99]"
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 flex items-center justify-center transition-all duration-300 group-hover:scale-[1.08]">
+            <div className="w-9 h-9 flex items-center justify-center transition-all duration-300 group-hover:scale-[1.08]">
               <img
                 src={verifiedBadge}
                 alt="Creator badge"
-                className="w-6 h-6 object-contain transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105"
+                className="w-7 h-7 object-contain transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105"
               />
             </div>
             <div className="min-w-0">
-              <h3 className="text-gray-900 font-bold text-xs">Become a Creator</h3>
-              <p className="text-gray-500 text-xs leading-snug">Go live, host events & grow your audience</p>
+              <h3 className="text-gray-900 font-bold text-sm">Switch to Creator Profile</h3>
+              <p className="text-gray-500 text-[13px] leading-snug">Go live, host events & grow your audience</p>
             </div>
           </div>
           <div className="text-gray-400 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-gray-500">

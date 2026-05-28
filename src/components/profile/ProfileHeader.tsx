@@ -60,14 +60,14 @@ export function ProfileHeader({
             ) : (
               <>
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-lg font-semibold text-gray-900 leading-tight truncate">
+                  <h1 className="text-xl font-semibold text-gray-900 leading-tight truncate">
                     {displayName || 'User'}
                   </h1>
                   {showCreatorBadge && (
                     <img
                       src={creatorBadge}
                       alt="Creator badge"
-                      className="w-3.5 h-3.5 object-contain flex-shrink-0 drop-shadow-sm pointer-events-none select-none"
+                      className="w-4 h-4 object-contain flex-shrink-0 drop-shadow-sm pointer-events-none select-none"
                       style={{ visibility: 'visible', opacity: 1, display: 'inline-block' }}
                       loading="eager"
                       onError={(e) => {
@@ -77,7 +77,7 @@ export function ProfileHeader({
                     />
                   )}
                 </div>
-                <p className="text-gray-500 font-medium text-xs truncate">
+                <p className="text-gray-500 font-medium text-sm truncate">
                   @{username || 'user'}
                 </p>
               </>
@@ -157,14 +157,14 @@ export function ProfileHeader({
           ) : (
             <>
               <div className="flex min-w-0 items-center gap-1.5">
-                <h1 className="truncate text-lg font-semibold leading-tight text-gray-900">
+                <h1 className="truncate text-xl font-semibold leading-tight text-gray-900">
                   {displayName || 'User'}
                 </h1>
                 {showCreatorBadge && (
                   <img
                     src={creatorBadge}
                     alt="Creator badge"
-                    className="h-3.5 w-3.5 flex-shrink-0 object-contain drop-shadow-sm pointer-events-none select-none"
+                    className="h-4 w-4 flex-shrink-0 object-contain drop-shadow-sm pointer-events-none select-none"
                     style={{ visibility: 'visible', opacity: 1, display: 'inline-block' }}
                     loading="eager"
                     onError={(e) => {
@@ -174,7 +174,7 @@ export function ProfileHeader({
                   />
                 )}
               </div>
-              <p className="mt-1 truncate text-xs font-medium text-gray-500">
+              <p className="mt-1 truncate text-sm font-medium text-gray-500">
                 @{username || 'user'}
               </p>
             </>
