@@ -42,7 +42,7 @@ const isVideo = (url?: string) => {
   const raw = url.toLowerCase();
   if (raw.includes('video') || raw.includes('highlight')) return true;
   const cleaned = url.split('#')[0].split('?')[0];
-  return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
+  return /\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(cleaned);
 };
 
 export function PostDetailModal({  

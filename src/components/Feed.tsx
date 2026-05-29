@@ -394,7 +394,6 @@ export function Feed({
     try {
       await deletePost(postId);
       removePostFromFeedCache(postId);
-      window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { deletedPostId: postId } }));
       toast.success('Post deleted');
     }
     catch (error) { console.error('Error deleting post:', error); toast.error('Failed to delete post'); setPosts(previousPosts); }

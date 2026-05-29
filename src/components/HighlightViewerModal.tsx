@@ -113,7 +113,6 @@ export function HighlightViewerModal({ highlight, onClose, onLike, onShare }: Hi
       }
       await deletePost(highlight.id);
       toast.success('Post deleted');
-      window.dispatchEvent(new Event('postsUpdated'));
       onClose();
     } catch (error) {
       toast.error('Failed to delete post');

@@ -149,6 +149,8 @@ export function useFeedData(initialCurrentUser?: any) {
       if (typeof deletedPostId === 'number') {
         removePostFromFeedCache(deletedPostId);
         setPosts((prev) => prev.filter((post) => post.id !== deletedPostId));
+        setIsLoading(false);
+        return;
       }
       void loadPosts(false);
     };
