@@ -1,7 +1,7 @@
 @variant dark (&:is(.dark *));
 
 :root {
-  --font-size: 16.8px;
+  --font-size: 17px;
   --background: #FAFAFA;
   --foreground: #1A1A1A;
   --card: #ffffff;
@@ -207,11 +207,84 @@
 
 html {
   font-size: var(--font-size);
+  -webkit-text-size-adjust: 100%;
 }
 
 @media (min-width: 768px) {
   html {
     font-size: 18px;
+  }
+}
+
+@layer base {
+  body {
+    font-size: 1rem;
+  }
+
+  button,
+  [role='button'],
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  button,
+  [role='button'],
+  input:not([type='checkbox']):not([type='radio']),
+  select {
+    min-height: 2.75rem;
+  }
+
+  button:has(svg),
+  [role='button']:has(svg),
+  a:has(svg) {
+    min-width: 2.75rem;
+  }
+
+  textarea {
+    font-size: 1rem;
+  }
+
+  input,
+  select {
+    font-size: 1rem;
+  }
+}
+
+@layer utilities {
+  .text-\[8px\],
+  .text-\[9px\],
+  .text-\[10px\] {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+
+  .text-\[11px\],
+  .text-\[12px\] {
+    font-size: 0.8125rem !important;
+    line-height: 1.125rem !important;
+  }
+
+  .text-\[13px\] {
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+  }
+
+  .text-\[15px\] {
+    font-size: 0.9375rem !important;
+    line-height: 1.35rem !important;
+  }
+
+  .text-xs {
+    font-size: 0.8125rem !important;
+    line-height: 1.125rem !important;
+  }
+
+  .text-sm {
+    font-size: 0.9375rem !important;
+    line-height: 1.35rem !important;
   }
 }
 
