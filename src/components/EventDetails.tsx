@@ -631,9 +631,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
 
           {/* Filters */}
-          <div className="mt-3">
-            <div className="-mx-3 overflow-x-auto px-3 pb-2 scrollbar-hide">
-              <div className="flex w-max items-center gap-2">
+          <div className="mt-2">
+            <div className="-mx-3 overflow-x-auto px-3 pb-1 scrollbar-hide">
+              <div className="flex w-max items-center gap-1.5">
                 {categories.map((category) => {
                   const Icon = category.icon;
                   const isSelected = selectedCategory === category.id;
@@ -644,13 +644,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       type="button"
                       aria-pressed={isSelected}
                       onClick={() => handleCategorySelect(category.id)}
-                      className={`flex h-7 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-semibold transition-all ${
+                      className={`event-category-chip flex h-6 flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 text-[10.5px] font-semibold transition-all ${
                         isSelected
                           ? 'border-gray-950 bg-gray-950 text-white shadow-sm'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
                       }`}
                     >
-                      {Icon && <Icon className="h-3.5 w-3.5" />}
+                      {Icon && <Icon className="h-3 w-3" />}
                       <span>{category.chipName || category.name}</span>
                     </button>
                   );
@@ -750,7 +750,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </div>
             </div>
             
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-5">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
               {upcomingEvents.map((event) => (
                   <EventCard
                     key={event.id}
@@ -759,6 +759,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     currentUserId={currentUserId}
                     onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
                     onDeleteEvent={handleDeleteEvent}
+                    className="event-card-compact"
                     compact
                   />
               ))}
