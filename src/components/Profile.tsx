@@ -281,7 +281,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   };
 
   return (
-    <div className="bg-white min-h-screen pb-14 px-4 pt-[calc(0.6rem+env(safe-area-inset-top))] sm:px-5">
+    <div className="bg-white min-h-screen pb-14 px-4 pt-[calc(0.95rem+env(safe-area-inset-top))] sm:px-5">
       <ProfileHeader
         isLoading={isLoading}
         profileImage={profileImage}
