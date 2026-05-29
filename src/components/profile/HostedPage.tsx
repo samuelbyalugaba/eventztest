@@ -15,6 +15,13 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 
 type HostedView = 'events' | 'streams';
 
+type HostedRouteState = {
+  initialProfile?: Partial<Profile> | null;
+  initialHostedCount?: number;
+  initialHostedEvents?: AppEvent[];
+  initialHostedStreams?: CloudflareStream[];
+};
+
 const eventDateLabel = (date?: string) => {
   if (!date) return 'DATE TBA';
   const parsed = new Date(date);
@@ -59,20 +66,29 @@ export function HostedPage() {
   const targetUserId = userId || user?.id;
   const navigate = useNavigate();
   const location = useLocation();
+  const initialState = location.state as HostedRouteState | null;
+  const initialEvents = Array.isArray(initialState?.initialHostedEvents) ? initialState.initialHostedEvents : [];
+  const initialStreams = Array.isArray(initialState?.initialHostedStreams) ? initialState.initialHostedStreams : [];
+  const hasInstantState = Boolean(
+    initialState?.initialProfile ||
+    typeof initialState?.initialHostedCount === 'number' ||
+    initialEvents.length > 0 ||
+    initialStreams.length > 0
+  );
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [events, setEvents] = useState<AppEvent[]>([]);
-  const [streams, setStreams] = useState<CloudflareStream[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(() => (initialState?.initialProfile ? initialState.initialProfile as Profile : null));
+  const [events, setEvents] = useState<AppEvent[]>(initialEvents);
+  const [streams, setStreams] = useState<CloudflareStream[]>(initialStreams);
   const [activeView, setActiveView] = useState<HostedView>('events');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!hasInstantState);
 
   useEffect(() => {
     let alive = true;
 
     const load = async () => {
       if (!targetUserId) return;
-      setIsLoading(true);
+      if (!hasInstantState) setIsLoading(true);
       try {
         const [profileData, organizerEvents, streamedVideos] = await Promise.all([
           getProfile(targetUserId),
@@ -95,7 +111,7 @@ export function HostedPage() {
     return () => {
       alive = false;
     };
-  }, [targetUserId]);
+  }, [hasInstantState, targetUserId]);
 
   const pastEvents = useMemo(() => events.filter(isPastEvent), [events]);
   const eventIdsWithStreams = useMemo(() => {

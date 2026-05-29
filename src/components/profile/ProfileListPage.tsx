@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Search } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -31,12 +31,18 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
   const { user } = useAuth();
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const targetUserId = userId || user?.id;
+  const initialState = location.state as {
+    initialFollowersCount?: number;
+    initialFollowingCount?: number;
+    initialProfile?: Partial<Profile> | null;
+  } | null;
 
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(() => (initialState?.initialProfile ? initialState.initialProfile as Profile : null));
   const [users, setUsers] = useState<Profile[]>([]);
-  const [followersCount, setFollowersCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
+  const [followersCount, setFollowersCount] = useState(() => initialState?.initialFollowersCount ?? 0);
+  const [followingCount, setFollowingCount] = useState(() => initialState?.initialFollowingCount ?? 0);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +55,20 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
       following: userId ? `${base}/following` : '/following',
     };
   }, [userId]);
+  const currentRouteState = useMemo(() => ({
+    initialFollowersCount: followersCount,
+    initialFollowingCount: followingCount,
+    initialProfile: profile
+      ? {
+          id: profile.id,
+          full_name: profile.full_name,
+          username: profile.username,
+          avatar_url: profile.avatar_url,
+          verified: profile.verified,
+          is_organizer: profile.is_organizer,
+        }
+      : initialState?.initialProfile,
+  }), [followersCount, followingCount, initialState?.initialProfile, profile]);
 
   useEffect(() => {
     let alive = true;
@@ -155,7 +175,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
         <div className="grid grid-cols-2 text-center">
           <button
             type="button"
-            onClick={() => navigate(paths.followers, { replace: true })}
+            onClick={() => navigate(paths.followers, { replace: true, state: currentRouteState })}
             className={`py-2.5 text-sm font-semibold border-b-2 transition ${
               type === 'followers'
                 ? 'border-purple-600 text-purple-700'
@@ -166,7 +186,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
           </button>
           <button
             type="button"
-            onClick={() => navigate(paths.following, { replace: true })}
+            onClick={() => navigate(paths.following, { replace: true, state: currentRouteState })}
             className={`py-2.5 text-sm font-semibold border-b-2 transition ${
               type === 'following'
                 ? 'border-purple-600 text-purple-700'

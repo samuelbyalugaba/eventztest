@@ -39,7 +39,6 @@ export function FullScreenImageModal({ images, currentIndex: initialIndex, postI
               toast.success('Post deleted');
               onClose();
               setPosts(prev => prev.filter(p => p.id !== postId));
-              window.dispatchEvent(new Event('postsUpdated'));
             } catch (error) {
               toast.error('Failed to delete post');
             }

@@ -1050,7 +1050,11 @@ export const deleteFile = async (bucket: 'events' | 'avatars' | 'posts', url: st
 };
 
 export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'posts', path?: string) => {
-  const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+  const getFileExtension = (name: string) => {
+    const dotIndex = name.lastIndexOf('.');
+    return dotIndex > 0 && dotIndex < name.length - 1 ? name.slice(dotIndex + 1).toLowerCase() : '';
+  };
+  const fileExt = getFileExtension(file.name);
   const contentTypeByExtension: Record<string, string> = {
     jpg: 'image/jpeg',
     jpeg: 'image/jpeg',
@@ -1064,9 +1068,23 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
     mov: 'video/quicktime',
     qt: 'video/quicktime',
     m4v: 'video/x-m4v',
-    hevc: 'video/mp4',
+    hevc: 'video/hevc',
     '3gp': 'video/3gpp',
     '3gpp': 'video/3gpp',
+  };
+  const extensionByContentType: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'video/ogg': 'ogg',
+    'video/quicktime': 'mov',
+    'video/x-m4v': 'm4v',
+    'video/hevc': 'hevc',
+    'video/heif': 'heif',
+    'video/3gpp': '3gp',
   };
   const allowedTypes = new Set([
     'image/jpeg',
@@ -1092,32 +1110,46 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
 
   // Optimize images before upload (resize large images, compress)
   const isVideo = contentType.startsWith('video/');
-  const uploadFile = file.type === contentType ? file : new File([file], file.name, { type: contentType });
+  const uploadFile = !isVideo && file.type !== contentType ? new File([file], file.name, { type: contentType }) : file;
   let optimizedFile = uploadFile;
   if (!isVideo) {
     const { optimizeForUpload } = await import('../imageOptimize');
     optimizedFile = await optimizeForUpload(uploadFile);
   }
 
-  // Validate file size (100MB limit for videos, 10MB for images)
-  const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+  // Validate file size (200MB limit for videos, 10MB for images)
+  const maxSize = isVideo ? 200 * 1024 * 1024 : 10 * 1024 * 1024;
   
   if (optimizedFile.size > maxSize) {
-    throw new Error(`File size too large. Maximum size is ${isVideo ? '100MB' : '10MB'}.`);
+    throw new Error(`File size too large. Maximum size is ${isVideo ? '200MB' : '10MB'}.`);
   }
 
-  const optimizedFileExt = (optimizedFile.name.split('.').pop() || fileExt || 'bin').toLowerCase();
+  const optimizedFileExt = (getFileExtension(optimizedFile.name) || fileExt || extensionByContentType[contentType] || 'bin').toLowerCase();
   const fileName = `${crypto.randomUUID()}_${Date.now()}.${optimizedFileExt}`;
   const filePath = path ? `${path}/${fileName}` : fileName;
+  const isNativeLikeMobile =
+    typeof window !== 'undefined' &&
+    (
+      !!(window as any).Capacitor ||
+      /Capacitor|iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    );
+  let arrayBufferBody: ArrayBuffer | null = null;
+  const getUploadBody = async (forceArrayBuffer: boolean) => {
+    if (!isVideo || (!forceArrayBuffer && !isNativeLikeMobile)) return optimizedFile;
+    arrayBufferBody = arrayBufferBody || await optimizedFile.arrayBuffer();
+    return arrayBufferBody;
+  };
 
   const tryUpload = async (targetBucket: 'events' | 'avatars' | 'posts') => {
     let uploadError: any = null;
 
     for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const forceArrayBuffer = isVideo && (isNativeLikeMobile || attempt > 1);
+      const uploadBody = await getUploadBody(forceArrayBuffer);
       const { error } = await supabase.storage
         .from(targetBucket)
-        .upload(filePath, optimizedFile, {
-          contentType: optimizedFile.type || contentType,
+        .upload(filePath, uploadBody, {
+          contentType,
           cacheControl: '31536000',
           upsert: false
         });
@@ -1125,7 +1157,13 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
       uploadError = error;
       if (!uploadError) break;
       const message = String(uploadError.message || '').toLowerCase();
-      const mayRecover = message.includes('network') || message.includes('fetch') || message.includes('timeout');
+      const mayRecover =
+        message.includes('network') ||
+        message.includes('fetch') ||
+        message.includes('timeout') ||
+        message.includes('load failed') ||
+        message.includes('abort') ||
+        (isVideo && !forceArrayBuffer);
       if (!mayRecover) break;
       await new Promise((resolve) => setTimeout(resolve, attempt * 700));
     }
@@ -1758,15 +1796,19 @@ export const deletePost = async (postId: number) => {
     .from('posts')
     .select('image_urls, video_url')
     .eq('id', postId)
-    .single();
+    .maybeSingle();
 
   // 2. Delete post row (CASCADE handles comments/likes)
-  const { error } = await supabase
+  const { data: deletedRows, error } = await supabase
     .from('posts')
     .delete()
-    .eq('id', postId);
+    .eq('id', postId)
+    .select('id');
 
   if (error) throw error;
+  if (!deletedRows || deletedRows.length === 0) {
+    throw new Error('Post could not be deleted. Please refresh and try again.');
+  }
 
   // 3. Delete images from storage (Best effort)
   if (post?.image_urls && Array.isArray(post.image_urls)) {
@@ -1782,6 +1824,10 @@ export const deletePost = async (postId: number) => {
     sessionStorage.removeItem('feedLastPostId');
   } catch {
     // Cache cleanup is best-effort; the database deletion already succeeded.
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { deletedPostId: postId } }));
   }
 };
 

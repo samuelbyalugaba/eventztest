@@ -1,7 +1,7 @@
 @variant dark (&:is(.dark *));
 
 :root {
-  --font-size: 14px;
+  --font-size: 16.8px;
   --background: #FAFAFA;
   --foreground: #1A1A1A;
   --card: #ffffff;
@@ -211,7 +211,7 @@ html {
 
 @media (min-width: 768px) {
   html {
-    font-size: 15px;
+    font-size: 18px;
   }
 }
 

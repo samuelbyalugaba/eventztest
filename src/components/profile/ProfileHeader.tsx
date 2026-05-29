@@ -119,7 +119,7 @@ export function ProfileHeader({
         {!onBack && <div className="h-10 w-10" />}
 
         <div className="flex items-center gap-3">
-          {isOwnProfile && sidebarSlot}
+          {sidebarSlot}
 
           {isOwnProfile && isOrganizer && (
             <button

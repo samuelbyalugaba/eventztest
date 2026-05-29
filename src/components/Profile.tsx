@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Camera } from 'lucide-react';
+import { Ban, Camera, Menu, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { blockUser, deleteEvent, reportContent, Ticket, ApiPost, toggleFollow } from '../utils/supabase/api';
 import type { Event as AppEvent } from '../utils/supabase/api';
@@ -26,6 +26,12 @@ import { ProfileContent } from './profile/ProfileContent';
 import { ProfileSidebar } from './profile/ProfileSidebar';
 import { ProfileActions } from './profile/ProfileActions';
 import { askForReportReason, confirmBlockUser } from '../utils/moderation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 type TicketViewerTicket = {
   id: number;
@@ -190,7 +196,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       timestamp: formatTimeAgo(post.created_at), likes: post.likes_count || 0, comments: [], comments_count: post.comments_count || 0,
       shares: 0, views: post.views || 0, isLiked: post.is_liked || false, isSaved: post.is_saved || false,
       isHighlight: !!post.video_url,
-      highlights: post.video_url ? [{ id: post.id, thumbnail: (post.image_urls?.find(url => !url.match(/\.(mp4|webm|ogg|mov)$/i))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', duration: post.duration || '', title: post.content || 'Video Highlight', videoUrl: post.video_url, views: post.views || 0 }] : undefined,
+      highlights: post.video_url ? [{ id: post.id, thumbnail: (post.image_urls?.find(url => !url.match(/\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', duration: post.duration || '', title: post.content || 'Video Highlight', videoUrl: post.video_url, views: post.views || 0 }] : undefined,
       video_url: post.video_url
     };
     onViewPost?.(uiPost);
@@ -210,6 +216,57 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const profileSubpagePath = (section: 'hosted' | 'followers' | 'following') => (
     userId ? `/profile/${userId}/${section}` : `/${section}`
   );
+  const profileListRouteState = {
+    initialFollowersCount: followStats.followers,
+    initialFollowingCount: followStats.following,
+    initialProfile: userProfile
+      ? {
+          id: userProfile.id,
+          full_name: userProfile.full_name,
+          username: userProfile.username,
+          avatar_url: userProfile.avatar_url,
+          verified: userProfile.verified,
+          is_organizer: userProfile.is_organizer,
+        }
+      : undefined,
+  };
+  const hostedRouteState = {
+    ...profileListRouteState,
+    initialHostedCount: hostedCount,
+    initialHostedEvents: publishedEvents,
+    initialHostedStreams: streamedVideos,
+  };
+
+  const handleReportProfile = async () => {
+    if (!currentUser) { toast.error('Please sign in to report profiles'); return; }
+    if (!userId) { toast.error('Could not find this profile'); return; }
+    const reason = askForReportReason('this profile');
+    if (!reason) return;
+    try {
+      await reportContent({
+        contentType: 'profile',
+        contentId: userId,
+        reason,
+        reportedUserId: userId,
+      });
+      toast.success('Report submitted');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to submit report');
+    }
+  };
+
+  const handleBlockProfile = async () => {
+    if (!currentUser) { toast.error('Please sign in to block profiles'); return; }
+    if (!userId) { toast.error('Could not find this profile'); return; }
+    if (!confirmBlockUser(displayName)) return;
+    try {
+      await blockUser(userId);
+      toast.success('Profile blocked');
+      navigate('/feed', { replace: true });
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to block profile');
+    }
+  };
 
   const handleFollow = async () => {
     const targetUserId = userId || currentUser?.id;
@@ -236,19 +293,26 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         onBack={handleBack}
         onGoLive={() => setShowLiveSetupModal(true)}
         sidebarSlot={
-          <ProfileSidebar
-            isOpen={isSidebarOpen}
-            onOpenChange={setIsSidebarOpen}
-            profileImage={profileImage}
-            displayName={displayName}
-            username={userProfile?.username}
-            isOrganizer={isOrganizer}
-            onEditProfile={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
-            onSettings={() => { setSettingsInitialView('main'); setShowSettingsModal(true); }}
-            onDashboard={() => setShowProfessionalDashboard(true)}
-            onWallet={() => setShowWalletModal(true)}
-            onLogout={onLogout}
-          />
+          isOwnProfile ? (
+            <ProfileSidebar
+              isOpen={isSidebarOpen}
+              onOpenChange={setIsSidebarOpen}
+              profileImage={profileImage}
+              displayName={displayName}
+              username={userProfile?.username}
+              isOrganizer={isOrganizer}
+              onEditProfile={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
+              onSettings={() => { setSettingsInitialView('main'); setShowSettingsModal(true); }}
+              onDashboard={() => setShowProfessionalDashboard(true)}
+              onWallet={() => setShowWalletModal(true)}
+              onLogout={onLogout}
+            />
+          ) : (
+            <ProfileSafetyMenu
+              onReport={handleReportProfile}
+              onBlock={handleBlockProfile}
+            />
+          )
         }
       />
 
@@ -270,13 +334,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         dataReady={!isLoading}
         onHostedClick={() => {
           if (isOrganizer) {
-            navigate(profileSubpagePath('hosted'));
+            navigate(profileSubpagePath('hosted'), { state: hostedRouteState });
           } else {
             setShowEventListModal(true);
           }
         }}
-        onFollowersClick={() => navigate(profileSubpagePath('followers'))}
-        onFollowingClick={() => navigate(profileSubpagePath('following'))}
+        onFollowersClick={() => navigate(profileSubpagePath('followers'), { state: profileListRouteState })}
+        onFollowingClick={() => navigate(profileSubpagePath('following'), { state: profileListRouteState })}
       />
 
       <ProfileActions
@@ -288,35 +352,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         onDashboard={() => setShowProfessionalDashboard(true)}
         onStartOrganizerSetup={onStartOrganizerSetup}
         onFollow={handleFollow}
-        onReport={async () => {
-          if (!currentUser) { toast.error('Please sign in to report profiles'); return; }
-          if (!userId) { toast.error('Could not find this profile'); return; }
-          const reason = askForReportReason('this profile');
-          if (!reason) return;
-          try {
-            await reportContent({
-              contentType: 'profile',
-              contentId: userId,
-              reason,
-              reportedUserId: userId,
-            });
-            toast.success('Report submitted');
-          } catch (error: any) {
-            toast.error(error?.message || 'Failed to submit report');
-          }
-        }}
-        onBlock={async () => {
-          if (!currentUser) { toast.error('Please sign in to block profiles'); return; }
-          if (!userId) { toast.error('Could not find this profile'); return; }
-          if (!confirmBlockUser(displayName)) return;
-          try {
-            await blockUser(userId);
-            toast.success('Profile blocked');
-            navigate('/feed', { replace: true });
-          } catch (error: any) {
-            toast.error(error?.message || 'Failed to block profile');
-          }
-        }}
         isMessaging={isStartingMessage}
         onMessage={async () => {
           if (!currentUser) { toast.error('Please sign in to message'); return; }
@@ -441,5 +476,38 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
           />
         )}
     </div>
+  );
+}
+
+function ProfileSafetyMenu({ onReport, onBlock }: { onReport: () => void; onBlock: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Profile actions"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-900 transition-colors hover:bg-gray-100 active:bg-gray-100"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={8} className="z-[80] min-w-[170px] rounded-xl border-gray-100 bg-white p-1.5 shadow-lg">
+        <DropdownMenuItem
+          onClick={onReport}
+          className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 focus:bg-gray-50"
+        >
+          <ShieldAlert className="h-4 w-4" />
+          Report profile
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={onBlock}
+          className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 focus:bg-red-50 focus:text-red-600"
+        >
+          <Ban className="h-4 w-4" />
+          Block profile
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

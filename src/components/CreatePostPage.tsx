@@ -18,13 +18,18 @@ const SUPPORTED_VIDEO_TYPES = new Set([
   'video/ogg',
   'video/quicktime',
   'video/x-m4v',
+  'video/hevc',
+  'video/heif',
   'video/3gpp',
 ]);
-const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v', '3gp', '3gpp']);
+const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v', 'hevc', '3gp', '3gpp']);
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
-const MAX_VIDEO_SIZE_MB = 100;
+const MAX_VIDEO_SIZE_MB = 200;
 
-const getFileExtension = (file: File) => (file.name.split('.').pop() || '').toLowerCase();
+const getFileExtension = (file: File) => {
+  const dotIndex = file.name.lastIndexOf('.');
+  return dotIndex > 0 && dotIndex < file.name.length - 1 ? file.name.slice(dotIndex + 1).toLowerCase() : '';
+};
 const isSupportedVideoFile = (file: File) => {
   const ext = getFileExtension(file);
   return SUPPORTED_VIDEO_TYPES.has(file.type) || SUPPORTED_VIDEO_EXTENSIONS.has(ext);
@@ -234,8 +239,13 @@ export default function CreatePostPage() {
       if (media.length > 0) {
         try {
           mediaUrls = [];
-          for (const item of media) {
-            mediaUrls.push(await uploadImage(item.file, 'posts', `user_${user.id}`));
+          for (const [index, item] of media.entries()) {
+            try {
+              mediaUrls.push(await uploadImage(item.file, 'posts', `user_${user.id}`));
+            } catch (error: any) {
+              const label = item.kind === 'video' ? 'Video' : `Media ${index + 1}`;
+              throw new Error(`${label} upload failed. ${error?.message || 'Please try again.'}`);
+            }
           }
         } catch (error: any) {
           throw new Error(error?.message || 'Failed to upload media');

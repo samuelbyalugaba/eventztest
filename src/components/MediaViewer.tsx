@@ -189,7 +189,6 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
     try {
       await deletePost((currentMedia as any).postId);
       toast.success('Post deleted');
-      window.dispatchEvent(new Event('postsUpdated'));
       onClose();
     } catch (error) {
       toast.error('Failed to delete post');

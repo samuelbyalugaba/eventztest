@@ -7,6 +7,27 @@ import { useAuth } from '../contexts/AuthContext';
 
 type SavedEvent = AppEvent & { isSaved: boolean; hasReminder: boolean };
 
+const removePostFromProfileCaches = (postId: number) => {
+  try {
+    for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+      const key = sessionStorage.key(i);
+      if (!key?.startsWith('eventz_profile_cache_')) continue;
+      const cached = JSON.parse(sessionStorage.getItem(key) || '{}');
+      if (!Array.isArray(cached.posts)) continue;
+      sessionStorage.setItem(
+        key,
+        JSON.stringify({
+          ...cached,
+          posts: cached.posts.filter((post: ApiPost) => post.id !== postId),
+          ts: Date.now(),
+        }),
+      );
+    }
+  } catch {
+    // Profile cache cleanup is best-effort; live state is updated below.
+  }
+};
+
 export function useProfileData(userId?: string, activeTab?: string) {
   const { user: authUser } = useAuth();
   const cachedProfile = useProfileStore((s) => s.profile);
@@ -270,13 +291,30 @@ export function useProfileData(userId?: string, activeTab?: string) {
       organizerEventsLoadedRef.current = false;
       void loadOrganizerEventsIfNeeded(true, true);
     };
+    const handlePostsUpdated = (event: Event) => {
+      const deletedPostId = (event as CustomEvent<{ deletedPostId?: number }>).detail?.deletedPostId;
+      if (typeof deletedPostId === 'number') {
+        removePostFromProfileCaches(deletedPostId);
+        setUserPosts((prev) => prev.filter((post) => post.id !== deletedPostId));
+        setPostsOffset((offset) => Math.max(0, offset - 1));
+        setSavedPosts((prev) => prev.filter((post) => post.id !== deletedPostId));
+        if (sessionStorage.getItem(PROFILE_POST_ID_KEY) === String(deletedPostId)) {
+          sessionStorage.removeItem(PROFILE_POST_ID_KEY);
+          sessionStorage.removeItem(PROFILE_SCROLL_KEY);
+        }
+        return;
+      }
+      void loadData();
+    };
     window.addEventListener('profileUpdated', handleProfileUpdated as EventListener);
     window.addEventListener('savedPostsUpdated', handleSavedPostsUpdated as EventListener);
     window.addEventListener('eventsUpdated', handleEventsUpdated as EventListener);
+    window.addEventListener('postsUpdated', handlePostsUpdated as EventListener);
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdated as EventListener);
       window.removeEventListener('savedPostsUpdated', handleSavedPostsUpdated as EventListener);
       window.removeEventListener('eventsUpdated', handleEventsUpdated as EventListener);
+      window.removeEventListener('postsUpdated', handlePostsUpdated as EventListener);
     };
   }, [userId, isOwnProfile, authUser?.id, activeTab, currentUser?.id]);
 

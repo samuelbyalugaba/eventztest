@@ -30,7 +30,7 @@ export function PostDetailWrapper() {
         const isVideo = (url?: string) => {
           if (!url) return false;
           const cleaned = url.split('#')[0].split('?')[0];
-          return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
+          return /\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(cleaned);
         };
         
         const isOrganizerPage = !!fetchedPost.posted_as_organizer;

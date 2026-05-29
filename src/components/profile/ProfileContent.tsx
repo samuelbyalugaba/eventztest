@@ -232,7 +232,7 @@ function MediaTab({ isLoading, posts, hasMore, isLoadingMore, onLoadMore, onOpen
     );
   }
 
-  const isMediaVideo = (url?: string) => !!url && (/\.(mp4|webm|ogg|mov)$/i.test(url) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight'));
+  const isMediaVideo = (url?: string) => !!url && (/\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(url.split('#')[0].split('?')[0]) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight'));
 
   return (
     <>

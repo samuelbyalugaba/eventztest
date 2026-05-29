@@ -12,13 +12,13 @@ import { GenericPageSkeleton, FeedPageSkeleton, RouteFallback } from './componen
 import { DesktopSidebar } from './components/desktop/DesktopSidebar';
 import { RightRail } from './components/desktop/RightRail';
 import { LegalPage } from './components/legal/LegalPage';
+import { HostedPage } from './components/profile/HostedPage';
 
 // Lazy-loaded heavy pages and route wrappers
 const EventDetails = lazy(() => import('./components/EventDetails').then(m => ({ default: m.EventDetails })));
 const LiveFeed = lazy(() => import('./components/LiveFeed').then(m => ({ default: m.LiveFeed })));
 const Feed = lazy(() => import('./components/Feed').then(m => ({ default: m.Feed })));
 const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
-const HostedPage = lazy(() => import('./components/profile/HostedPage').then(m => ({ default: m.HostedPage })));
 const ProfileListPage = lazy(() => import('./components/profile/ProfileListPage').then(m => ({ default: m.ProfileListPage })));
 const CreateEventWrapper = lazy(() => import('./components/CreateEventWrapper').then(m => ({ default: m.CreateEventWrapper })));
 const PostDetailWrapper = lazy(() => import('./components/PostDetailWrapper').then(m => ({ default: m.PostDetailWrapper })));
