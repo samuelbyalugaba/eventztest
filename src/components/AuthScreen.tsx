@@ -5,6 +5,7 @@ import { checkUsernameUnique } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import authLogoBlack from '../assets/auth-logo-black.png';
+import appleIcon from '../../assets/apple.png';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
 
 interface AuthScreenProps {
@@ -29,6 +30,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
 
   // Configuration check
   const [isConfigured, setIsConfigured] = useState(true);
+  const isAppleSignInEnabled = import.meta.env.VITE_ENABLE_APPLE_SIGN_IN === 'true';
 
   useEffect(() => {
     const configured = isSupabaseConfigured();
@@ -208,7 +210,13 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
   };
 
   const handleGoogleSignIn = () => handleOAuthSignIn('google');
-  const handleAppleSignIn = () => handleOAuthSignIn('apple');
+  const handleAppleSignIn = () => {
+    if (!isAppleSignInEnabled) {
+      toast.info('Apple sign-in is not enabled yet.');
+      return;
+    }
+    handleOAuthSignIn('apple');
+  };
 
   return (
     <div
@@ -331,7 +339,8 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
               <button
                 type="button"
                 onClick={handleAppleSignIn}
-                disabled={isAppleSubmitting || isGoogleSubmitting || isSubmitting || !isConfigured}
+                disabled={!isAppleSignInEnabled || isAppleSubmitting || isGoogleSubmitting || isSubmitting || !isConfigured}
+                title={!isAppleSignInEnabled ? 'Apple sign-in is not enabled yet' : undefined}
                 className="mt-4 w-full h-11 rounded-xl bg-black text-white text-sm font-semibold hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
               >
                 {isAppleSubmitting ? (
@@ -340,7 +349,10 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                     Signing in...
                   </span>
                 ) : (
-                  <span>Continue with Apple</span>
+                  <>
+                    <img src={appleIcon} alt="" aria-hidden="true" className="h-4 w-4 object-contain" />
+                    <span>Continue with Apple</span>
+                  </>
                 )}
               </button>
 
@@ -452,7 +464,8 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
               <button
                 type="button"
                 onClick={handleAppleSignIn}
-                disabled={isAppleSubmitting || isGoogleSubmitting || isSubmitting || !isConfigured}
+                disabled={!isAppleSignInEnabled || isAppleSubmitting || isGoogleSubmitting || isSubmitting || !isConfigured}
+                title={!isAppleSignInEnabled ? 'Apple sign-in is not enabled yet' : undefined}
                 className="mt-4 w-full h-11 rounded-xl bg-black text-white text-sm font-semibold hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
               >
                 {isAppleSubmitting ? (
@@ -461,7 +474,10 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                     Signing in...
                   </span>
                 ) : (
-                  <span>Continue with Apple</span>
+                  <>
+                    <img src={appleIcon} alt="" aria-hidden="true" className="h-4 w-4 object-contain" />
+                    <span>Continue with Apple</span>
+                  </>
                 )}
               </button>
 
