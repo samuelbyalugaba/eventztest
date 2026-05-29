@@ -83,6 +83,101 @@ export type Profile = {
   description?: string; // Long form description for creators
 };
 
+export type ReportContentType = 'post' | 'comment' | 'profile' | 'message' | 'event' | 'stream';
+
+export const getBlockedUserIds = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('user_blocks')
+    .select('blocker_id, blocked_id')
+    .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+
+  if (error) {
+    if (String(error.message || '').toLowerCase().includes('does not exist')) return new Set<string>();
+    throw error;
+  }
+
+  const ids = new Set<string>();
+  (data || []).forEach((row: any) => {
+    if (row.blocker_id === userId && row.blocked_id) ids.add(row.blocked_id);
+    if (row.blocked_id === userId && row.blocker_id) ids.add(row.blocker_id);
+  });
+  return ids;
+};
+
+export const reportContent = async ({
+  contentType,
+  contentId,
+  reason,
+  details,
+  reportedUserId,
+}: {
+  contentType: ReportContentType;
+  contentId: string | number;
+  reason: string;
+  details?: string;
+  reportedUserId?: string | null;
+}) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Please sign in to report content');
+
+  const { data, error } = await supabase
+    .from('reports')
+    .insert({
+      reporter_id: user.id,
+      reported_user_id: reportedUserId || null,
+      content_type: contentType,
+      content_id: String(contentId),
+      reason: reason.trim() || 'Inappropriate content',
+      details: details?.trim() || null,
+      status: 'open',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    if ((error as any).code === '23505') return null;
+    throw error;
+  }
+
+  return data;
+};
+
+export const blockUser = async (blockedUserId: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Please sign in to block users');
+  if (!blockedUserId || blockedUserId === user.id) throw new Error('You cannot block this profile');
+
+  const { error } = await supabase
+    .from('user_blocks')
+    .upsert(
+      { blocker_id: user.id, blocked_id: blockedUserId },
+      { onConflict: 'blocker_id,blocked_id' }
+    );
+
+  if (error) throw error;
+};
+
+export const unblockUser = async (blockedUserId: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Please sign in to unblock users');
+
+  const { error } = await supabase
+    .from('user_blocks')
+    .delete()
+    .eq('blocker_id', user.id)
+    .eq('blocked_id', blockedUserId);
+
+  if (error) throw error;
+};
+
+export const assertUsersCanInteract = async (currentUserId: string, otherUserId?: string | null) => {
+  if (!currentUserId || !otherUserId || currentUserId === otherUserId) return;
+  const blockedIds = await getBlockedUserIds(currentUserId);
+  if (blockedIds.has(otherUserId)) {
+    throw new Error('This interaction is unavailable because one of you has blocked the other.');
+  }
+};
+
 export type Event = {
   id: number;
   organizer_id: string;
@@ -967,7 +1062,9 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
     ogg: 'video/ogg',
     ogv: 'video/ogg',
     mov: 'video/quicktime',
+    qt: 'video/quicktime',
     m4v: 'video/x-m4v',
+    hevc: 'video/mp4',
     '3gp': 'video/3gpp',
     '3gpp': 'video/3gpp',
   };
@@ -981,6 +1078,8 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
     'video/ogg',
     'video/quicktime',
     'video/x-m4v',
+    'video/hevc',
+    'video/heif',
     'video/3gpp',
   ]);
   const declaredContentType = file.type || '';
@@ -1012,12 +1111,24 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
   const filePath = path ? `${path}/${fileName}` : fileName;
 
   const tryUpload = async (targetBucket: 'events' | 'avatars' | 'posts') => {
-    const { error: uploadError } = await supabase.storage
-      .from(targetBucket)
-      .upload(filePath, optimizedFile, {
-        contentType: optimizedFile.type || contentType,
-        upsert: false
-      });
+    let uploadError: any = null;
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const { error } = await supabase.storage
+        .from(targetBucket)
+        .upload(filePath, optimizedFile, {
+          contentType: optimizedFile.type || contentType,
+          cacheControl: '31536000',
+          upsert: false
+        });
+
+      uploadError = error;
+      if (!uploadError) break;
+      const message = String(uploadError.message || '').toLowerCase();
+      const mayRecover = message.includes('network') || message.includes('fetch') || message.includes('timeout');
+      if (!mayRecover) break;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 700));
+    }
 
     if (uploadError) throw uploadError;
 
@@ -1531,9 +1642,12 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
 
   let likedPostIds = new Set<number>();
   let savedPostIds = new Set<number>();
+  let blockedUserIds = new Set<string>();
 
   if (options.currentUserId) {
     try {
+      blockedUserIds = await getBlockedUserIds(options.currentUserId);
+
       const { data: likes } = await supabase
         .from('post_likes')
         .select('post_id')
@@ -1551,7 +1665,9 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
     }
   }
 
-  return (posts || []).map((p: any) => ({
+  return (posts || [])
+    .filter((p: any) => !blockedUserIds.has(p.user_id))
+    .map((p: any) => ({
     ...p,
     likes_count: p.likes?.[0]?.count || 0,
     comments_count: p.comments?.[0]?.count || 0,
@@ -1747,6 +1863,16 @@ export const toggleSavePost = async (postId: number, userId: string) => {
 };
 
 export const getPostComments = async (postId: number) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  let blockedUserIds = new Set<string>();
+  if (user) {
+    try {
+      blockedUserIds = await getBlockedUserIds(user.id);
+    } catch {
+      blockedUserIds = new Set<string>();
+    }
+  }
+
   const { data, error } = await supabase
     .from('post_comments')
     .select(`
@@ -1758,7 +1884,7 @@ export const getPostComments = async (postId: number) => {
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return data;
+  return (data || []).filter((comment: any) => !blockedUserIds.has(comment.user_id));
 };
 
 export const createPostComment = async (postId: number, userId: string, text: string, parentId?: number) => {
@@ -2336,6 +2462,13 @@ export type Message = {
 };
 
 export const getConversations = async (userId: string) => {
+  let blockedUserIds = new Set<string>();
+  try {
+    blockedUserIds = await getBlockedUserIds(userId);
+  } catch {
+    blockedUserIds = new Set<string>();
+  }
+
   // Fetch conversations where user is participant1 OR participant2
   const { data, error } = await supabase
     .from('conversations')
@@ -2350,7 +2483,12 @@ export const getConversations = async (userId: string) => {
   if (error) throw error;
 
   // Enhance with last message and unread count
-  const conversationsWithDetails = await Promise.all(data.map(async (conv) => {
+  const visibleConversations = (data || []).filter((conv: any) => {
+    const otherUserId = conv.participant1_id === userId ? conv.participant2_id : conv.participant1_id;
+    return !blockedUserIds.has(otherUserId);
+  });
+
+  const conversationsWithDetails = await Promise.all(visibleConversations.map(async (conv) => {
     // Get last message
     const { data: lastMsg } = await supabase
       .from('messages')
@@ -2379,6 +2517,22 @@ export const getConversations = async (userId: string) => {
 };
 
 export const getMessages = async (conversationId: number) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: conversation } = await supabase
+      .from('conversations')
+      .select('participant1_id, participant2_id')
+      .eq('id', conversationId)
+      .maybeSingle();
+
+    if (conversation) {
+      const otherUserId = conversation.participant1_id === user.id
+        ? conversation.participant2_id
+        : conversation.participant1_id;
+      await assertUsersCanInteract(user.id, otherUserId);
+    }
+  }
+
   const { data, error } = await supabase
     .from('messages')
     .select(`
@@ -2395,6 +2549,18 @@ export const getMessages = async (conversationId: number) => {
 export const sendMessage = async (conversationId: number, text: string, imageUrl?: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
+
+  const { data: conversation, error: conversationError } = await supabase
+    .from('conversations')
+    .select('participant1_id, participant2_id')
+    .eq('id', conversationId)
+    .maybeSingle();
+
+  if (conversationError) throw conversationError;
+  const otherUserId = conversation?.participant1_id === user.id
+    ? conversation?.participant2_id
+    : conversation?.participant1_id;
+  await assertUsersCanInteract(user.id, otherUserId);
 
   const trimmedText = text.trim();
   if (!trimmedText && !imageUrl) {
@@ -2424,6 +2590,7 @@ export const sendMessage = async (conversationId: number, text: string, imageUrl
 export const startConversation = async (otherUserId: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
+  await assertUsersCanInteract(user.id, otherUserId);
 
   // Check if conversation already exists
   const { data: existing } = await supabase

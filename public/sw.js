@@ -1,6 +1,6 @@
-const STATIC_CACHE = 'eventz-static-v5';
-const RUNTIME_CACHE = 'eventz-runtime-v5';
-const IMAGE_CACHE = 'eventz-images-v5';
+const STATIC_CACHE = 'eventz-static-v6';
+const RUNTIME_CACHE = 'eventz-runtime-v6';
+const IMAGE_CACHE = 'eventz-images-v6';
 const IMAGE_CACHE_MAX = 200;
 const CURRENT_CACHES = [STATIC_CACHE, RUNTIME_CACHE, IMAGE_CACHE];
 

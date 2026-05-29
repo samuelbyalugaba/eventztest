@@ -32,14 +32,14 @@
 	<string>Eventz needs microphone access so organizers can include audio in live streams.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Eventz lets you choose photos from your library for profiles, posts, and events.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Eventz saves generated ticket and event images only when you choose to save them.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>armv7</string>
-	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

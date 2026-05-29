@@ -6,6 +6,7 @@ import { extractCurrencyFromPrice, currencies, formatPrice } from '../utils/curr
 import { createTransaction, createTicket } from '../utils/supabase/api';
 import { formatDateDMY } from '../utils/format';
 import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, WALLET_PAYMENT_METHODS, type WalletPaymentMethod } from '../utils/walletCheckout';
+import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
 
 interface TicketTier {
   name: string;
@@ -503,6 +504,14 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                 )}
               </button>
             </div>
+          )}
+          {step === 'checkout' && (
+            <p className="mt-3 text-center text-[11px] leading-5 text-gray-500">
+              By continuing, you agree to the{' '}
+              <a href={TERMS_OF_SERVICE_URL} className="font-medium text-gray-700 underline underline-offset-2">Terms</a>
+              {' '}and{' '}
+              <a href={PRIVACY_POLICY_URL} className="font-medium text-gray-700 underline underline-offset-2">Privacy Policy</a>.
+            </p>
           )}
         </div>
       </div>

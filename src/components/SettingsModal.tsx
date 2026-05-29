@@ -6,6 +6,7 @@ import { searchNominatim } from '../utils/nominatim';
 import { Sheet, SheetContent, SheetClose, SheetTitle, SheetDescription } from "./ui/sheet";
 import { CREATOR_CATEGORIES } from '../utils/categories';
 import { useAuth } from '../contexts/AuthContext';
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, TERMS_OF_SERVICE_URL } from '../utils/legal';
 import { DEFAULT_PRIVACY_SETTINGS, mapUserProfileToSettingsForm, uploadProfileAvatar, validateProfileImageFile } from './settings/profileSettingsShared';
 
 type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
@@ -540,7 +541,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                     </div>
 
                     <div className="space-y-2" ref={locationRef}>
-                      <label className="text-sm font-medium text-gray-700">Location <span className="font-normal text-gray-400">(optional)</span></label>
+                      <label className="text-sm font-medium text-gray-700">Location</label>
                       <div className="relative">
                         <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
@@ -551,7 +552,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                             searchLocations(e.target.value);
                           }}
                           onFocus={() => profileData.location.length >= 3 && setShowLocationDropdown(true)}
-                          placeholder="City, Country (optional)"
+                          placeholder="City, Country"
                           className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
                         />
                         {loadingLocations && (
@@ -873,7 +874,9 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <Mail className="w-4 h-4 text-gray-400" />
-                    <p className="text-gray-600 text-sm">support@eventz.co.tz</p>
+                    <a href={`mailto:${SUPPORT_EMAIL}`} className="text-gray-600 text-sm hover:text-purple-700">
+                      {SUPPORT_EMAIL}
+                    </a>
                   </div>
                   <div className="flex items-center gap-3">
                     <Phone className="w-4 h-4 text-gray-400" />
@@ -884,6 +887,21 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                     <p className="text-gray-600 text-sm">Dar es Salaam, Tanzania</p>
                   </div>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <a
+                  href={TERMS_OF_SERVICE_URL}
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-medium text-gray-700 hover:border-purple-200 hover:bg-purple-50"
+                >
+                  Terms
+                </a>
+                <a
+                  href={PRIVACY_POLICY_URL}
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-medium text-gray-700 hover:border-purple-200 hover:bg-purple-50"
+                >
+                  Privacy
+                </a>
               </div>
 
               {/* App Info */}
