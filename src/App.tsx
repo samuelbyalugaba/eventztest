@@ -33,7 +33,7 @@ const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
 const isVideoAsset = (url?: string) => {
   if (!url) return false;
   const cleaned = url.split('#')[0].split('?')[0];
-  return /\.(mp4|webm|ogg|mov)$/i.test(cleaned);
+  return /\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(cleaned);
 };
 
 export default function App() {
@@ -268,7 +268,7 @@ export default function App() {
             color: '#1a1a1a',
             boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
             padding: '16px',
-            fontSize: '14px',
+            fontSize: '16px',
             fontWeight: 500,
           },
           classNames: {
@@ -448,45 +448,45 @@ export default function App() {
       {!shouldHideBottomNav && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 pb-[env(safe-area-inset-bottom)] lg:hidden">
           <div className="max-w-7xl mx-auto px-2 sm:px-4">
-            <div className="flex justify-around items-center h-14">
+            <div className="flex justify-around items-center h-16">
               <Link
                 to="/events"
-                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
+                className={`flex min-h-[3rem] flex-col items-center justify-center gap-1 px-2 sm:px-4 py-1.5 transition-colors ${
                   location.pathname === '/events' || location.pathname === '/' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
-                <Calendar className="w-5 h-5" />
-                <span className="text-[11px]">Events</span>
+                <Calendar className="w-6 h-6" />
+                <span className="text-xs font-medium">Events</span>
               </Link>
               <Link
                 to="/live"
-                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors relative ${
+                className={`relative flex min-h-[3rem] flex-col items-center justify-center gap-1 px-2 sm:px-4 py-1.5 transition-colors ${
                   location.pathname === '/live' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
-                <Radio className="w-5 h-5" />
-                <span className="text-[11px]">Live</span>
+                <Radio className="w-6 h-6" />
+                <span className="text-xs font-medium">Live</span>
                 {hasLiveEvents && (
                   <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                 )}
               </Link>
               <Link
                 to="/feed"
-                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
+                className={`flex min-h-[3rem] flex-col items-center justify-center gap-1 px-2 sm:px-4 py-1.5 transition-colors ${
                   location.pathname === '/feed' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
-                <Rss className="w-5 h-5" />
-                <span className="text-[11px]">Feed</span>
+                <Rss className="w-6 h-6" />
+                <span className="text-xs font-medium">Feed</span>
               </Link>
               <Link
                 to="/profile"
-                className={`flex flex-col items-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
+                className={`flex min-h-[3rem] flex-col items-center justify-center gap-1 px-2 sm:px-4 py-1.5 transition-colors ${
                   location.pathname === '/profile' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
-                <User className="w-5 h-5" />
-                <span className="text-[11px]">Profile</span>
+                <User className="w-6 h-6" />
+                <span className="text-xs font-medium">Profile</span>
               </Link>
             </div>
           </div>
