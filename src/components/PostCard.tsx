@@ -37,6 +37,11 @@ const isVideo = (url?: string) => {
   return /\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(cleaned);
 };
 
+const mediaControlButtonClass =
+  'inline-flex h-8 w-8 min-h-8 min-w-8 items-center justify-center rounded-full bg-black/50 p-0 text-white leading-none backdrop-blur-md transition-colors hover:bg-black/70';
+
+const mediaControlIconClass = 'block h-3.5 w-3.5 text-white';
+
 export const PostCard = React.memo(function PostCard({ 
   post, 
   onLike, 
@@ -430,17 +435,17 @@ export const PostCard = React.memo(function PostCard({
                                         requestVideoFullscreen(videoEl);
                                       }
                                     }}
-                                    className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                                    className={mediaControlButtonClass}
                                   >
-                                    <Maximize className="w-3.5 h-3.5 text-white" />
+                                    <Maximize className={mediaControlIconClass} />
                                   </button>
                                 </div>
                                 <div className="absolute bottom-4 right-4 z-10">
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                                    className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                                    className={mediaControlButtonClass}
                                   >
-                                    {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                                    {isMuted ? <VolumeX className={mediaControlIconClass} /> : <Volume2 className={mediaControlIconClass} />}
                                   </button>
                                 </div>
                               </>
@@ -529,17 +534,17 @@ export const PostCard = React.memo(function PostCard({
                           requestVideoFullscreen(videoEl);
                         }
                       }}
-                      className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                      className={mediaControlButtonClass}
                     >
-                      <Maximize className="w-3.5 h-3.5 text-white" />
+                      <Maximize className={mediaControlIconClass} />
                     </button>
                   </div>
                   <div className="absolute bottom-4 right-4 z-10">
                     <button 
                       onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                      className="p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors"
+                      className={mediaControlButtonClass}
                     >
-                      {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      {isMuted ? <VolumeX className={mediaControlIconClass} /> : <Volume2 className={mediaControlIconClass} />}
                     </button>
                   </div>
                 </div>
