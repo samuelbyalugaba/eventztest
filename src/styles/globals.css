@@ -1,7 +1,7 @@
 @variant dark (&:is(.dark *));
 
 :root {
-  --font-size: 16px;
+  --font-size: 15.75px;
   --background: #FAFAFA;
   --foreground: #1A1A1A;
   --card: #ffffff;
@@ -212,7 +212,7 @@ html {
 
 @media (min-width: 768px) {
   html {
-    font-size: 16px;
+    font-size: 15.75px;
   }
 }
 
@@ -234,23 +234,47 @@ html {
   [role='button'],
   input:not([type='checkbox']):not([type='radio']),
   select {
-    min-height: 2.75rem;
+    min-height: 2.625rem;
   }
 
   button:has(svg),
   [role='button']:has(svg),
   a:has(svg) {
-    min-width: 2.75rem;
+    min-width: 2.625rem;
   }
 
   textarea {
-    font-size: 1rem;
+    font-size: 16px;
   }
 
   input,
   select {
-    font-size: 1rem;
+    font-size: 16px;
   }
+}
+
+.icon-circle-button {
+  display: inline-flex !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  min-width: 2.5rem !important;
+  min-height: 2.5rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.event-discovery-page button,
+.event-discovery-page [role='button'],
+.event-discovery-page input:not([type='checkbox']):not([type='radio']),
+.event-discovery-page select {
+  min-height: 2.5rem;
+}
+
+.event-discovery-page button:has(svg),
+.event-discovery-page [role='button']:has(svg),
+.event-discovery-page a:has(svg) {
+  min-width: 2.5rem;
 }
 
 @layer utilities {

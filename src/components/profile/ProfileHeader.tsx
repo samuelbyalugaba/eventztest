@@ -91,11 +91,11 @@ export function ProfileHeader({
           {isOrganizer && (
             <button
               onClick={onGoLive}
-              className="p-1.5 text-red-600 hover:bg-red-50 rounded-full transition-colors border border-red-200 bg-white shadow-sm"
+              className="icon-circle-button rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition-colors hover:bg-red-50"
               title="Go Live"
               aria-label="Go Live"
             >
-              <Radio className="w-4 h-4" />
+              <Radio className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -124,11 +124,11 @@ export function ProfileHeader({
           {isOwnProfile && isOrganizer && (
             <button
               onClick={onGoLive}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition-colors hover:bg-red-50 active:bg-red-50"
+              className="icon-circle-button rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition-colors hover:bg-red-50 active:bg-red-50"
               title="Go Live"
               aria-label="Go Live"
             >
-              <Radio className="h-5 w-5" />
+              <Radio className="h-4 w-4" />
             </button>
           )}
         </div>

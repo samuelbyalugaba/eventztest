@@ -592,15 +592,15 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <div className="pb-20">
+      <div className="event-discovery-page pb-20">
         {/* 3. Search & Events List */}
         <div className="px-3 pb-6 pt-0">
           {/* Header */}
           <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 -mx-3 px-3 transition-all rounded-b-[24px]">
             <div className="flex items-center justify-between mb-3">
               <div className="flex flex-col">
-                <h1 className="text-gray-900 text-2xl font-bold tracking-tight">EVENTZ</h1>
-                <p className="text-gray-600 text-sm">Discover amazing events happening around you</p>
+                <h1 className="text-[22px] font-bold leading-tight tracking-tight text-gray-900">EVENTZ</h1>
+                <p className="text-[13px] font-medium leading-snug text-gray-600">Discover amazing events happening around you</p>
               </div>
             </div>
 
@@ -611,14 +611,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 <input 
                   type="text" 
                   placeholder="Search events..." 
-                  className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-100 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#8A2BE2] focus:ring-4 focus:ring-[#8A2BE2]/10 transition-all shadow-sm"
+                  className="w-full rounded-xl border border-gray-100 bg-white py-2 pl-10 pr-3 text-sm font-medium text-gray-900 shadow-sm transition-all placeholder-gray-400 focus:border-[#8A2BE2] focus:outline-none focus:ring-4 focus:ring-[#8A2BE2]/10"
                   onClick={() => setShowSearchModal(true)}
                   readOnly
                 />
               </div>
               <button 
                 onClick={() => setShowFilters(true)}
-                className="p-2.5 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition-all shadow-sm relative group"
+                className="relative rounded-xl border border-gray-100 bg-white p-2 shadow-sm transition-all hover:bg-gray-50 group"
               >
                 <Filter className="w-4 h-4 text-gray-600 group-hover:text-[#8A2BE2] transition-colors" />
                 {hasActiveFilters && (
@@ -644,7 +644,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       type="button"
                       aria-pressed={isSelected}
                       onClick={() => handleCategorySelect(category.id)}
-                      className={`flex h-8 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-all ${
+                      className={`flex h-7 flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-semibold transition-all ${
                         isSelected
                           ? 'border-gray-950 bg-gray-950 text-white shadow-sm'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
@@ -697,7 +697,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 />
               )}
               <div className="min-w-0 pr-1">
-                <h3 className="truncate text-gray-900 font-bold text-base leading-tight">Upcoming Events</h3>
+                <h3 className="truncate text-sm font-bold leading-tight text-gray-900">Upcoming Events</h3>
                 <p className="mt-1 h-4 whitespace-nowrap text-xs font-medium leading-4 text-gray-500 tabular-nums">
                   {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'} found
                 </p>
@@ -707,7 +707,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   type="button"
                   aria-expanded={showWhenMenu}
                   onClick={() => setShowWhenMenu((open) => !open)}
-                  className={`flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold shadow-sm transition-all ${
+                  className={`flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold shadow-sm transition-all ${
                     selectedTimeFilter !== 'all'
                       ? 'border-purple-200 bg-purple-50 text-purple-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
@@ -752,14 +752,15 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-5">
               {upcomingEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onClick={handleEventClick}
-                  currentUserId={currentUserId}
-                  onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
-                  onDeleteEvent={handleDeleteEvent}
-                />
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={handleEventClick}
+                    currentUserId={currentUserId}
+                    onEditEvent={(e) => navigate(`/edit-event/${e.id}`)}
+                    onDeleteEvent={handleDeleteEvent}
+                    compact
+                  />
               ))}
             </div>
 
