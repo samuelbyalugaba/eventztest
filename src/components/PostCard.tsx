@@ -365,10 +365,10 @@ export const PostCard = React.memo(function PostCard({
         <div className="flex items-center gap-1">
           <button 
             onClick={handleSave}
-            className={`p-1.5 rounded-full transition-colors active:scale-75 ${isSaved ? 'text-purple-600 bg-purple-50' : 'text-gray-400 hover:bg-gray-50'}`}
+            className={`inline-flex h-8 w-8 min-h-8 min-w-8 items-center justify-center rounded-full p-0 transition-colors active:scale-75 ${isSaved ? 'text-purple-600 bg-purple-50' : 'text-gray-400 hover:bg-gray-50'}`}
             aria-label={isSaved ? "Unsave post" : "Save post"}
           >
-            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-purple-600' : ''}`} />
+            <Bookmark className={`block h-4 w-4 ${isSaved ? 'fill-purple-600' : ''}`} />
           </button>
         </div>
       </div>

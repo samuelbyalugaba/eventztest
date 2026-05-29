@@ -174,7 +174,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
   return (
     <div className="bg-white min-h-screen flex flex-col">
       {/* Mobile Header */}
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-5 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-5 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {onBack && (
             <button 
@@ -186,7 +186,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
           )}
           <div>
             <h1 className="text-base font-semibold text-gray-900">Set up your creator profile</h1>
-            <p className="text-xs text-gray-500 font-medium">Go live, host events & grow your audience</p>
+            <p className="text-[0.7rem] leading-4 text-gray-500 font-medium">Go live, host events & grow your audience</p>
           </div>
         </div>
         <div className="w-10 h-10 flex items-center justify-center">
@@ -240,9 +240,9 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
               </div>
             )}
           </div>
-          <div className="mt-5">
-            <p className="text-[11px] font-semibold tracking-[0.18em] text-gray-500 uppercase mb-3">Popular on EVENTZ</p>
-            <div className="flex flex-wrap gap-2">
+          <div className="mt-4">
+            <p className="text-[0.66rem] font-semibold tracking-[0.18em] text-gray-500 uppercase mb-2.5">Popular on EVENTZ</p>
+            <div className="flex flex-wrap gap-1.5">
               {popularCreatorCategories.map((item) => (
                 <button
                   key={item.value}
@@ -252,7 +252,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
                     setCategorySearch(item.value);
                     setShowCategoryDropdown(false);
                   }}
-                  className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                  className={`min-h-7 px-3 py-1.5 rounded-full border text-[0.75rem] font-medium transition-colors ${
                     category === item.value
                       ? 'border-purple-500 bg-purple-50 text-purple-700'
                       : 'border-gray-200 bg-white text-gray-700 active:bg-gray-50'
