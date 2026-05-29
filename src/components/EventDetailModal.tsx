@@ -501,7 +501,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           <div className="mb-6 pb-4 border-b border-gray-100">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <h2 className="text-gray-900 text-2xl font-bold">{event.title}</h2>
+                <h2 className="text-lg font-bold leading-snug text-gray-900">{event.title}</h2>
                 {(event.organizer || event.organizer_id) && (
                   <button
                     onClick={handleOrganizerProfileClick}
