@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2, CheckCheck } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
-import { Message, Profile, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage, deleteMessage } from '../utils/supabase/api';
+import { Message, Profile, blockUser, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage, deleteMessage } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { useVisualViewport } from '../utils/useVisualViewport';
+import { confirmBlockUser } from '../utils/moderation';
 
 interface ChatDetailProps {
   conversationId: number;
@@ -198,9 +199,16 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
     }
   };
 
-  const handleBlockUser = () => {
-    toast.success('User blocked');
-    setShowMenu(false);
+  const handleBlockUser = async () => {
+    if (!confirmBlockUser(recipient.full_name || recipient.username || 'this user')) return;
+    try {
+      await blockUser(recipient.id);
+      toast.success('User blocked');
+      setShowMenu(false);
+      onBack();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to block user');
+    }
   };
 
   return (

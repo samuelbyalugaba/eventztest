@@ -11,6 +11,7 @@ import { formatTimeAgo } from './utils/format';
 import { GenericPageSkeleton, FeedPageSkeleton, RouteFallback } from './components/skeletons/PageSkeletons';
 import { DesktopSidebar } from './components/desktop/DesktopSidebar';
 import { RightRail } from './components/desktop/RightRail';
+import { LegalPage } from './components/legal/LegalPage';
 
 // Lazy-loaded heavy pages and route wrappers
 const EventDetails = lazy(() => import('./components/EventDetails').then(m => ({ default: m.EventDetails })));
@@ -187,6 +188,8 @@ export default function App() {
     (location.pathname.startsWith('/event/') && !isEventModal) ||
     location.pathname.startsWith('/live/') ||
     location.pathname.startsWith('/messages') ||
+    location.pathname === '/privacy' ||
+    location.pathname === '/terms' ||
     isProfileSubpagePath(location.pathname) ||
     isProfileSubpagePath(backgroundLocation?.pathname);
   const effectiveLocation = backgroundLocation || location;
@@ -226,6 +229,15 @@ export default function App() {
           <div className="w-16 h-16 border-4 border-[#8A2BE2]/30 border-t-[#8A2BE2] rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-600 font-medium">Loading EVENTZ...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && (location.pathname === '/privacy' || location.pathname === '/terms')) {
+    return (
+      <div className="h-[100dvh] overflow-y-auto bg-gray-50">
+        <Toaster position="top-center" richColors={false} closeButton toastOptions={{ duration: 2500 }} />
+        <LegalPage type={location.pathname === '/privacy' ? 'privacy' : 'terms'} />
       </div>
     );
   }
@@ -392,6 +404,8 @@ export default function App() {
             <Route path="/compose/post" element={
               <Suspense fallback={<RouteFallback />}><CreatePostPage /></Suspense>
             } />
+            <Route path="/privacy" element={<LegalPage type="privacy" />} />
+            <Route path="/terms" element={<LegalPage type="terms" />} />
           </Routes>
         </div>
       </div>

@@ -3,6 +3,9 @@ import { X, MessageCircle, Heart } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import verifiedBadge from '../assets/verified-badge.png';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
+import { toast } from 'sonner';
+import { reportContent } from '../utils/supabase/api';
+import { askForReportReason } from '../utils/moderation';
 
 
 interface CommentsSheetProps {
@@ -58,6 +61,28 @@ export function CommentsSheet({
       verified: !!user?.verified,
       isOrganizer: !!(user?.isOrganizer || user?.is_organizer),
     });
+  };
+
+  const handleReportComment = async (comment: any) => {
+    if (!currentUser) {
+      toast.error('Please sign in to report content');
+      return;
+    }
+    const reason = askForReportReason('this comment');
+    if (!reason) return;
+
+    try {
+      await reportContent({
+        contentType: 'comment',
+        contentId: comment.id,
+        reason,
+        details: comment.text,
+        reportedUserId: comment.user?.id || comment.user_id,
+      });
+      toast.success('Report submitted');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to submit report');
+    }
   };
 
   const comments = post.comments || [];
@@ -131,6 +156,14 @@ export function CommentsSheet({
                         <Heart className={`w-3.5 h-3.5 ${comment.is_liked ? 'fill-pink-600' : ''}`} />
                         {comment.likes_count > 0 && comment.likes_count}
                       </button>
+                      {String(comment.user?.id || comment.user_id) !== String(currentUser?.id || '') && (
+                        <button
+                          onClick={() => handleReportComment(comment)}
+                          className="text-xs text-gray-400 font-bold hover:text-red-600 transition-colors"
+                        >
+                          Report
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -179,6 +212,14 @@ export function CommentsSheet({
                           <Heart className={`w-3.5 h-3.5 ${reply.is_liked ? 'fill-pink-600' : ''}`} />
                           {reply.likes_count > 0 && reply.likes_count}
                         </button>
+                        {String(reply.user?.id || reply.user_id) !== String(currentUser?.id || '') && (
+                          <button
+                            onClick={() => handleReportComment(reply)}
+                            className="text-xs text-gray-400 font-bold hover:text-red-600 transition-colors"
+                          >
+                            Report
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

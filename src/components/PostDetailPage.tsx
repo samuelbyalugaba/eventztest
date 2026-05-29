@@ -19,6 +19,8 @@ import {
 } from './ui/dropdown-menu';
 import { toast } from 'sonner';
 import { useVisualViewport } from '../utils/useVisualViewport';
+import { reportContent } from '../utils/supabase/api';
+import { askForReportReason } from '../utils/moderation';
 
 interface PostDetailPageProps {
   post: any;
@@ -144,6 +146,50 @@ export function PostDetailPage({
     textareaRef.current?.focus();
   };
 
+  const handleReportPost = async () => {
+    if (!currentUser) {
+      toast.error('Please sign in to report content');
+      return;
+    }
+    const reason = askForReportReason('this post');
+    if (!reason) return;
+
+    try {
+      await reportContent({
+        contentType: 'post',
+        contentId: post.id,
+        reason,
+        reportedUserId: post.user?.id || post.user_id,
+      });
+      toast.success('Report submitted');
+      onBack();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to submit report');
+    }
+  };
+
+  const handleReportComment = async (comment: any) => {
+    if (!currentUser) {
+      toast.error('Please sign in to report content');
+      return;
+    }
+    const reason = askForReportReason('this comment');
+    if (!reason) return;
+
+    try {
+      await reportContent({
+        contentType: 'comment',
+        contentId: comment.id,
+        reason,
+        details: comment.text,
+        reportedUserId: comment.user?.id || comment.user_id,
+      });
+      toast.success('Report submitted');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to submit report');
+    }
+  };
+
   const handleCommentProfileClick = (comment: any, e: React.MouseEvent) => {
     const user = comment.user;
     const userId = user?.id || comment.user_id;
@@ -233,10 +279,7 @@ export function PostDetailPage({
                     </>
                   ) : (
                     <DropdownMenuItem 
-                      onClick={() => {
-                        toast.success('Post reported. We will review it shortly.');
-                        onBack();
-                      }}
+                      onClick={handleReportPost}
                       className="cursor-pointer"
                     >
                       Report Post
@@ -663,6 +706,14 @@ export function PostDetailPage({
                           >
                             Like {comment.likes_count > 0 && `(${comment.likes_count})`}
                           </button>
+                          {String(comment.user?.id || comment.user_id) !== String(currentUser?.id || '') && (
+                            <button
+                              onClick={() => handleReportComment(comment)}
+                              className="text-xs text-gray-400 font-medium hover:text-red-600"
+                            >
+                              Report
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -710,6 +761,14 @@ export function PostDetailPage({
                             >
                               Like {reply.likes_count > 0 && `(${reply.likes_count})`}
                             </button>
+                            {String(reply.user?.id || reply.user_id) !== String(currentUser?.id || '') && (
+                              <button
+                                onClick={() => handleReportComment(reply)}
+                                className="text-[10px] text-gray-400 font-medium hover:text-red-600"
+                              >
+                                Report
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

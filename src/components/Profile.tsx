@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { deleteEvent, Ticket, ApiPost, toggleFollow } from '../utils/supabase/api';
+import { blockUser, deleteEvent, reportContent, Ticket, ApiPost, toggleFollow } from '../utils/supabase/api';
 import type { Event as AppEvent } from '../utils/supabase/api';
 import { TicketListModal } from './TicketListModal';
 import { Conversation, Post as UiPost } from '../types';
@@ -25,6 +25,7 @@ import { ProfileTabs, type ProfileTab } from './profile/ProfileTabs';
 import { ProfileContent } from './profile/ProfileContent';
 import { ProfileSidebar } from './profile/ProfileSidebar';
 import { ProfileActions } from './profile/ProfileActions';
+import { askForReportReason, confirmBlockUser } from '../utils/moderation';
 
 type TicketViewerTicket = {
   id: number;
@@ -287,6 +288,35 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         onDashboard={() => setShowProfessionalDashboard(true)}
         onStartOrganizerSetup={onStartOrganizerSetup}
         onFollow={handleFollow}
+        onReport={async () => {
+          if (!currentUser) { toast.error('Please sign in to report profiles'); return; }
+          if (!userId) { toast.error('Could not find this profile'); return; }
+          const reason = askForReportReason('this profile');
+          if (!reason) return;
+          try {
+            await reportContent({
+              contentType: 'profile',
+              contentId: userId,
+              reason,
+              reportedUserId: userId,
+            });
+            toast.success('Report submitted');
+          } catch (error: any) {
+            toast.error(error?.message || 'Failed to submit report');
+          }
+        }}
+        onBlock={async () => {
+          if (!currentUser) { toast.error('Please sign in to block profiles'); return; }
+          if (!userId) { toast.error('Could not find this profile'); return; }
+          if (!confirmBlockUser(displayName)) return;
+          try {
+            await blockUser(userId);
+            toast.success('Profile blocked');
+            navigate('/feed', { replace: true });
+          } catch (error: any) {
+            toast.error(error?.message || 'Failed to block profile');
+          }
+        }}
         isMessaging={isStartingMessage}
         onMessage={async () => {
           if (!currentUser) { toast.error('Please sign in to message'); return; }

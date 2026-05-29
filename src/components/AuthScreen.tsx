@@ -5,6 +5,8 @@ import { checkUsernameUnique } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import authLogoBlack from '../assets/auth-logo-black.png';
+import appleIcon from '../../assets/apple.png';
+import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
 
 interface AuthScreenProps {
   onAuthSuccess: (accessToken: string, user: any) => void;
@@ -17,6 +19,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const [isAppleSubmitting, setIsAppleSubmitting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -27,6 +30,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
 
   // Configuration check
   const [isConfigured, setIsConfigured] = useState(true);
+  const isAppleSignInEnabled = import.meta.env.VITE_ENABLE_APPLE_SIGN_IN === 'true';
 
   useEffect(() => {
     const configured = isSupabaseConfigured();
@@ -183,24 +187,35 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
     if (!isConfigured) {
       toast.error('Configuration Error', { description: 'Cannot proceed without database connection.' });
       return;
     }
-    setIsGoogleSubmitting(true);
+    const setLoading = provider === 'google' ? setIsGoogleSubmitting : setIsAppleSubmitting;
+    setLoading(true);
     try {
-      const redirectTo = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+      const redirectTo = import.meta.env.VITE_AUTH_REDIRECT_URL || `${window.location.origin}/events`;
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: { redirectTo },
       });
       if (error) throw error;
     } catch (error: any) {
-      const message = error?.message || 'Google sign-in failed.';
+      const label = provider === 'google' ? 'Google' : 'Apple';
+      const message = error?.message || `${label} sign-in failed.`;
       toast.error('Authentication Failed', { description: message });
-      setIsGoogleSubmitting(false);
+      setLoading(false);
     }
+  };
+
+  const handleGoogleSignIn = () => handleOAuthSignIn('google');
+  const handleAppleSignIn = () => {
+    if (!isAppleSignInEnabled) {
+      toast.info('Apple sign-in is not enabled yet.');
+      return;
+    }
+    handleOAuthSignIn('apple');
   };
 
   return (
@@ -323,8 +338,28 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
 
               <button
                 type="button"
+                onClick={handleAppleSignIn}
+                disabled={!isAppleSignInEnabled || isAppleSubmitting || isGoogleSubmitting || isSubmitting || !isConfigured}
+                title={!isAppleSignInEnabled ? 'Apple sign-in is not enabled yet' : undefined}
+                className="mt-4 w-full h-11 rounded-xl bg-black text-white text-sm font-semibold hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+              >
+                {isAppleSubmitting ? (
+                  <span className="inline-flex items-center justify-center">
+                    <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                    Signing in...
+                  </span>
+                ) : (
+                  <>
+                    <img src={appleIcon} alt="" aria-hidden="true" className="h-4 w-4 object-contain" />
+                    <span>Continue with Apple</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
                 onClick={handleGoogleSignIn}
-                disabled={isGoogleSubmitting || isSubmitting || !isConfigured}
+                disabled={isGoogleSubmitting || isAppleSubmitting || isSubmitting || !isConfigured}
                 className="mt-4 w-full h-11 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
               >
                 {isGoogleSubmitting ? (
@@ -428,8 +463,28 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
 
               <button
                 type="button"
+                onClick={handleAppleSignIn}
+                disabled={!isAppleSignInEnabled || isAppleSubmitting || isGoogleSubmitting || isSubmitting || !isConfigured}
+                title={!isAppleSignInEnabled ? 'Apple sign-in is not enabled yet' : undefined}
+                className="mt-4 w-full h-11 rounded-xl bg-black text-white text-sm font-semibold hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+              >
+                {isAppleSubmitting ? (
+                  <span className="inline-flex items-center justify-center">
+                    <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                    Signing in...
+                  </span>
+                ) : (
+                  <>
+                    <img src={appleIcon} alt="" aria-hidden="true" className="h-4 w-4 object-contain" />
+                    <span>Continue with Apple</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
                 onClick={handleGoogleSignIn}
-                disabled={isGoogleSubmitting || isSubmitting || !isConfigured}
+                disabled={isGoogleSubmitting || isAppleSubmitting || isSubmitting || !isConfigured}
                 className="mt-4 w-full h-11 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
               >
                 {isGoogleSubmitting ? (
@@ -453,8 +508,16 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
           </Tabs>
         </div>
 
-        <div className="mt-4 text-center text-xs text-gray-500">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
+        <div className="mt-4 text-center text-xs leading-5 text-gray-500">
+          By continuing, you agree to our{' '}
+          <a href={TERMS_OF_SERVICE_URL} className="font-medium text-gray-800 underline underline-offset-2">
+            Terms of Service
+          </a>{' '}
+          and{' '}
+          <a href={PRIVACY_POLICY_URL} className="font-medium text-gray-800 underline underline-offset-2">
+            Privacy Policy
+          </a>
+          .
         </div>
       </div>
     </div>
