@@ -18,6 +18,7 @@ interface EventCardProps {
   onEditEvent?: (event: ApiEvent) => void;
   onDeleteEvent?: (event: ApiEvent) => void;
   showOwnerActions?: boolean;
+  compact?: boolean;
 }
 
 export const EventCard = memo(function EventCard({
@@ -27,6 +28,7 @@ export const EventCard = memo(function EventCard({
   onEditEvent,
   onDeleteEvent,
   showOwnerActions = false,
+  compact = false,
 }: EventCardProps) {
   // Use passed organizer data if available, otherwise fallback to "Event Organizer"
   // Avoiding internal fetches to prevent N+1 request problem
@@ -36,10 +38,10 @@ export const EventCard = memo(function EventCard({
   return (
     <div
       onClick={() => onClick(event)}
-      className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer ${className}`}
+      className={`bg-white ${compact ? 'rounded-xl' : 'rounded-2xl'} overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer ${className}`}
     >
       {/* Event Image */}
-      <div className="relative w-full h-40 overflow-hidden">
+      <div className={`relative w-full ${compact ? 'h-36' : 'h-40'} overflow-hidden`}>
         <ImageWithFallback
           src={event.image_url}
           alt={event.title}
@@ -103,24 +105,24 @@ export const EventCard = memo(function EventCard({
       </div>
 
       {/* Event Info */}
-      <div className="p-3">
-        <h3 className="text-gray-900 mb-2 text-sm line-clamp-2 font-medium">
+      <div className={compact ? 'p-2.5' : 'p-3'}>
+        <h3 className={`text-gray-900 line-clamp-2 font-medium ${compact ? 'mb-1.5 text-[13px] leading-snug' : 'mb-2 text-sm'}`}>
           {event.title}
         </h3>
         
         {/* Organizer Name */}
-        <div className="flex items-center gap-1.5 mb-1.5 text-gray-500 text-xs">
+        <div className={`flex items-center gap-1.5 mb-1.5 text-gray-500 ${compact ? 'text-[11px]' : 'text-xs'}`}>
           <span className="line-clamp-1">by {organizerName || 'Loading...'}</span>
         </div>
         
-        <div className="flex items-center gap-1.5 mb-1.5 text-gray-600 text-xs">
+        <div className={`flex items-center gap-1.5 mb-1.5 text-gray-600 ${compact ? 'text-[11px]' : 'text-xs'}`}>
           <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
           <span className="line-clamp-1">{formatDateDMY(event.date)}</span>
         </div>
         
         <div className="flex items-center justify-between mt-2">
           {event.location ? (
-            <div className="flex items-center gap-1.5 text-gray-600 text-xs">
+            <div className={`flex items-center gap-1.5 text-gray-600 ${compact ? 'text-[11px]' : 'text-xs'}`}>
               <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="line-clamp-1">{event.location}</span>
             </div>
