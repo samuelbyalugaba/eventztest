@@ -290,7 +290,7 @@ html {
 }
 
 .event-discovery-page .event-card-compact > div:first-child {
-  height: 7.65rem !important;
+  height: 9.75rem !important;
 }
 
 .event-discovery-page .event-card-compact > div:nth-child(2) {
@@ -315,6 +315,74 @@ html {
 .event-discovery-page .event-card-compact svg {
   width: 0.74rem !important;
   height: 0.74rem !important;
+}
+
+.bottom-search-orb {
+  position: relative;
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.bottom-search-orb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid transparent;
+  border-top-color: #8A2BE2;
+  border-right-color: rgba(138, 43, 226, 0.3);
+  border-radius: 9999px;
+  animation: bottom-search-spin 3s linear infinite;
+}
+
+.bottom-search-orb::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 9999px;
+  background: #F3EEFF;
+  transition: background 0.2s ease;
+}
+
+.bottom-search-link:hover .bottom-search-orb::after {
+  background: rgba(138, 43, 226, 0.15);
+}
+
+.bottom-search-link:active .bottom-search-orb {
+  transform: scale(0.9);
+}
+
+.bottom-search-orb svg {
+  position: relative;
+  z-index: 1;
+  color: #8A2BE2;
+  transition: transform 0.2s ease;
+}
+
+.bottom-search-link:hover .bottom-search-orb svg {
+  transform: scale(1.1);
+}
+
+.bottom-search-label {
+  color: #8A2BE2;
+  font-size: 0.5625rem !important;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 0.8rem;
+  text-transform: uppercase;
+}
+
+@keyframes bottom-search-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @layer utilities {

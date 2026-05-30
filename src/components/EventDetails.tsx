@@ -303,6 +303,30 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messageText, setMessageText] = useState('');
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('search') === '1') {
+      setShowSearchModal(true);
+    }
+  }, [location.search]);
+
+  const closeSearchModal = () => {
+    setShowSearchModal(false);
+
+    const params = new URLSearchParams(location.search);
+    if (params.get('search') !== '1') return;
+
+    params.delete('search');
+    const nextSearch = params.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true, state: location.state },
+    );
+  };
+
   // Sync activeConversation
   useEffect(() => {
     if (activeConversation) {
@@ -975,7 +999,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
       {showSearchModal && (
         <PremiumSearchModal
-          onClose={() => setShowSearchModal(false)}
+          onClose={closeSearchModal}
           events={events}
                     onEventSelect={(event: ApiEvent) => handleEventClick(event)}
           onPersonSelect={(person) => setSelectedUser(person)}

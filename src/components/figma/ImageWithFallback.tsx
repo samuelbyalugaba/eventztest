@@ -15,6 +15,8 @@ interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElemen
   resize?: 'cover' | 'contain' | 'fill'
   /** Skip Supabase image optimization */
   skipOptimize?: boolean
+  /** Object-fit class for the rendered image; defaults to object-cover */
+  imageClassName?: string
 }
 
 export function ImageWithFallback(props: ImageWithFallbackProps) {
@@ -44,6 +46,7 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
     quality,
     resize,
     skipOptimize,
+    imageClassName,
     ...rest
   } = props
 
@@ -106,7 +109,7 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
           <img
             src={optimizedSrc}
             alt={alt}
-            className={`w-full h-full object-cover ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+            className={`w-full h-full ${imageClassName ?? 'object-cover'} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
             loading="lazy"
             decoding="async"
             {...rest}
