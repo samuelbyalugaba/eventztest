@@ -23,7 +23,6 @@ interface FeedContentProps {
   isRestoringScroll: boolean;
   hasMore: boolean;
   isLoadingMore: boolean;
-  audioUnlocked: boolean;
   isPaused?: boolean;
   onProfileClick: (user: any, e?: React.MouseEvent) => void;
   onLike: (id: number) => Promise<void>;
@@ -43,7 +42,6 @@ export function FeedContent({
   isRestoringScroll,
   hasMore,
   isLoadingMore,
-  audioUnlocked,
   isPaused,
   onProfileClick,
   onLike,
@@ -145,7 +143,6 @@ export function FeedContent({
                   onShare={(p) => onShare(p)}
                   onProfileClick={(user) => onProfileClick(user)}
                   onMessage={(user) => onMessage(user)}
-                  audioUnlocked={audioUnlocked}
                   onViewPost={(startTime, isMuted) => onViewPost(post, startTime, isMuted)}
                   onViewComments={() => onViewComments(post)}
                   isPaused={isPaused}

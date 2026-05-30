@@ -27,7 +27,6 @@ interface PostCardProps {
   onMessage?: (user: any) => void;
   onViewPost?: (startTime?: number, isMuted?: boolean) => void;
   onViewComments?: () => void;
-  audioUnlocked?: boolean;
   isPaused?: boolean;
 }
 
@@ -51,7 +50,6 @@ export const PostCard = React.memo(function PostCard({
   onMessage, 
   onViewPost, 
   onViewComments, 
-  audioUnlocked = false,
   isPaused = false
 }: PostCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -127,6 +125,32 @@ export const PostCard = React.memo(function PostCard({
       videoEl.controls = true;
     }
   };
+
+  const markVideoReady = useCallback(() => {
+    setIsVideoLoading(false);
+  }, []);
+
+  const toggleVideoMute = useCallback((videoEl?: HTMLVideoElement | null) => {
+    const target = videoEl || videoRef.current;
+    const nextMuted = !isMuted;
+
+    setIsMuted(nextMuted);
+
+    if (!target) return;
+
+    target.muted = nextMuted;
+
+    if (!nextMuted && target.paused) {
+      const playPromise = target.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          target.muted = true;
+          setIsMuted(true);
+          setIsPlaying(false);
+        });
+      }
+    }
+  }, [isMuted]);
 
   // Haptic feedback helper
   const triggerHaptic = () => {
@@ -209,9 +233,8 @@ export const PostCard = React.memo(function PostCard({
             const canAutoplay = !isLowInternet || entry.intersectionRatio >= 0.8;
             if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && !isPaused && canAutoplay) {
               if (videoRef.current.paused) {
-                const shouldMute = !audioUnlocked;
-                videoRef.current.muted = shouldMute;
-                setIsMuted(shouldMute);
+                videoRef.current.muted = true;
+                setIsMuted(true);
 
                 const playPromise = videoRef.current.play();
                 if (playPromise !== undefined) {
@@ -224,10 +247,6 @@ export const PostCard = React.memo(function PostCard({
                       setIsPlaying(false);
                     });
                 }
-              } else if (audioUnlocked && videoRef.current.muted) {
-                // If already playing and audio is unlocked, ensure we are unmuted
-                videoRef.current.muted = false;
-                setIsMuted(false);
               }
             } else {
               // Pause if less than 50% visible OR if we are explicitly paused
@@ -239,7 +258,7 @@ export const PostCard = React.memo(function PostCard({
           }
         });
       },
-      { threshold: 0.5 }
+      { threshold: [0, 0.25, 0.5, 0.8, 1] }
     );
 
     if (videoRef.current) {
@@ -258,15 +277,7 @@ export const PostCard = React.memo(function PostCard({
         observer.unobserve(videoRef.current);
       }
     };
-  }, [carouselIndex, post.id, audioUnlocked, isPaused]);
-
-  // Effect to handle audio unlock when already playing
-  useEffect(() => {
-    if (audioUnlocked && isPlaying && videoRef.current && videoRef.current.muted) {
-      videoRef.current.muted = false;
-      setIsMuted(false);
-    }
-  }, [audioUnlocked, isPlaying]);
+  }, [carouselIndex, post.id, isLowInternet, isPaused]);
 
   const handleLike = async () => {
     // Optimistic UI
@@ -317,6 +328,10 @@ export const PostCard = React.memo(function PostCard({
     : post.content.images?.find((u) => !!u && !isVideo(u));
   const currentVideoSrc = currentMedia ? `${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}` : undefined;
   const currentAspectRatio = currentMedia ? (mediaAspectRatios[currentMedia] ?? 1) : 1;
+
+  useEffect(() => {
+    setIsVideoLoading(isCurrentMediaVideo);
+  }, [currentVideoSrc, isCurrentMediaVideo]);
 
   // Determine display profile (Unified Identity)
   const displayProfile = {
@@ -419,9 +434,17 @@ export const PostCard = React.memo(function PostCard({
                                   const next = v.videoWidth / v.videoHeight;
                                   setMediaAspectRatios((prev) => (prev[media] === next ? prev : { ...prev, [media]: next }));
                                 }
-                                setIsVideoLoading(false);
+                                markVideoReady();
                                 requestAnimationFrame(updateCarouselHeight);
                               }}
+                              onLoadedData={markVideoReady}
+                              onCanPlay={markVideoReady}
+                              onPlaying={() => {
+                                markVideoReady();
+                                setIsPlaying(true);
+                              }}
+                              onPause={() => setIsPlaying(false)}
+                              onError={markVideoReady}
                             />
                             {/* Video Controls (Show only on active slide) */}
                             {isActive && (
@@ -442,7 +465,11 @@ export const PostCard = React.memo(function PostCard({
                                 </div>
                                 <div className="absolute bottom-4 right-4 z-10">
                                   <button 
-                                    onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const videoEl = document.getElementById(`video-card-${post.id}-${index}`) as HTMLVideoElement | null;
+                                      toggleVideoMute(videoEl);
+                                    }}
                                     className={mediaControlButtonClass}
                                   >
                                     {isMuted ? <VolumeX className={mediaControlIconClass} /> : <Volume2 className={mediaControlIconClass} />}
@@ -522,8 +549,16 @@ export const PostCard = React.memo(function PostCard({
                         const next = v.videoWidth / v.videoHeight;
                         setMediaAspectRatios((prev) => (prev[currentMedia] === next ? prev : { ...prev, [currentMedia]: next }));
                       }
-                      setIsVideoLoading(false);
+                      markVideoReady();
                     }}
+                    onLoadedData={markVideoReady}
+                    onCanPlay={markVideoReady}
+                    onPlaying={() => {
+                      markVideoReady();
+                      setIsPlaying(true);
+                    }}
+                    onPause={() => setIsPlaying(false)}
+                    onError={markVideoReady}
                   />
                   <div className="absolute bottom-4 left-4 z-10">
                     <button
@@ -541,7 +576,11 @@ export const PostCard = React.memo(function PostCard({
                   </div>
                   <div className="absolute bottom-4 right-4 z-10">
                     <button 
-                      onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const videoEl = document.getElementById(`video-card-${post.id}`) as HTMLVideoElement | null;
+                        toggleVideoMute(videoEl);
+                      }}
                       className={mediaControlButtonClass}
                     >
                       {isMuted ? <VolumeX className={mediaControlIconClass} /> : <Volume2 className={mediaControlIconClass} />}

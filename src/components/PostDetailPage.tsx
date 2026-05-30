@@ -84,14 +84,22 @@ export function PostDetailPage({
         if (startTime > 0) {
           video.currentTime = startTime;
         }
+
+        const dispatchPlaying = () => {
+          window.dispatchEvent(new CustomEvent('video-play', { detail: { id: post.id } }));
+        };
         
         // Ensure it starts playing if it's supposed to
         const playPromise = video.play();
         if (playPromise !== undefined) {
           playPromise.then(() => {
-            // Dispatch event to pause other videos
-            window.dispatchEvent(new CustomEvent('video-play', { detail: { id: post.id } }));
-          }).catch(_error => {
+            dispatchPlaying();
+          }).catch(() => {
+            if (!video.muted) {
+              video.muted = true;
+              setIsMuted(true);
+              video.play().then(dispatchPlaying).catch(() => {});
+            }
           });
         }
       };
@@ -106,7 +114,7 @@ export function PostDetailPage({
         video.removeEventListener('loadedmetadata', handleMetadata);
       };
     }
-  }, [startTime]);
+  }, [post.id, startTime]);
 
   const updateCarouselHeight = useCallback(() => {
     if (!api) return;

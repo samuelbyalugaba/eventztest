@@ -60,7 +60,6 @@ export function Feed({
   const [likeAnimation, setLikeAnimation] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [exploreSearch, setExploreSearch] = useState('');
   const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
   const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
@@ -198,23 +197,6 @@ export function Feed({
     const timer = setTimeout(performSearch, 300);
     return () => clearTimeout(timer);
   }, [exploreSearch]);
-
-  useEffect(() => {
-    const unlockAudio = () => {
-      setAudioUnlocked(true);
-      window.removeEventListener('click', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
-    };
-    window.addEventListener('click', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
-    window.addEventListener('keydown', unlockAudio);
-    return () => {
-      window.removeEventListener('click', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
-    };
-  }, []);
 
   useEffect(() => {
     if (selectedPost) {
@@ -571,7 +553,6 @@ export function Feed({
               isRestoringScroll={isRestoringScroll}
               hasMore={hasMore}
               isLoadingMore={isLoadingMore}
-              audioUnlocked={audioUnlocked}
               isPaused={isFeedPaused}
               onProfileClick={handleOpenUserProfile}
               onLike={onLikeId}
