@@ -1,7 +1,7 @@
 import { useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { AuthScreen } from './components/AuthScreen';
-import { Calendar, Radio, User, Rss } from 'lucide-react';
+import { Calendar, Menu, Radio, Search, User } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { useMessaging } from './contexts/MessagingContext';
 import { Toaster } from 'sonner';
@@ -194,6 +194,7 @@ export default function App() {
     isProfileSubpagePath(backgroundLocation?.pathname);
   const effectiveLocation = backgroundLocation || location;
   const effectivePath = effectiveLocation.pathname;
+  const isSearchTab = effectivePath === '/events' && new URLSearchParams(effectiveLocation.search).get('search') === '1';
   const isEventsTab = effectivePath === '/events' || effectivePath === '/';
   const isFeedTab = effectivePath === '/feed';
   const isLiveTab = effectivePath === '/live';
@@ -448,11 +449,11 @@ export default function App() {
       {!shouldHideBottomNav && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 pb-[env(safe-area-inset-bottom)] lg:hidden">
           <div className="max-w-7xl mx-auto px-2 sm:px-4">
-            <div className="flex justify-around items-center h-[3.75rem]">
+            <div className="flex items-center justify-around h-[4.75rem]">
               <Link
                 to="/events"
-                className={`flex min-h-11 flex-col items-center justify-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
-                  location.pathname === '/events' || location.pathname === '/' ? 'text-purple-600' : 'text-gray-500'
+                className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
+                  (location.pathname === '/events' || location.pathname === '/') && !isSearchTab ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
                 <Calendar className="w-[1.375rem] h-[1.375rem]" />
@@ -460,7 +461,7 @@ export default function App() {
               </Link>
               <Link
                 to="/live"
-                className={`relative flex min-h-11 flex-col items-center justify-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
+                className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
                   location.pathname === '/live' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
@@ -471,17 +472,27 @@ export default function App() {
                 )}
               </Link>
               <Link
+                to="/events?search=1"
+                aria-label="Search"
+                className="bottom-search-link relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 px-1 py-1 text-purple-600 transition-colors"
+              >
+                <span className="bottom-search-orb">
+                  <Search className="h-3.5 w-3.5" />
+                </span>
+                <span className="bottom-search-label">Search</span>
+              </Link>
+              <Link
                 to="/feed"
-                className={`flex min-h-11 flex-col items-center justify-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
+                className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
                   location.pathname === '/feed' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >
-                <Rss className="w-[1.375rem] h-[1.375rem]" />
+                <Menu className="w-[1.375rem] h-[1.375rem]" />
                 <span className="text-xs font-medium">Feed</span>
               </Link>
               <Link
                 to="/profile"
-                className={`flex min-h-11 flex-col items-center justify-center gap-0.5 px-2 sm:px-4 py-1.5 transition-colors ${
+                className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
                   location.pathname === '/profile' ? 'text-purple-600' : 'text-gray-500'
                 }`}
               >

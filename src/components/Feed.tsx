@@ -3,7 +3,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } fr
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { toggleLikePost, toggleSavePost, createPostComment, incrementPostView, deletePost, getPostComments, toggleLikeComment, updatePostCaption, searchProfiles } from '../utils/supabase/api';
+import { toggleLikePost, toggleSavePost, createPostComment, incrementPostView, deletePost, getPostComments, toggleLikeComment, updatePostCaption } from '../utils/supabase/api';
 import { formatTimeAgo } from '../utils/format';
 import { Post, HighlightClip, Conversation } from '../types';
 import { PostDetailModal } from './PostDetailModal';
@@ -60,9 +60,6 @@ export function Feed({
   const [likeAnimation, setLikeAnimation] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
-  const [exploreSearch, setExploreSearch] = useState('');
-  const [searchedProfiles, setSearchedProfiles] = useState<any[]>([]);
-  const [isSearchingProfiles, setIsSearchingProfiles] = useState(false);
   const [isRestoringScroll, setIsRestoringScroll] = useState(
     !!sessionStorage.getItem('feedScrollPos') || !!sessionStorage.getItem('feedLastPostId')
   );
@@ -182,21 +179,6 @@ export function Feed({
     attempt();
     return () => { cancelAnimationFrame(rafId); };
   }, [isLoading, posts.length]);
-
-  useEffect(() => {
-    const performSearch = async () => {
-      if (exploreSearch.trim().length >= 2) {
-        setIsSearchingProfiles(true);
-        try {
-          const profiles = await searchProfiles(exploreSearch.trim());
-          setSearchedProfiles(profiles || []);
-        } catch (error) { console.error('Error searching profiles:', error); }
-        finally { setIsSearchingProfiles(false); }
-      } else { setSearchedProfiles([]); }
-    };
-    const timer = setTimeout(performSearch, 300);
-    return () => clearTimeout(timer);
-  }, [exploreSearch]);
 
   useEffect(() => {
     if (selectedPost) {
@@ -521,8 +503,6 @@ export function Feed({
           showMessages={false}
           unreadMessagesCount={unreadMessagesCount}
           notifications={notifications}
-          exploreSearch={exploreSearch}
-          setExploreSearch={setExploreSearch}
           onToggleNotifications={handleToggleNotifications}
           onToggleMessages={handleToggleMessages}
           showMessagesOrPost={!!selectedPost}
@@ -545,9 +525,6 @@ export function Feed({
           <div id="top-sentinel" className="w-full h-px pointer-events-none" />
           <div className="max-w-2xl xl:max-w-[640px] mx-auto px-3 pt-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] space-y-3">
             <FeedContent
-              exploreSearch={exploreSearch}
-              isSearchingProfiles={isSearchingProfiles}
-              searchedProfiles={searchedProfiles}
               isLoading={isLoading}
               filteredPosts={filteredPosts}
               isRestoringScroll={isRestoringScroll}

@@ -41,7 +41,7 @@ export const EventCard = memo(function EventCard({
       className={`bg-white ${compact ? 'rounded-md' : 'rounded-2xl'} overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer ${className}`}
     >
       {/* Event Image */}
-      <div className={`relative w-full ${compact ? 'h-[7.5rem]' : 'h-40'} overflow-hidden`}>
+      <div className={`relative w-full ${compact ? 'h-[9.75rem]' : 'h-40'} overflow-hidden`}>
         <ImageWithFallback
           src={event.image_url}
           alt={event.title}

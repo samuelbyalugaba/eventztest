@@ -59,6 +59,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
   const navigate = useNavigate();
   const location = useLocation();
   const [isSaved, setIsSaved] = useState(event.isSaved || false);
+  const [coverAspectRatio, setCoverAspectRatio] = useState(4 / 5);
   const [hasVirtualAccess, setHasVirtualAccess] = useState(false);
   const [isCheckingVirtualAccess, setIsCheckingVirtualAccess] = useState(false);
   const virtualPriceNumber = (() => {
@@ -79,6 +80,10 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
   const externalTicketingHref = externalTicketingPhone
     ? `tel:${externalTicketingPhone.replace(/[^\d+]/g, '')}`
     : '';
+
+  useEffect(() => {
+    setCoverAspectRatio(4 / 5);
+  }, [event.id, event.image_url]);
 
   const handleExternalTicketing = () => {
     if (externalTicketingHref) {
@@ -469,11 +474,26 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto relative bg-white pb-6">
         {/* Cover Image with Overlays */}
-        <div className="relative w-full h-96">
+        <div
+          className="relative w-full overflow-hidden bg-gray-100"
+          style={{
+            aspectRatio: coverAspectRatio,
+            maxHeight: '70dvh',
+          }}
+        >
           <ImageWithFallback
             src={event.image_url}
             alt={event.title}
-            className="w-full h-full object-cover"
+            displayWidth={900}
+            resize="contain"
+            className="h-full w-full"
+            imageClassName="object-contain"
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                setCoverAspectRatio(img.naturalWidth / img.naturalHeight);
+              }
+            }}
           />
           
           {/* Back Button */}

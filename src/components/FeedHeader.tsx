@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Search, Bell, MessageSquare } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Bell, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FeedHeaderProps {
@@ -8,8 +8,6 @@ interface FeedHeaderProps {
   showMessages: boolean;
   unreadMessagesCount: number;
   notifications: any[];
-  exploreSearch: string;
-  setExploreSearch: (value: string) => void;
   onToggleNotifications: () => void;
   onToggleMessages: () => void;
   showMessagesOrPost?: boolean;
@@ -23,15 +21,12 @@ export function FeedHeader({
   showMessages,
   unreadMessagesCount,
   notifications,
-  exploreSearch,
-  setExploreSearch,
   onToggleNotifications,
   onToggleMessages,
   showMessagesOrPost = false,
   scrollContainer
 }: FeedHeaderProps) {
   const headerRef = useRef<HTMLDivElement | null>(null);
-  const [showExtendedHeader, setShowExtendedHeader] = useState(true);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
   const headerHeightRef = useRef(0);
@@ -110,26 +105,6 @@ export function FeedHeader({
     };
   }, [scrollContainer, showMessagesOrPost]);
 
-  useEffect(() => {
-    const sentinel = document.getElementById('top-sentinel');
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const atTop = entry.isIntersecting;
-        setShowExtendedHeader(atTop);
-      },
-      {
-        root: scrollContainer ?? null,
-        threshold: 0,
-        rootMargin: '0px'
-      }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [scrollContainer]);
-
   return (
     <div
       id="feed-header"
@@ -180,23 +155,6 @@ export function FeedHeader({
                 </span>
               )}
             </button>
-          </div>
-        </div>
-
-        {/* Search and Filters - Animated on scroll */}
-        <div className={`overflow-hidden transition-[max-height,opacity,margin-top] duration-200 ease-out ${
-          showExtendedHeader ? 'max-h-36 opacity-100 mt-2.5' : 'max-h-0 opacity-0 mt-0 pointer-events-none'
-        }`}>
-          <div className="mb-3">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                value={exploreSearch}
-                onChange={(e) => setExploreSearch(e.target.value)}
-                placeholder="Search"
-                className="w-full pl-10 pr-3 py-2.5 bg-gray-100/60 hover:bg-gray-100 focus:bg-white border border-transparent rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none transition-all text-sm font-medium"
-              />
-            </div>
           </div>
         </div>
       </div>
