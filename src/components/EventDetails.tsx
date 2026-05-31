@@ -621,30 +621,16 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         <div className="px-3 pb-6 pt-0">
           {/* Header */}
           <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 -mx-3 px-3 transition-all rounded-b-[24px]">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex flex-col">
                 <h1 className="text-[22px] font-bold leading-tight tracking-tight text-gray-900">EVENTZ</h1>
                 <p className="text-[13px] font-medium leading-snug text-gray-600">Discover amazing events happening around you</p>
               </div>
-            </div>
-
-            {/* Search Bar & Filter */}
-            <div className="flex items-center gap-2.5">
-              <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search events..." 
-                  className="w-full rounded-xl border border-gray-100 bg-white py-2 pl-10 pr-3 text-sm font-medium text-gray-900 shadow-sm transition-all placeholder-gray-400 focus:border-[#8A2BE2] focus:outline-none focus:ring-4 focus:ring-[#8A2BE2]/10"
-                  onClick={() => setShowSearchModal(true)}
-                  readOnly
-                />
-              </div>
               <button 
                 onClick={() => setShowFilters(true)}
-                className="relative rounded-xl border border-gray-100 bg-white p-2 shadow-sm transition-all hover:bg-gray-50 group"
+                className="icon-circle-button relative rounded-full border border-gray-100 bg-white shadow-sm transition-all hover:bg-gray-50 group"
               >
-                <Filter className="w-4 h-4 text-gray-600 group-hover:text-[#8A2BE2] transition-colors" />
+                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#8A2BE2]" />
                 {hasActiveFilters && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#8A2BE2] text-white text-[10px] rounded-full flex items-center justify-center shadow-md">
                     {activeFiltersCount}
