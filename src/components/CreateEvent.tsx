@@ -974,7 +974,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                         updateForm('subcategory', subcategory.name);
                         setCategoryOpen(false);
                       }}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                      className={`create-subcategory-chip inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition ${
                         active ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-200'
                       }`}
                     >
@@ -989,25 +989,25 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             <div className="h-px bg-gray-200" />
 
             <div className="flex items-center justify-between gap-3">
-              <div className="flex rounded-full border border-gray-200 bg-gray-100 p-1">
+              <div className="flex rounded-full border border-gray-200 bg-gray-100 p-0.5">
                 <button
                   type="button"
                   onClick={() => updateForm('ticketMode', 'tiers')}
-                  className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition ${
+                  className={`create-ticket-mode-button inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition ${
                     formData.ticketMode === 'tiers' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
                   }`}
                 >
-                  <Ticket className="h-3.5 w-3.5" />
+                  <Ticket className="h-3 w-3" />
                   Ticket tiers
                 </button>
                 <button
                   type="button"
                   onClick={() => updateForm('ticketMode', 'free')}
-                  className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition ${
+                  className={`create-ticket-mode-button inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition ${
                     formData.ticketMode === 'free' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
                   }`}
                 >
-                  <Users className="h-3.5 w-3.5" />
+                  <Users className="h-3 w-3" />
                   Free entry
                 </button>
               </div>
@@ -1015,7 +1015,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               <select
                 value={formData.currency}
                 onChange={(e) => handleCurrencyChange(e.target.value)}
-                className="h-8 max-w-[98px] rounded-full border border-gray-200 bg-gray-100 px-3 text-xs font-semibold text-gray-700 outline-none focus:border-purple-500"
+                className="create-currency-select h-7 max-w-[88px] rounded-full border border-gray-200 bg-gray-100 px-2.5 text-[11px] font-semibold text-gray-700 outline-none focus:border-purple-500"
                 aria-label="Currency"
               >
                 {createCurrencies.map((currency) => (
@@ -1081,11 +1081,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                       </div>
                       <div>
                         <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Capacity</label>
-                        <div className="flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 focus-within:border-purple-500">
+                        <div className="flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-1.5 focus-within:border-purple-500">
                           <button
                             type="button"
                             onClick={() => handleAdjustTierCapacity(index, -10)}
-                            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-gray-600 shadow-sm"
+                            className="capacity-stepper-button rounded-md bg-white text-gray-600 shadow-sm"
                             aria-label="Decrease capacity"
                           >
                             <Minus className="h-3.5 w-3.5" />
@@ -1103,7 +1103,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                           <button
                             type="button"
                             onClick={() => handleAdjustTierCapacity(index, 10)}
-                            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-gray-600 shadow-sm"
+                            className="capacity-stepper-button rounded-md bg-white text-gray-600 shadow-sm"
                             aria-label="Increase capacity"
                           >
                             <Plus className="h-3.5 w-3.5" />
@@ -1256,11 +1256,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                   <button
                     type="button"
                     onClick={() => updateForm('requireRegistration', !formData.requireRegistration)}
-                    className={`relative h-6 w-11 rounded-full transition ${formData.requireRegistration ? 'bg-purple-600' : 'bg-gray-300'}`}
+                    className={`eventz-switch transition ${formData.requireRegistration ? 'bg-purple-600' : 'bg-gray-200'}`}
                     aria-pressed={formData.requireRegistration}
                     aria-label="Toggle registration requirement"
                   >
-                    <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${formData.requireRegistration ? 'left-6' : 'left-1'}`} />
+                    <span className={`eventz-switch-thumb ${formData.requireRegistration ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
                 </div>
 
@@ -1354,11 +1354,11 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     <button
                       type="button"
                       onClick={() => handleSettingChange(setting.key, !formData.settings[setting.key])}
-                      className={`relative h-6 w-11 shrink-0 rounded-full transition ${formData.settings[setting.key] ? 'bg-purple-600' : 'bg-gray-300'}`}
+                      className={`eventz-switch shrink-0 transition ${formData.settings[setting.key] ? 'bg-purple-600' : 'bg-gray-200'}`}
                       aria-pressed={formData.settings[setting.key]}
                       aria-label={`Toggle ${setting.label}`}
                     >
-                      <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${formData.settings[setting.key] ? 'left-6' : 'left-1'}`} />
+                      <span className={`eventz-switch-thumb ${formData.settings[setting.key] ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
                 ))}

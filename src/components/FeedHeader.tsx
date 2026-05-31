@@ -122,7 +122,7 @@ export function FeedHeader({
           <div className="flex items-center gap-2">
             <button
               aria-label="Notifications"
-              className={`p-2 rounded-lg transition-colors relative ${showNotifications ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showNotifications ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
               onClick={() => {
                 if (!currentUser) {
                   toast.error('Sign in to view notifications');
@@ -131,7 +131,7 @@ export function FeedHeader({
                 onToggleNotifications();
               }}
             >
-              <Bell className={`w-4 h-4 ${showNotifications ? 'text-purple-600' : 'text-gray-700'}`} />
+              <Bell className={`h-[18px] w-[18px] ${showNotifications ? 'text-purple-600' : 'text-gray-700'}`} />
               {/* Notification Badge */}
               {notifications.filter(n => !n.read).length > 0 && (
                 <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
@@ -139,7 +139,7 @@ export function FeedHeader({
             </button>
             <button
               aria-label="Messages"
-              className={`p-2 rounded-lg transition-colors relative ${showMessages ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showMessages ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
               onClick={() => {
                 if (!currentUser) {
                   toast.error('Sign in to view messages');
@@ -148,7 +148,7 @@ export function FeedHeader({
                 onToggleMessages();
               }}
             >
-              <MessageSquare className="w-4 h-4 text-gray-700" />
+              <MessageSquare className="h-[18px] w-[18px] text-gray-700" />
               {unreadMessagesCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-[#8A2BE2] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                   {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}

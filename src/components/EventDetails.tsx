@@ -654,13 +654,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       type="button"
                       aria-pressed={isSelected}
                       onClick={() => handleCategorySelect(category.id)}
-                      className={`event-category-chip flex h-6 flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 text-[10.5px] font-semibold transition-all ${
+                      className={`event-category-chip flex h-[1.65rem] flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-semibold transition-all ${
                         isSelected
                           ? 'border-gray-950 bg-gray-950 text-white shadow-sm'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
                       }`}
                     >
-                      {Icon && <Icon className="h-3 w-3" />}
+                      {Icon && <Icon className="h-[0.8rem] w-[0.8rem]" />}
                       <span>{category.chipName || category.name}</span>
                     </button>
                   );
@@ -681,10 +681,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       <button
                         key={subcategory}
                         onClick={() => setSelectedSubcategory(selectedSubcategory === subcategory ? '' : subcategory)}
-                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm transition-all ${ 
+                        className={`event-subcategory-chip flex h-[1.65rem] flex-shrink-0 items-center rounded-full border px-2.5 text-[11px] font-semibold transition-all ${
                           selectedSubcategory === subcategory
-                            ? 'bg-purple-600 text-white shadow-md'
-                            : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                            ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'
                         }`}
                       >
                         {subcategory}
