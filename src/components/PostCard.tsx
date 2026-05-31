@@ -495,9 +495,13 @@ export const PostCard = React.memo(function PostCard({
       >
         {isCarousel ? (
           <div onDoubleClick={handleDoubleTap}>
-            <Carousel setApi={setApi} className="w-full">
+            <Carousel
+              setApi={setApi}
+              opts={{ align: 'start', containScroll: 'trimSnaps', dragFree: false, duration: 30 }}
+              className="w-full"
+            >
               <CarouselContent
-                className="transition-[height] duration-300"
+                className="ml-0 transition-[height] duration-500 ease-out will-change-transform"
                 style={carouselHeight ? { height: `${carouselHeight}px` } : undefined}
               >
                 {post.content.images?.map((media, index) => {
@@ -764,7 +768,7 @@ export const PostCard = React.memo(function PostCard({
           onClick={handleLike}
           className={`feed-action-btn feed-like-btn ${isLiked ? 'feed-action-liked' : ''}`}
         >
-           <Heart className={`h-[0.9375rem] w-[0.9375rem] ${isLiked ? 'fill-current' : ''}`} />
+           <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
            <span>{likesCount}</span>
         </button>
 
@@ -775,7 +779,7 @@ export const PostCard = React.memo(function PostCard({
           }}
           className="feed-action-btn"
         >
-          <CommentIcon className="h-[0.9375rem] w-[0.9375rem]" color="currentColor" />
+          <CommentIcon className="h-4 w-4" color="currentColor" />
           <span>{commentsCount}</span>
         </button>
 
@@ -786,7 +790,7 @@ export const PostCard = React.memo(function PostCard({
           className="feed-action-icon-btn"
           aria-label="Share post"
         >
-          <Share2 className="h-[0.9375rem] w-[0.9375rem]" />
+          <Share2 className="h-4 w-4" />
         </button>
 
         <button
@@ -794,7 +798,7 @@ export const PostCard = React.memo(function PostCard({
           className={`feed-save-pill ${isSaved ? 'feed-save-saved' : ''}`}
           aria-label={isSaved ? "Unsave post" : "Save post"}
         >
-          <Bookmark className={`h-[0.9375rem] w-[0.9375rem] ${isSaved ? 'fill-current' : ''}`} />
+          <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
         </button>
       </div>
     </article>
