@@ -36,6 +36,33 @@ export const removePostFromFeedCache = (postId: number) => {
   }
 };
 
+export const removeUserPostsFromFeedCache = (userId: string) => {
+  const isDifferentUser = (post: Post) => String(post.user?.id || post.user_id || '') !== String(userId);
+
+  feedCacheMemory = feedCacheMemory
+    ? { ...feedCacheMemory, posts: feedCacheMemory.posts.filter(isDifferentUser) }
+    : null;
+
+  try {
+    const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
+    if (!cachedRaw) return;
+
+    const cached = JSON.parse(cachedRaw);
+    if (!Array.isArray(cached.posts)) return;
+
+    localStorage.setItem(
+      FEED_CACHE_KEY,
+      JSON.stringify({
+        ...cached,
+        posts: cached.posts.filter(isDifferentUser),
+        timestamp: Date.now(),
+      }),
+    );
+  } catch {
+    localStorage.removeItem(FEED_CACHE_KEY);
+  }
+};
+
 export function useFeedData(initialCurrentUser?: any) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [hasMore, setHasMore] = useState(true);

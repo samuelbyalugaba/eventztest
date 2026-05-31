@@ -5,10 +5,13 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { CommentIcon } from './icons/CommentIcon';
 import verifiedBadge from '../assets/verified-badge.png';
 import { 
-  MessageSquare, Share2, Bookmark, 
+  Share2, Bookmark, MoreHorizontal,
   Volume2, VolumeX, Maximize,
-  ThumbsUp
+  Heart, Flag, Ban, MessageCircle
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { reportContent, blockUser } from '../utils/supabase/api';
+import { askForReportReason, confirmBlockUser } from '../utils/moderation';
 import {
   Carousel,
   CarouselContent,
@@ -17,6 +20,12 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "./ui/carousel";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 interface PostCardProps {
   post: Post;
@@ -25,6 +34,7 @@ interface PostCardProps {
   onShare: (post: Post) => Promise<void>;
   onProfileClick: (user: Post['user']) => void;
   onMessage?: (user: any) => void;
+  onUserBlocked?: (userId: string) => void;
   onViewPost?: (startTime?: number, isMuted?: boolean) => void;
   onViewComments?: () => void;
   isPaused?: boolean;
@@ -47,7 +57,8 @@ export const PostCard = React.memo(function PostCard({
   onSave, 
   onShare, 
   onProfileClick, 
-  onMessage, 
+  onMessage,
+  onUserBlocked,
   onViewPost, 
   onViewComments, 
   isPaused = false
@@ -327,38 +338,91 @@ export const PostCard = React.memo(function PostCard({
     ? (post.highlights?.[0]?.thumbnail || post.content.images?.find((u) => !!u && !isVideo(u)))
     : post.content.images?.find((u) => !!u && !isVideo(u));
   const currentVideoSrc = currentMedia ? `${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}` : undefined;
-  const currentAspectRatio = currentMedia ? (mediaAspectRatios[currentMedia] ?? 1) : 1;
+  const getMediaFrameStyle = useCallback((media?: string): React.CSSProperties => {
+    const ratio = media ? mediaAspectRatios[media] : undefined;
+    return { aspectRatio: ratio && Number.isFinite(ratio) ? String(ratio) : '4 / 5' };
+  }, [mediaAspectRatios]);
 
   useEffect(() => {
     setIsVideoLoading(isCurrentMediaVideo);
   }, [currentVideoSrc, isCurrentMediaVideo]);
 
+  useEffect(() => {
+    requestAnimationFrame(updateCarouselHeight);
+  }, [mediaAspectRatios, carouselIndex, updateCarouselHeight]);
+
   // Determine display profile (Unified Identity)
   const displayProfile = {
     name: post.user.name || post.user.username || 'User',
+    username: post.user.username || '',
     avatar: post.user.avatar,
-    id: post.user.id,
-    isOrganizer: post.user.isOrganizer || post.user.isOrganizerPage
+    id: post.user.id || post.user_id,
+    verified: !!post.user.verified,
+    isOrganizer: post.user.isOrganizer || post.user.isOrganizerPage,
+    isOrganizerPage: post.user.isOrganizerPage
+  };
+  const postOwnerId = displayProfile.id || post.user_id;
+
+  const handleReportPost = async () => {
+    const reason = askForReportReason('this post');
+    if (!reason) return;
+
+    try {
+      await reportContent({
+        contentType: 'post',
+        contentId: post.id,
+        reason,
+        details: post.content.text,
+        reportedUserId: postOwnerId,
+      });
+      toast.success('Report submitted');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to submit report');
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!postOwnerId) {
+      toast.error('Could not find this profile');
+      return;
+    }
+    if (!confirmBlockUser(displayProfile.name)) return;
+
+    try {
+      await blockUser(postOwnerId);
+      onUserBlocked?.(postOwnerId);
+      toast.success('User blocked');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to block user');
+    }
+  };
+
+  const handleMessageUser = () => {
+    if (!onMessage) {
+      toast.error('Messaging is unavailable');
+      return;
+    }
+    onMessage(displayProfile);
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4 hover:shadow-md transition-shadow duration-300 p-3">
+    <article className="feed-post-card overflow-hidden">
       
       {/* 1. HEADER */}
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-2.5">
+      <div className="feed-post-head">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <UserAvatar 
             src={displayProfile.avatar} 
             name={displayProfile.name} 
-            size="sm"
+            size="md"
             verified={post.user.verified}
-            className="ring-2 ring-purple-50 cursor-pointer"
+            className="cursor-pointer border border-[#EDEDED]"
             onClick={() => onProfileClick(displayProfile as any)}
           />
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col">
             <div className="flex items-center gap-1.5">
               <span 
-                className="text-gray-900 font-bold text-sm cursor-pointer hover:text-purple-600 transition-colors"
+                className="feed-post-name cursor-pointer truncate transition-colors hover:text-purple-600"
                 onClick={() => onProfileClick(displayProfile as any)}
               >
                 {displayProfile.name}
@@ -371,26 +435,58 @@ export const PostCard = React.memo(function PostCard({
                 />
               )}
             </div>
-            <span className="text-xs text-gray-400">
+            <span className="feed-post-time">
               {post.timestamp}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={handleSave}
-            className={`inline-flex h-8 w-8 min-h-8 min-w-8 items-center justify-center rounded-full p-0 transition-colors active:scale-75 ${isSaved ? 'text-purple-600 bg-purple-50' : 'text-gray-400 hover:bg-gray-50'}`}
-            aria-label={isSaved ? "Unsave post" : "Save post"}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="feed-post-more hover:bg-gray-50"
+              aria-label="Post options"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-[1.125rem] w-[1.125rem]" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            sideOffset={8}
+            className="z-[90] min-w-[180px] rounded-xl border-gray-100 bg-white p-1.5 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Bookmark className={`block h-4 w-4 ${isSaved ? 'fill-purple-600' : ''}`} />
-          </button>
-        </div>
+            <DropdownMenuItem
+              onClick={() => void handleReportPost()}
+              className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 focus:bg-gray-50"
+            >
+              <Flag className="h-4 w-4" />
+              Report post
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => void handleBlockUser()}
+              className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 focus:bg-red-50 focus:text-red-600"
+            >
+              <Ban className="h-4 w-4" />
+              Block user
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleMessageUser}
+              className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 focus:bg-gray-50"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Message user
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* 2. MEDIA CONTENT */}
-      <div 
-        className="relative overflow-hidden group rounded-xl bg-gray-50 cursor-pointer"
+      <div
+        className="feed-post-media group cursor-pointer"
         onClick={(e) => { 
           e.stopPropagation(); 
           const startTime = videoRef.current?.currentTime || 0;
@@ -411,16 +507,20 @@ export const PostCard = React.memo(function PostCard({
 
                   return (
                     <CarouselItem key={index} className="pl-0">
-                      <div data-media-frame="true" className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: mediaAspectRatios[media] ?? 1 }}>
+                      <div
+                        data-media-frame="true"
+                        className="relative w-full overflow-hidden bg-[#F6F6F6]"
+                        style={getMediaFrameStyle(media)}
+                      >
                         {isMediaVideo ? (
-                          <div className="absolute inset-0 bg-black">
+                          <div className="absolute inset-0 bg-[#F6F6F6]">
                             {isVideoLoading && isActive && !videoPoster && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                             <video
                               id={`video-card-${post.id}-${index}`}
                               ref={isActive ? videoRef : null}
                               src={`${media}${media.includes('#') ? '' : '#t=0.1'}`}
                               poster={videoPoster}
-                              className={`absolute inset-0 w-full h-full object-contain pointer-events-none transition-opacity duration-300 ${isVideoLoading && isActive && !videoPoster ? 'opacity-0' : 'opacity-100'}`}
+                              className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ${isVideoLoading && isActive && !videoPoster ? 'opacity-0' : 'opacity-100'}`}
                               loop
                               muted={isMuted}
                               playsInline
@@ -482,7 +582,8 @@ export const PostCard = React.memo(function PostCard({
                           <ImageWithFallback
                             src={media}
                             alt={`Post content ${index + 1}`}
-                            className="absolute inset-0 w-full h-full object-contain"
+                            className="absolute inset-0 h-full w-full"
+                            imageClassName="object-cover"
                             fallbackType="image"
                             loading={index === 0 ? "eager" : "lazy"}
                             displayWidth={600}
@@ -524,17 +625,22 @@ export const PostCard = React.memo(function PostCard({
           </div>
         ) : (
           /* SINGLE MEDIA RENDER (No Carousel) */
-          <div className={`relative w-full flex items-center justify-center ${isCurrentMediaVideo ? 'bg-black min-h-[200px] sm:min-h-[250px]' : 'min-h-[200px] sm:min-h-[250px]'}`} onDoubleClick={handleDoubleTap}>
+          <div
+            data-media-frame="true"
+            className="relative flex w-full items-center justify-center bg-[#F6F6F6]"
+            style={getMediaFrameStyle(currentMedia)}
+            onDoubleClick={handleDoubleTap}
+          >
              {isCurrentMediaVideo ? (
                 /* ... Existing Video Logic for Single File ... */
-                <div className="relative w-full bg-black overflow-hidden" style={{ aspectRatio: currentAspectRatio }}>
+                <div className="relative h-full w-full overflow-hidden bg-[#F6F6F6]">
                   {isVideoLoading && !videoPoster && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                   <video
                     id={`video-card-${post.id}`}
                     ref={videoRef}
                     src={currentVideoSrc}
                     poster={videoPoster}
-                    className={`absolute inset-0 w-full h-full object-contain pointer-events-none transition-opacity duration-300 ${isVideoLoading && !videoPoster ? 'opacity-0' : 'opacity-100'}`}
+                    className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ${isVideoLoading && !videoPoster ? 'opacity-0' : 'opacity-100'}`}
                     loop
                     muted={isMuted}
                     playsInline
@@ -588,11 +694,12 @@ export const PostCard = React.memo(function PostCard({
                   </div>
                 </div>
              ) : (
-                <div className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: currentAspectRatio }}>
+                <div className="relative h-full w-full overflow-hidden bg-[#F6F6F6]">
                   <ImageWithFallback
                     src={currentMedia}
                     alt="Post content"
-                    className="absolute inset-0 w-full h-full object-contain"
+                    className="absolute inset-0 h-full w-full"
+                    imageClassName="object-cover"
                     fallbackType="image"
                     loading="lazy"
                     displayWidth={800}
@@ -614,66 +721,82 @@ export const PostCard = React.memo(function PostCard({
         {/* Double Tap Animation Overlay */}
         {showLikeAnimation && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 animate-in zoom-in-50 duration-300">
-            <ThumbsUp className="w-24 h-24 text-purple-600 fill-purple-600 drop-shadow-xl animate-bounce" />
+            <Heart className="w-24 h-24 text-purple-600 fill-purple-600 drop-shadow-xl animate-bounce" />
           </div>
         )}
       </div>
 
-      {/* 3. FOOTER ACTION BAR */}
-      <div className="mt-3 bg-purple-50 rounded-xl p-1.5 flex items-center justify-between gap-1.5">
-        <button 
+      {/* 3. TEXT CONTENT */}
+      {(post.content.text || (post.content.hashtags?.length ?? 0) > 0) && (
+        <div className="feed-post-caption">
+          {post.content.text && (
+            <>
+              <p
+                className={`transition-all ${isExpanded ? '' : 'line-clamp-3'}`}
+              >
+                {post.content.text}
+              </p>
+              {(post.content.text.length > 100 || post.content.text.split('\n').length > 3) && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="text-gray-500 text-xs mt-1 hover:text-gray-700 font-medium"
+                >
+                  {isExpanded ? 'Show less' : 'Show more'}
+                </button>
+              )}
+            </>
+          )}
+          {(post.content.hashtags ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {(post.content.hashtags ?? []).slice(0, 4).map((tag) => (
+                <span key={tag} className="feed-post-hashtag">
+                  {tag.startsWith('#') ? tag : `#${tag}`}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 4. FOOTER ACTION BAR */}
+      <div className="feed-post-actions">
+        <button
           onClick={handleLike}
-          className="flex-1 w-0 bg-white rounded-full py-1.5 px-2.5 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all"
+          className={`feed-action-btn feed-like-btn ${isLiked ? 'feed-action-liked' : ''}`}
         >
-           <ThumbsUp className={`w-4 h-4 ${isLiked ? 'text-purple-600 fill-purple-600' : 'text-gray-600'}`} />
-           <span className={`text-xs font-bold ${isLiked ? 'text-purple-600' : 'text-gray-700'}`}>{likesCount}</span>
+           <Heart className={`h-[0.9375rem] w-[0.9375rem] ${isLiked ? 'fill-current' : ''}`} />
+           <span>{likesCount}</span>
         </button>
 
-        <button 
+        <button
           onClick={(e) => { 
             e.stopPropagation(); 
             onViewComments?.(); 
           }}
-          className="flex-1 w-0 bg-white rounded-full py-1.5 px-2.5 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all"
+          className="feed-action-btn"
         >
-          <CommentIcon className="w-4 h-4" color="#4b5563" />
-          <span className="text-xs font-bold text-gray-700">{commentsCount}</span>
+          <CommentIcon className="h-[0.9375rem] w-[0.9375rem]" color="currentColor" />
+          <span>{commentsCount}</span>
         </button>
+
+        <div className="feed-action-spacer" />
 
         <button 
           onClick={() => onShare(post)}
-          className="flex-1 w-0 bg-white rounded-full py-1.5 px-2.5 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all"
+          className="feed-action-icon-btn"
+          aria-label="Share post"
         >
-          <Share2 className="w-4 h-4 text-gray-600" />
-        </button>
-        
-         <button 
-           onClick={() => onMessage?.(post.user)}
-           className="flex-1 w-0 bg-white rounded-full py-1.5 px-2.5 flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all"
-         >
-          <MessageSquare className="w-4 h-4 text-gray-600" />
+          <Share2 className="h-[0.9375rem] w-[0.9375rem]" />
         </button>
 
+        <button
+          onClick={handleSave}
+          className={`feed-save-pill ${isSaved ? 'feed-save-saved' : ''}`}
+          aria-label={isSaved ? "Unsave post" : "Save post"}
+        >
+          <Bookmark className={`h-[0.9375rem] w-[0.9375rem] ${isSaved ? 'fill-current' : ''}`} />
+        </button>
       </div>
-
-      {/* 4. TEXT CONTENT (Caption) - moved below actions */}
-      {post.content.text && (
-        <div className="mt-3 px-1">
-          <p 
-            className={`text-gray-800 text-sm leading-relaxed transition-all ${isExpanded ? '' : 'line-clamp-3'}`}
-          >
-            {post.content.text}
-          </p>
-          {(post.content.text.length > 100 || post.content.text.split('\n').length > 3) && (
-            <button 
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-500 text-xs mt-1 hover:text-gray-700 font-medium"
-            >
-              {isExpanded ? 'Show less' : 'Show more'}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+    </article>
   );
 });

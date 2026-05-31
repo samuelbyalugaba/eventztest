@@ -8,7 +8,7 @@ import { formatTimeAgo } from '../utils/format';
 import { Post, HighlightClip, Conversation } from '../types';
 import { PostDetailModal } from './PostDetailModal';
 import { handleShare } from '../utils/share';
-import { removePostFromFeedCache, useFeedData } from '../hooks/useFeedData';
+import { removePostFromFeedCache, removeUserPostsFromFeedCache, useFeedData } from '../hooks/useFeedData';
 
 import { ShareModal } from './ShareModal';
 import { FeedHeader } from './FeedHeader';
@@ -426,6 +426,14 @@ export function Feed({
     navigate(`/profile/${user.id}`);
   }, [navigate]);
 
+  const handleUserBlocked = useCallback((userId: string) => {
+    setPosts(prev => prev.filter(post => String(post.user?.id || post.user_id || '') !== String(userId)));
+    setSelectedPost(prev => (prev && String(prev.user?.id || prev.user_id || '') === String(userId)) ? null : prev);
+    setSelectedPostForComments(prev => (prev && String(prev.user?.id || prev.user_id || '') === String(userId)) ? null : prev);
+    removeUserPostsFromFeedCache(userId);
+    window.dispatchEvent(new Event('postsUpdated'));
+  }, [setPosts]);
+
   const filteredPosts = posts;
 
   const handlePostClick = useCallback((post: Post, startTime?: number, isMuted?: boolean) => {
@@ -523,7 +531,7 @@ export function Feed({
           }}
         >
           <div id="top-sentinel" className="w-full h-px pointer-events-none" />
-          <div className="max-w-2xl xl:max-w-[640px] mx-auto px-3 pt-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] space-y-3">
+          <div className="max-w-2xl xl:max-w-[640px] mx-auto px-3 pt-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] space-y-0">
             <FeedContent
               isLoading={isLoading}
               filteredPosts={filteredPosts}
@@ -536,6 +544,7 @@ export function Feed({
               onSave={onSaveId}
               onShare={onShareP}
               onMessage={onMessageU}
+              onUserBlocked={handleUserBlocked}
               onViewPost={handlePostClick}
               onViewComments={handleViewComments}
             />

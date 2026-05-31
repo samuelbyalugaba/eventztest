@@ -15,6 +15,7 @@ interface FeedContentProps {
   onSave: (id: number) => Promise<void>;
   onShare: (post: Post) => Promise<void>;
   onMessage: (user: any) => void;
+  onUserBlocked: (userId: string) => void;
   onViewPost: (post: Post, startTime?: number, isMuted?: boolean) => void;
   onViewComments: (post: Post) => void;
 }
@@ -31,6 +32,7 @@ export function FeedContent({
   onSave,
   onShare,
   onMessage,
+  onUserBlocked,
   onViewPost,
   onViewComments,
 }: FeedContentProps) {
@@ -63,6 +65,7 @@ export function FeedContent({
                   onShare={(p) => onShare(p)}
                   onProfileClick={(user) => onProfileClick(user)}
                   onMessage={(user) => onMessage(user)}
+                  onUserBlocked={onUserBlocked}
                   onViewPost={(startTime, isMuted) => onViewPost(post, startTime, isMuted)}
                   onViewComments={() => onViewComments(post)}
                   isPaused={isPaused}

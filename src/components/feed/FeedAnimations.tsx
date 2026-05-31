@@ -1,4 +1,4 @@
-import { ThumbsUp } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
 export function LikeAnimation({ show, x, y }: { show: boolean; x: number; y: number }) {
   if (!show) return null;
@@ -9,7 +9,7 @@ export function LikeAnimation({ show, x, y }: { show: boolean; x: number; y: num
     >
       <div className="animate-likePopup">
         <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-full p-4 shadow-2xl">
-          <ThumbsUp className="w-10 h-10 text-white fill-white" />
+          <Heart className="w-10 h-10 text-white fill-white" />
         </div>
       </div>
     </div>
