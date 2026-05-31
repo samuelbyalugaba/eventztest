@@ -35,18 +35,47 @@ export const formatTimeAgo = (dateString: string): string => {
   }
 };
 
+const toDateValue = (dateInput?: string | Date | null): Date | null => {
+  if (!dateInput) return null;
+
+  if (dateInput instanceof Date) {
+    return isNaN(dateInput.getTime()) ? null : dateInput;
+  }
+
+  const dateOnlyMatch = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = dateOnlyMatch
+    ? new Date(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3]),
+      )
+    : new Date(dateInput);
+
+  return isNaN(date.getTime()) ? null : date;
+};
+
 /**
  * Formats a date string to DD-MM-YYYY format
  */
 export const formatDateDMY = (dateInput?: string | Date | null): string => {
   if (!dateInput) return '';
-  
-  const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
-  if (isNaN(date.getTime())) return String(dateInput);
+
+  const date = toDateValue(dateInput);
+  if (!date) return String(dateInput);
 
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
 
   return `${day}-${month}-${year}`;
+};
+
+export const formatDateWithWeekday = (dateInput?: string | Date | null): string => {
+  if (!dateInput) return '';
+
+  const date = toDateValue(dateInput);
+  if (!date) return String(dateInput);
+
+  const weekday = new Intl.DateTimeFormat('en', { weekday: 'long' }).format(date);
+  return `${weekday}, ${formatDateDMY(date)}`;
 };

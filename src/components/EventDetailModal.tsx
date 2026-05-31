@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles, Phone } from 'lucide-react';
-import { formatDateDMY } from '../utils/format';
+import { formatDateWithWeekday } from '../utils/format';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
 import { LiveStreamViewerNew as LiveStreamViewer } from './livestream/LiveStreamViewerNew';
@@ -555,7 +555,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 <DetailCalendarIcon />
               </div>
               <div className="flex-1">
-                <p className="text-gray-900">{formatDateDMY(event.date)}</p>
+                <p className="text-gray-900">{formatDateWithWeekday(event.date)}</p>
                 <p className="text-gray-700 text-sm">{event.time}</p>
               </div>
             </div>
