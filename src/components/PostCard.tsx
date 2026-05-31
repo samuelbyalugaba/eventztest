@@ -416,7 +416,7 @@ export const PostCard = React.memo(function PostCard({
             name={displayProfile.name} 
             size="md"
             verified={post.user.verified}
-            className="cursor-pointer border border-[#EDEDED]"
+            className="feed-post-avatar cursor-pointer border border-[#EDEDED]"
             onClick={() => onProfileClick(displayProfile as any)}
           />
           <div className="flex min-w-0 flex-col">

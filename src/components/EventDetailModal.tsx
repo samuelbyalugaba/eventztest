@@ -664,41 +664,54 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 Ticket Prices
               </h3>
               <div className="space-y-2">
-                {event.ticket_tiers.map((tier, index) => (
-                  <div 
-                    key={index} 
-                    onClick={() => !externalTicketing && onTierSelect && onTierSelect(event, tier.name)}
-                    className={`flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100 transition-colors ${externalTicketing ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
-                          <Ticket className="w-4 h-4" />
-                       </div>
-                       <div>
-                        <span className="font-medium text-gray-900 block">{tier.name}</span>
-                        {tier.available < 10 && (
-                          <span className="text-xs text-red-500 font-medium">
-                            Only {tier.available} left
-                          </span>
-                        )}
-                       </div>
+                {event.ticket_tiers.map((tier, index) => {
+                  const tierPerks = Array.isArray(tier.features) ? tier.features.filter(Boolean) : [];
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => !externalTicketing && onTierSelect && onTierSelect(event, tier.name)}
+                      className={`flex items-start justify-between gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100 transition-colors ${externalTicketing ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100'}`}
+                    >
+                      <div className="flex min-w-0 items-start gap-3">
+                         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                            <Ticket className="w-4 h-4" />
+                         </div>
+                         <div className="min-w-0">
+                          <span className="font-medium text-gray-900 block">{tier.name}</span>
+                          {tierPerks.length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {tierPerks.slice(0, 5).map((perk) => (
+                                <span key={perk} className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-200">
+                                  {perk}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {tier.available < 10 && (
+                            <span className="mt-1 block text-xs text-red-500 font-medium">
+                              Only {tier.available} left
+                            </span>
+                          )}
+                         </div>
+                      </div>
+                      <span className="shrink-0 whitespace-nowrap pt-1 font-bold text-gray-900">
+                        {(() => {
+                          // Try to use priceNumeric if available (more reliable)
+                          if (tier.priceNumeric !== undefined && tier.priceNumeric !== null && !isNaN(tier.priceNumeric)) {
+                            if (tier.priceNumeric === 0) return 'Free';
+                            const eventCurrencyCode = getEventCurrency();
+                            const currency = currencies.find(c => c.code === eventCurrencyCode);
+                            const symbol = currency ? currency.symbol : 'TSh';
+                            return `${symbol} ${tier.priceNumeric.toLocaleString()}`;
+                          }
+                          // Fallback to tier.price string
+                          return formatEventPrice(tier.price);
+                        })()}
+                      </span>
                     </div>
-                    <span className="font-bold text-gray-900">
-                      {(() => {
-                        // Try to use priceNumeric if available (more reliable)
-                        if (tier.priceNumeric !== undefined && tier.priceNumeric !== null && !isNaN(tier.priceNumeric)) {
-                          if (tier.priceNumeric === 0) return 'Free';
-                          const eventCurrencyCode = getEventCurrency();
-                          const currency = currencies.find(c => c.code === eventCurrencyCode);
-                          const symbol = currency ? currency.symbol : 'TSh';
-                          return `${symbol} ${tier.priceNumeric.toLocaleString()}`;
-                        }
-                        // Fallback to tier.price string
-                        return formatEventPrice(tier.price);
-                      })()}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
