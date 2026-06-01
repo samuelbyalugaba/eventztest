@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Eventz</string>
     <string name="title_activity_main">Eventz</string>
-    <string name="package_name">com.eventz.app</string>
-    <string name="custom_url_scheme">com.eventz.app</string>
+    <string name="package_name">com.eventz.live</string>
+    <string name="custom_url_scheme">com.eventz.live</string>
 </resources>

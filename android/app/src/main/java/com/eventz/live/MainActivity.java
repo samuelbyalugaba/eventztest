@@ -1,4 +1,4 @@
-package com.eventz.app;
+package com.eventz.live;
 
 import com.getcapacitor.BridgeActivity;
 

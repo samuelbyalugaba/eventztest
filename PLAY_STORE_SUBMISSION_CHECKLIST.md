@@ -3,7 +3,7 @@
 ## Build
 
 - Build a signed Android App Bundle: `android/app/build/outputs/bundle/release/app-release.aab`.
-- Confirm package name: `com.eventz.app`.
+- Confirm package name: `com.eventz.live`.
 - Confirm target SDK: `36`.
 - Confirm production version code/name.
 - Uninstall older test builds before device testing to avoid cached icons/assets.

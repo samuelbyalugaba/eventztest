@@ -9,10 +9,10 @@ def releaseKeyPassword = System.getenv("EVENTZ_UPLOAD_KEY_PASSWORD")
 def releaseSigningReady = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
 
 android {
-    namespace = "com.eventz.app"
+    namespace = "com.eventz.live"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.eventz.app"
+        applicationId "com.eventz.live"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode eventzVersionCode
