@@ -783,7 +783,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   className="flex w-full cursor-default items-center justify-center gap-2 rounded-xl bg-gray-100 py-3 text-gray-700 shadow-none"
                 >
                   <Tv className="w-4 h-4" />
-                  <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : 'Free Events'}</span>
+                  <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : 'Free Event'}</span>
                 </button>
               )}
             </div>
@@ -832,7 +832,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                         <Ticket className={`w-5 h-5 ${isFreeEvent ? 'text-gray-500' : 'text-purple-600 group-hover:text-white'}`} />
                       </div>
                       <div className="text-left">
-                        <p className="text-gray-900 font-medium">{isFreeEvent ? 'Free Events' : 'Standard Entry'}</p>
+                        <p className="text-gray-900 font-medium">{isFreeEvent ? 'Free Event' : 'Standard Entry'}</p>
                         <p className="text-gray-500 text-xs">{isFreeEvent ? 'No ticket purchase required' : 'General admission access'}</p>
                       </div>
                     </div>
@@ -900,7 +900,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                  }`}
                >
                  <Ticket className="w-5 h-5" />
-                {isFreeEvent ? 'Free Events' : 'Get Tickets Now'}
+                {isFreeEvent ? 'Free Event' : 'Get Tickets Now'}
               </button>
              )
            )

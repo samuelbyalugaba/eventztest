@@ -339,6 +339,7 @@ export const PostCard = React.memo(function PostCard({
 
   const isCarousel = (post.content.images?.length ?? 0) > 1;
   const videoUrl = post.isHighlight && post.highlights?.[0]?.videoUrl;
+  const firstCarouselMedia = post.content.images?.[0];
   const currentMedia = videoUrl || post.content.images?.[carouselIndex] || post.content.image;
   const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
   const videoPoster = post.isHighlight 
@@ -346,9 +347,10 @@ export const PostCard = React.memo(function PostCard({
     : post.content.images?.find((u) => !!u && !isVideo(u));
   const currentVideoSrc = currentMedia ? `${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}` : undefined;
   const getMediaFrameStyle = useCallback((media?: string): React.CSSProperties => {
-    const ratio = media ? mediaAspectRatios[media] : undefined;
+    const referenceMedia = isCarousel ? firstCarouselMedia : media;
+    const ratio = referenceMedia ? mediaAspectRatios[referenceMedia] : undefined;
     return { aspectRatio: ratio && Number.isFinite(ratio) ? String(ratio) : '4 / 5' };
-  }, [mediaAspectRatios]);
+  }, [firstCarouselMedia, isCarousel, mediaAspectRatios]);
 
   useEffect(() => {
     setIsVideoLoading(isCurrentMediaVideo);
@@ -357,7 +359,7 @@ export const PostCard = React.memo(function PostCard({
 
   useEffect(() => {
     requestAnimationFrame(updateCarouselHeight);
-  }, [mediaAspectRatios, carouselIndex, updateCarouselHeight]);
+  }, [mediaAspectRatios, updateCarouselHeight]);
 
   // Determine display profile (Unified Identity)
   const displayProfile = {

@@ -420,7 +420,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {isOwnProfile && (
         <button
           onClick={() => navigate('/compose/post')}
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-5 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
+          className="fixed bottom-[calc(6.25rem+env(safe-area-inset-bottom))] right-5 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
           title="Share a post"
         >
           <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />

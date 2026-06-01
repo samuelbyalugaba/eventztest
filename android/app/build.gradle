@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+def eventzVersionCode = (System.getenv("EVENTZ_VERSION_CODE") ?: "1").toInteger()
+def eventzVersionName = System.getenv("EVENTZ_VERSION_NAME") ?: "1.0.0"
+def releaseStoreFile = System.getenv("EVENTZ_UPLOAD_STORE_FILE")
+def releaseStorePassword = System.getenv("EVENTZ_UPLOAD_STORE_PASSWORD")
+def releaseKeyAlias = System.getenv("EVENTZ_UPLOAD_KEY_ALIAS")
+def releaseKeyPassword = System.getenv("EVENTZ_UPLOAD_KEY_PASSWORD")
+def releaseSigningReady = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
 android {
     namespace = "com.eventz.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +15,8 @@ android {
         applicationId "com.eventz.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode eventzVersionCode
+        versionName eventzVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +24,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseSigningReady) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseSigningReady) {
+                signingConfig signingConfigs.release
+            } else {
+                logger.warn("Release signing environment variables are not fully configured; release builds will not be Play-ready.")
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
