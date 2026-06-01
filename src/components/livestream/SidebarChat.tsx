@@ -1,7 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
-import { Send, Users } from 'lucide-react';
+import { Flag, Send, Users } from 'lucide-react';
 
 interface ChatMessage {
+  id?: number;
+  userId?: string;
   user: string;
   text: string;
   avatar?: string;
@@ -13,6 +15,7 @@ interface SidebarChatProps {
   message: string;
   onMessageChange: (val: string) => void;
   onSendMessage: (e?: React.FormEvent) => void;
+  onReportMessage?: (message: ChatMessage) => void;
   viewerCount: number;
 }
 
@@ -21,6 +24,7 @@ export function SidebarChat({
   message,
   onMessageChange,
   onSendMessage,
+  onReportMessage,
   viewerCount,
 }: SidebarChatProps) {
   const endRef = useRef<HTMLDivElement>(null);
@@ -59,7 +63,7 @@ export function SidebarChat({
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-white/5 transition-colors ${
+            className={`group flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-white/5 transition-colors ${
               m.isGift ? 'bg-yellow-500/10' : ''
             }`}
           >
@@ -74,10 +78,21 @@ export function SidebarChat({
                 {(m.user || 'U').charAt(0).toUpperCase()}
               </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <span className="text-xs font-semibold text-primary mr-1.5">{m.user}</span>
               <span className="text-xs text-white/80 break-words">{m.text}</span>
             </div>
+            {onReportMessage && m.id && (
+              <button
+                type="button"
+                onClick={() => onReportMessage(m)}
+                className="mt-0.5 rounded-full p-1 text-white/30 opacity-0 transition hover:bg-white/10 hover:text-red-300 group-hover:opacity-100"
+                aria-label={`Report message from ${m.user}`}
+                title="Report message"
+              >
+                <Flag className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         ))}
         <div ref={endRef} />

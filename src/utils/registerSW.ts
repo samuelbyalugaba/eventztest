@@ -1,14 +1,30 @@
 import { toast } from 'sonner';
+import { isNativeCapacitor } from './platform';
+
+const clearEventzCaches = async () => {
+  if (!('caches' in window)) return;
+
+  const names = await caches.keys();
+  await Promise.all(
+    names
+      .filter((name) => name.startsWith('eventz-'))
+      .map((name) => caches.delete(name))
+  );
+};
+
+const unregisterServiceWorkers = async () => {
+  const regs = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(regs.map((reg) => reg.unregister()));
+};
 
 export const registerServiceWorker = async () => {
-  // Only register in production; in dev, unregister any existing SW to avoid intercepting API calls
   if ('serviceWorker' in navigator) {
-    if (!import.meta.env.PROD) {
+    // Capacitor ships bundled assets, so a PWA service worker can keep Android/iOS
+    // WebViews pinned to stale JS chunks after an app update.
+    if (isNativeCapacitor() || !import.meta.env.PROD) {
       try {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        for (const reg of regs) {
-          await reg.unregister();
-        }
+        await unregisterServiceWorkers();
+        await clearEventzCaches();
       } catch (e) {
       }
       return;

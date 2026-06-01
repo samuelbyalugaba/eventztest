@@ -1,6 +1,6 @@
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { SUPPORT_EMAIL } from '../../utils/legal';
+import { ACCOUNT_DELETION_URL, SUPPORT_EMAIL } from '../../utils/legal';
 
 const TERMS_SECTIONS = [
   {
@@ -17,7 +17,7 @@ const TERMS_SECTIONS = [
   },
   {
     title: 'Accounts',
-    body: 'You are responsible for keeping your account secure. You can update your profile details and request account deletion from Privacy & Security in Settings.',
+    body: 'You are responsible for keeping your account secure. You can update your profile details and request account deletion from Privacy & Security in Settings or from the public account deletion page.',
   },
 ];
 
@@ -36,7 +36,7 @@ const PRIVACY_SECTIONS = [
   },
   {
     title: 'Your Choices',
-    body: 'You can update profile visibility, message settings, and account details from Settings. You can delete your account from Privacy & Security, and you can contact support for privacy requests.',
+    body: 'You can update profile visibility, message settings, and account details from Settings. You can delete your account from Privacy & Security, use the public account deletion page, or contact support for privacy requests.',
   },
 ];
 
@@ -74,7 +74,7 @@ export function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
       <main className="mx-auto max-w-2xl px-4 py-5">
         <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <p className="text-sm leading-6 text-gray-600">
-            Last updated: May 29, 2026. This in-app policy should match the public policy URLs configured for the app.
+            Last updated: May 29, 2026. Please review these terms before using Eventz.
           </p>
         </div>
 
@@ -96,6 +96,16 @@ export function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
             <Mail className="h-4 w-4" />
             {SUPPORT_EMAIL}
           </a>
+        </section>
+
+        <section className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold">Account Deletion</h2>
+          <p className="mt-2 text-sm leading-6 text-gray-600">
+            You can request or complete account deletion from the public deletion page.
+          </p>
+          <Link to={ACCOUNT_DELETION_URL} className="mt-3 inline-flex text-sm font-medium text-purple-700">
+            Delete account
+          </Link>
         </section>
 
         <div className="mt-5 text-center text-sm">

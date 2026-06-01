@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2, CheckCheck } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2, CheckCheck, Flag } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
-import { Message, Profile, blockUser, getMessages, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage, deleteMessage } from '../utils/supabase/api';
+import { Message, Profile, blockUser, getMessages, reportContent, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage, deleteMessage } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { useVisualViewport } from '../utils/useVisualViewport';
-import { confirmBlockUser } from '../utils/moderation';
+import { askForReportReason, confirmBlockUser } from '../utils/moderation';
 
 interface ChatDetailProps {
   conversationId: number;
@@ -211,6 +211,24 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
     }
   };
 
+  const handleReportUser = async () => {
+    const reason = askForReportReason(recipient.full_name || recipient.username || 'this user');
+    if (!reason) return;
+
+    try {
+      await reportContent({
+        contentType: 'profile',
+        contentId: recipient.id,
+        reason,
+        reportedUserId: recipient.id,
+      });
+      toast.success('Report submitted');
+      setShowMenu(false);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to submit report');
+    }
+  };
+
   return (
     <div className="fixed inset-0 h-[100dvh] bg-white z-[70] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
@@ -273,6 +291,13 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 Block User
+              </button>
+              <button
+                onClick={handleReportUser}
+                className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Flag className="w-4 h-4" />
+                Report User
               </button>
             </div>
           )}
@@ -338,6 +363,30 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                      )}
                      {isMe && msg.is_read && (
                        <CheckCheck className="w-3 h-3 text-blue-500" />
+                     )}
+                     {!isMe && (
+                       <button
+                         onClick={async () => {
+                           const reason = askForReportReason('this message');
+                           if (!reason) return;
+                           try {
+                             await reportContent({
+                               contentType: 'message',
+                               contentId: msg.id,
+                               reason,
+                               details: msg.content,
+                               reportedUserId: msg.sender_id,
+                             });
+                             toast.success('Report submitted');
+                           } catch (error: any) {
+                             toast.error(error?.message || 'Failed to submit report');
+                           }
+                         }}
+                         className="ml-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                         title="Report message"
+                       >
+                         <Flag className="w-3 h-3" />
+                       </button>
                      )}
                   </div>
                 </div>

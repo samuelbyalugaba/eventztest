@@ -59,8 +59,8 @@ export function ProfileHeader({
               </div>
             ) : (
               <>
-                <div className="flex min-w-0 items-start gap-1.5">
-                  <h1 className="min-w-0 flex-1 whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <h1 className="min-w-0 flex-none max-w-[calc(100%-1.375rem)] whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
                     {displayName || 'User'}
                   </h1>
                   {showCreatorBadge && (
@@ -156,8 +156,8 @@ export function ProfileHeader({
             </div>
           ) : (
             <>
-              <div className="flex min-w-0 items-start gap-1.5">
-                <h1 className="min-w-0 flex-1 whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <h1 className="min-w-0 flex-none max-w-[calc(100%-1.375rem)] whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
                   {displayName || 'User'}
                 </h1>
                 {showCreatorBadge && (

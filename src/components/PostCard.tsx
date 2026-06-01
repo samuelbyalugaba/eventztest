@@ -81,6 +81,7 @@ export const PostCard = React.memo(function PostCard({
   const videoRef = useRef<HTMLVideoElement>(null);
   const commentsCount = post.comments_count || 0;
   const [isVideoLoading, setIsVideoLoading] = useState(true);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
   const [carouselHeight, setCarouselHeight] = useState<number | null>(null);
   const [isLowInternet, setIsLowInternet] = useState(false);
@@ -351,6 +352,7 @@ export const PostCard = React.memo(function PostCard({
 
   useEffect(() => {
     setIsVideoLoading(isCurrentMediaVideo);
+    setVideoError(null);
   }, [currentVideoSrc, isCurrentMediaVideo]);
 
   useEffect(() => {
@@ -579,6 +581,11 @@ export const PostCard = React.memo(function PostCard({
                         {isMediaVideo ? (
                           <div className="absolute inset-0 bg-[#F6F6F6]">
                             {isVideoLoading && isActive && !videoPoster && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
+                            {videoError && isActive && (
+                              <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-100 px-5 text-center text-xs font-medium text-gray-500">
+                                {videoError}
+                              </div>
+                            )}
                             <video
                               id={`video-card-${post.id}-${index}`}
                               ref={isActive ? videoRef : null}
@@ -608,7 +615,10 @@ export const PostCard = React.memo(function PostCard({
                                 setIsPlaying(true);
                               }}
                               onPause={() => setIsPlaying(false)}
-                              onError={markVideoReady}
+                              onError={() => {
+                                markVideoReady();
+                                setVideoError('This video format cannot play on this device.');
+                              }}
                             />
                             {/* Video Controls (Show only on active slide) */}
                             {isActive && (
@@ -699,6 +709,11 @@ export const PostCard = React.memo(function PostCard({
                 /* ... Existing Video Logic for Single File ... */
                 <div className="relative h-full w-full overflow-hidden bg-[#F6F6F6]">
                   {isVideoLoading && !videoPoster && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
+                  {videoError && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-100 px-5 text-center text-xs font-medium text-gray-500">
+                      {videoError}
+                    </div>
+                  )}
                   <video
                     id={`video-card-${post.id}`}
                     ref={videoRef}
@@ -728,7 +743,10 @@ export const PostCard = React.memo(function PostCard({
                       setIsPlaying(true);
                     }}
                     onPause={() => setIsPlaying(false)}
-                    onError={markVideoReady}
+                    onError={() => {
+                      markVideoReady();
+                      setVideoError('This video format cannot play on this device.');
+                    }}
                   />
                   <div className="absolute bottom-4 left-4 z-10">
                     <button
