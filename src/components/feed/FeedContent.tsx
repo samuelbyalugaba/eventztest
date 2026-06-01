@@ -10,12 +10,15 @@ interface FeedContentProps {
   hasMore: boolean;
   isLoadingMore: boolean;
   isPaused?: boolean;
+  currentUserId?: string | null;
   onProfileClick: (user: any, e?: React.MouseEvent) => void;
   onLike: (id: number) => Promise<void>;
   onSave: (id: number) => Promise<void>;
   onShare: (post: Post) => Promise<void>;
   onMessage: (user: any) => void;
   onUserBlocked: (userId: string) => void;
+  onDelete: (postId: number) => Promise<void>;
+  onEditCaption: (postId: number, caption: string) => Promise<void>;
   onViewPost: (post: Post, startTime?: number, isMuted?: boolean) => void;
   onViewComments: (post: Post) => void;
 }
@@ -27,12 +30,15 @@ export function FeedContent({
   hasMore,
   isLoadingMore,
   isPaused,
+  currentUserId,
   onProfileClick,
   onLike,
   onSave,
   onShare,
   onMessage,
   onUserBlocked,
+  onDelete,
+  onEditCaption,
   onViewPost,
   onViewComments,
 }: FeedContentProps) {
@@ -60,12 +66,15 @@ export function FeedContent({
               >
                 <PostCard
                   post={post}
+                  currentUserId={currentUserId}
                   onLike={(id) => onLike(id)}
                   onSave={(id) => onSave(id)}
                   onShare={(p) => onShare(p)}
                   onProfileClick={(user) => onProfileClick(user)}
                   onMessage={(user) => onMessage(user)}
                   onUserBlocked={onUserBlocked}
+                  onDelete={onDelete}
+                  onEditCaption={onEditCaption}
                   onViewPost={(startTime, isMuted) => onViewPost(post, startTime, isMuted)}
                   onViewComments={() => onViewComments(post)}
                   isPaused={isPaused}

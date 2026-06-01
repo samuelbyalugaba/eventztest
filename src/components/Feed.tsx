@@ -539,12 +539,15 @@ export function Feed({
               hasMore={hasMore}
               isLoadingMore={isLoadingMore}
               isPaused={isFeedPaused}
+              currentUserId={currentUser?.id}
               onProfileClick={handleOpenUserProfile}
               onLike={onLikeId}
               onSave={onSaveId}
               onShare={onShareP}
               onMessage={onMessageU}
               onUserBlocked={handleUserBlocked}
+              onDelete={handleDeletePost}
+              onEditCaption={handleEditCaption}
               onViewPost={handlePostClick}
               onViewComments={handleViewComments}
             />

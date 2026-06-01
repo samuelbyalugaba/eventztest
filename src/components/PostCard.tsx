@@ -7,7 +7,7 @@ import verifiedBadge from '../assets/verified-badge.png';
 import { 
   Share2, Bookmark, MoreHorizontal,
   Volume2, VolumeX, Maximize,
-  Heart, Flag, Ban, MessageCircle
+  Heart, Flag, Ban, MessageCircle, Pencil, Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { reportContent, blockUser } from '../utils/supabase/api';
@@ -33,8 +33,11 @@ interface PostCardProps {
   onSave: (postId: number) => Promise<void>;
   onShare: (post: Post) => Promise<void>;
   onProfileClick: (user: Post['user']) => void;
+  currentUserId?: string | null;
   onMessage?: (user: any) => void;
   onUserBlocked?: (userId: string) => void;
+  onDelete?: (postId: number) => Promise<void>;
+  onEditCaption?: (postId: number, caption: string) => Promise<void>;
   onViewPost?: (startTime?: number, isMuted?: boolean) => void;
   onViewComments?: () => void;
   isPaused?: boolean;
@@ -57,8 +60,11 @@ export const PostCard = React.memo(function PostCard({
   onSave, 
   onShare, 
   onProfileClick, 
+  currentUserId,
   onMessage,
   onUserBlocked,
+  onDelete,
+  onEditCaption,
   onViewPost, 
   onViewComments, 
   isPaused = false
@@ -362,15 +368,21 @@ export const PostCard = React.memo(function PostCard({
     isOrganizerPage: post.user.isOrganizerPage
   };
   const postOwnerId = displayProfile.id || post.user_id;
+  const isOwnPost = !!currentUserId && !!postOwnerId && String(currentUserId) === String(postOwnerId);
 
-  const handleReportPost = async () => {
-    const reason = askForReportReason('this post');
+  const handleReportUser = async () => {
+    if (!postOwnerId) {
+      toast.error('Could not find this profile');
+      return;
+    }
+
+    const reason = askForReportReason(displayProfile.name);
     if (!reason) return;
 
     try {
       await reportContent({
-        contentType: 'post',
-        contentId: post.id,
+        contentType: 'profile',
+        contentId: postOwnerId,
         reason,
         details: post.content.text,
         reportedUserId: postOwnerId,
@@ -379,6 +391,32 @@ export const PostCard = React.memo(function PostCard({
     } catch (error: any) {
       toast.error(error?.message || 'Failed to submit report');
     }
+  };
+
+  const handleEditOwnPost = async () => {
+    if (!onEditCaption) {
+      toast.error('Editing is unavailable');
+      return;
+    }
+
+    const nextCaption = window.prompt('Edit caption', post.content.text || '');
+    if (nextCaption === null || nextCaption === post.content.text) return;
+
+    try {
+      await onEditCaption(post.id, nextCaption);
+      toast.success('Post updated');
+    } catch {
+      toast.error('Failed to update post');
+    }
+  };
+
+  const handleDeleteOwnPost = async () => {
+    if (!onDelete) {
+      toast.error('Deleting is unavailable');
+      return;
+    }
+
+    await onDelete(post.id);
   };
 
   const handleBlockUser = async () => {
@@ -458,28 +496,50 @@ export const PostCard = React.memo(function PostCard({
             className="z-[90] min-w-[180px] rounded-xl border-gray-100 bg-white p-1.5 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <DropdownMenuItem
-              onClick={() => void handleReportPost()}
-              className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 focus:bg-gray-50"
-            >
-              <Flag className="h-4 w-4" />
-              Report post
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => void handleBlockUser()}
-              className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 focus:bg-red-50 focus:text-red-600"
-            >
-              <Ban className="h-4 w-4" />
-              Block user
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleMessageUser}
-              className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 focus:bg-gray-50"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Message user
-            </DropdownMenuItem>
+            {isOwnPost ? (
+              <>
+                <DropdownMenuItem
+                  onClick={() => void handleEditOwnPost()}
+                  className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 focus:bg-gray-50"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit caption
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => void handleDeleteOwnPost()}
+                  className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 focus:bg-red-50 focus:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete post
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                <DropdownMenuItem
+                  onClick={handleMessageUser}
+                  className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 focus:bg-gray-50"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Message User
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => void handleReportUser()}
+                  className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 focus:bg-gray-50"
+                >
+                  <Flag className="h-4 w-4" />
+                  Report User
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => void handleBlockUser()}
+                  className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 focus:bg-red-50 focus:text-red-600"
+                >
+                  <Ban className="h-4 w-4" />
+                  Block User
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

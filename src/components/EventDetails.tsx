@@ -707,7 +707,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 />
               )}
               <div className="min-w-0 pr-1">
-                <h3 className="truncate text-sm font-bold leading-tight text-gray-900">Upcoming Events</h3>
+                <h3 className="truncate text-[15px] font-bold leading-tight text-gray-900">Upcoming Events</h3>
                 <p className="mt-1 h-4 whitespace-nowrap text-xs font-medium leading-4 text-gray-500 tabular-nums">
                   {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'} found
                 </p>

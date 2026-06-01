@@ -251,6 +251,11 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     return `${symbol} ${numeric.toLocaleString()}`;
   };
 
+  const isFreeEvent = formatEventPrice(event.price_range).toLowerCase() === 'free';
+  const locationMapsUrl = event.location
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`
+    : '';
+
   useEffect(() => {
     // Increment view count
     incrementEventView(event.id);
@@ -565,11 +570,25 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
                 <MapPin className="w-8 h-8 text-[#8A2BE2]" strokeWidth={2.2} />
               </div>
-              <div className="flex-1">
-                <p className="text-gray-600 text-sm">Location</p>
-                <p className="text-gray-900">{event.location}</p>
-                <p className="text-gray-700 text-sm">{locations.find(l => l.id === event.city)?.name}</p>
-              </div>
+              {locationMapsUrl ? (
+                <a
+                  href={locationMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="-m-1 min-w-0 flex-1 rounded-lg p-1 transition-colors hover:bg-purple-50 active:bg-purple-50"
+                  aria-label={`Open ${event.location} in maps`}
+                >
+                  <p className="text-gray-600 text-sm">Location</p>
+                  <p className="break-words text-gray-900 underline-offset-2 hover:text-purple-700 hover:underline">{event.location}</p>
+                  <p className="text-gray-700 text-sm">{locations.find(l => l.id === event.city)?.name}</p>
+                </a>
+              ) : (
+                <div className="flex-1">
+                  <p className="text-gray-600 text-sm">Location</p>
+                  <p className="text-gray-900">{event.location}</p>
+                  <p className="text-gray-700 text-sm">{locations.find(l => l.id === event.city)?.name}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -680,13 +699,10 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                          <div className="min-w-0">
                           <span className="font-medium text-gray-900 block">{tier.name}</span>
                           {tierPerks.length > 0 && (
-                            <div className="mt-1.5 flex flex-wrap gap-1">
-                              {tierPerks.slice(0, 5).map((perk) => (
-                                <span key={perk} className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-200">
-                                  {perk}
-                                </span>
-                              ))}
-                            </div>
+                            <p className="mt-1 max-w-full text-[12px] leading-snug text-gray-500 [overflow-wrap:anywhere]">
+                              {tierPerks.slice(0, 4).join(' • ')}
+                              {tierPerks.length > 4 ? ` • +${tierPerks.length - 4} more` : ''}
+                            </p>
                           )}
                           {tier.available < 10 && (
                             <span className="mt-1 block text-xs text-red-500 font-medium">
@@ -761,22 +777,13 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : hasVirtualAccess ? 'Access Granted' : 'Get Access'}</span>
                 </button>
               ) : (
-                <button 
-                  onClick={() => {
-                    if (!isEventPast) {
-                      setHasVirtualAccess(true);
-                      if (event.streaming?.isLive) {
-                        setShowLiveStream(true);
-                      } else {
-                        toast.success('Free virtual access granted!');
-                      }
-                    }
-                  }}
-                  disabled={isEventPast}
-                  className={`w-full bg-gray-900 text-white py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`}
+                <button
+                  type="button"
+                  disabled
+                  className="flex w-full cursor-default items-center justify-center gap-2 rounded-xl bg-gray-100 py-3 text-gray-700 shadow-none"
                 >
                   <Tv className="w-4 h-4" />
-                  <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : event.streaming?.isLive ? 'Watch Live' : 'Free Access'}</span>
+                  <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : 'Free Events'}</span>
                 </button>
               )}
             </div>
@@ -812,17 +819,21 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   </button>
                 ) : (
                   <button
-                    onClick={() => !isEventPast && onPurchaseNormalTicket(event)}
-                    disabled={isEventPast}
-                    className={`w-full bg-white border-2 border-purple-100 rounded-xl p-4 flex items-center justify-between transition-all shadow-sm group ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-600 hover:shadow-md'}`}
+                    onClick={() => !isEventPast && !isFreeEvent && onPurchaseNormalTicket(event)}
+                    disabled={isEventPast || isFreeEvent}
+                    className={`w-full rounded-xl border-2 p-4 flex items-center justify-between transition-all shadow-sm group ${
+                      isEventPast || isFreeEvent
+                        ? 'cursor-default border-gray-100 bg-gray-50 text-gray-500'
+                        : 'border-purple-100 bg-white hover:border-purple-600 hover:shadow-md'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
-                        <Ticket className="w-5 h-5 text-purple-600 group-hover:text-white" />
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isFreeEvent ? 'bg-gray-100' : 'bg-purple-100 group-hover:bg-purple-600'}`}>
+                        <Ticket className={`w-5 h-5 ${isFreeEvent ? 'text-gray-500' : 'text-purple-600 group-hover:text-white'}`} />
                       </div>
                       <div className="text-left">
-                        <p className="text-gray-900 font-medium">Standard Entry</p>
-                        <p className="text-gray-500 text-xs">General admission access</p>
+                        <p className="text-gray-900 font-medium">{isFreeEvent ? 'Free Events' : 'Standard Entry'}</p>
+                        <p className="text-gray-500 text-xs">{isFreeEvent ? 'No ticket purchase required' : 'General admission access'}</p>
                       </div>
                     </div>
                     <span className="text-purple-600 font-bold">{formatEventPrice(event.price_range)}</span>
@@ -880,11 +891,16 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                </button>
              ) : (
                <button
-                 onClick={() => onPurchaseNormalTicket(event)}
-                 className="flex-1 bg-[#8A2BE2] text-white py-3 rounded-xl font-medium hover:bg-[#7b26c9] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                 onClick={() => !isFreeEvent && onPurchaseNormalTicket(event)}
+                 disabled={isFreeEvent}
+                 className={`flex-1 rounded-xl py-3 font-medium transition-colors flex items-center justify-center gap-2 ${
+                   isFreeEvent
+                     ? 'cursor-default bg-purple-100 text-purple-700 shadow-none'
+                     : 'bg-[#8A2BE2] text-white hover:bg-[#7b26c9] shadow-lg shadow-purple-200'
+                 }`}
                >
                  <Ticket className="w-5 h-5" />
-                {event.price_range === 'Free' ? 'Register' : 'Get Tickets Now'}
+                {isFreeEvent ? 'Free Events' : 'Get Tickets Now'}
               </button>
              )
            )
