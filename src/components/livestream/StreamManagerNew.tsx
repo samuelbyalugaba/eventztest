@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, RotateCcw, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award } from 'lucide-react';
 import { toast } from 'sonner';
-import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToStreamPresence, sendStreamMessage } from '../../utils/supabase/api';
+import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToStreamPresence, sendStreamMessage, reportContent } from '../../utils/supabase/api';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../../utils/agora';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
@@ -11,6 +11,7 @@ import { HeartAnimations, generateHeart } from './HeartAnimations';
 import { useIsMobile } from '../ui/use-mobile';
 import type { FloatingHeart, StreamStats } from './types';
 import { createStreamClient, formatStreamElapsedTime, initializeLocalTracks, playLocalPreview, switchLocalCamera } from './sessionUtils';
+import { askForReportReason } from '../../utils/moderation';
 
 interface StreamManagerProps {
   event: Event;
@@ -377,11 +378,38 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   };
 
   const chatMessages = messages.map((m) => ({
+    id: m.id,
+    userId: m.user_id,
     user: m.user?.full_name || (m.user as any)?.username || 'Guest',
     text: m.message,
     avatar: m.user?.avatar_url,
     isGift: m.message.startsWith('[Gift]'),
   }));
+
+  const handleReportStreamMessage = async (chatMessage: { id?: number; userId?: string; user: string; text: string }) => {
+    if (!chatMessage.id) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id && chatMessage.userId === user.id) {
+      toast.error('You cannot report your own message');
+      return;
+    }
+
+    const reason = askForReportReason('this live chat message');
+    if (!reason) return;
+
+    try {
+      await reportContent({
+        contentType: 'stream',
+        contentId: chatMessage.id,
+        reason,
+        details: chatMessage.text,
+        reportedUserId: chatMessage.userId,
+      });
+      toast.success('Report submitted');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to submit report');
+    }
+  };
 
   // ===== RENDER =====
 
@@ -757,7 +785,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         {/* Mobile: Floating chat overlay */}
         {isMobile && isChatVisible && (
           <div className="absolute bottom-28 left-4 w-64 z-20 pointer-events-auto">
-            <FloatingChat messages={chatMessages} maxVisible={3} />
+            <FloatingChat messages={chatMessages} maxVisible={3} onReportMessage={handleReportStreamMessage} />
           </div>
         )}
 
@@ -789,6 +817,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             message={chatMessage}
             onMessageChange={setChatMessage}
             onSendMessage={handleSendMessage}
+            onReportMessage={handleReportStreamMessage}
             viewerCount={viewerCount}
           />
         </div>

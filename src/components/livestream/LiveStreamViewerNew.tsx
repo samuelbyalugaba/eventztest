@@ -16,6 +16,7 @@ import {
   followUser,
   unfollowUser,
   isFollowing,
+  reportContent,
   supabase,
 } from '../../utils/supabase/api';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
@@ -28,6 +29,7 @@ import { GiftPicker } from './GiftPicker';
 import { GiftBannerOverlay } from './GiftBannerOverlay';
 import { HeartAnimations, generateHeart } from './HeartAnimations';
 import { GIFT_OPTIONS, type LiveStreamData, type FloatingHeart, type GiftBanner, type GiftOption } from './types';
+import { askForReportReason } from '../../utils/moderation';
 
 interface LiveStreamViewerProps {
   stream: LiveStreamData;
@@ -90,7 +92,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   // User can tap the unmute control to enable audio.
   const [isMuted, setIsMuted] = useState(true);
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<{ user: string; text: string; avatar?: string; isGift?: boolean }[]>([]);
+  const [messages, setMessages] = useState<{ id?: number; userId?: string; user: string; text: string; avatar?: string; isGift?: boolean }[]>([]);
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isFollowingHost, setIsFollowingHost] = useState(false);
@@ -241,6 +243,8 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         if (msgs) {
           setMessages(
             msgs.slice(-200).map((m: any) => ({
+              id: m.id,
+              userId: m.user_id,
               user: m.user?.full_name || m.user?.username || 'User',
               text: m.message,
               avatar: m.user?.avatar_url,
@@ -254,6 +258,8 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
     const sub = subscribeToStreamMessages(stream.id, (msg) => {
       const newMsg = {
+        id: msg.id,
+        userId: msg.user_id,
         user: msg.user?.full_name || (msg.user as any)?.username || 'User',
         text: msg.message,
         avatar: msg.user?.avatar_url,
@@ -288,6 +294,30 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
     return () => { sub.unsubscribe(); giftSub.unsubscribe(); };
   }, [stream.id]);
+
+  const handleReportStreamMessage = async (chatMessage: { id?: number; userId?: string; user: string; text: string }) => {
+    if (!chatMessage.id) return;
+    if (chatMessage.userId && chatMessage.userId === currentUserIdRef.current) {
+      toast.error('You cannot report your own message');
+      return;
+    }
+
+    const reason = askForReportReason('this live chat message');
+    if (!reason) return;
+
+    try {
+      await reportContent({
+        contentType: 'stream',
+        contentId: chatMessage.id,
+        reason,
+        details: chatMessage.text,
+        reportedUserId: chatMessage.userId,
+      });
+      toast.success('Report submitted');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to submit report');
+    }
+  };
 
   // Agora (skipped when streaming via Cloudflare HLS / OBS)
   useEffect(() => {
@@ -749,6 +779,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
               message={message}
               onMessageChange={setMessage}
               onSendMessage={handleSendMessage}
+              onReportMessage={handleReportStreamMessage}
               viewerCount={viewerCount}
             />
           </div>
@@ -789,7 +820,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       {isChatVisible && (
         <div className="absolute left-3 right-3 bottom-20 pointer-events-none">
           <div className="pointer-events-auto">
-            <FloatingChat messages={messages} maxVisible={5} />
+            <FloatingChat messages={messages} maxVisible={5} onReportMessage={handleReportStreamMessage} />
           </div>
         </div>
       )}

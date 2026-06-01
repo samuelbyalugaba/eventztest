@@ -7,6 +7,7 @@ import { extractCurrencyFromPrice, formatPrice } from '../utils/currencies';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, WALLET_PAYMENT_METHODS, type WalletPaymentMethod } from '../utils/walletCheckout';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
+import { ANDROID_PAID_VIRTUAL_ACCESS_NOTICE, isPaidVirtualAccessAllowed } from '../utils/platform';
 
 interface VirtualTicketPurchaseModalProps {
   isOpen: boolean;
@@ -161,6 +162,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
   const priceString = event.streaming?.virtualPrice || '0';
   const price = parseFloat(priceString.replace(/[^0-9.]/g, '')) || 0;
   const isFreeVirtual = price <= 0;
+  const paidVirtualBlocked = !isFreeVirtual && !isPaidVirtualAccessAllowed();
   const walletShortfall = Math.max(0, price - walletBalance);
   const needsTopUp = price > 0 && selectedPaymentMethod !== 'Wallet' && walletShortfall > 0;
 
@@ -194,6 +196,13 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                     </div>
                 </div>
 
+                {paidVirtualBlocked ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm font-semibold text-amber-900">Virtual ticketing unavailable</p>
+                    <p className="mt-1 text-sm leading-5 text-amber-800">{ANDROID_PAID_VIRTUAL_ACCESS_NOTICE}</p>
+                  </div>
+                ) : (
+                <>
                 {/* Form */}
                 <div className="space-y-3">
                     <div className="relative">
@@ -300,6 +309,8 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                         </>
                     )}
                 </button>
+                </>
+                )}
                 </>
             ) : (
                 <div className="text-center py-8 animate-in zoom-in duration-300">

@@ -16,13 +16,8 @@ const SUPPORTED_VIDEO_TYPES = new Set([
   'video/mp4',
   'video/webm',
   'video/ogg',
-  'video/quicktime',
-  'video/x-m4v',
-  'video/hevc',
-  'video/heif',
-  'video/3gpp',
 ]);
-const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v', 'hevc', '3gp', '3gpp']);
+const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'ogg', 'ogv']);
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
 const MAX_VIDEO_SIZE_MB = 200;
 
@@ -33,6 +28,10 @@ const getFileExtension = (file: File) => {
 const isSupportedVideoFile = (file: File) => {
   const ext = getFileExtension(file);
   return SUPPORTED_VIDEO_TYPES.has(file.type) || SUPPORTED_VIDEO_EXTENSIONS.has(ext);
+};
+const isKnownUnsupportedVideoFile = (file: File) => {
+  const ext = getFileExtension(file);
+  return file.type.startsWith('video/') || ['mov', 'm4v', 'hevc', 'heif', '3gp', '3gpp'].includes(ext);
 };
 const isSupportedImageFile = (file: File) => {
   const ext = getFileExtension(file);
@@ -149,7 +148,12 @@ export default function CreatePostPage() {
     for (const file of files.slice(0, remaining)) {
       const isVideo = isSupportedVideoFile(file);
       const isImage = isSupportedImageFile(file);
-      if (!isVideo && !isImage) continue;
+      if (!isVideo && !isImage) {
+        if (isKnownUnsupportedVideoFile(file)) {
+          toast.error('Use MP4, WebM, or OGG video for reliable mobile playback.');
+        }
+        continue;
+      }
       if (isVideo && file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
         toast.error(`Video must be less than ${MAX_VIDEO_SIZE_MB}MB`);
         continue;
@@ -513,7 +517,7 @@ export default function CreatePostPage() {
           type="file"
           ref={fileInputRef}
           onChange={handleFileSelect}
-          accept="image/*,video/*"
+          accept="image/*,video/mp4,video/webm,video/ogg"
           className="hidden"
           multiple
         />

@@ -2384,6 +2384,16 @@ export type StreamMessage = {
 };
 
 export const getStreamMessages = async (eventId: number) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  let blockedUserIds = new Set<string>();
+  if (user) {
+    try {
+      blockedUserIds = await getBlockedUserIds(user.id);
+    } catch {
+      blockedUserIds = new Set<string>();
+    }
+  }
+
   const { data, error } = await supabase
     .from('stream_chat_messages')
     .select(`
@@ -2395,7 +2405,7 @@ export const getStreamMessages = async (eventId: number) => {
     .limit(50);
 
   if (error) throw error;
-  return data;
+  return (data || []).filter((message: any) => !blockedUserIds.has(message.user_id));
 };
 
 export const sendStreamMessage = async (eventId: number, message: string) => {
@@ -2435,6 +2445,14 @@ export const subscribeToStreamMessages = (eventId: number, callback: (message: S
         filter: `event_id=eq.${eventId}`
       },
       async (payload) => {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          try {
+            const blockedUserIds = await getBlockedUserIds(currentUser.id);
+            if (blockedUserIds.has(payload.new.user_id)) return;
+          } catch {}
+        }
+
         // Fetch user details for the new message
         const { data: user } = await supabase
           .from('profiles')

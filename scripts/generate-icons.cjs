@@ -1,11 +1,7 @@
 
-import sharp from 'sharp';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const sharp = require('sharp');
+const fs = require('fs');
+const path = require('path');
 
 const SOURCE_ICON = path.resolve(__dirname, '../public/icons/source.png');
 const OUTPUT_DIR = path.resolve(__dirname, '../public/icons');

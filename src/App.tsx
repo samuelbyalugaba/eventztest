@@ -12,6 +12,7 @@ import { GenericPageSkeleton, FeedPageSkeleton, RouteFallback } from './componen
 import { DesktopSidebar } from './components/desktop/DesktopSidebar';
 import { RightRail } from './components/desktop/RightRail';
 import { LegalPage } from './components/legal/LegalPage';
+import { DeleteAccountPage } from './components/legal/DeleteAccountPage';
 import { HostedPage } from './components/profile/HostedPage';
 
 // Lazy-loaded heavy pages and route wrappers
@@ -190,6 +191,7 @@ export default function App() {
     location.pathname.startsWith('/messages') ||
     location.pathname === '/privacy' ||
     location.pathname === '/terms' ||
+    location.pathname === '/delete-account' ||
     isProfileSubpagePath(location.pathname) ||
     isProfileSubpagePath(backgroundLocation?.pathname);
   const effectiveLocation = backgroundLocation || location;
@@ -234,11 +236,13 @@ export default function App() {
     );
   }
 
-  if (!isAuthenticated && (location.pathname === '/privacy' || location.pathname === '/terms')) {
+  if (!isAuthenticated && (location.pathname === '/privacy' || location.pathname === '/terms' || location.pathname === '/delete-account')) {
     return (
       <div className="h-[100dvh] overflow-y-auto bg-gray-50">
         <Toaster position="top-center" richColors={false} closeButton toastOptions={{ duration: 2500 }} />
-        <LegalPage type={location.pathname === '/privacy' ? 'privacy' : 'terms'} />
+        {location.pathname === '/delete-account'
+          ? <DeleteAccountPage />
+          : <LegalPage type={location.pathname === '/privacy' ? 'privacy' : 'terms'} />}
       </div>
     );
   }
@@ -407,6 +411,7 @@ export default function App() {
             } />
             <Route path="/privacy" element={<LegalPage type="privacy" />} />
             <Route path="/terms" element={<LegalPage type="terms" />} />
+            <Route path="/delete-account" element={<DeleteAccountPage />} />
           </Routes>
         </div>
       </div>
