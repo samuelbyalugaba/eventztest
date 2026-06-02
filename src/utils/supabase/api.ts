@@ -1,5 +1,6 @@
 
 import { supabase } from './client';
+import { sendSocialPushNotification } from '../pushNotifications';
 export { supabase };
 
 const normalizeEnv = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
@@ -467,6 +468,7 @@ export const toggleFollow = async (followerId: string, followingId: string) => {
       .from('follows')
       .insert({ follower_id: followerId, following_id: followingId });
     if (error) throw error;
+    void sendSocialPushNotification('follow', { targetUserId: followingId });
     return true; // Followed
   }
 };
@@ -1117,11 +1119,11 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
     optimizedFile = await optimizeForUpload(uploadFile);
   }
 
-  // Validate file size (200MB limit for videos, 10MB for images)
-  const maxSize = isVideo ? 200 * 1024 * 1024 : 10 * 1024 * 1024;
+  // Validate file size (100MB limit for videos, 10MB for images)
+  const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
   
   if (optimizedFile.size > maxSize) {
-    throw new Error(`File size too large. Maximum size is ${isVideo ? '200MB' : '10MB'}.`);
+    throw new Error(`File size too large. Maximum size is ${isVideo ? '100MB' : '10MB'}.`);
   }
 
   const optimizedFileExt = (getFileExtension(optimizedFile.name) || fileExt || extensionByContentType[contentType] || 'bin').toLowerCase();
@@ -1885,6 +1887,7 @@ export const toggleLikePost = async (postId: number, userId: string) => {
   } else {
     const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: userId });
     if (error) throw error;
+    void sendSocialPushNotification('like', { postId });
     return true;
   }
 };
@@ -1959,6 +1962,8 @@ export const createPostComment = async (postId: number, userId: string, text: st
     .single();
 
   if (error) throw error;
+
+  void sendSocialPushNotification('comment', { postId, commentId: data.id });
 
   return data;
 };

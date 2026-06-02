@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, RotateCcw, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award } from 'lucide-react';
+import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, SwitchCamera, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award } from 'lucide-react';
 import { toast } from 'sonner';
 import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToStreamPresence, sendStreamMessage, reportContent } from '../../utils/supabase/api';
 import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
@@ -521,8 +521,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         {/* Center controls */}
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
           <div className="flex items-center gap-6 pointer-events-auto">
-            <button onClick={toggleCameraDevice} className="p-3 rounded-2xl bg-white/10 backdrop-blur-xl text-white border border-white/10 active:scale-90 transition-transform">
-              <RotateCcw className="w-6 h-6" />
+            <button onClick={toggleCameraDevice} className="p-3 rounded-2xl bg-white/10 backdrop-blur-xl text-white border border-white/10 active:scale-90 transition-transform" aria-label="Switch camera">
+              <SwitchCamera className="w-6 h-6" />
             </button>
             <button onClick={toggleCamera} className={`p-3 rounded-2xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${cameraEnabled ? 'bg-white/10 text-white' : 'bg-white text-black'}`}>
               {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
@@ -757,8 +757,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
           {/* Right action rail */}
           <div className="absolute bottom-32 right-4 flex flex-col items-center gap-3 pointer-events-auto">
-            <button onClick={toggleCameraDevice} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10 active:scale-90 transition-transform">
-              <RotateCcw className="w-5 h-5" />
+            <button onClick={toggleCameraDevice} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10 active:scale-90 transition-transform" aria-label="Switch camera">
+              <SwitchCamera className="w-5 h-5" />
             </button>
             <button onClick={toggleCamera} className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${cameraEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
               {cameraEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}

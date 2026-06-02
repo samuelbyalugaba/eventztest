@@ -33,11 +33,6 @@ export function ProfileHeader({
     return (
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          {onBack && (
-            <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors" aria-label="Back">
-              <ChevronLeft className="w-5 h-5 text-gray-900" />
-            </button>
-          )}
           <div className="w-16 h-16 rounded-full overflow-hidden bg-white ring-1 ring-gray-200">
             {isLoading ? (
               <div className="w-full h-full bg-gray-200 animate-pulse" />

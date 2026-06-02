@@ -5,7 +5,6 @@ import { Calendar, Menu, Radio, Search, User } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { useMessaging } from './contexts/MessagingContext';
 import { Toaster } from 'sonner';
-import { supabase } from './utils/supabase/client';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
 import { GenericPageSkeleton, FeedPageSkeleton, RouteFallback } from './components/skeletons/PageSkeletons';
@@ -14,6 +13,7 @@ import { RightRail } from './components/desktop/RightRail';
 import { LegalPage } from './components/legal/LegalPage';
 import { DeleteAccountPage } from './components/legal/DeleteAccountPage';
 import { HostedPage } from './components/profile/HostedPage';
+import { AuthCallbackPage } from './components/AuthCallbackPage';
 
 // Lazy-loaded heavy pages and route wrappers
 const EventDetails = lazy(() => import('./components/EventDetails').then(m => ({ default: m.EventDetails })));
@@ -46,6 +46,7 @@ export default function App() {
     user: currentUser,
     isAuthenticated,
     isLoading: isCheckingAuth,
+    signOut,
   } = useAuth();
 
   const {
@@ -144,7 +145,7 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut();
       navigate('/events');
     } catch {/* silent */}
   };
@@ -232,6 +233,15 @@ export default function App() {
           <div className="w-16 h-16 border-4 border-[#8A2BE2]/30 border-t-[#8A2BE2] rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-600 font-medium">Loading EVENTZ...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && location.pathname === '/auth/callback') {
+    return (
+      <div className="h-[100dvh] overflow-y-auto bg-gray-50">
+        <Toaster position="top-center" richColors={false} closeButton toastOptions={{ duration: 2500 }} />
+        <AuthCallbackPage />
       </div>
     );
   }
@@ -412,6 +422,7 @@ export default function App() {
             <Route path="/privacy" element={<LegalPage type="privacy" />} />
             <Route path="/terms" element={<LegalPage type="terms" />} />
             <Route path="/delete-account" element={<DeleteAccountPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
           </Routes>
         </div>
       </div>

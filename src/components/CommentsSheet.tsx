@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import { toast } from 'sonner';
 import { reportContent } from '../utils/supabase/api';
 import { askForReportReason } from '../utils/moderation';
+import { useVisualViewport } from '../utils/useVisualViewport';
 
 
 interface CommentsSheetProps {
@@ -32,6 +33,7 @@ export function CommentsSheet({
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: number, name: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { offsetBottom } = useVisualViewport();
 
   const handlePostComment = () => {
     if (!commentText.trim()) return;
@@ -88,129 +90,137 @@ export function CommentsSheet({
   const comments = post.comments || [];
   const parentComments = comments.filter((c: any) => !c.parent_id);
   const replies = comments.filter((c: any) => c.parent_id);
+  const inputBottomPadding = `calc(0.85rem + ${offsetBottom}px + env(safe-area-inset-bottom))`;
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[80vh] p-0 rounded-t-[32px] overflow-hidden flex flex-col border-none shadow-2xl">
-        <SheetHeader className="px-6 py-4 border-b border-gray-50 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-lg font-bold text-gray-900">
+    <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent side="bottom" className="h-[82dvh] max-h-[min(82dvh,760px)] p-0 rounded-t-3xl overflow-hidden flex flex-col border-none bg-white shadow-2xl">
+        <SheetHeader className="flex-shrink-0 border-b border-gray-100 px-4 pb-3 pt-2">
+          <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-gray-300" />
+          <div className="flex h-9 items-center justify-center">
+            <SheetTitle className="text-base font-bold text-gray-950">
               Comments ({comments.length})
             </SheetTitle>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close comments"
+              className="absolute right-3 inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </SheetHeader>
 
         {/* Scrollable List */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 scrollbar-hide">
           {comments.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageCircle className="w-8 h-8 text-gray-300" />
+            <div className="py-20 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-50">
+                <MessageCircle className="h-7 w-7 text-gray-300" />
               </div>
-              <p className="text-gray-400 text-sm font-medium">No comments yet</p>
-              <p className="text-gray-300 text-xs mt-1">Be the first to share your thoughts!</p>
+              <p className="text-sm font-semibold text-gray-500">No comments yet</p>
+              <p className="mt-1 text-xs text-gray-400">Be the first to comment.</p>
             </div>
           ) : (
             parentComments.map((comment: any) => (
-              <div key={comment.id} className="space-y-4">
+              <div key={comment.id} className="mb-5 space-y-3">
                 {/* Parent Comment */}
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => handleOpenCommentUser(comment)}
-                    className="mt-0.5 h-10 w-10 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    className="mt-0.5 h-9 w-9 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                     aria-label={`Open ${comment.user.name}'s profile`}
                   >
                     <UserAvatar
                       src={comment.user.avatar}
                       name={comment.user.name}
-                      className="h-10 w-10 rounded-full object-cover"
+                      className="h-9 w-9 rounded-full object-cover"
                     />
                   </button>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] leading-5 text-gray-900">
                       <button
                         type="button"
                         onClick={() => handleOpenCommentUser(comment)}
-                        className="flex items-center gap-1 text-sm font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        className="mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                       >
                         {comment.user.name}
                         {comment.user.is_organizer && (
-                          <img src={verifiedBadge} alt="Verified" className="w-3.5 h-3.5 select-none" loading="lazy" decoding="async" />
+                          <img src={verifiedBadge} alt="Verified" className="h-3.5 w-3.5 select-none" loading="lazy" decoding="async" />
                         )}
                       </button>
-                      <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
-                    </div>
-                    <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
-                    <div className="flex items-center gap-6 mt-2.5">
+                      {comment.text}
+                    </p>
+                    <div className="mt-1.5 flex items-center gap-5">
+                      <span className="text-[11px] font-medium text-gray-400">{comment.timestamp}</span>
                       <button 
                         onClick={() => handleReply(comment)}
-                        className="text-xs text-gray-400 font-bold hover:text-gray-600 transition-colors"
+                        className="text-[11px] font-semibold text-gray-500 transition-colors hover:text-gray-800"
                       >
                         Reply
-                      </button>
-                      <button 
-                        onClick={() => onLikeComment?.(comment.id)}
-                        className={`text-xs font-bold transition-colors flex items-center gap-1.5 ${comment.is_liked ? 'text-pink-600' : 'text-gray-400 hover:text-gray-600'}`}
-                      >
-                        <Heart className={`w-3.5 h-3.5 ${comment.is_liked ? 'fill-pink-600' : ''}`} />
-                        {comment.likes_count > 0 && comment.likes_count}
                       </button>
                       {String(comment.user?.id || comment.user_id) !== String(currentUser?.id || '') && (
                         <button
                           onClick={() => handleReportComment(comment)}
-                          className="text-xs text-gray-400 font-bold hover:text-red-600 transition-colors"
+                          className="text-[11px] font-semibold text-gray-500 transition-colors hover:text-red-600"
                         >
                           Report
                         </button>
                       )}
                     </div>
                   </div>
+                  <button 
+                        onClick={() => onLikeComment?.(comment.id)}
+                    className={`mt-3 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-colors ${comment.is_liked ? 'text-pink-600' : 'text-gray-400 hover:text-gray-700'}`}
+                      >
+                    <Heart className={`h-4 w-4 ${comment.is_liked ? 'fill-pink-600' : ''}`} />
+                      </button>
                 </div>
 
                 {/* Replies */}
                 {replies.filter((r: any) => r.parent_id === comment.id).map((reply: any) => (
-                  <div key={reply.id} className="flex gap-3 ml-12">
+                  <div key={reply.id} className="ml-12 flex gap-2.5">
                     <button
                       type="button"
                       onClick={() => handleOpenCommentUser(reply)}
-                      className="mt-0.5 h-8 w-8 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                      className="mt-0.5 h-7 w-7 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                       aria-label={`Open ${reply.user.name}'s profile`}
                     >
                       <UserAvatar
                         src={reply.user.avatar}
                         name={reply.user.name}
-                        className="h-8 w-8 rounded-full object-cover"
+                        className="h-7 w-7 rounded-full object-cover"
                       />
                     </button>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] leading-5 text-gray-900">
                         <button
                           type="button"
                           onClick={() => handleOpenCommentUser(reply)}
-                          className="flex items-center gap-1 text-sm font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                          className="mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                         >
                           {reply.user.name}
                           {reply.user.is_organizer && (
-                            <img src={verifiedBadge} alt="Verified" className="w-3 h-3 select-none" loading="lazy" decoding="async" />
+                            <img src={verifiedBadge} alt="Verified" className="h-3 w-3 select-none" loading="lazy" decoding="async" />
                           )}
                         </button>
-                        <span className="text-gray-400 text-[10px]">{reply.timestamp}</span>
-                      </div>
-                      <p className="text-gray-700 text-sm leading-relaxed">{reply.text}</p>
-                      <div className="flex items-center gap-6 mt-2.5">
+                        {reply.text}
+                      </p>
+                      <div className="mt-1.5 flex items-center gap-5">
+                        <span className="text-[10px] font-medium text-gray-400">{reply.timestamp}</span>
                         <button 
                           onClick={() => handleReply(comment)}
-                          className="text-xs text-gray-400 font-bold hover:text-gray-600 transition-colors"
+                          className="text-[10px] font-semibold text-gray-500 transition-colors hover:text-gray-800"
                         >
                           Reply
                         </button>
                         <button 
                           onClick={() => onLikeComment?.(reply.id)}
-                          className={`text-xs font-bold transition-colors flex items-center gap-1.5 ${reply.is_liked ? 'text-pink-600' : 'text-gray-400 hover:text-gray-600'}`}
+                          className={`text-[10px] font-semibold transition-colors ${reply.is_liked ? 'text-pink-600' : 'text-gray-500 hover:text-gray-800'}`}
                         >
-                          <Heart className={`w-3.5 h-3.5 ${reply.is_liked ? 'fill-pink-600' : ''}`} />
-                          {reply.likes_count > 0 && reply.likes_count}
+                          Like{reply.likes_count > 0 ? ` (${reply.likes_count})` : ''}
                         </button>
                         {String(reply.user?.id || reply.user_id) !== String(currentUser?.id || '') && (
                           <button
@@ -230,9 +240,12 @@ export function CommentsSheet({
         </div>
 
         {/* Input Section */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-white pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div
+          className="flex-shrink-0 border-t border-gray-100 bg-white px-4 pt-3"
+          style={{ paddingBottom: inputBottomPadding }}
+        >
           {replyingTo && (
-            <div className="flex items-center justify-between px-3 py-2 mb-3 bg-gray-50 rounded-xl text-xs">
+            <div className="mb-2 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
               <span className="text-gray-500 font-medium">Replying to <span className="font-bold text-gray-900">@{replyingTo.name}</span></span>
               <button 
                 onClick={() => setReplyingTo(null)}
@@ -242,11 +255,11 @@ export function CommentsSheet({
               </button>
             </div>
           )}
-          <div className="flex items-end gap-3 bg-gray-50 rounded-[24px] px-4 py-3 border border-gray-100 focus-within:bg-white focus-within:border-purple-200 focus-within:ring-4 focus-within:ring-purple-50 transition-all">
+          <div className="flex items-end gap-2.5 rounded-[1.45rem] border border-gray-200 bg-gray-50 px-3 py-2.5 transition-all focus-within:border-gray-300 focus-within:bg-white">
             <UserAvatar
               src={userProfile?.avatar_url || currentUser?.user_metadata?.avatar_url}
               name={userProfile?.full_name || currentUser?.user_metadata?.full_name || userProfile?.username || "User"}
-              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+              className="h-8 w-8 flex-shrink-0 rounded-full object-cover"
             />
             <textarea
               ref={textareaRef}
@@ -254,7 +267,7 @@ export function CommentsSheet({
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Add a comment..."
               rows={1}
-              className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 focus:ring-0 resize-none min-h-[20px] max-h-[120px] py-2 font-medium"
+              className="min-h-[20px] max-h-[110px] flex-1 resize-none border-none bg-transparent p-0 py-1.5 text-sm font-medium text-gray-900 placeholder-gray-400 focus:ring-0"
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';
@@ -264,10 +277,10 @@ export function CommentsSheet({
             <button
               onClick={handlePostComment}
               disabled={!commentText.trim()}
-              className={`px-4 py-2 rounded-full font-bold text-sm transition-all ${
+              className={`rounded-full px-3.5 py-2 text-sm font-bold transition-all ${
                 commentText.trim()
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-200 hover:bg-purple-700 active:scale-95'
-                  : 'text-gray-300 bg-gray-100 cursor-not-allowed'
+                  : 'cursor-not-allowed bg-transparent text-gray-300'
               }`}
             >
               Post

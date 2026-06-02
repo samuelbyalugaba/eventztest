@@ -49,12 +49,12 @@ type TimeFilterOption = {
 const categories: CategoryOption[] = [
   { id: 'all', name: 'All' },
   { id: 'entertainment', name: 'Entertainment', icon: Music2, subcategories: ['Concerts', 'Club Nights', 'Live Performances', 'Nightlife (Bars/Lounges)', 'Themed Parties'] },
-  { id: 'education', name: 'Education', icon: GraduationCap, subcategories: ['Workshops', 'Seminars', 'Webinars'] },
   { id: 'business & tech', name: 'Business & Tech', icon: BriefcaseBusiness, subcategories: ['Startup Events', 'Networking', 'Conferences', 'Tech Talks'] },
-  { id: 'culture', name: 'Culture', icon: Palette, subcategories: ['Festivals', 'Arts', 'Theater', 'Food & Drink', 'Local Traditions', 'Fashion Events'] },
-  { id: 'religion', name: 'Religion', icon: Landmark, subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
   { id: 'sports & fitness', name: 'Sports & Fitness', chipName: 'Sports', icon: Dumbbell, subcategories: ['Fitness Classes', 'Competitions', 'Sports Events'] },
   { id: 'fashion', name: 'Fashion', icon: Shirt, subcategories: ['Runway Shows', 'Pop-Up Markets', 'Style and Beauty', 'Brand Launches', 'Fashion Weeks'] },
+  { id: 'culture', name: 'Culture', icon: Palette, subcategories: ['Festivals', 'Arts', 'Theater', 'Food & Drink', 'Local Traditions', 'Fashion Events'] },
+  { id: 'education', name: 'Education', icon: GraduationCap, subcategories: ['Workshops', 'Seminars', 'Webinars'] },
+  { id: 'religion', name: 'Religion', icon: Landmark, subcategories: ['Worship Services', 'Religious Gatherings', 'Spiritual Events'] },
 ];
 
 const timeFilters: TimeFilterOption[] = [

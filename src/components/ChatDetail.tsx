@@ -23,6 +23,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   const [isListening, setIsListening] = useState(false);
   const { offsetTop, offsetBottom } = useVisualViewport();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,15 +72,30 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
     recognition.start();
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
+    });
   };
+
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior;
+    };
+  }, []);
 
   useEffect(() => {
     // Fetch initial messages
     getMessages(conversationId).then(msgs => {
       setMessages(msgs || []);
-      scrollToBottom();
+      scrollToBottom('auto');
       // Mark as read when opening
       markMessagesAsRead(conversationId, currentUser.id).catch(console.error);
     });
@@ -103,6 +119,10 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
       subscription.unsubscribe();
     };
   }, [conversationId, currentUser.id]);
+
+  useEffect(() => {
+    scrollToBottom('auto');
+  }, [messages.length, offsetBottom]);
 
   const handlePlusClick = () => {
     fileInputRef.current?.click();
@@ -230,7 +250,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   };
 
   return (
-    <div className="fixed inset-0 h-[100dvh] bg-white z-[70] flex flex-col animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 h-[100dvh] overflow-hidden overscroll-none bg-white z-[70] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div
         className="fixed left-0 right-0 h-14 px-4 border-b border-gray-100 flex items-center justify-between bg-white z-20"
@@ -306,8 +326,14 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
 
       {/* Messages Area */}
       <div
-        className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4"
-        style={{ paddingTop: 56 + offsetTop, paddingBottom: 76 + offsetBottom }}
+        ref={messagesScrollerRef}
+        className="flex-1 overflow-y-auto overscroll-y-contain bg-gray-50 px-4 py-4"
+        style={{
+          paddingTop: 56 + offsetTop,
+          paddingBottom: `calc(6rem + ${offsetBottom}px + env(safe-area-inset-bottom))`,
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+        }}
       >
         <div className="space-y-4">
           {messages.map((msg, index) => {
@@ -400,7 +426,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
 
       {/* Input Area */}
       <div
-        className="fixed left-0 right-0 p-3 bg-white border-t border-gray-100 z-20"
+        className="fixed left-0 right-0 border-t border-gray-100 bg-white px-3 pt-3 pb-[calc(0.9rem+env(safe-area-inset-bottom))] z-20"
         style={{ bottom: offsetBottom }}
       >
         <input 

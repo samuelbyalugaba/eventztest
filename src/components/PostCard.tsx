@@ -76,7 +76,7 @@ export const PostCard = React.memo(function PostCard({
   const [likesCount, setLikesCount] = useState(post.likes);
   const [isSaved, setIsSaved] = useState(post.isSaved);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const commentsCount = post.comments_count || 0;
@@ -248,8 +248,7 @@ export const PostCard = React.memo(function PostCard({
             const canAutoplay = !isLowInternet || entry.intersectionRatio >= 0.8;
             if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && !isPaused && canAutoplay) {
               if (videoRef.current.paused) {
-                videoRef.current.muted = true;
-                setIsMuted(true);
+                videoRef.current.muted = isMuted;
 
                 const playPromise = videoRef.current.play();
                 if (playPromise !== undefined) {
@@ -292,7 +291,7 @@ export const PostCard = React.memo(function PostCard({
         observer.unobserve(videoRef.current);
       }
     };
-  }, [carouselIndex, post.id, isLowInternet, isPaused]);
+  }, [carouselIndex, post.id, isLowInternet, isPaused, isMuted]);
 
   const handleLike = async () => {
     // Optimistic UI

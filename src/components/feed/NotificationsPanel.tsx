@@ -1,8 +1,14 @@
-import { X, Heart, MessageCircle, UserPlus, Calendar } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { X, Heart, MessageCircle, UserPlus, Calendar, Bell } from 'lucide-react';
 import { UserAvatar } from '../UserAvatar';
 import { formatTimeAgo } from '../../utils/format';
 import { markNotificationsAsRead, Notification } from '../../utils/supabase/api';
 import { toast } from 'sonner';
+import {
+  getPushPermission,
+  isPushNotificationSupported,
+  subscribeToPushNotifications,
+} from '../../utils/pushNotifications';
 
 interface NotificationsPanelProps {
   notifications: Notification[];
@@ -19,6 +25,28 @@ export function NotificationsPanel({
   currentUser,
   onClose,
 }: NotificationsPanelProps) {
+  const [pushPermission, setPushPermission] = useState(getPushPermission());
+  const [isEnablingPush, setIsEnablingPush] = useState(false);
+  const canEnablePush = useMemo(
+    () => isPushNotificationSupported() && pushPermission !== 'granted',
+    [pushPermission]
+  );
+
+  const handleEnablePush = async () => {
+    if (!currentUser?.id) return;
+    setIsEnablingPush(true);
+    try {
+      await subscribeToPushNotifications(currentUser.id);
+      setPushPermission(getPushPermission());
+      toast.success('Push notifications enabled');
+    } catch (error: any) {
+      setPushPermission(getPushPermission());
+      toast.error(error?.message || 'Could not enable push notifications');
+    } finally {
+      setIsEnablingPush(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-white md:max-w-md md:right-0 md:left-auto md:border-l border-gray-100 shadow-2xl animate-in slide-in-from-right-full duration-300">
       <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
@@ -47,6 +75,23 @@ export function NotificationsPanel({
 
       <div className="flex-1 overflow-y-auto p-2">
         <div className="space-y-1">
+          {canEnablePush && (
+            <button
+              type="button"
+              onClick={handleEnablePush}
+              disabled={isEnablingPush}
+              className="mb-2 flex w-full items-center gap-3 rounded-xl border border-purple-100 bg-purple-50 px-3 py-3 text-left transition-colors hover:bg-purple-100 disabled:opacity-60"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-purple-600">
+                <Bell className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-gray-900">Enable push notifications</span>
+                <span className="block text-xs leading-5 text-gray-500">Receive Eventz alerts in your device notification bar.</span>
+              </span>
+            </button>
+          )}
+
           {notificationsLoading ? (
             <div className="flex justify-center py-8">
               <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />

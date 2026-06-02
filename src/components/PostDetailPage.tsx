@@ -6,6 +6,7 @@ import {
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import verifiedBadge from '../assets/verified-badge.png';
+import { CommentIcon } from './icons/CommentIcon';
 import { 
   Carousel,
   CarouselContent,
@@ -234,31 +235,34 @@ export function PostDetailPage({
           <div className="flex items-center justify-between w-full">
             <button
               onClick={onBack}
-              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="-ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full p-0 transition-colors hover:bg-gray-100"
+              aria-label="Back"
             >
               <ArrowLeft className="w-6 h-6 text-gray-900" />
             </button>
             <div className="flex items-center gap-2">
               <button
                 onClick={(e) => onShare(post, e)}
-                className="p-2.5 bg-gray-100 hover:bg-cyan-100 text-gray-700 hover:text-cyan-600 rounded-xl transition-all"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 p-0 text-gray-700 transition-all hover:bg-cyan-100 hover:text-cyan-600"
+                aria-label="Share post"
               >
                 <Share2 className="w-4 h-4" />
               </button>
               <button
                 onClick={(e) => onSave(post.id, e)}
-                className={`p-2.5 rounded-xl transition-all ${
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-xl p-0 transition-all ${
                   post.isSaved
                     ? 'bg-purple-600 text-white'
                     : 'bg-gray-100 hover:bg-purple-100 text-gray-700 hover:text-purple-600'
                 }`}
+                aria-label={post.isSaved ? 'Unsave post' : 'Save post'}
               >
                 <Bookmark className={`w-4 h-4 ${post.isSaved ? 'fill-white' : ''}`} />
               </button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all">
+                  <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 p-0 text-gray-700 transition-all hover:bg-gray-200" aria-label="More post actions">
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </DropdownMenuTrigger>
@@ -624,25 +628,40 @@ export function PostDetailPage({
           )}
 
           {/* Engagement Stats */}
-          <div className="flex items-center gap-6 py-2">
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={(e) => onLike(post.id, e)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                  post.isLiked ? 'bg-pink-50 text-pink-600 scale-110' : 'bg-gray-100 text-gray-600 hover:bg-pink-50 hover:text-pink-600'
-                }`}
-              >
-                <Heart className={`w-5 h-5 ${post.isLiked ? 'fill-pink-600' : ''}`} />
-              </button>
-              <div className="text-gray-900 font-bold text-sm">{(post.likes_count || post.likes || 0).toLocaleString()}</div>
-            </div>
+          <div className="feed-post-actions !px-0 !py-2">
+            <button
+              onClick={(e) => onLike(post.id, e)}
+              className={`feed-action-btn feed-like-btn ${post.isLiked ? 'feed-action-liked' : ''}`}
+            >
+              <Heart className={`h-4 w-4 ${post.isLiked ? 'fill-current' : ''}`} />
+              <span>{(post.likes_count || post.likes || 0).toLocaleString()}</span>
+            </button>
 
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="text-gray-900 font-bold text-sm">{(post.comments?.length || 0).toLocaleString()}</div>
-            </div>
+            <button
+              onClick={() => textareaRef.current?.focus()}
+              className="feed-action-btn"
+            >
+              <CommentIcon className="h-[1.05rem] w-[1.05rem] overflow-visible" color="currentColor" />
+              <span>{(post.comments_count || post.comments?.length || 0).toLocaleString()}</span>
+            </button>
+
+            <div className="feed-action-spacer" />
+
+            <button
+              onClick={(e) => onShare(post, e)}
+              className="feed-action-icon-btn"
+              aria-label="Share post"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+
+            <button
+              onClick={(e) => onSave(post.id, e)}
+              className={`feed-save-pill ${post.isSaved ? 'feed-save-saved' : ''}`}
+              aria-label={post.isSaved ? 'Unsave post' : 'Save post'}
+            >
+              <Bookmark className={`h-4 w-4 ${post.isSaved ? 'fill-current' : ''}`} />
+            </button>
           </div>
         </div>
 

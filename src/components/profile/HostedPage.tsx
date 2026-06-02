@@ -60,6 +60,14 @@ const streamHasPlayback = (stream: CloudflareStream) => {
   return stream.has_recording !== false && Boolean(stream.playback_url || stream.uid || stream.preview_url);
 };
 
+const streamThumbnailUrl = (stream: CloudflareStream) => {
+  if (stream.thumbnail_url) return stream.thumbnail_url;
+  if (stream.uid && !String(stream.uid).startsWith('event-')) {
+    return `https://videodelivery.net/${stream.uid}/thumbnails/thumbnail.jpg`;
+  }
+  return stream.event?.image_url || '';
+};
+
 export function HostedPage() {
   const { user } = useAuth();
   const { userId } = useParams<{ userId: string }>();
@@ -346,7 +354,7 @@ function HostedStreamCard({
     >
       <div className="relative aspect-[1.75] overflow-hidden bg-gradient-to-br from-slate-950 via-blue-800 to-purple-700">
         <ImageWithFallback
-          src={stream.thumbnail_url || stream.event?.image_url}
+          src={streamThumbnailUrl(stream)}
           alt={title}
           className="h-full w-full object-cover"
           fallbackType="video"

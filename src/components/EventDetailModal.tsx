@@ -549,7 +549,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
               <div className="flex gap-2">
                 <button 
                   onClick={handleToggleSave}
-                  className={`p-2 border rounded-lg transition-all ${
+                  className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border p-0 transition-all ${
                     isSaved 
                       ? 'bg-purple-50 border-purple-600 text-purple-600' 
                       : 'border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -590,9 +590,9 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 >
                   <div className="mb-0.5 flex items-center justify-between gap-2">
                     <p className="text-sm text-gray-600">Location</p>
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2 py-1 text-[11px] font-semibold leading-none text-purple-700 shadow-sm">
-                      Open in maps
-                      <ExternalLink className="h-3 w-3" />
+                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold leading-none text-purple-700 shadow-sm">
+                      Maps
+                      <ExternalLink className="h-2.5 w-2.5" />
                     </span>
                   </div>
                   <p className="break-words font-medium text-purple-700 underline decoration-purple-300 underline-offset-4">{event.location}</p>
@@ -758,10 +758,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
                     <Tv className="w-5 h-5 text-purple-600" />
                   </div>
-                  <div>
-                    <h3 className="text-gray-900 font-semibold text-sm">Virtual Access</h3>
-                    <p className="text-gray-500 text-xs">HD Live Stream</p>
-                  </div>
+                  <h3 className="text-gray-900 font-semibold text-sm">HD Live Stream</h3>
                 </div>
                 {event.streaming.isLive && (
                   <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-600 rounded-full">
@@ -801,7 +798,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   className="flex w-full cursor-default items-center justify-center gap-2 rounded-xl bg-gray-100 py-3 text-gray-700 shadow-none"
                 >
                   <Tv className="w-4 h-4" />
-                  <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : 'Free Event'}</span>
+                  <span className="text-sm font-medium">{isEventPast ? 'Event Ended' : 'Free Live Stream, Stay Tuned!'}</span>
                 </button>
               )}
             </div>
@@ -887,7 +884,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       </div>
 
       {/* Sticky Action Bar */}
-      <div className="p-4 border-t border-gray-100 bg-white flex gap-3 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] shrink-0 safe-area-bottom">
+      <div className="flex shrink-0 gap-3 border-t border-gray-100 bg-white px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
          {event.streaming?.isLive ? (
            <button 
              onClick={handleWatchLive}
@@ -913,7 +910,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                  disabled={isFreeEvent}
                  className={`flex-1 rounded-xl py-3 font-medium transition-colors flex items-center justify-center gap-2 ${
                    isFreeEvent
-                     ? 'cursor-default bg-purple-100 text-purple-700 shadow-none'
+                     ? 'cursor-default bg-gray-100 text-gray-600 shadow-none'
                      : 'bg-[#8A2BE2] text-white hover:bg-[#7b26c9] shadow-lg shadow-purple-200'
                  }`}
                >

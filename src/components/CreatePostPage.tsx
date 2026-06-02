@@ -19,7 +19,7 @@ const SUPPORTED_VIDEO_TYPES = new Set([
 ]);
 const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'ogg', 'ogv']);
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
-const MAX_VIDEO_SIZE_MB = 200;
+const MAX_VIDEO_SIZE_MB = 100;
 
 const getFileExtension = (file: File) => {
   const dotIndex = file.name.lastIndexOf('.');

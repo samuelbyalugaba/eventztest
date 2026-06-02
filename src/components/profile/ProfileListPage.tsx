@@ -147,6 +147,10 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
   };
 
   const emptyText = type === 'followers' ? 'No followers yet' : 'Not following anyone yet';
+  const emptyBody =
+    type === 'followers'
+      ? 'Everyone who follows you, will appear here.'
+      : 'Everyone that you follow, will appear here.';
 
   return (
     <div className="min-h-screen bg-white pb-[calc(2rem+env(safe-area-inset-bottom))]">
@@ -226,7 +230,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
         ) : filteredUsers.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-sm font-semibold text-gray-900">{emptyText}</p>
-            <p className="mt-1 text-sm text-gray-500">People will appear here once there is activity.</p>
+            <p className="mt-1 text-sm text-gray-500">{emptyBody}</p>
           </div>
         ) : (
           <div className="space-y-2">

@@ -3,6 +3,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabase/client';
 import { getProfile } from '../utils/supabase/api';
 import { useProfileStore } from '../store/profileStore';
+import { syncExistingPushSubscription, unsubscribeFromPushNotifications } from '../utils/pushNotifications';
 
 interface AuthContextType {
   user: SupabaseUser | null;
@@ -125,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (session?.user) {
           setUser(session.user);
           setIsAuthenticated(true);
+          void syncExistingPushSubscription(session.user.id);
           void ensureProfile(session.user);
         } else {
           setUser(null);
@@ -146,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' && session) {
         setUser(session.user);
         setIsAuthenticated(true);
+        void syncExistingPushSubscription(session.user.id);
         void ensureProfile(session.user);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -178,6 +181,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const signOut = async () => {
+    if (user?.id) {
+      await unsubscribeFromPushNotifications(user.id).catch(() => undefined);
+    }
     await supabase.auth.signOut();
   };
 

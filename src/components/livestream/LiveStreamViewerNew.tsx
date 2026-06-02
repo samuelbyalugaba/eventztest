@@ -836,10 +836,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
             onGift={() => setShowGiftPicker(true)}
             onMuteToggle={() => setIsMuted((m) => !m)}
             onToggleChat={() => setIsChatVisible((v) => !v)}
-            onToggleFit={() => setFitMode((m) => (m === 'contain' ? 'cover' : 'contain'))}
-            onRotate={handleRotate}
-            fitMode={fitMode}
-            showVideoControls={isHlsMode && isLandscapeSource && hlsReady}
             isLiked={isLiked}
             isMuted={isMuted}
             isChatVisible={isChatVisible}

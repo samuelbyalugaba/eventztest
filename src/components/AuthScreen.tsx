@@ -17,6 +17,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEmailActionSubmitting, setIsEmailActionSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
 
   // Form state
@@ -68,6 +69,61 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
     return true;
   };
 
+  const validateEmailOnly = () => {
+    if (!formData.email) {
+      toast.error('Email required', { description: 'Enter your email address first.' });
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast.error('Invalid Email', { description: 'Please enter a valid email address.' });
+      return false;
+    }
+    return true;
+  };
+
+  const getEmailRedirectTo = (next = '/events') => {
+    const origin = window.location.origin;
+    return `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  };
+
+  const handleResetPassword = async () => {
+    if (!isConfigured || !validateEmailOnly()) return;
+
+    setIsEmailActionSubmitting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: getEmailRedirectTo('/events'),
+      });
+      if (error) throw error;
+      toast.success('Reset email sent', { description: 'Check your inbox for the password reset link.' });
+    } catch (error: any) {
+      toast.error('Could not send reset email', { description: error?.message || 'Please try again.' });
+    } finally {
+      setIsEmailActionSubmitting(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!isConfigured || !validateEmailOnly()) return;
+
+    setIsEmailActionSubmitting(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: formData.email,
+        options: {
+          emailRedirectTo: getEmailRedirectTo('/events'),
+        },
+      });
+      if (error) throw error;
+      toast.success('Verification email sent', { description: 'Check your inbox to confirm your account.' });
+    } catch (error: any) {
+      toast.error('Could not send verification email', { description: error?.message || 'Please try again.' });
+    } finally {
+      setIsEmailActionSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -115,6 +171,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
           email: formData.email,
           password: formData.password,
           options: {
+            emailRedirectTo: getEmailRedirectTo('/events'),
             data: {
               name: formData.fullName,
             },
@@ -177,6 +234,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
       let message = error.message || 'An unexpected error occurred.';
       if (message.includes('Invalid login credentials')) message = 'Incorrect email or password.';
       if (message.includes('User already registered')) message = 'This email is already registered. Please login.';
+      if (message.includes('Email not confirmed')) message = 'Please verify your email before signing in.';
       
       toast.error('Authentication Failed', { description: message });
     } finally {
@@ -191,7 +249,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
     }
     setIsGoogleSubmitting(true);
     try {
-      const redirectTo = import.meta.env.VITE_AUTH_REDIRECT_URL || `${window.location.origin}/events`;
+      const redirectTo = import.meta.env.VITE_AUTH_REDIRECT_URL || getEmailRedirectTo('/events');
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: { redirectTo },
@@ -284,7 +342,17 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-800 block text-left">Password</label>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="text-sm font-medium text-gray-800 block text-left">Password</label>
+                    <button
+                      type="button"
+                      onClick={handleResetPassword}
+                      disabled={isEmailActionSubmitting || isSubmitting || !isConfigured}
+                      className="text-xs font-semibold text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <div className="relative">
                     <input
                       name="password"
@@ -323,6 +391,15 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                   )}
                 </button>
               </form>
+
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={isEmailActionSubmitting || isSubmitting || !isConfigured}
+                className="mt-3 w-full text-center text-xs font-semibold text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50"
+              >
+                Resend verification email
+              </button>
 
               <div className="mt-4 flex items-center gap-3">
                 <div className="h-px flex-1 bg-gray-200" />
