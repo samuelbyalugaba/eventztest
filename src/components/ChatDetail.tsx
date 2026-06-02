@@ -330,7 +330,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
         className="flex-1 overflow-y-auto overscroll-y-contain bg-gray-50 px-4 py-4"
         style={{
           paddingTop: 56 + offsetTop,
-          paddingBottom: `calc(6rem + ${offsetBottom}px + env(safe-area-inset-bottom))`,
+          paddingBottom: `calc(6rem + ${offsetBottom}px + var(--eventz-safe-area-bottom))`,
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y',
         }}
@@ -426,7 +426,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
 
       {/* Input Area */}
       <div
-        className="fixed left-0 right-0 border-t border-gray-100 bg-white px-3 pt-3 pb-[calc(0.9rem+env(safe-area-inset-bottom))] z-20"
+        className="fixed left-0 right-0 border-t border-gray-100 bg-white px-3 pt-3 pb-[calc(0.9rem+var(--eventz-safe-area-bottom))] z-20"
         style={{ bottom: offsetBottom }}
       >
         <input 

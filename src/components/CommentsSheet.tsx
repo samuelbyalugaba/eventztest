@@ -90,7 +90,7 @@ export function CommentsSheet({
   const comments = post.comments || [];
   const parentComments = comments.filter((c: any) => !c.parent_id);
   const replies = comments.filter((c: any) => c.parent_id);
-  const inputBottomPadding = `calc(0.85rem + ${offsetBottom}px + env(safe-area-inset-bottom))`;
+  const inputBottomPadding = `calc(0.85rem + ${offsetBottom}px + var(--eventz-safe-area-bottom))`;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>

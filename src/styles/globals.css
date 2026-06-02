@@ -39,6 +39,10 @@
   --sidebar-accent-foreground: #1A1A1A;
   --sidebar-border: #E5E7EB;
   --sidebar-ring: #8A2BE2;
+  --eventz-safe-area-top: max(var(--safe-area-inset-top, 0px), env(safe-area-inset-top, 0px));
+  --eventz-safe-area-right: max(var(--safe-area-inset-right, 0px), env(safe-area-inset-right, 0px));
+  --eventz-safe-area-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+  --eventz-safe-area-left: max(var(--safe-area-inset-left, 0px), env(safe-area-inset-left, 0px));
 }
 
 .dark {
@@ -267,6 +271,14 @@ html {
   min-width: 2rem !important;
   min-height: 2rem !important;
   padding: 0 !important;
+}
+
+.safe-area-top {
+  padding-top: var(--eventz-safe-area-top) !important;
+}
+
+.safe-area-bottom {
+  padding-bottom: var(--eventz-safe-area-bottom) !important;
 }
 
 .icon-circle-button {

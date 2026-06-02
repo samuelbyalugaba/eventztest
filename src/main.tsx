@@ -7,8 +7,10 @@ import { registerServiceWorker } from "./utils/registerSW";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { MessagingProvider } from "./contexts/MessagingContext";
+import { configureNativeRuntime } from "./utils/nativeRuntime";
 
 try {
+  void configureNativeRuntime();
   registerServiceWorker();
 } catch (e) {
 }

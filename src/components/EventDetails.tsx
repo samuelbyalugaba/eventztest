@@ -620,7 +620,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         {/* 3. Search & Events List */}
         <div className="px-3 pb-6 pt-0">
           {/* Header */}
-          <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 -mx-3 px-3 transition-all rounded-b-[24px]">
+          <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-sm pt-[calc(0.75rem+var(--eventz-safe-area-top))] pb-3 -mx-3 px-3 transition-all rounded-b-[24px]">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex flex-col">
                 <h1 className="text-[22px] font-bold leading-tight tracking-tight text-gray-900">EVENTZ</h1>

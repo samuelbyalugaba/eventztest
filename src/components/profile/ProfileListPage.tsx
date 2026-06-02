@@ -153,8 +153,8 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
       : 'Everyone that you follow, will appear here.';
 
   return (
-    <div className="min-h-screen bg-white pb-[calc(2rem+env(safe-area-inset-bottom))]">
-      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 pt-[env(safe-area-inset-top)]">
+    <div className="min-h-screen bg-white pb-[calc(2rem+var(--eventz-safe-area-bottom))]">
+      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 pt-[var(--eventz-safe-area-top)]">
         <div className="px-4 py-3">
           <div className="flex items-center gap-3">
             <button

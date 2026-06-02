@@ -884,7 +884,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
       </div>
 
       {/* Sticky Action Bar */}
-      <div className="flex shrink-0 gap-3 border-t border-gray-100 bg-white px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      <div className="flex shrink-0 gap-3 border-t border-gray-100 bg-white px-4 pt-4 pb-[calc(1rem+var(--eventz-safe-area-bottom))] z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
          {event.streaming?.isLive ? (
            <button 
              onClick={handleWatchLive}

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import authLogoBlack from '../assets/auth-logo-black.png';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
+import { getNativeAuthRedirectTo, isNativeCapacitor } from '../utils/platform';
 
 interface AuthScreenProps {
   onAuthSuccess: (accessToken: string, user: any) => void;
@@ -84,6 +85,22 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
   const getEmailRedirectTo = (next = '/events') => {
     const origin = window.location.origin;
     return `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  };
+
+  const finishNativeOAuthSignIn = async (callbackUrl: string) => {
+    const url = new URL(callbackUrl);
+    const oauthError = url.searchParams.get('error_description') || url.searchParams.get('error');
+    if (oauthError) throw new Error(oauthError);
+
+    const code = url.searchParams.get('code');
+    if (!code) throw new Error('Google sign-in did not return an authorization code.');
+
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    if (!data.session || !data.user) throw new Error('Google sign-in did not return a session.');
+
+    toast.success('Welcome back!');
+    onAuthSuccess(data.session.access_token, data.user);
   };
 
   const handleResetPassword = async () => {
@@ -249,6 +266,62 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
     }
     setIsGoogleSubmitting(true);
     try {
+      if (isNativeCapacitor()) {
+        const [{ App }, { Browser }] = await Promise.all([import('@capacitor/app'), import('@capacitor/browser')]);
+        const redirectTo = getNativeAuthRedirectTo();
+        let completed = false;
+        let urlOpenHandle: Awaited<ReturnType<typeof App.addListener>> | null = null;
+        let browserFinishedHandle: Awaited<ReturnType<typeof Browser.addListener>> | null = null;
+
+        const cleanup = async () => {
+          await Promise.all([urlOpenHandle?.remove(), browserFinishedHandle?.remove()]);
+        };
+
+        urlOpenHandle = await App.addListener('appUrlOpen', ({ url }) => {
+          if (!url.startsWith(redirectTo) || completed) return;
+          completed = true;
+
+          void (async () => {
+            try {
+              await cleanup();
+              await Browser.close().catch(() => undefined);
+              await finishNativeOAuthSignIn(url);
+            } catch (error: any) {
+              const message = error?.message || 'Google sign-in failed.';
+              toast.error('Authentication Failed', { description: message });
+            } finally {
+              setIsGoogleSubmitting(false);
+            }
+          })();
+        });
+
+        browserFinishedHandle = await Browser.addListener('browserFinished', () => {
+          if (completed) return;
+          completed = true;
+          void cleanup();
+          setIsGoogleSubmitting(false);
+        });
+
+        try {
+          const { data, error } = await supabase.auth.signInWithOAuth({
+            provider,
+            options: {
+              redirectTo,
+              skipBrowserRedirect: true,
+            },
+          });
+          if (error) throw error;
+          if (!data.url) throw new Error('Google sign-in did not return an authorization URL.');
+
+          await Browser.open({ url: data.url, toolbarColor: '#FAFAFA' });
+        } catch (error) {
+          completed = true;
+          await cleanup();
+          throw error;
+        }
+        return;
+      }
+
       const redirectTo = import.meta.env.VITE_AUTH_REDIRECT_URL || getEmailRedirectTo('/events');
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
