@@ -49,7 +49,7 @@ export function NotificationsPanel({
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-white md:max-w-md md:right-0 md:left-auto md:border-l border-gray-100 shadow-2xl animate-in slide-in-from-right-full duration-300">
-      <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white/80 p-4 pt-[calc(1rem+var(--eventz-safe-area-top))] backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-bold text-gray-900">Notifications</h2>
           <button
@@ -73,7 +73,7 @@ export function NotificationsPanel({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto overscroll-y-contain p-2 pb-[calc(0.5rem+var(--eventz-safe-area-bottom))]">
         <div className="space-y-1">
           {canEnablePush && (
             <button

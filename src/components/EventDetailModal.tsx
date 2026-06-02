@@ -514,7 +514,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           {/* Back Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 left-4 p-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all shadow-lg z-20"
+            className="absolute left-4 top-[calc(1rem+var(--eventz-safe-area-top))] p-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all shadow-lg z-20"
           >
             <ChevronLeft className="w-5 h-5 text-gray-900" />
           </button>
@@ -522,7 +522,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           {/* Share Button (moved to top right for better reachability) */}
           <button
             onClick={handleShareEvent}
-            className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all shadow-lg z-20"
+            className="absolute right-4 top-[calc(1rem+var(--eventz-safe-area-top))] p-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all shadow-lg z-20"
           >
             <Share2 className="w-5 h-5 text-gray-900" />
           </button>

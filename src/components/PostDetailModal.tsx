@@ -208,12 +208,15 @@ export function PostDetailModal({
   return (
     <div
       className="fixed inset-0 bg-white z-[70] overflow-y-auto animate-in slide-in-from-right duration-300"
-      style={{ paddingTop: 64 + offsetTop, paddingBottom: 96 + offsetBottom }}
+      style={{
+        paddingTop: `calc(4rem + ${offsetTop}px + var(--eventz-safe-area-top))`,
+        paddingBottom: `calc(6rem + ${offsetBottom}px + var(--eventz-safe-area-bottom))`,
+      }}
     >
       {/* Unique Detail Header */}
       <div
         className="fixed left-0 right-0 z-20 bg-white/95 backdrop-blur-lg border-b border-gray-100"
-        style={{ top: offsetTop }}
+        style={{ top: offsetTop, paddingTop: 'var(--eventz-safe-area-top)' }}
       >
         <div className="px-4 h-16 flex items-center">
           <div className="flex items-center justify-between w-full">

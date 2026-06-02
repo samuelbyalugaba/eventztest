@@ -297,9 +297,9 @@ export default function CreatePostPage() {
   const isButtonDisabled = isSubmitting || (!content.trim() && media.length === 0);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col z-[100] fixed inset-0">
+    <div className="min-h-screen bg-white flex flex-col z-[100] fixed inset-0 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 h-14 sticky top-0 bg-white z-10 border-b border-gray-100">
+      <div className="flex min-h-[calc(3.5rem+var(--eventz-safe-area-top))] items-center justify-between border-b border-gray-100 bg-white px-4 pt-[var(--eventz-safe-area-top)] sticky top-0 z-10">
         <button 
           onClick={() => navigate(-1)}
           className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -330,7 +330,7 @@ export default function CreatePostPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div className="flex-1 overflow-y-auto px-4 py-6 overscroll-y-contain">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-start gap-4">
             <UserAvatar 
@@ -476,7 +476,7 @@ export default function CreatePostPage() {
       </div>
 
       {/* Bottom Tools */}
-      <div className="border-t border-gray-100 px-4 py-3 sticky bottom-0 bg-white">
+      <div className="border-t border-gray-100 px-4 pt-3 pb-[calc(0.75rem+var(--eventz-safe-area-bottom))] sticky bottom-0 bg-white">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-1 relative">
           <button

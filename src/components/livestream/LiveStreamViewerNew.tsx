@@ -734,7 +734,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
             {renderVideo()}
             <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-black/40" />
 
-            <div className="absolute top-0 left-0 right-0 p-4">
+            <div className="absolute top-0 left-0 right-0 p-4 pt-[calc(1rem+var(--eventz-safe-area-top))]">
               <ViewerHeader
                 host={stream.host}
                 hostAvatar={stream.host_avatar}
@@ -800,7 +800,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/80 via-transparent to-black/60" />
 
       {/* Fixed header overlay */}
-      <div className="absolute top-0 left-0 right-0 p-3 pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 p-3 pt-[calc(0.75rem+var(--eventz-safe-area-top))] pointer-events-none">
         <div className="pointer-events-auto">
           <ViewerHeader
             host={stream.host}
@@ -826,7 +826,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       )}
 
       {/* Fixed bottom overlay - always at bottom, never pushes video */}
-      <div className="absolute bottom-0 left-0 right-0 p-3">
+      <div className="absolute bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+var(--eventz-safe-area-bottom))]">
         <ViewerActionBar
             message={message}
             onMessageChange={setMessage}

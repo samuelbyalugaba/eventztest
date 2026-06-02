@@ -45,6 +45,11 @@
   --eventz-safe-area-left: max(var(--safe-area-inset-left, 0px), env(safe-area-inset-left, 0px));
 }
 
+html.capacitor-android {
+  --eventz-safe-area-top: max(24px, var(--safe-area-inset-top, 0px), env(safe-area-inset-top, 0px));
+  --eventz-safe-area-bottom: max(16px, var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);

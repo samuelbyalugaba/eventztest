@@ -343,7 +343,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
         </SheetDescription>
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
-          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xl border-b border-gray-100 px-6 py-4">
+          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xl border-b border-gray-100 px-6 pb-4 pt-[calc(1rem+var(--eventz-safe-area-top))]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {currentView !== 'main' && currentView !== 'profile' && (

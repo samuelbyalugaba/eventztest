@@ -57,9 +57,9 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
   };
 
   return (
-    <div className="fixed inset-0 bg-white z-[70] flex flex-col h-full animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 bg-white z-[70] flex flex-col h-[100dvh] overflow-hidden animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="px-5 pt-6 pb-2">
+      <div className="px-5 pt-[calc(1.5rem+var(--eventz-safe-area-top))] pb-2">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <button onClick={handleBack} aria-label="Back" className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
@@ -89,7 +89,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overscroll-y-contain">
         {/* Online Friends */}
         {!isSearching && onlineUsers.length > 0 && (
           <div className="pt-4 pb-2">
@@ -121,7 +121,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
         )}
 
         {/* Content Area */}
-        <div className="px-5 pt-2 pb-20">
+        <div className="px-5 pt-2 pb-[calc(5rem+var(--eventz-safe-area-bottom))]">
           <h2 className="text-base font-semibold text-gray-900 mb-4">
             {isSearching ? (searchTerm ? 'Search Results' : 'Suggested') : 'Messages'}
           </h2>

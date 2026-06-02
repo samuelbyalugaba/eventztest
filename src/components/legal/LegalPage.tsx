@@ -51,7 +51,7 @@ export function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 text-gray-900">
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 pt-[var(--eventz-safe-area-top)] backdrop-blur">
         <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
           <button
             type="button"

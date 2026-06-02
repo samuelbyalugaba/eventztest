@@ -21,7 +21,7 @@ export function VideoPlayerOverlay({ playingVideo, onClose }: VideoPlayerOverlay
   return (
     <div className="fixed inset-0 bg-black z-[60]">
       {/* Top Controls */}
-      <div className={`absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/60 to-transparent px-4 pt-12 pb-6 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/60 to-transparent px-4 pb-6 pt-[calc(3rem+var(--eventz-safe-area-top))] transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex items-center justify-between">
           <button
             onClick={() => { onClose(); }}
@@ -107,7 +107,7 @@ export function VideoPlayerOverlay({ playingVideo, onClose }: VideoPlayerOverlay
         />
 
         {/* Mute Button */}
-        <div className={`absolute top-4 right-4 z-20 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`absolute right-4 top-[calc(1rem+var(--eventz-safe-area-top))] z-20 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
           <button
             onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
             className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/60 transition-colors"
@@ -116,7 +116,7 @@ export function VideoPlayerOverlay({ playingVideo, onClose }: VideoPlayerOverlay
           </button>
         </div>
         {isMuted && (
-          <div className={`absolute top-4 left-4 z-20 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`absolute left-4 top-[calc(1rem+var(--eventz-safe-area-top))] z-20 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}>
             <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-black/50 text-white backdrop-blur-md">Tap to unmute</span>
           </div>
         )}

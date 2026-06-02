@@ -130,7 +130,7 @@ export function ProfessionalDashboardModal({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-gray-50 animate-in fade-in duration-200 overflow-y-auto">
       {/* Header */}
-      <div className="bg-white px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+      <div className="bg-white px-6 pb-4 pt-[calc(1rem+var(--eventz-safe-area-top))] flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
           <button 
             onClick={onClose}

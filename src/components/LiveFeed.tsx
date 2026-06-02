@@ -170,7 +170,7 @@ export function LiveFeed() {
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-100 pt-[var(--eventz-safe-area-top)] shadow-sm">
         <div className="max-w-4xl mx-auto px-5 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

@@ -174,7 +174,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
   return (
     <div className="bg-white min-h-screen flex flex-col">
       {/* Mobile Header */}
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-5 py-2.5 flex items-center justify-between">
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-5 pb-2.5 pt-[calc(0.625rem+var(--eventz-safe-area-top))] flex items-center justify-between">
         <div className="flex items-center gap-3">
           {onBack && (
             <button 

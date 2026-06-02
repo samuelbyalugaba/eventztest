@@ -85,6 +85,7 @@
             "check-env": "node scripts/check-env.cjs",
             "preview": "vite preview",
             "generate-icons": "node scripts/generate-icons.cjs",
+            "generate-splash": "node scripts/generate-modern-splash.cjs",
             "generate-native-assets": "capacitor-assets generate",
             "cap:sync": "npm run build && npx cap sync",
             "cap:open:android": "npx cap open android",

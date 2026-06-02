@@ -34,7 +34,7 @@ export function EventListModal({ title, events, streams = [], onClose, onEventCl
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 z-10 bg-white">
+        <div className="border-b border-gray-100 bg-white p-4 pt-[calc(1rem+var(--eventz-safe-area-top))] flex items-center justify-between sticky top-0 z-10">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button 
             onClick={onClose}

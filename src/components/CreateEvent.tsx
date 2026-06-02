@@ -801,7 +801,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   return (
     <div className="min-h-screen bg-[#F2F2F7] pb-24 text-[#1C1C1E]">
-      <div className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
+      <div className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 pt-[var(--eventz-safe-area-top)] backdrop-blur">
         <div className="mx-auto flex max-w-[460px] items-center justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <button

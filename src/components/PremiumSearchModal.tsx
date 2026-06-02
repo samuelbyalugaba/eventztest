@@ -174,7 +174,7 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with Search Bar */}
-        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 py-4 transition-all">
+        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 pb-4 pt-[calc(1rem+var(--eventz-safe-area-top))] transition-all">
           <div className="flex items-center gap-3">
             <button 
               onClick={onClose}

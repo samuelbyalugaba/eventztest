@@ -253,8 +253,12 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
     <div className="fixed inset-0 h-[100dvh] overflow-hidden overscroll-none bg-white z-[70] flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div
-        className="fixed left-0 right-0 h-14 px-4 border-b border-gray-100 flex items-center justify-between bg-white z-20"
-        style={{ top: offsetTop }}
+        className="fixed left-0 right-0 px-4 border-b border-gray-100 flex items-center justify-between bg-white z-20"
+        style={{
+          top: offsetTop,
+          height: 'calc(3.5rem + var(--eventz-safe-area-top))',
+          paddingTop: 'var(--eventz-safe-area-top)',
+        }}
       >
         <div className="flex items-center gap-3">
           <button onClick={onBack} aria-label="Back" className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -329,7 +333,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
         ref={messagesScrollerRef}
         className="flex-1 overflow-y-auto overscroll-y-contain bg-gray-50 px-4 py-4"
         style={{
-          paddingTop: 56 + offsetTop,
+          paddingTop: `calc(3.5rem + ${offsetTop}px + var(--eventz-safe-area-top))`,
           paddingBottom: `calc(6rem + ${offsetBottom}px + var(--eventz-safe-area-bottom))`,
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y',

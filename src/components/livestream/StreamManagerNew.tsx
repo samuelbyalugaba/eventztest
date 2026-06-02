@@ -504,7 +504,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/60 pointer-events-none" />
 
         {/* Top bar */}
-        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-4">
+        <div className="absolute top-0 left-0 right-0 z-20 px-4 pb-4 pt-[calc(3rem+var(--eventz-safe-area-top))]">
           <div className="flex items-center justify-between">
             <button onClick={handleRequestClose} className="p-2.5 rounded-xl bg-white/10 backdrop-blur-xl text-white border border-white/10">
               <X className="w-5 h-5" />
@@ -534,7 +534,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         </div>
 
         {/* Bottom: Stream info & Go Live */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-8">
+        <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-[calc(2rem+var(--eventz-safe-area-bottom))]">
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-4 mb-4">
             <input
               value={streamTitle}
@@ -716,7 +716,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         <div className="absolute inset-0 pointer-events-none z-40">
           {/* Top gradient */}
           <div className="bg-gradient-to-b from-black/80 via-black/30 to-transparent h-32 pointer-events-auto">
-            <div className="px-4 pt-12 flex items-center justify-between">
+            <div className="px-4 pt-[calc(3rem+var(--eventz-safe-area-top))] flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button onClick={handleRequestClose} className="p-2 rounded-xl bg-white/10 backdrop-blur-xl text-white border border-white/10">
                   <X className="w-5 h-5" />

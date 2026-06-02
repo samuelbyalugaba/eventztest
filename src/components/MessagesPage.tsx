@@ -30,7 +30,7 @@ const toRouteTarget = (value: unknown): RouteTarget | null => {
 function MessagesLoading() {
   return (
     <div className="fixed inset-0 z-[70] flex h-[100dvh] flex-col bg-white">
-      <div className="flex h-16 items-center gap-3 border-b border-gray-100 px-5">
+      <div className="flex min-h-[calc(4rem+var(--eventz-safe-area-top))] items-center gap-3 border-b border-gray-100 px-5 pt-[var(--eventz-safe-area-top)]">
         <div className="h-10 w-10 rounded-full bg-gray-100 animate-pulse" />
         <div className="space-y-2">
           <div className="h-4 w-32 rounded bg-gray-100 animate-pulse" />
@@ -55,7 +55,7 @@ function MessagesLoading() {
 function ConversationNotFound({ onBack }: { onBack: () => void }) {
   return (
     <div className="fixed inset-0 z-[70] flex h-[100dvh] flex-col bg-white">
-      <div className="flex h-16 items-center border-b border-gray-100 px-5">
+      <div className="flex min-h-[calc(4rem+var(--eventz-safe-area-top))] items-center border-b border-gray-100 px-5 pt-[var(--eventz-safe-area-top)]">
         <button onClick={onBack} aria-label="Back" className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
           <ArrowLeft className="h-6 w-6 text-gray-900" />
         </button>

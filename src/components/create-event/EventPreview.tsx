@@ -53,7 +53,7 @@ export function EventPreview({
 
   return (
     <div className="fixed inset-0 z-50 bg-gray-50 overflow-y-auto animate-in fade-in">
-      <div className="sticky top-0 z-10 bg-white px-4 py-4 border-b border-gray-100 flex items-center justify-between shadow-sm">
+      <div className="sticky top-0 z-10 bg-white px-4 pb-4 pt-[calc(1rem+var(--eventz-safe-area-top))] border-b border-gray-100 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6 text-gray-900" />
