@@ -176,11 +176,11 @@ export function HostedPage() {
       </header>
 
       <main className="px-4 py-4">
-        <div className="mb-4 flex gap-2.5">
+        <div className="mb-3 flex gap-2">
           <button
             type="button"
             onClick={() => setActiveView('events')}
-            className={`h-11 flex-1 rounded-xl px-3 text-sm font-bold transition active:scale-[0.98] ${
+            className={`h-10 flex-1 rounded-xl px-2.5 text-[12px] font-bold leading-none transition active:scale-[0.98] ${
               activeView === 'events'
                 ? 'bg-white text-gray-950 shadow-sm'
                 : 'bg-white/70 text-gray-500'
@@ -191,7 +191,7 @@ export function HostedPage() {
           <button
             type="button"
             onClick={() => setActiveView('streams')}
-            className={`h-11 flex-1 rounded-xl px-3 text-sm font-bold transition active:scale-[0.98] ${
+            className={`h-10 flex-1 rounded-xl px-2.5 text-[12px] font-bold leading-none transition active:scale-[0.98] ${
               activeView === 'streams'
                 ? 'bg-white text-gray-950 shadow-sm'
                 : 'bg-white/70 text-gray-500'
@@ -288,7 +288,7 @@ function HostedEventCard({
       onKeyDown={(keyboardEvent) => {
         if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') onOpen();
       }}
-      className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500"
+      className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] cursor-pointer focus:outline-none focus-visible:outline-none focus-visible:ring-0"
     >
       <div className="relative aspect-[1.75] overflow-hidden bg-gradient-to-br from-purple-950 via-purple-700 to-indigo-600">
         <ImageWithFallback
@@ -340,7 +340,7 @@ function HostedStreamCard({
       onKeyDown={(keyboardEvent) => {
         if (canOpen && (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ')) onOpen();
       }}
-      className={`overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+      className={`overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
         canOpen ? 'cursor-pointer' : ''
       }`}
     >

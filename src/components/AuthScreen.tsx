@@ -252,13 +252,13 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
           >
             <TabsList className="w-full h-auto bg-gray-100 p-1 rounded-xl flex overflow-x-auto scrollbar-hide">
               <TabsTrigger
-                className="flex-1 min-h-8 min-w-[76px] py-1.5 text-[0.72rem] font-semibold rounded-lg transition-all gap-1 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=inactive]:text-gray-500"
+                className="flex-1 min-h-8 min-w-[76px] py-1.5 text-[0.76rem] font-semibold rounded-lg transition-all gap-1 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=inactive]:text-gray-500"
                 value="login"
               >
                 Log in
               </TabsTrigger>
               <TabsTrigger
-                className="flex-1 min-h-8 min-w-[76px] py-1.5 text-[0.72rem] font-semibold rounded-lg transition-all gap-1 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=inactive]:text-gray-500"
+                className="flex-1 min-h-8 min-w-[76px] py-1.5 text-[0.76rem] font-semibold rounded-lg transition-all gap-1 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=inactive]:text-gray-500"
                 value="signup"
               >
                 Sign up

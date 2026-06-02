@@ -126,7 +126,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
             {isSearching ? (searchTerm ? 'Search Results' : 'Suggested') : 'Messages'}
           </h2>
           
-          <div className="space-y-6">
+          <div className="space-y-1">
             {isSearching ? (
               // Search Results List
               (searchTerm ? searchResults : onlineUsers).map((user) => (
@@ -186,53 +186,48 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
                         onSelectConversation(conv);
                       }
                     }}
-                    className="flex items-start gap-4 cursor-pointer active:opacity-70 transition-opacity"
+                    className="group flex items-center gap-3 rounded-xl px-0.5 py-2.5 transition active:bg-gray-50"
                   >
-                    <div className="relative">
+                    <div className="relative shrink-0">
                       <UserAvatar 
                         src={conv.user.avatar} 
                         name={conv.user.name} 
-                        className="w-14 h-14"
+                        className="h-14 w-14"
                       />
                       {isOnline && (
                         <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
                       )}
                     </div>
                     
-                    <div className="flex-1 min-w-0 pt-1">
-                      <div className="flex justify-between items-start mb-1">
-                        <h3 className="font-bold text-gray-900 truncate">{conv.user.name}</h3>
-                        <span className="text-xs text-gray-500 whitespace-nowrap">
-                          {conv.lastMessage.timestamp}
-                        </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="truncate text-[15px] font-semibold leading-tight text-gray-900">{conv.user.name}</h3>
+                        {(conv.unreadCount || 0) > 0 && (
+                          <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-purple-600 px-1 text-[9px] font-bold leading-none text-white">
+                            {conv.unreadCount}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex justify-between items-center">
-                        <p className={`text-sm truncate pr-4 ${
+                      <p className={`mt-1 truncate text-[13px] leading-tight ${
                           (conv.unreadCount || 0) > 0 ? 'text-gray-900 font-semibold' : 'text-gray-500'
                         }`}>
-                          {previewText}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          {(conv.unreadCount || 0) > 0 && (
-                            <div className="min-w-[20px] h-5 bg-blue-600 rounded-full flex items-center justify-center px-1.5">
-                              <span className="text-[10px] font-bold text-white">{conv.unreadCount}</span>
-                            </div>
-                          )}
-                          <button 
-                            aria-label={`Delete conversation with ${conv.user.name}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm('Are you sure you want to delete this conversation?')) {
-                                onDeleteConversation?.(conv.id);
-                              }
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
+                        {previewText}
+                        <span className="px-1 text-gray-400">-</span>
+                        <span className="text-gray-500">{conv.lastMessage.timestamp}</span>
+                      </p>
                     </div>
+                    <button
+                      aria-label={`Delete conversation with ${conv.user.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Are you sure you want to delete this conversation?')) {
+                          onDeleteConversation?.(conv.id);
+                        }
+                      }}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 opacity-70 transition hover:bg-red-50 hover:text-red-500 group-active:opacity-100"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 );
               })

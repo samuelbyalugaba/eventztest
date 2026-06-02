@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Share2, Bookmark, Users, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles, Phone } from 'lucide-react';
+import { MapPin, Share2, Bookmark, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles, Phone, ExternalLink } from 'lucide-react';
 import { formatDateWithWeekday } from '../utils/format';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
@@ -106,6 +106,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
 
   const [organizerDisplayName, setOrganizerDisplayName] = useState(event.organizer?.full_name || 'Event Organizer');
   const [eventPosts, setEventPosts] = useState<any[]>([]);
+  const [displayViews, setDisplayViews] = useState(Number(event.views) || 0);
+  const incrementedViewEventRef = useRef<number | null>(null);
 
   // Extract the event's currency from price_range or virtualPrice to ensure consistency
   const getEventCurrency = (): string => {
@@ -257,9 +259,17 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
     : '';
 
   useEffect(() => {
-    // Increment view count
-    incrementEventView(event.id);
+    setDisplayViews(Number(event.views) || 0);
+  }, [event.id, event.views]);
 
+  useEffect(() => {
+    if (incrementedViewEventRef.current === event.id) return;
+    incrementedViewEventRef.current = event.id;
+    setDisplayViews((current) => current + 1);
+    void incrementEventView(event.id);
+  }, [event.id]);
+
+  useEffect(() => {
     const fetchOrganizerDetails = async () => {
       if (event.organizer_id) {
         try {
@@ -575,11 +585,17 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   href={locationMapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="-m-1 min-w-0 flex-1 rounded-lg p-1 transition-colors hover:bg-purple-50 active:bg-purple-50"
+                  className="-m-1 min-w-0 flex-1 rounded-xl border border-purple-100 bg-purple-50/70 p-2 pr-2.5 transition-colors hover:bg-purple-50 active:bg-purple-100"
                   aria-label={`Open ${event.location} in maps`}
                 >
-                  <p className="text-gray-600 text-sm">Location</p>
-                  <p className="break-words text-gray-900 underline-offset-2 hover:text-purple-700 hover:underline">{event.location}</p>
+                  <div className="mb-0.5 flex items-center justify-between gap-2">
+                    <p className="text-sm text-gray-600">Location</p>
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2 py-1 text-[11px] font-semibold leading-none text-purple-700 shadow-sm">
+                      Open in maps
+                      <ExternalLink className="h-3 w-3" />
+                    </span>
+                  </div>
+                  <p className="break-words font-medium text-purple-700 underline decoration-purple-300 underline-offset-4">{event.location}</p>
                   <p className="text-gray-700 text-sm">{locations.find(l => l.id === event.city)?.name}</p>
                 </a>
               ) : (
@@ -670,8 +686,10 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 <p className="text-gray-900">{formatEventPrice(event.price_range)}</p>
               </div>
               <div className="mt-0.5 flex shrink-0 items-center gap-2 text-purple-600">
-                <Users className="w-5 h-5" />
-                <span className="text-sm">{(event.attendees || 0).toLocaleString()} attending</span>
+                <Eye className="w-5 h-5" />
+                <span className="text-sm">
+                  {displayViews.toLocaleString()} {displayViews === 1 ? 'view' : 'views'}
+                </span>
               </div>
             </div>
           </div>

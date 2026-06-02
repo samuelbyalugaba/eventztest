@@ -104,8 +104,7 @@ export const PostCard = React.memo(function PostCard({
 
   const updateCarouselHeight = useCallback(() => {
     if (!api) return;
-    const index = api.selectedScrollSnap();
-    const slide = api.slideNodes()[index] as HTMLElement | undefined;
+    const slide = api.slideNodes()[0] as HTMLElement | undefined;
     const frame = slide?.querySelector('[data-media-frame="true"]') as HTMLElement | null;
     if (!frame) return;
     const next = Math.ceil(frame.getBoundingClientRect().height);
@@ -191,12 +190,10 @@ export const PostCard = React.memo(function PostCard({
     };
     onSize();
     api.on("reInit", onSize);
-    api.on("select", onSize);
     
     return () => {
       api.off("select", onSelect);
       api.off("reInit", onSize);
-      api.off("select", onSize);
     };
   }, [api, updateCarouselHeight]);
   
@@ -561,26 +558,29 @@ export const PostCard = React.memo(function PostCard({
           <div onDoubleClick={handleDoubleTap}>
             <Carousel
               setApi={setApi}
-              opts={{ align: 'start', containScroll: 'trimSnaps', dragFree: false, duration: 30 }}
-              className="w-full"
+              opts={{ align: 'start', containScroll: 'trimSnaps', dragFree: false, duration: 22 }}
+              className="w-full [touch-action:pan-y]"
             >
               <CarouselContent
-                className="ml-0 transition-[height] duration-500 ease-out will-change-transform"
+                className="ml-0 transform-gpu transition-[height] duration-300 ease-out will-change-transform"
                 style={carouselHeight ? { height: `${carouselHeight}px` } : undefined}
               >
                 {post.content.images?.map((media, index) => {
                   const isMediaVideo = isVideo(media);
                   // Only attach ref if this is the ACTIVE slide to ensure IntersectionObserver works correctly
                   const isActive = index === carouselIndex;
+                  const shouldRenderMedia = index === 0 || Math.abs(index - carouselIndex) <= 1;
 
                   return (
-                    <CarouselItem key={index} className="pl-0">
+                    <CarouselItem key={index} className="pl-0 transform-gpu [backface-visibility:hidden]">
                       <div
                         data-media-frame="true"
-                        className="relative w-full overflow-hidden bg-[#F6F6F6]"
+                        className="relative w-full overflow-hidden bg-[#F6F6F6] [contain:layout_paint]"
                         style={getMediaFrameStyle(media)}
                       >
-                        {isMediaVideo ? (
+                        {!shouldRenderMedia ? (
+                          <div className="absolute inset-0 bg-[#F6F6F6]" />
+                        ) : isMediaVideo ? (
                           <div className="absolute inset-0 bg-[#F6F6F6]">
                             {isVideoLoading && isActive && !videoPoster && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
                             {videoError && isActive && (
@@ -662,8 +662,8 @@ export const PostCard = React.memo(function PostCard({
                             imageClassName="object-cover"
                             fallbackType="image"
                             loading={index === 0 ? "eager" : "lazy"}
-                            displayWidth={600}
-                            quality={80}
+                            displayWidth={520}
+                            quality={78}
                             resize="cover"
                             onLoad={(e) => {
                               const img = e.currentTarget;
@@ -859,7 +859,7 @@ export const PostCard = React.memo(function PostCard({
           }}
           className="feed-action-btn"
         >
-          <CommentIcon className="h-4 w-4" color="currentColor" />
+          <CommentIcon className="h-[1.05rem] w-[1.05rem] overflow-visible" color="currentColor" />
           <span>{commentsCount}</span>
         </button>
 
