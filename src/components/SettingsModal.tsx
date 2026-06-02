@@ -336,7 +336,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="w-[100vw] sm:w-[450px] p-0 overflow-y-auto bg-white border-l border-gray-100">
+      <SheetContent side="right" hideDefaultClose className="w-[100vw] sm:w-[450px] p-0 overflow-y-auto bg-white border-l border-gray-100">
         <SheetTitle className="sr-only">Settings</SheetTitle>
         <SheetDescription className="sr-only">
           Manage your profile, privacy settings, and view help options.
@@ -346,7 +346,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
           <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xl border-b border-gray-100 px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {currentView !== 'main' && (
+                {currentView !== 'main' && currentView !== 'profile' && (
                   <button 
                     onClick={() => setCurrentView('main')}
                     className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"

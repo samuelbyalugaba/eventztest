@@ -253,6 +253,22 @@ html {
   }
 }
 
+.comment-inline-button {
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  line-height: inherit !important;
+}
+
+.comment-icon-button {
+  width: 2rem !important;
+  height: 2rem !important;
+  min-width: 2rem !important;
+  min-height: 2rem !important;
+  padding: 0 !important;
+}
+
 .icon-circle-button {
   display: inline-flex !important;
   width: 2.5rem !important;

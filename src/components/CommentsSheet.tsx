@@ -94,7 +94,7 @@ export function CommentsSheet({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent side="bottom" className="h-[82dvh] max-h-[min(82dvh,760px)] p-0 rounded-t-3xl overflow-hidden flex flex-col border-none bg-white shadow-2xl">
+      <SheetContent hideDefaultClose side="bottom" className="h-[82dvh] max-h-[min(82dvh,760px)] p-0 rounded-t-3xl overflow-hidden flex flex-col border-none bg-white shadow-2xl">
         <SheetHeader className="flex-shrink-0 border-b border-gray-100 px-4 pb-3 pt-2">
           <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-gray-300" />
           <div className="flex h-9 items-center justify-center">
@@ -124,13 +124,13 @@ export function CommentsSheet({
             </div>
           ) : (
             parentComments.map((comment: any) => (
-              <div key={comment.id} className="mb-5 space-y-3">
+              <div key={comment.id} className="mb-4 space-y-2.5">
                 {/* Parent Comment */}
-                <div className="flex gap-3">
+                <div className="flex items-start gap-3">
                   <button
                     type="button"
                     onClick={() => handleOpenCommentUser(comment)}
-                    className="mt-0.5 h-9 w-9 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    className="h-9 w-9 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                     aria-label={`Open ${comment.user.name}'s profile`}
                   >
                     <UserAvatar
@@ -139,12 +139,12 @@ export function CommentsSheet({
                       className="h-9 w-9 rounded-full object-cover"
                     />
                   </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] leading-5 text-gray-900">
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <p className="text-[13px] leading-[18px] text-gray-900">
                       <button
                         type="button"
                         onClick={() => handleOpenCommentUser(comment)}
-                        className="mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                       >
                         {comment.user.name}
                         {comment.user.is_organizer && (
@@ -153,18 +153,18 @@ export function CommentsSheet({
                       </button>
                       {comment.text}
                     </p>
-                    <div className="mt-1.5 flex items-center gap-5">
-                      <span className="text-[11px] font-medium text-gray-400">{comment.timestamp}</span>
+                    <div className="mt-0.5 flex h-4 items-center gap-4">
+                      <span className="text-[11px] font-semibold leading-none text-gray-400">{comment.timestamp}</span>
                       <button 
                         onClick={() => handleReply(comment)}
-                        className="text-[11px] font-semibold text-gray-500 transition-colors hover:text-gray-800"
+                        className="comment-inline-button text-[11px] font-semibold leading-none text-gray-500 transition-colors hover:text-gray-800"
                       >
                         Reply
                       </button>
                       {String(comment.user?.id || comment.user_id) !== String(currentUser?.id || '') && (
                         <button
                           onClick={() => handleReportComment(comment)}
-                          className="text-[11px] font-semibold text-gray-500 transition-colors hover:text-red-600"
+                          className="comment-inline-button text-[11px] font-semibold leading-none text-gray-500 transition-colors hover:text-red-600"
                         >
                           Report
                         </button>
@@ -172,16 +172,16 @@ export function CommentsSheet({
                     </div>
                   </div>
                   <button 
-                        onClick={() => onLikeComment?.(comment.id)}
-                    className={`mt-3 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-colors ${comment.is_liked ? 'text-pink-600' : 'text-gray-400 hover:text-gray-700'}`}
-                      >
+                    onClick={() => onLikeComment?.(comment.id)}
+                    className={`comment-icon-button mt-1 flex flex-shrink-0 items-center justify-center rounded-full transition-colors ${comment.is_liked ? 'text-pink-600' : 'text-gray-400 hover:text-gray-700'}`}
+                  >
                     <Heart className={`h-4 w-4 ${comment.is_liked ? 'fill-pink-600' : ''}`} />
-                      </button>
+                  </button>
                 </div>
 
                 {/* Replies */}
                 {replies.filter((r: any) => r.parent_id === comment.id).map((reply: any) => (
-                  <div key={reply.id} className="ml-12 flex gap-2.5">
+                  <div key={reply.id} className="ml-12 flex items-start gap-2.5">
                     <button
                       type="button"
                       onClick={() => handleOpenCommentUser(reply)}
@@ -194,12 +194,12 @@ export function CommentsSheet({
                         className="h-7 w-7 rounded-full object-cover"
                       />
                     </button>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] leading-5 text-gray-900">
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="text-[13px] leading-[18px] text-gray-900">
                         <button
                           type="button"
                           onClick={() => handleOpenCommentUser(reply)}
-                          className="mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                          className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                         >
                           {reply.user.name}
                           {reply.user.is_organizer && (
@@ -208,24 +208,24 @@ export function CommentsSheet({
                         </button>
                         {reply.text}
                       </p>
-                      <div className="mt-1.5 flex items-center gap-5">
-                        <span className="text-[10px] font-medium text-gray-400">{reply.timestamp}</span>
+                      <div className="mt-0.5 flex h-4 items-center gap-4">
+                        <span className="text-[10px] font-semibold leading-none text-gray-400">{reply.timestamp}</span>
                         <button 
                           onClick={() => handleReply(comment)}
-                          className="text-[10px] font-semibold text-gray-500 transition-colors hover:text-gray-800"
+                          className="comment-inline-button text-[10px] font-semibold leading-none text-gray-500 transition-colors hover:text-gray-800"
                         >
                           Reply
                         </button>
                         <button 
                           onClick={() => onLikeComment?.(reply.id)}
-                          className={`text-[10px] font-semibold transition-colors ${reply.is_liked ? 'text-pink-600' : 'text-gray-500 hover:text-gray-800'}`}
+                          className={`comment-inline-button text-[10px] font-semibold leading-none transition-colors ${reply.is_liked ? 'text-pink-600' : 'text-gray-500 hover:text-gray-800'}`}
                         >
                           Like{reply.likes_count > 0 ? ` (${reply.likes_count})` : ''}
                         </button>
                         {String(reply.user?.id || reply.user_id) !== String(currentUser?.id || '') && (
                           <button
                             onClick={() => handleReportComment(reply)}
-                            className="text-xs text-gray-400 font-bold hover:text-red-600 transition-colors"
+                            className="comment-inline-button text-[10px] font-semibold leading-none text-gray-500 transition-colors hover:text-red-600"
                           >
                             Report
                           </button>
