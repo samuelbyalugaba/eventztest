@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
-def eventzVersionCode = (System.getenv("EVENTZ_VERSION_CODE") ?: (project.findProperty("EVENTZ_VERSION_CODE") ?: "2")).toInteger()
-def eventzVersionName = System.getenv("EVENTZ_VERSION_NAME") ?: (project.findProperty("EVENTZ_VERSION_NAME") ?: "1.0.1")
+def eventzVersionCode = (System.getenv("EVENTZ_VERSION_CODE") ?: (project.findProperty("EVENTZ_VERSION_CODE") ?: "3")).toInteger()
+def eventzVersionName = System.getenv("EVENTZ_VERSION_NAME") ?: (project.findProperty("EVENTZ_VERSION_NAME") ?: "1.0.2")
 def releaseStoreFile = System.getenv("EVENTZ_UPLOAD_STORE_FILE")
 def releaseStorePassword = System.getenv("EVENTZ_UPLOAD_STORE_PASSWORD")
 def releaseKeyAlias = System.getenv("EVENTZ_UPLOAD_KEY_ALIAS")
