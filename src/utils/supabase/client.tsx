@@ -14,6 +14,9 @@ const supabaseKey = (() => {
   return undefined;
 })();
 
+const resolvedSupabaseUrl = supabaseUrl || 'https://placeholder.supabase.co';
+const resolvedSupabaseKey = supabaseKey || 'placeholder';
+
 export const isSupabaseConfigured = () => {
   return (
     !!supabaseUrl &&
@@ -25,8 +28,8 @@ export const isSupabaseConfigured = () => {
 };
 
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseKey || 'placeholder',
+  resolvedSupabaseUrl,
+  resolvedSupabaseKey,
   {
     auth: {
       persistSession: true,
@@ -34,5 +37,18 @@ export const supabase = createClient(
       detectSessionInUrl: true,
       flowType: 'pkce',
     }
+  }
+);
+
+export const nativeOAuthSupabase = createClient(
+  resolvedSupabaseUrl,
+  resolvedSupabaseKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      flowType: 'implicit',
+    },
   }
 );

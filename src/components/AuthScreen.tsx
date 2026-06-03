@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../utils/supabase/client';
+import { nativeOAuthSupabase, supabase, isSupabaseConfigured } from '../utils/supabase/client';
 import { checkUsernameUnique } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -89,8 +89,28 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
 
   const finishNativeOAuthSignIn = async (callbackUrl: string) => {
     const url = new URL(callbackUrl);
-    const oauthError = url.searchParams.get('error_description') || url.searchParams.get('error');
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
+    const oauthError =
+      url.searchParams.get('error_description') ||
+      url.searchParams.get('error') ||
+      hashParams.get('error_description') ||
+      hashParams.get('error');
     if (oauthError) throw new Error(oauthError);
+
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    if (accessToken && refreshToken) {
+      const { data, error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (error) throw error;
+      if (!data.session || !data.user) throw new Error('Google sign-in did not return a session.');
+
+      toast.success('Welcome back!');
+      onAuthSuccess(data.session.access_token, data.user);
+      return;
+    }
 
     const code = url.searchParams.get('code');
     if (!code) throw new Error('Google sign-in did not return an authorization code.');
@@ -303,7 +323,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
         });
 
         try {
-          const { data, error } = await supabase.auth.signInWithOAuth({
+          const { data, error } = await nativeOAuthSupabase.auth.signInWithOAuth({
             provider,
             options: {
               redirectTo,

@@ -563,6 +563,7 @@ export function Feed({
           setNotifications={setNotifications}
           notificationsLoading={notificationsLoading}
           currentUser={currentUser}
+          currentUserProfile={currentUserProfile}
           onClose={handleCloseNotifications}
           onRefreshNotifications={handleRefreshNotifications}
         />

@@ -2745,6 +2745,8 @@ export type Notification = {
     id?: string;
     name: string;
     avatar: string;
+    verified?: boolean;
+    isOrganizer?: boolean;
   };
   content: string;
   time: string; // ISO string
@@ -2771,7 +2773,7 @@ export const getNotifications = async (userId: string) => {
     .from('follows')
     .select(`
       created_at,
-      follower:profiles!follower_id(id, full_name, avatar_url)
+      follower:profiles!follower_id(id, full_name, avatar_url, verified, is_organizer)
     `)
     .eq('following_id', userId)
     .order('created_at', { ascending: false })
@@ -2786,7 +2788,9 @@ export const getNotifications = async (userId: string) => {
           user: { 
             id: follow.follower.id,
             name: follow.follower.full_name || 'User', 
-            avatar: follow.follower.avatar_url 
+            avatar: follow.follower.avatar_url,
+            verified: !!follow.follower.verified,
+            isOrganizer: !!follow.follower.is_organizer
           },
           content: 'started following you',
           time: follow.created_at,
@@ -2804,7 +2808,7 @@ export const getNotifications = async (userId: string) => {
     .from('post_likes')
     .select(`
       created_at,
-      user:profiles(id, full_name, avatar_url),
+      user:profiles(id, full_name, avatar_url, verified, is_organizer),
       post:posts!inner(id) 
     `)
     .eq('post.user_id', userId)
@@ -2821,7 +2825,9 @@ export const getNotifications = async (userId: string) => {
           user: { 
             id: like.user.id,
             name: like.user.full_name || 'User', 
-            avatar: like.user.avatar_url 
+            avatar: like.user.avatar_url,
+            verified: !!like.user.verified,
+            isOrganizer: !!like.user.is_organizer
           },
           content: 'liked your post',
           time: like.created_at,
@@ -2840,7 +2846,7 @@ export const getNotifications = async (userId: string) => {
       id,
       created_at,
       text,
-      user:profiles(id, full_name, avatar_url),
+      user:profiles(id, full_name, avatar_url, verified, is_organizer),
       post:posts!inner(id)
     `)
     .eq('post.user_id', userId)
@@ -2857,7 +2863,9 @@ export const getNotifications = async (userId: string) => {
           user: { 
             id: comment.user.id,
             name: comment.user.full_name || 'User', 
-            avatar: comment.user.avatar_url 
+            avatar: comment.user.avatar_url,
+            verified: !!comment.user.verified,
+            isOrganizer: !!comment.user.is_organizer
           },
           content: `commented: "${comment.text.substring(0, 30)}${comment.text.length > 30 ? '...' : ''}"`,
           time: comment.created_at,
@@ -2878,7 +2886,7 @@ export const getNotifications = async (userId: string) => {
         created_at,
         ticket_type,
         event:events!inner(id, title, organizer_id),
-        user:profiles(id, full_name, avatar_url)
+        user:profiles(id, full_name, avatar_url, verified, is_organizer)
       `)
       .eq('event.organizer_id', userId)
       .order('created_at', { ascending: false })
@@ -2896,7 +2904,9 @@ export const getNotifications = async (userId: string) => {
           user: { 
             id: ticket.user?.id,
             name: buyerName, 
-            avatar: buyerAvatar
+            avatar: buyerAvatar,
+            verified: !!ticket.user?.verified,
+            isOrganizer: !!ticket.user?.is_organizer
           },
           content: `bought a ${ticket.ticket_type} ticket for "${ticket.event?.title || 'Event'}"`,
           time: ticketTime,
