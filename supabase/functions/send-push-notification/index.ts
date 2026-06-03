@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type PushKind = "generic" | "like" | "comment" | "follow";
+type PushKind = "config" | "generic" | "like" | "comment" | "follow";
 
 type PushRequest = {
   kind?: PushKind;
@@ -256,6 +256,16 @@ Deno.serve(async (req) => {
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:support@eventz.app";
+    const body = (await req.json().catch(() => ({}))) as PushRequest;
+    const kind = body.kind || "generic";
+
+    if (kind === "config") {
+      const configured = Boolean(vapidPublicKey && vapidPrivateKey);
+      return json({
+        configured,
+        publicKey: configured ? vapidPublicKey : "",
+      });
+    }
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       return json({ error: "Push notification keys are not configured" }, 500);
@@ -268,8 +278,6 @@ Deno.serve(async (req) => {
       !!internalSecret && req.headers.get("x-eventz-internal-secret") === internalSecret;
 
     const admin = createAdminClient();
-    const body = (await req.json()) as PushRequest;
-    const kind = body.kind || "generic";
 
     if (kind === "generic") {
       if (!isInternal) return json({ error: "Unauthorized" }, 401);

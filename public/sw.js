@@ -67,6 +67,13 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.startsWith('chrome-extension://')) return;
 
   const url = new URL(event.request.url);
+  const isLocalDevelopment =
+    self.location.hostname === 'localhost' ||
+    self.location.hostname === '127.0.0.1' ||
+    self.location.hostname === '::1';
+
+  if (isLocalDevelopment) return;
+
   const isSameOrigin = isSameOriginRequest(url);
   const isRemoteImage = isSupabaseStorageRequest(url) || isWsrvRequest(url);
   const shouldHandleImage = isImageRequest(event.request) && (isSameOrigin || isRemoteImage);

@@ -21,7 +21,7 @@ export const registerServiceWorker = async () => {
   if ('serviceWorker' in navigator) {
     // Capacitor ships bundled assets, so a PWA service worker can keep Android/iOS
     // WebViews pinned to stale JS chunks after an app update.
-    if (isNativeCapacitor() || !import.meta.env.PROD) {
+    if (isNativeCapacitor()) {
       try {
         await unregisterServiceWorkers();
         await clearEventzCaches();

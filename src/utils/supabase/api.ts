@@ -2742,6 +2742,7 @@ export type Notification = {
   id: string;
   type: 'like' | 'comment' | 'follow' | 'event';
   user: {
+    id?: string;
     name: string;
     avatar: string;
   };
@@ -2749,6 +2750,8 @@ export type Notification = {
   time: string; // ISO string
   read: boolean;
   created_at: string;
+  postId?: number;
+  eventId?: number;
 };
 
 export const getNotifications = async (userId: string) => {
@@ -2768,7 +2771,7 @@ export const getNotifications = async (userId: string) => {
     .from('follows')
     .select(`
       created_at,
-      follower:profiles!follower_id(full_name, avatar_url)
+      follower:profiles!follower_id(id, full_name, avatar_url)
     `)
     .eq('following_id', userId)
     .order('created_at', { ascending: false })
@@ -2781,6 +2784,7 @@ export const getNotifications = async (userId: string) => {
           id: `follow-${follow.created_at}`,
           type: 'follow',
           user: { 
+            id: follow.follower.id,
             name: follow.follower.full_name || 'User', 
             avatar: follow.follower.avatar_url 
           },
@@ -2815,13 +2819,15 @@ export const getNotifications = async (userId: string) => {
           id: `like-${like.created_at}-${like.user.id}`,
           type: 'like',
           user: { 
+            id: like.user.id,
             name: like.user.full_name || 'User', 
             avatar: like.user.avatar_url 
           },
           content: 'liked your post',
           time: like.created_at,
           read: new Date(like.created_at).getTime() <= lastReadTime,
-          created_at: like.created_at
+          created_at: like.created_at,
+          postId: like.post.id
         });
       }
     });
@@ -2849,13 +2855,15 @@ export const getNotifications = async (userId: string) => {
           id: `comment-${comment.id}`,
           type: 'comment',
           user: { 
+            id: comment.user.id,
             name: comment.user.full_name || 'User', 
             avatar: comment.user.avatar_url 
           },
           content: `commented: "${comment.text.substring(0, 30)}${comment.text.length > 30 ? '...' : ''}"`,
           time: comment.created_at,
           read: new Date(comment.created_at).getTime() <= lastReadTime,
-          created_at: comment.created_at
+          created_at: comment.created_at,
+          postId: comment.post.id
         });
       }
     });
@@ -2886,13 +2894,15 @@ export const getNotifications = async (userId: string) => {
           id: `sale-${ticket.id}`,
           type: 'event',
           user: { 
+            id: ticket.user?.id,
             name: buyerName, 
             avatar: buyerAvatar
           },
           content: `bought a ${ticket.ticket_type} ticket for "${ticket.event?.title || 'Event'}"`,
           time: ticketTime,
           read: new Date(ticketTime).getTime() <= lastReadTime,
-          created_at: ticketTime
+          created_at: ticketTime,
+          eventId: ticket.event?.id
         });
       });
     }
@@ -2921,6 +2931,7 @@ export const getNotifications = async (userId: string) => {
         
         // If event is within next 48 hours
         if (eventDate > now && eventDate <= twoDaysFromNow) {
+          const reminderTime = new Date(eventDate.getTime() - 48 * 60 * 60 * 1000).toISOString();
            notifications.push({
             id: `reminder-${ticket.events.id}`,
             type: 'event',
@@ -2929,9 +2940,10 @@ export const getNotifications = async (userId: string) => {
               avatar: ticket.events.image_url || '/logo.png' // Fallback to logo or event image
             },
             content: `Event "${ticket.events.title}" is coming up on ${new Date(ticket.events.date).toLocaleDateString()}`,
-            time: new Date().toISOString(), // Current time as notification time
-            read: false, // Always show as new for urgency (or logic to check if seen)
-            created_at: new Date().toISOString()
+            time: reminderTime,
+            read: new Date(reminderTime).getTime() <= lastReadTime,
+            created_at: reminderTime,
+            eventId: ticket.events.id
           });
         }
       }

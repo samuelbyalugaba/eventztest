@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getFollowedUserIds, getNotifications, getPosts, getProfile, type Notification } from '../utils/supabase/api';
@@ -185,21 +185,40 @@ export function useFeedData(initialCurrentUser?: any) {
     return () => { window.removeEventListener('postsUpdated', handlePostsUpdated); };
   }, []);
 
+  const refreshNotifications = useCallback(async (options?: { silent?: boolean }) => {
+    if (!currentUser?.id) {
+      setNotifications([]);
+      return;
+    }
+
+    if (!options?.silent) setNotificationsLoading(true);
+    try {
+      const data = await getNotifications(currentUser.id);
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      if (!options?.silent) setNotificationsLoading(false);
+    }
+  }, [currentUser?.id]);
+
   useEffect(() => {
-    if (!currentUser) return;
-    const fetchNotifications = async () => {
-      setNotificationsLoading(true);
-      try {
-        const data = await getNotifications(currentUser.id);
-        setNotifications(data);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-      } finally {
-        setNotificationsLoading(false);
-      }
+    if (!currentUser?.id) return;
+
+    void refreshNotifications();
+    const interval = window.setInterval(() => {
+      void refreshNotifications({ silent: true });
+    }, 60000);
+    const handleNotificationsUpdated = () => {
+      void refreshNotifications({ silent: true });
     };
-    void fetchNotifications();
-  }, [currentUser]);
+
+    window.addEventListener('notificationsUpdated', handleNotificationsUpdated);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('notificationsUpdated', handleNotificationsUpdated);
+    };
+  }, [currentUser?.id, refreshNotifications]);
 
   return {
     posts,
@@ -214,6 +233,7 @@ export function useFeedData(initialCurrentUser?: any) {
     currentUserProfile,
     loadPosts,
     handleLoadMore,
+    refreshNotifications,
     setNotifications,
     setNotificationsLoading,
   };

@@ -80,8 +80,8 @@ export function Feed({
     notificationsLoading,
     currentUserProfile,
     handleLoadMore,
+    refreshNotifications,
     setNotifications,
-    setNotificationsLoading,
   } = useFeedData(propCurrentUser);
 
   // Force pause highlight player if background is paused
@@ -267,25 +267,6 @@ export function Feed({
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [posts.length, hasMore, isLoadingMore, feedScrollContainer, handleLoadMore]);
-
-  useEffect(() => {
-    if (currentUser) {
-      const fetchNotifications = async () => {
-        setNotificationsLoading(true);
-        try {
-          const { getNotifications } = await import('../utils/supabase/api');
-          const data = await getNotifications(currentUser.id);
-          setNotifications(data);
-        }
-        catch (error) { console.error('Error fetching notifications:', error); }
-        finally { setNotificationsLoading(false); }
-      };
-      void fetchNotifications();
-      let interval: ReturnType<typeof setInterval>;
-      if (showNotifications) interval = setInterval(() => { void fetchNotifications(); }, 60000);
-      return () => { if (interval) clearInterval(interval); };
-    }
-  }, [currentUser, showNotifications]);
 
   const toggleLike = useCallback(async (postId: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -488,6 +469,7 @@ export function Feed({
   const handleClosePlayingVideo = useCallback(() => setPlayingVideo(null), []);
   const handleCloseFullScreenImage = useCallback(() => setFullScreenImage(null), []);
   const handleCloseNotifications = useCallback(() => setShowNotifications(false), []);
+  const handleRefreshNotifications = useCallback(() => refreshNotifications({ silent: true }), [refreshNotifications]);
   const handleCloseShareModal = useCallback(() => {
     setShowShareModal(false);
     setShareModalData(null);
@@ -582,6 +564,7 @@ export function Feed({
           notificationsLoading={notificationsLoading}
           currentUser={currentUser}
           onClose={handleCloseNotifications}
+          onRefreshNotifications={handleRefreshNotifications}
         />
       )}
 
