@@ -15,6 +15,22 @@ interface ProfileHeaderProps {
   sidebarSlot?: React.ReactNode;
 }
 
+function CreatorBadge({ className = '' }: { className?: string }) {
+  return (
+    <img
+      src={creatorBadge}
+      alt="Creator badge"
+      className={`inline-block h-4 w-4 object-contain align-[-2px] drop-shadow-sm pointer-events-none select-none ${className}`}
+      style={{ visibility: 'visible', opacity: 1 }}
+      loading="eager"
+      onError={(e) => {
+        console.error('Badge image failed to load:', e);
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  );
+}
+
 export function ProfileHeader({
   isLoading,
   profileImage,
@@ -54,23 +70,11 @@ export function ProfileHeader({
               </div>
             ) : (
               <>
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <h1 className="min-w-0 flex-none max-w-[calc(100%-1.375rem)] whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
+                <div className="min-w-0">
+                  <h1 className="whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
                     {displayName || 'User'}
+                    {showCreatorBadge && <CreatorBadge className="ml-1.5" />}
                   </h1>
-                  {showCreatorBadge && (
-                    <img
-                      src={creatorBadge}
-                      alt="Creator badge"
-                      className="w-4 h-4 object-contain flex-shrink-0 drop-shadow-sm pointer-events-none select-none"
-                      style={{ visibility: 'visible', opacity: 1, display: 'inline-block' }}
-                      loading="eager"
-                      onError={(e) => {
-                        console.error('Badge image failed to load:', e);
-                        (e.target as any).style.display = 'none';
-                      }}
-                    />
-                  )}
                 </div>
                 <p className="text-gray-500 font-medium text-sm truncate">
                   @{username || 'user'}
@@ -151,23 +155,11 @@ export function ProfileHeader({
             </div>
           ) : (
             <>
-              <div className="flex min-w-0 items-center gap-1.5">
-                <h1 className="min-w-0 flex-none max-w-[calc(100%-1.375rem)] whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
+              <div className="min-w-0">
+                <h1 className="whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
                   {displayName || 'User'}
+                  {showCreatorBadge && <CreatorBadge className="ml-1.5" />}
                 </h1>
-                {showCreatorBadge && (
-                  <img
-                    src={creatorBadge}
-                    alt="Creator badge"
-                    className="h-4 w-4 flex-shrink-0 object-contain drop-shadow-sm pointer-events-none select-none"
-                    style={{ visibility: 'visible', opacity: 1, display: 'inline-block' }}
-                    loading="eager"
-                    onError={(e) => {
-                      console.error('Badge image failed to load:', e);
-                      (e.target as any).style.display = 'none';
-                    }}
-                  />
-                )}
               </div>
               <p className="mt-1 truncate text-sm font-medium text-gray-500">
                 @{username || 'user'}

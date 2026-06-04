@@ -1,8 +1,7 @@
-import { X, Search, TrendingUp, Clock, MapPin, Calendar } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Bookmark, ChevronRight, Clock, Compass, MapPin, Search, TrendingUp, X } from 'lucide-react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
-
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
 
@@ -14,474 +13,505 @@ interface PremiumSearchModalProps {
   onVenueSelect?: (venue: { name: string; lat?: string; lon?: string }) => void;
 }
 
+type SearchCategory = 'all' | 'events' | 'venues' | 'people';
 type VenueResult = { id: string; name: string; subtitle?: string; lat?: string; lon?: string };
+
+const categories: { id: SearchCategory; name: string }[] = [
+  { id: 'all', name: 'All' },
+  { id: 'events', name: 'Events' },
+  { id: 'venues', name: 'Venues' },
+  { id: 'people', name: 'People' },
+];
+
+const getViews = (event: any) => Number(event?.views || event?.view_count || 0);
+const getEventImage = (event: any) => event?.image_url || event?.cover_image || event?.coverImage || event?.image || event?.thumbnail_url || event?.thumbnail;
+const hasEventImage = (event: any) => Boolean(getEventImage(event));
+const formatViews = (views: number) => views >= 1000 ? `${(views / 1000).toFixed(1)}k views` : `${views || 0} views`;
 
 export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSelect, onVenueSelect }: PremiumSearchModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchCategory, setSearchCategory] = useState<'all' | 'events' | 'venues' | 'people'>('all');
+  const [searchCategory, setSearchCategory] = useState<SearchCategory>('all');
   const [isSearchingPeople, setIsSearchingPeople] = useState(false);
   const [isSearchingVenues, setIsSearchingVenues] = useState(false);
+  const [isLoadingTrending, setIsLoadingTrending] = useState(true);
   const [peopleResults, setPeopleResults] = useState<Profile[]>([]);
   const [venueResults, setVenueResults] = useState<VenueResult[]>([]);
-  const [trendingData, setTrendingData] = useState<{events: any[], people: any[]}>({ events: [], people: [] });
+  const [trendingData, setTrendingData] = useState<{ events: any[]; people: any[] }>({ events: [], people: [] });
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   useEffect(() => {
-    // Load recent searches
-    const saved = localStorage.getItem('recentSearches');
-    if (saved) {
-      try {
-        setRecentSearches(JSON.parse(saved));
-      } catch (e) {
+    try {
+      const saved = localStorage.getItem('recentSearches');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setRecentSearches(Array.isArray(parsed) ? parsed : []);
       }
+    } catch {
+      setRecentSearches([]);
     }
 
-    // Load trending data
     const loadTrending = async () => {
       try {
         const data = await getTrending();
         setTrendingData(data);
-      } catch (error) {
+      } catch {
+        setTrendingData({ events: [], people: [] });
+      } finally {
+        setIsLoadingTrending(false);
       }
     };
-    loadTrending();
+
+    void loadTrending();
   }, []);
 
   const addToRecent = (query: string) => {
-    if (!query.trim()) return;
-    const newRecent = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
-    setRecentSearches(newRecent);
-    localStorage.setItem('recentSearches', JSON.stringify(newRecent));
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const next = [trimmed, ...recentSearches.filter((item) => item.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
+    setRecentSearches(next);
+    localStorage.setItem('recentSearches', JSON.stringify(next));
   };
 
   useEffect(() => {
     const searchPeople = async () => {
-      if (searchQuery.trim().length < 2) {
+      if (searchQuery.trim().length < 2 || (searchCategory !== 'all' && searchCategory !== 'people')) {
         setPeopleResults([]);
         return;
       }
 
-      if (searchCategory !== 'all' && searchCategory !== 'people') {
-        return;
-      }
-      
       setIsSearchingPeople(true);
       try {
         const results = await searchProfiles(searchQuery);
         setPeopleResults(results || []);
-      } catch (error) {
+      } catch {
+        setPeopleResults([]);
       } finally {
         setIsSearchingPeople(false);
       }
     };
 
-    const timeoutId = setTimeout(searchPeople, 300);
-    return () => clearTimeout(timeoutId);
+    const timeoutId = window.setTimeout(searchPeople, 300);
+    return () => window.clearTimeout(timeoutId);
   }, [searchQuery, searchCategory]);
 
   useEffect(() => {
     const q = searchQuery.trim();
-    if (q.length < 2) {
+    if (q.length < 2 || (searchCategory !== 'all' && searchCategory !== 'venues')) {
       setVenueResults([]);
-      return;
-    }
-
-    if (searchCategory !== 'all' && searchCategory !== 'venues') {
+      setIsSearchingVenues(false);
       return;
     }
 
     const controller = new AbortController();
     setIsSearchingVenues(true);
 
-    const timeoutId = setTimeout(async () => {
+    const timeoutId = window.setTimeout(async () => {
       try {
         const results = await searchNominatim(q, { limit: 10, signal: controller.signal });
         const seen = new Set<string>();
         const next: VenueResult[] = [];
 
-        for (const r of results) {
-          const city = extractCityName(r);
+        for (const result of results) {
+          const city = extractCityName(result);
           if (!city) continue;
           const key = normalizePlaceName(city);
           if (seen.has(key)) continue;
           seen.add(key);
           next.push({
-            id: String(r.place_id),
+            id: String(result.place_id),
             name: city,
-            subtitle: r.display_name,
-            lat: r.lat,
-            lon: r.lon,
+            subtitle: result.display_name,
+            lat: result.lat,
+            lon: result.lon,
           });
           if (next.length >= 6) break;
         }
 
         setVenueResults(next);
-      } catch (e: any) {
-        if (e?.name !== 'AbortError') {
-          setVenueResults([]);
-        }
+      } catch (error: any) {
+        if (error?.name !== 'AbortError') setVenueResults([]);
       } finally {
         setIsSearchingVenues(false);
       }
     }, 250);
 
     return () => {
-      clearTimeout(timeoutId);
+      window.clearTimeout(timeoutId);
       controller.abort();
     };
   }, [searchQuery, searchCategory]);
 
-  // Filter events based on search query
-  const normalizedQuery = searchQuery.toLowerCase();
-  const filteredEvents = events
-    .filter((event) => {
-      const title = String(event.title || '').toLowerCase();
-      const category = String((event as any).category || '').toLowerCase();
-      const location = String((event as any).location || '').toLowerCase();
-      const subcategory = String((event as any).subcategory || '').toLowerCase();
-      return (
-        title.includes(normalizedQuery) ||
-        category.includes(normalizedQuery) ||
-        location.includes(normalizedQuery) ||
-        subcategory.includes(normalizedQuery)
-      );
-    })
-    .slice(0, 5);
+  const trendingEvents = useMemo(() => {
+    const byId = new Map(events.map((event) => [String(event.id), event]));
+    const apiEvents = trendingData.events.map((event) => {
+      const localEvent = byId.get(String(event.id));
+      return localEvent ? { ...event, ...localEvent } : event;
+    });
+    const localEvents = [...events].filter(hasEventImage).sort((a, b) => getViews(b) - getViews(a));
+    const seen = new Set<string>();
 
-  const filteredPeople = peopleResults;
-  const filteredVenues = venueResults;
+    return [...localEvents, ...apiEvents]
+      .filter((event) => {
+        const key = String(event?.id || event?.title || '');
+        if (!key || seen.has(key) || !hasEventImage(event)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 5);
+  }, [events, trendingData.events]);
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredEvents = useMemo(() => {
+    if (!normalizedQuery) return [];
+    return events
+      .filter((event) => {
+        const title = String(event.title || '').toLowerCase();
+        const category = String(event.category || '').toLowerCase();
+        const location = String(event.location || '').toLowerCase();
+        const subcategory = String(event.subcategory || '').toLowerCase();
+        return title.includes(normalizedQuery) || category.includes(normalizedQuery) || location.includes(normalizedQuery) || subcategory.includes(normalizedQuery);
+      })
+      .slice(0, 8);
+  }, [events, normalizedQuery]);
+
+  const recentEvent = useMemo(() => {
+    for (const recent of recentSearches) {
+      const match = events.find((event) => hasEventImage(event) && String(event.title || '').toLowerCase().includes(recent.toLowerCase()));
+      if (match) return match;
+    }
+    return trendingEvents[0] || events.find(hasEventImage);
+  }, [events, recentSearches, trendingEvents]);
+
+  const hasQuery = searchQuery.trim().length > 0;
   const isSearching = isSearchingPeople || isSearchingVenues;
-  const showEmptyState =
-    (searchCategory === 'all' && filteredPeople.length === 0 && filteredEvents.length === 0 && filteredVenues.length === 0) ||
-    (searchCategory === 'people' && filteredPeople.length === 0) ||
+  const showEmptyState = hasQuery && (
+    (searchCategory === 'all' && filteredEvents.length === 0 && peopleResults.length === 0 && venueResults.length === 0) ||
     (searchCategory === 'events' && filteredEvents.length === 0) ||
-    (searchCategory === 'venues' && filteredVenues.length === 0);
+    (searchCategory === 'people' && peopleResults.length === 0) ||
+    (searchCategory === 'venues' && venueResults.length === 0)
+  );
 
-  const categories = [
-    { id: 'all', name: 'All', icon: '' },
-    { id: 'events', name: 'Events', icon: '' },
-    { id: 'venues', name: 'Venues', icon: '' },
-    { id: 'people', name: 'People', icon: '' },
-  ];
+  const selectEvent = (event: any) => {
+    addToRecent(event.title || '');
+    onEventSelect(event);
+    onClose();
+  };
+
+  const selectPerson = (person: any) => {
+    addToRecent(person.full_name || person.username || '');
+    onPersonSelect?.(person);
+    onClose();
+  };
+
+  const selectVenue = (venue: VenueResult) => {
+    addToRecent(venue.name);
+    onVenueSelect?.({ name: venue.name, lat: venue.lat, lon: venue.lon });
+    onClose();
+  };
 
   return (
-    <div 
-      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-white h-full overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header with Search Bar */}
-        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 pb-4 pt-[calc(1rem+var(--eventz-safe-area-top))] transition-all">
-          <div className="flex items-center gap-3">
-            <button 
+    <div className="fixed inset-0 z-[100] bg-white">
+      <div className="mx-auto flex h-full max-w-3xl flex-col bg-white">
+        <div className="shrink-0 px-4 pb-2 pt-[calc(1rem+var(--eventz-safe-area-top))]">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
               onClick={onClose}
-              className="p-2.5 hover:bg-gray-100 rounded-full transition-colors text-gray-700"
+              aria-label="Close search"
+              className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 transition-colors hover:bg-gray-100"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
-            
-            <div className="flex-1 relative group">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#8A2BE2] transition-colors" />
+
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
+                aria-label="Search events, venues, people"
                 placeholder="Search events, venues, people..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
                 autoFocus
-                className="w-full pl-11 pr-4 py-3 bg-gray-100/50 hover:bg-gray-100 focus:bg-white border border-transparent focus:border-[#8A2BE2]/20 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-[#8A2BE2]/5 transition-all text-sm font-medium"
+                className="h-12 w-full rounded-[18px] border border-gray-200 bg-white pl-10 pr-4 text-[14px] font-medium text-gray-900 shadow-[0_5px_18px_rgba(15,23,42,0.05)] outline-none transition-all placeholder:text-gray-400 focus:border-purple-200 focus:ring-[3px] focus:ring-purple-100"
               />
             </div>
-            {isSearching && (
-              <div className="w-5 h-5 border-2 border-gray-300 border-t-[#8A2BE2] rounded-full animate-spin" aria-hidden />
-            )}
           </div>
 
-          {/* Category Tabs */}
-          <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-hide pb-2">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSearchCategory(cat.id as any)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all border ${
-                  searchCategory === cat.id
-                    ? 'bg-[#8A2BE2] text-white border-[#8A2BE2] shadow-lg shadow-purple-200'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                }`}
-              >
-                <span className="mr-1.5">{cat.icon}</span>
-                {cat.name}
-              </button>
-            ))}
+          <div className="mt-4 grid grid-cols-4 gap-2.5">
+            {categories.map((category) => {
+              const active = searchCategory === category.id;
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => setSearchCategory(category.id)}
+                  className={`h-10 min-w-0 rounded-2xl border px-1 text-[13px] font-bold transition-all ${
+                    active
+                      ? 'border-purple-100 bg-purple-100 text-purple-700 shadow-[0_8px_24px_rgba(138,43,226,0.12)]'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-purple-100 hover:text-purple-700'
+                  }`}
+                >
+                  {category.name}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Content */}
-        <div className="px-6 py-6 max-w-4xl mx-auto">
-          {searchQuery === '' ? (
-            <div className="py-4">
-              {/* Recent Searches */}
-              {recentSearches.length > 0 && (
-                <div className="mb-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-gray-900 font-semibold flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-gray-500" />
-                      Recent
-                    </h3>
-                    <button 
+        <div className="flex-1 overflow-y-auto px-4 pb-[calc(5.75rem+var(--eventz-safe-area-bottom))] pt-3">
+          {!hasQuery ? (
+            <div className="space-y-6">
+              <section>
+                <div className="mb-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Clock className="h-[18px] w-[18px] text-gray-500" />
+                    <h2 className="text-[19px] font-bold text-gray-950">Recent</h2>
+                  </div>
+                  {recentSearches.length > 0 && (
+                    <button
+                      type="button"
                       onClick={() => {
                         setRecentSearches([]);
                         localStorage.removeItem('recentSearches');
                       }}
-                      className="text-xs text-purple-600 font-medium"
+                      className="text-xs font-bold text-purple-700"
                     >
                       Clear all
                     </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {recentSearches.map((term, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setSearchQuery(term)}
-                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
-                      >
-                        {term}
-                      </button>
-                    ))}
-                  </div>
+                  )}
                 </div>
-              )}
 
-              {/* Trending */}
-              {(trendingData.events.length > 0 || trendingData.people.length > 0) && (
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="p-1.5 bg-purple-100 rounded-lg">
-                      <TrendingUp className="w-4 h-4 text-[#8A2BE2]" />
+                {recentEvent ? (
+                  <button
+                    type="button"
+                    onClick={() => selectEvent(recentEvent)}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-white p-2.5 text-left shadow-[0_5px_18px_rgba(15,23,42,0.045)] transition-all hover:border-purple-100"
+                  >
+                    <ImageWithFallback
+                      src={getEventImage(recentEvent)}
+                      alt={recentEvent.title || 'Recent event'}
+                      className="h-16 w-24 shrink-0 rounded-xl object-cover"
+                      displayWidth={160}
+                      displayHeight={112}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-[14px] font-bold text-gray-950">{recentEvent.title || 'Recent event'}</h3>
+                      <div className="mt-1.5 flex items-center gap-3">
+                        <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                          {recentEvent.category || 'Event'}
+                        </span>
+                        <span className="text-xs font-medium text-gray-400">{formatViews(getViews(recentEvent))}</span>
+                      </div>
                     </div>
-                    <h3 className="text-gray-900 font-bold text-lg">Trending Now</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Trending Events */}
-                    {trendingData.events.map((event, index) => (
-                      <button
-                        key={`trend-evt-${event.id}`}
-                        onClick={() => {
-                          onEventSelect(event);
-                          addToRecent(event.title);
-                          onClose();
-                        }}
-                        className="group flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl hover:border-purple-200 hover:shadow-lg hover:shadow-purple-500/5 transition-all text-left relative overflow-hidden"
-                      >
-                        <div className="absolute top-0 left-0 w-1 h-full bg-[#8A2BE2] opacity-0 group-hover:opacity-100 transition-opacity" />
-                        
-                        <div className="w-12 h-12 rounded-xl bg-purple-50 flex flex-col items-center justify-center text-[#8A2BE2] flex-shrink-0 border border-purple-100 group-hover:scale-105 transition-transform">
-                          <span className="text-xs font-bold leading-none mb-0.5">#{index + 1}</span>
-                          <TrendingUp className="w-3 h-3 opacity-50" />
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-gray-900 truncate group-hover:text-[#8A2BE2] transition-colors">{event.title}</div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                              {event.category}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {event.views > 1000 ? (event.views/1000).toFixed(1) + 'k' : event.views} views
-                            </span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+                    <ChevronRight className="h-5 w-5 shrink-0 text-gray-500" />
+                  </button>
+                ) : (
+                  <SearchResultSkeleton compact />
+                )}
+              </section>
 
-                    {/* Trending People */}
-                    {trendingData.people.map((person, index) => (
-                      <button
-                        key={`trend-ppl-${person.id}`}
-                        onClick={() => {
-                          onPersonSelect && onPersonSelect(person);
-                          addToRecent(person.full_name || person.username || '');
-                          onClose();
-                        }}
-                        className="group flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl hover:border-purple-200 hover:shadow-lg hover:shadow-purple-500/5 transition-all text-left"
-                      >
-                        <div className="relative w-12 h-12 flex-shrink-0">
-                           <div className="w-full h-full rounded-full overflow-hidden border-2 border-white shadow-sm group-hover:scale-105 transition-transform">
-                            <UserAvatar
-                              src={person.avatar_url}
-                              name={person.full_name || person.username || 'User'}
-                              className="w-full h-full"
-                            />
-                           </div>
-                           <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm">
-                             <div className="w-3.5 h-3.5 bg-[#8A2BE2] rounded-full flex items-center justify-center text-[8px] font-bold text-white">
-                               {index + 1}
-                             </div>
-                           </div>
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-gray-900 truncate group-hover:text-[#8A2BE2] transition-colors">{person.full_name || person.username}</div>
-                          <div className="text-xs text-gray-500 font-medium">{person.is_organizer ? 'Organizer' : 'Verified User'}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+              <section>
+                <div className="mb-2.5 flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
+                    <TrendingUp className="h-[18px] w-[18px]" />
+                  </span>
+                  <h2 className="text-[19px] font-bold text-gray-950">Trending Now</h2>
+                  {isSearching && <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-purple-600" />}
                 </div>
-              )}
-              
-              {recentSearches.length === 0 && trendingData.events.length === 0 && trendingData.people.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mb-6">
-                    <Search className="w-10 h-10 text-purple-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Search Eventz</h3>
-                  <p className="text-gray-500 max-w-xs">
-                    Find events, organizers, and people in your community.
-                  </p>
+
+                <div className="space-y-2.5">
+                  {trendingEvents.length > 0 ? trendingEvents.map((event, index) => (
+                    <button
+                      key={`trend-event-${event.id || event.title}-${index}`}
+                      type="button"
+                      onClick={() => selectEvent(event)}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-white p-2.5 text-left shadow-[0_5px_18px_rgba(15,23,42,0.04)] transition-all hover:border-purple-100"
+                    >
+                      <div className="relative h-16 w-24 shrink-0">
+                        <ImageWithFallback
+                          src={getEventImage(event)}
+                          alt={event.title || 'Trending event'}
+                          className="h-full w-full rounded-xl object-cover"
+                          displayWidth={160}
+                          displayHeight={112}
+                        />
+                        <span className="absolute left-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full border border-purple-200 bg-white text-sm font-bold text-purple-700 shadow-sm">
+                          {index + 1}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="line-clamp-2 text-[14px] font-bold leading-tight text-gray-950">{event.title || 'Untitled event'}</h3>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+                          <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                            {event.category || 'Event'}
+                          </span>
+                          <span className="text-xs font-medium text-gray-400">{formatViews(getViews(event))}</span>
+                        </div>
+                      </div>
+
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-100 text-gray-600">
+                        <Bookmark className="h-5 w-5" />
+                      </span>
+                    </button>
+                  )) : (
+                    <>
+                      {Array.from({ length: isLoadingTrending ? 5 : 3 }).map((_, index) => (
+                        <SearchResultSkeleton key={`trend-skeleton-${index}`} rank={index + 1} />
+                      ))}
+                    </>
+                  )}
                 </div>
-              )}
+              </section>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  window.dispatchEvent(new Event('eventsUpdated'));
+                }}
+                className="flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-purple-50 text-sm font-bold text-purple-700 transition-colors hover:bg-purple-100"
+              >
+                <Compass className="h-[18px] w-[18px]" />
+                Explore more events
+              </button>
             </div>
           ) : (
-            <>
-              {/* Search Results - People */}
-              {filteredPeople.length > 0 && (searchCategory === 'all' || searchCategory === 'people') && (
-                <div className="mb-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-gray-900">People</h3>
-                    <p className="text-gray-500 text-sm">{filteredPeople.length} found</p>
-                  </div>
-                  <div className="space-y-3">
-                    {filteredPeople.map((person) => (
-                      <button
-                        key={person.id}
-                        onClick={() => {
-                          onPersonSelect && onPersonSelect(person);
-                          onClose();
-                        }}
-                        className="w-full flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all"
-                      >
-                        <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                          <UserAvatar
-                            src={person.avatar_url}
-                            name={person.full_name || person.username || 'User'}
-                            className="w-full h-full"
-                          />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <div className="flex items-center gap-2">
-                            <p className="text-gray-900">{person.full_name || person.username}</p>
-                            {person.verified && (
-                              <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                              </svg>
-                            )}
-                          </div>
-                          <p className="text-gray-500 text-sm">
-                            {person.is_organizer ? (person.organizer_type || 'Organizer') : 'User'} 
-                            {person.location && ` • ${person.location}`}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            <div className="space-y-5">
+              {(searchCategory === 'all' || searchCategory === 'events') && filteredEvents.length > 0 && (
+                <ResultSection title="Events" count={filteredEvents.length}>
+                  {filteredEvents.map((event) => (
+                    <EventResultRow key={event.id} event={event} onClick={() => selectEvent(event)} />
+                  ))}
+                </ResultSection>
               )}
 
-              {filteredVenues.length > 0 && (searchCategory === 'all' || searchCategory === 'venues') && (
-                <div className="mb-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-gray-900">Venues</h3>
-                    <p className="text-gray-500 text-sm">{filteredVenues.length} found</p>
-                  </div>
-                  <div className="space-y-3">
-                    {filteredVenues.map((venue) => (
-                      <button
-                        key={venue.id}
-                        onClick={() => {
-                          onVenueSelect && onVenueSelect({ name: venue.name, lat: venue.lat, lon: venue.lon });
-                          addToRecent(venue.name);
-                          onClose();
-                        }}
-                        className="w-full flex items-start gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all text-left"
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-[#8A2BE2] flex-shrink-0 border border-purple-100">
-                          <MapPin className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-gray-900 font-medium truncate">{venue.name}</div>
-                          {venue.subtitle && <div className="text-xs text-gray-500 mt-0.5 truncate">{venue.subtitle}</div>}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {(searchCategory === 'all' || searchCategory === 'people') && peopleResults.length > 0 && (
+                <ResultSection title="People" count={peopleResults.length}>
+                  {peopleResults.map((person) => (
+                    <button
+                      key={person.id}
+                      type="button"
+                      onClick={() => selectPerson(person)}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-white p-2.5 text-left shadow-sm transition-all hover:border-purple-100"
+                    >
+                      <UserAvatar
+                        src={person.avatar_url}
+                        name={person.full_name || person.username || 'User'}
+                        className="h-11 w-11"
+                        verified={person.verified}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-sm font-bold text-gray-950">{person.full_name || person.username}</h3>
+                        <p className="truncate text-xs font-medium text-gray-500">
+                          {person.is_organizer ? person.organizer_type || 'Organizer' : 'User'}
+                          {person.location ? ` - ${person.location}` : ''}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </button>
+                  ))}
+                </ResultSection>
               )}
 
-              {/* Search Results - Events */}
-              {filteredEvents.length > 0 && (searchCategory === 'all' || searchCategory === 'events') && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-gray-900">Events</h3>
-                    <p className="text-gray-500 text-sm">{filteredEvents.length} found</p>
-                  </div>
-                  <div className="space-y-3">
-                    {filteredEvents.map((event) => (
-                      <button
-                        key={event.id}
-                        onClick={() => {
-                          onEventSelect(event);
-                          addToRecent(event.title);
-                          onClose();
-                        }}
-                        className="w-full flex items-start gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all text-left"
-                      >
-                        <ImageWithFallback
-                          src={(event as any).image_url ?? (event as any).image}
-                          alt={event.title}
-                          className="w-20 h-20 rounded-lg object-cover"
-                          fallbackSrc="/icons/icon-192x192.png"
-                        />
-                        <div className="flex-1">
-                          <h4 className="text-gray-900 mb-1">{event.title}</h4>
-                          <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              {event.date.split(',')[0]}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              {event.location}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="px-2 py-1 bg-purple-100 text-purple-600 rounded-md text-xs">
-                              {event.category}
-                            </span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {(searchCategory === 'all' || searchCategory === 'venues') && venueResults.length > 0 && (
+                <ResultSection title="Venues" count={venueResults.length}>
+                  {venueResults.map((venue) => (
+                    <button
+                      key={venue.id}
+                      type="button"
+                      onClick={() => selectVenue(venue)}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-white p-2.5 text-left shadow-sm transition-all hover:border-purple-100"
+                    >
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+                        <MapPin className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-sm font-bold text-gray-950">{venue.name}</h3>
+                        {venue.subtitle && <p className="truncate text-xs font-medium text-gray-500">{venue.subtitle}</p>}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </button>
+                  ))}
+                </ResultSection>
               )}
 
               {showEmptyState && (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Search className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-gray-900 mb-2">No results found</h3>
-                  <p className="text-gray-500 text-sm">Try searching for something else</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                    <Search className="h-7 w-7" />
+                  </span>
+                  <h3 className="text-base font-bold text-gray-950">No results found</h3>
+                  <p className="mt-1 text-xs font-medium text-gray-500">Try another event, venue, or person.</p>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function ResultSection({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  return (
+    <section>
+      <div className="mb-2.5 flex items-center justify-between">
+        <h2 className="text-lg font-bold text-gray-950">{title}</h2>
+        <span className="text-xs font-semibold text-gray-400">{count} found</span>
+      </div>
+      <div className="space-y-2.5">{children}</div>
+    </section>
+  );
+}
+
+function SearchResultSkeleton({ compact = false, rank }: { compact?: boolean; rank?: number }) {
+  return (
+    <div className={`flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-white p-2.5 shadow-[0_5px_18px_rgba(15,23,42,0.04)] ${compact ? '' : 'min-h-[84px]'}`}>
+      <div className={`${compact ? 'h-16 w-24' : 'h-16 w-24'} relative shrink-0 overflow-hidden rounded-xl bg-gray-100`}>
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100" />
+        {rank && (
+          <span className="absolute left-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full border border-purple-100 bg-white text-sm font-bold text-purple-500">
+            {rank}
+          </span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1 space-y-2.5">
+        <div className="h-3.5 w-3/4 animate-pulse rounded bg-gray-100" />
+        <div className="flex items-center gap-2.5">
+          <div className="h-6 w-20 animate-pulse rounded-md bg-purple-50" />
+          <div className="h-3.5 w-14 animate-pulse rounded bg-gray-100" />
+        </div>
+      </div>
+      {!compact && <div className="h-9 w-9 shrink-0 animate-pulse rounded-xl border border-gray-100 bg-gray-50" />}
+    </div>
+  );
+}
+
+function EventResultRow({ event, onClick }: { event: any; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-white p-2.5 text-left shadow-sm transition-all hover:border-purple-100"
+    >
+      <ImageWithFallback
+        src={getEventImage(event)}
+        alt={event.title || 'Event'}
+        className="h-16 w-24 shrink-0 rounded-xl object-cover"
+        displayWidth={160}
+        displayHeight={112}
+      />
+      <div className="min-w-0 flex-1">
+        <h3 className="line-clamp-2 text-sm font-bold leading-tight text-gray-950">{event.title || 'Untitled event'}</h3>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700">
+            {event.category || 'Event'}
+          </span>
+          <span className="text-xs font-medium text-gray-400">{formatViews(getViews(event))}</span>
+        </div>
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
+    </button>
   );
 }

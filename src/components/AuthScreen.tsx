@@ -419,8 +419,9 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
             <TabsContent value="login" className="mt-4">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-800 block text-left">Your Email</label>
+                  <label htmlFor="auth-login-email" className="text-sm font-medium text-gray-800 block text-left">Your Email</label>
                   <input
+                    id="auth-login-email"
                     name="email"
                     type="email"
                     required
@@ -436,7 +437,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-3">
-                    <label className="text-sm font-medium text-gray-800 block text-left">Password</label>
+                    <label htmlFor="auth-login-password" className="text-sm font-medium text-gray-800 block text-left">Password</label>
                     <button
                       type="button"
                       onClick={handleResetPassword}
@@ -447,7 +448,8 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                     </button>
                   </div>
                   <div className="relative">
-                    <input
+                      <input
+                      id="auth-login-password"
                       name="password"
                       type={showPassword ? 'text' : 'password'}
                       required
@@ -528,8 +530,9 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
             <TabsContent value="signup" className="mt-4">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-800 block text-left">Your Name</label>
+                  <label htmlFor="auth-signup-name" className="text-sm font-medium text-gray-800 block text-left">Your Name</label>
                   <input
+                    id="auth-signup-name"
                     name="fullName"
                     type="text"
                     required
@@ -543,8 +546,9 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-800 block text-left">Your Email</label>
+                  <label htmlFor="auth-signup-email" className="text-sm font-medium text-gray-800 block text-left">Your Email</label>
                   <input
+                    id="auth-signup-email"
                     name="email"
                     type="email"
                     required
@@ -559,9 +563,10 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-800 block text-left">Password</label>
+                  <label htmlFor="auth-signup-password" className="text-sm font-medium text-gray-800 block text-left">Password</label>
                   <div className="relative">
                     <input
+                      id="auth-signup-password"
                       name="password"
                       type={showPassword ? 'text' : 'password'}
                       required

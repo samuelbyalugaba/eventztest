@@ -4,28 +4,25 @@ import { getProfile, getUserTickets, getSavedEvents, getSavedPosts, getFollowers
 import type { ApiPost, Profile as UserProfile, Ticket, Event as AppEvent, CloudflareStream } from '../utils/supabase/api';
 import { useProfileStore } from '../store/profileStore';
 import { useAuth } from '../contexts/AuthContext';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 
 type SavedEvent = AppEvent & { isSaved: boolean; hasReminder: boolean };
 
 const removePostFromProfileCaches = (postId: number) => {
-  try {
-    for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
-      const key = sessionStorage.key(i);
-      if (!key?.startsWith('eventz_profile_cache_')) continue;
-      const cached = JSON.parse(sessionStorage.getItem(key) || '{}');
-      if (!Array.isArray(cached.posts)) continue;
-      sessionStorage.setItem(
-        key,
-        JSON.stringify({
+  queryClient.setQueriesData(
+    { queryKey: queryKeys.profile.root },
+    (cached: unknown) => {
+      if (Array.isArray(cached)) return cached.filter((post: ApiPost) => post.id !== postId);
+      if (cached && typeof cached === 'object' && Array.isArray((cached as { posts?: ApiPost[] }).posts)) {
+        return {
           ...cached,
-          posts: cached.posts.filter((post: ApiPost) => post.id !== postId),
-          ts: Date.now(),
-        }),
-      );
+          posts: (cached as { posts: ApiPost[] }).posts.filter((post) => post.id !== postId),
+        };
+      }
+      return cached;
     }
-  } catch {
-    // Profile cache cleanup is best-effort; live state is updated below.
-  }
+  );
 };
 
 export function useProfileData(userId?: string, activeTab?: string) {
@@ -90,18 +87,8 @@ export function useProfileData(userId?: string, activeTab?: string) {
       if (!targetUserId) return;
 
       const viewerId = user?.id || null;
-      const cacheKey = viewerId ? `eventz_profile_cache_${viewerId}_${targetUserId}` : `eventz_profile_cache_${targetUserId}`;
-      let cachedData: any = null;
-
-      try {
-        const cachedRaw = sessionStorage.getItem(cacheKey);
-        if (cachedRaw) {
-          const cached = JSON.parse(cachedRaw);
-          if (cached?.ts && Date.now() - cached.ts < PROFILE_CACHE_TTL_MS) {
-            cachedData = cached;
-          }
-        }
-      } catch {}
+      const summaryKey = queryKeys.profile.summary(viewerId, targetUserId);
+      const cachedData = queryClient.getQueryData<any>(summaryKey);
 
       if (lastLoadedProfileIdRef.current !== targetUserId) {
         setUserProfile(cachedData?.profile ?? null);
@@ -159,7 +146,11 @@ export function useProfileData(userId?: string, activeTab?: string) {
       setIsFollowing(!!followingFlag);
       setIsLoading(false);
 
-      const posts = await getProfilePostsGrid({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: 0 });
+      const posts = await queryClient.fetchQuery({
+        queryKey: queryKeys.profile.posts(targetUserId, 0),
+        staleTime: PROFILE_CACHE_TTL_MS,
+        queryFn: () => getProfilePostsGrid({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: 0 }),
+      });
       if (seq !== loadSeqRef.current) return;
       setUserPosts(posts || []);
       setPostsOffset((posts || []).length);
@@ -167,14 +158,13 @@ export function useProfileData(userId?: string, activeTab?: string) {
       setIsLoadingPosts(false);
 
       try {
-        sessionStorage.setItem(cacheKey, JSON.stringify({
-          ts: Date.now(),
+        queryClient.setQueryData(summaryKey, {
           profile,
           followStats: { followers, following },
           isFollowing: !!followingFlag,
           organizerStats: stats,
           posts: posts || []
-        }));
+        });
       } catch {}
     } catch {
       setIsLoading(false);
@@ -194,7 +184,11 @@ export function useProfileData(userId?: string, activeTab?: string) {
     if (!targetUserId) return;
     try {
       setIsLoadingMorePosts(true);
-      const next = await getProfilePostsGrid({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: postsOffset });
+      const next = await queryClient.fetchQuery({
+        queryKey: queryKeys.profile.posts(targetUserId, postsOffset),
+        staleTime: PROFILE_CACHE_TTL_MS,
+        queryFn: () => getProfilePostsGrid({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: postsOffset }),
+      });
       const nextPosts = next || [];
       setUserPosts((prev) => [...prev, ...nextPosts]);
       setPostsOffset((prev) => prev + nextPosts.length);

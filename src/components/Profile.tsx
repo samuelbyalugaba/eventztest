@@ -26,6 +26,7 @@ import { ProfileContent } from './profile/ProfileContent';
 import { ProfileSidebar } from './profile/ProfileSidebar';
 import { ProfileActions } from './profile/ProfileActions';
 import { askForReportReason, confirmBlockUser } from '../utils/moderation';
+import { ConfirmDialog } from './ui/confirm-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,6 +95,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [isStartingMessage, setIsStartingMessage] = useState(false);
+  const [eventPendingDelete, setEventPendingDelete] = useState<AppEvent | null>(null);
 
   const [showTicketListModal, setShowTicketListModal] = useState(false);
   const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);
@@ -149,8 +151,13 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
   const handleDeleteEvent = async (event: AppEvent) => {
     if (!currentUser || currentUser.id !== event.organizer_id) return;
-    const confirmed = window.confirm('Delete this event? This action cannot be undone.');
-    if (!confirmed) return;
+    setEventPendingDelete(event);
+  };
+
+  const handleConfirmDeleteEvent = async () => {
+    if (!eventPendingDelete || !currentUser || currentUser.id !== eventPendingDelete.organizer_id) return;
+    const event = eventPendingDelete;
+    setEventPendingDelete(null);
     try {
       await deleteEvent(event.id);
       setPublishedEvents(prev => prev.filter(e => e.id !== event.id));
@@ -475,6 +482,17 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             }}
           />
         )}
+      <ConfirmDialog
+        open={eventPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setEventPendingDelete(null);
+        }}
+        title="Delete event?"
+        description="This removes the event and cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleConfirmDeleteEvent}
+      />
     </div>
   );
 }

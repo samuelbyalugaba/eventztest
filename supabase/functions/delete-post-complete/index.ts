@@ -1,6 +1,4 @@
-// @ts-nocheck
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { jwtDecode } from "https://esm.sh/jwt-decode@4.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -27,17 +25,6 @@ serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const token = authHeader.split(" ")[1];
-    let userId = "";
-    try {
-      const decoded: any = jwtDecode(token);
-      userId = decoded?.sub || decoded?.user_id || "";
-    } catch {
-      return new Response(JSON.stringify({ error: "Invalid auth token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -49,6 +36,16 @@ serve(async (req: Request) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const userId = userData.user?.id || "";
+
+    if (userError || !userId) {
+      return new Response(JSON.stringify({ error: "Invalid auth token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { postId }: DeletePostBody = await req.json();
     if (!postId || typeof postId !== "number") {
@@ -110,8 +107,9 @@ serve(async (req: Request) => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e?.message || "Unknown error" }), {
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

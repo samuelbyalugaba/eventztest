@@ -4,63 +4,43 @@ import { supabase } from '../utils/supabase/client';
 import { getFollowedUserIds, getNotifications, getPosts, getProfile, type Notification } from '../utils/supabase/api';
 import { mapPostsToViewModel } from '../utils/postMapper';
 import type { Post } from '../types';
-
-let feedCacheMemory: { posts: any[]; timestamp: number } | null = null;
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
-const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
 const FEED_PAGE_SIZE = 20;
 
 export const removePostFromFeedCache = (postId: number) => {
-  feedCacheMemory = feedCacheMemory
-    ? { ...feedCacheMemory, posts: feedCacheMemory.posts.filter((post) => post.id !== postId) }
-    : null;
-
-  try {
-    const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
-    if (!cachedRaw) return;
-
-    const cached = JSON.parse(cachedRaw);
-    if (!Array.isArray(cached.posts)) return;
-
-    localStorage.setItem(
-      FEED_CACHE_KEY,
-      JSON.stringify({
-        ...cached,
-        posts: cached.posts.filter((post: Post) => post.id !== postId),
-        timestamp: Date.now(),
-      }),
-    );
-  } catch {
-    localStorage.removeItem(FEED_CACHE_KEY);
-  }
+  queryClient.setQueriesData(
+    { queryKey: queryKeys.feed.root },
+    (cached: unknown) => {
+      if (Array.isArray(cached)) return cached.filter((post: Post) => post.id !== postId);
+      if (cached && typeof cached === 'object' && Array.isArray((cached as { posts?: Post[] }).posts)) {
+        return {
+          ...cached,
+          posts: (cached as { posts: Post[] }).posts.filter((post) => post.id !== postId),
+        };
+      }
+      return cached;
+    },
+  );
 };
 
 export const removeUserPostsFromFeedCache = (userId: string) => {
   const isDifferentUser = (post: Post) => String(post.user?.id || post.user_id || '') !== String(userId);
-
-  feedCacheMemory = feedCacheMemory
-    ? { ...feedCacheMemory, posts: feedCacheMemory.posts.filter(isDifferentUser) }
-    : null;
-
-  try {
-    const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
-    if (!cachedRaw) return;
-
-    const cached = JSON.parse(cachedRaw);
-    if (!Array.isArray(cached.posts)) return;
-
-    localStorage.setItem(
-      FEED_CACHE_KEY,
-      JSON.stringify({
-        ...cached,
-        posts: cached.posts.filter(isDifferentUser),
-        timestamp: Date.now(),
-      }),
-    );
-  } catch {
-    localStorage.removeItem(FEED_CACHE_KEY);
-  }
+  queryClient.setQueriesData(
+    { queryKey: queryKeys.feed.root },
+    (cached: unknown) => {
+      if (Array.isArray(cached)) return cached.filter(isDifferentUser);
+      if (cached && typeof cached === 'object' && Array.isArray((cached as { posts?: Post[] }).posts)) {
+        return {
+          ...cached,
+          posts: (cached as { posts: Post[] }).posts.filter(isDifferentUser),
+        };
+      }
+      return cached;
+    },
+  );
 };
 
 export function useFeedData(initialCurrentUser?: any) {
@@ -83,21 +63,6 @@ export function useFeedData(initialCurrentUser?: any) {
   const loadPosts = async (useCacheFirst: boolean) => {
     setIsLoading(true);
     try {
-      if (useCacheFirst && feedCacheMemory && (Date.now() - feedCacheMemory.timestamp < FEED_CACHE_TTL_MS)) {
-        setPosts(feedCacheMemory.posts as Post[]);
-        setIsLoading(false);
-      }
-      if (useCacheFirst) {
-        const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
-        if (cachedRaw) {
-          const cached = JSON.parse(cachedRaw);
-          if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS && Array.isArray(cached.posts)) {
-            setPosts(cached.posts);
-            setIsLoading(false);
-          }
-        }
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
       if (user) {
@@ -105,24 +70,46 @@ export function useFeedData(initialCurrentUser?: any) {
         try { const following = await getFollowedUserIds(user.id); setFollowingIds(new Set(following)); } catch (e) { console.error('Error loading following:', e); }
       }
 
-      const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset: 0 });
-      const freshCount = fresh?.length ?? 0;
-      nextOffsetRef.current = freshCount;
-      setHasMore(freshCount === FEED_PAGE_SIZE);
-      const mapped = fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [];
+      const firstPageKey = queryKeys.feed.firstPage(user?.id);
+      const cachedPage = useCacheFirst
+        ? queryClient.getQueryData<{ posts: Post[]; count: number }>(firstPageKey)
+        : undefined;
 
-      setPosts((prev) => {
-        if (useCacheFirst && sessionStorage.getItem('feedScrollPos') && prev.length > mapped.length) {
-          const merged = [...prev];
-          mapped.forEach((post, i) => { merged[i] = post; });
-          return merged;
-        }
-        return mapped;
+      if (cachedPage) {
+        nextOffsetRef.current = cachedPage.count;
+        setHasMore(cachedPage.count === FEED_PAGE_SIZE);
+        setPosts(cachedPage.posts);
+        setIsLoading(false);
+      }
+
+      if (!useCacheFirst) {
+        await queryClient.invalidateQueries({ queryKey: firstPageKey });
+      }
+
+      const page = await queryClient.fetchQuery({
+        queryKey: firstPageKey,
+        staleTime: FEED_CACHE_TTL_MS,
+        queryFn: async () => {
+          const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset: 0 });
+          return {
+            posts: fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [],
+            count: fresh?.length ?? 0,
+          };
+        },
       });
 
-      const payload = { posts: mapped, timestamp: Date.now() };
-      feedCacheMemory = payload;
-      localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(payload));
+      const freshCount = page.count;
+      nextOffsetRef.current = freshCount;
+      setHasMore(freshCount === FEED_PAGE_SIZE);
+
+      setPosts((prev) => {
+        if (useCacheFirst && sessionStorage.getItem('feedScrollPos') && prev.length > page.posts.length) {
+          const merged = [...prev];
+          page.posts.forEach((post, i) => { merged[i] = post; });
+          return merged;
+        }
+        return page.posts;
+      });
     } catch (error) {
       console.error('Error loading posts:', error);
       toast.error('Failed to load posts');
@@ -138,7 +125,11 @@ export function useFeedData(initialCurrentUser?: any) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const offset = Math.max(nextOffsetRef.current, posts.length);
-      const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset });
+      const fresh = await queryClient.fetchQuery({
+        queryKey: queryKeys.feed.page(user?.id, offset),
+        staleTime: FEED_CACHE_TTL_MS,
+        queryFn: () => getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset }),
+      });
       const freshCount = fresh?.length ?? 0;
       nextOffsetRef.current = offset + freshCount;
 
@@ -193,7 +184,12 @@ export function useFeedData(initialCurrentUser?: any) {
 
     if (!options?.silent) setNotificationsLoading(true);
     try {
-      const data = await getNotifications(currentUser.id);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list(currentUser.id) });
+      const data = await queryClient.fetchQuery({
+        queryKey: queryKeys.notifications.list(currentUser.id),
+        staleTime: 60_000,
+        queryFn: () => getNotifications(currentUser.id),
+      });
       setNotifications(data);
     } catch (error) {
       console.error('Error fetching notifications:', error);

@@ -21,6 +21,7 @@
   --border: #E5E7EB;
   --input: transparent;
   --input-background: #F9FAFB;
+  --ring: #8A2BE2;
   --switch-background: #D1D5DB;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
@@ -130,20 +131,13 @@ html.capacitor-android {
 }
 
 @layer base {
-  input, textarea, select, button {
-    @apply focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none;
+  :where(input, textarea, select, button, a, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 
-  input:focus,
-  textarea:focus,
-  select:focus,
-  button:focus,
-  input:focus-visible,
-  textarea:focus-visible,
-  select:focus-visible,
-  button:focus-visible {
-    outline: none !important;
-    box-shadow: none !important;
+  :where(input, textarea, select):focus-visible {
+    box-shadow: 0 0 0 3px rgb(138 43 226 / 0.16);
   }
 }
 

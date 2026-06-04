@@ -2984,7 +2984,7 @@ export const getTrending = async () => {
     // Trending Events (by views)
     supabase
       .from('events')
-      .select('id, title, category, views')
+      .select('id, title, category, views, image_url, date, time, location, city')
       .eq('status', 'published')
       .order('views', { ascending: false })
       .limit(5),

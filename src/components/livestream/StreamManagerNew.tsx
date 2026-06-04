@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, SwitchCamera, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award } from 'lucide-react';
 import { toast } from 'sonner';
 import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToStreamPresence, sendStreamMessage, reportContent } from '../../utils/supabase/api';
-import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
+import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../../utils/agora';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { FloatingChat } from './FloatingChat';
@@ -59,7 +59,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
   const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null);
   const tracksRef = useRef<{ audio: IMicrophoneAudioTrack | null; video: ICameraVideoTrack | null }>({ audio: null, video: null });
-  const client = useRef<ReturnType<typeof AgoraRTC.createClient> | null>(null);
+  const client = useRef<IAgoraRTCClient | null>(null);
+  const [isClientReady, setIsClientReady] = useState(false);
 
   // Settings panel
   const [showSettings, setShowSettings] = useState(false);
@@ -85,10 +86,27 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const virtualPrice = (event.streaming as any)?.virtualPrice || virtualTicket?.price || null;
   const isInstantStream = Boolean((event.streaming as any)?.isInstant);
 
-  // Initialize Agora
-  if (!client.current) {
-    client.current = createStreamClient();
-  }
+  // Initialize Agora only after the studio opens.
+  useEffect(() => {
+    let mounted = true;
+
+    const loadClient = async () => {
+      try {
+        if (!client.current) {
+          client.current = await createStreamClient();
+        }
+        if (mounted) setIsClientReady(true);
+      } catch {
+        if (mounted) toast.error('Could not initialize livestream');
+      }
+    };
+
+    void loadClient();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Keep refs in sync
   useEffect(() => { tracksRef.current = { audio: localAudioTrack, video: localVideoTrack }; }, [localAudioTrack, localVideoTrack]);
@@ -107,7 +125,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     };
     client.current.on('network-quality', handleQuality);
     return () => { client.current?.off('network-quality', handleQuality); };
-  }, []);
+  }, [isClientReady]);
 
   // Real-time viewer count via Supabase Presence (instant + accurate)
   useEffect(() => {
@@ -550,11 +568,11 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
           <button
             onClick={toggleLive}
-            disabled={isStarting}
+            disabled={isStarting || !isClientReady}
             className="w-full py-4 rounded-2xl bg-red-600 text-white font-bold text-base shadow-2xl shadow-red-600/30 hover:shadow-red-600/50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <Radio className="w-5 h-5" />
-            {isStarting ? `Going live in ${countdown}...` : 'Go Live'}
+            {!isClientReady ? 'Preparing studio...' : isStarting ? `Going live in ${countdown}...` : 'Go Live'}
           </button>
         </div>
 

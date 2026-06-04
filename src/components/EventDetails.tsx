@@ -15,8 +15,11 @@ import { SimplifiedTicketModal } from './SimplifiedTicketModal';
 import { supabase } from '../utils/supabase/client';
 import { deleteEvent, getEvents, getSavedEvents, type Event as ApiEvent } from '../utils/supabase/api';
 import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 import { eventsStore } from '../store/eventStore';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 
 type LocationOption = {
   id: string;
@@ -114,7 +117,7 @@ const extractReverseCity = (address: Record<string, string | undefined> = {}) =>
       ''
   ).trim();
 
-const eventMatchesLocation = (event: ApiEvent, selectedLocation: string) => {
+export const eventMatchesLocation = (event: ApiEvent, selectedLocation: string) => {
   if (selectedLocation === 'all') return true;
 
   const selected = normalizePlaceName(selectedLocation);
@@ -155,7 +158,7 @@ const getEventDateTime = (event: ApiEvent) => {
   }
 };
 
-const matchesTimeFilter = (eventDate: Date, filterId: TimeFilterId, now: Date) => {
+export const matchesTimeFilter = (eventDate: Date, filterId: TimeFilterId, now: Date) => {
   if (filterId === 'all') return true;
 
   const todayStart = startOfDay(now);
@@ -220,7 +223,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       
       try {
         setIsFetching(true);
-        const allEvents = await getEvents();
+        if (force) {
+          await queryClient.invalidateQueries({ queryKey: queryKeys.events.root });
+        }
+        const allEvents = await queryClient.fetchQuery({
+          queryKey: queryKeys.events.publicList,
+          staleTime: 15 * 60 * 1000,
+          queryFn: () => getEvents(),
+        });
         eventsStore.setEvents((allEvents as any[]).map(e => ({ ...e, isSaved: false })) as ApiEvent[]);
         setHasLoadedEvents(true);
 
@@ -239,6 +249,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             isSaved: savedIds.has(e.id)
           }));
 
+          queryClient.setQueryData(queryKeys.events.list(user.id), eventsWithSaved);
           eventsStore.setEvents(eventsWithSaved as ApiEvent[]);
         } catch (_savedEventsError) {
           // Saved-event hydration is best-effort; keep the public events list visible.
@@ -302,6 +313,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [showMessages, setShowMessages] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [eventPendingDelete, setEventPendingDelete] = useState<ApiEvent | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -571,8 +583,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
   const handleDeleteEvent = async (event: ApiEvent) => {
     if (!currentUserId || currentUserId !== event.organizer_id) return;
-    const confirmed = window.confirm('Delete this event? This action cannot be undone.');
-    if (!confirmed) return;
+    setEventPendingDelete(event);
+  };
+
+  const handleConfirmDeleteEvent = async () => {
+    if (!eventPendingDelete || !currentUserId || currentUserId !== eventPendingDelete.organizer_id) return;
+    const event = eventPendingDelete;
+    setEventPendingDelete(null);
     try {
       await deleteEvent(event.id);
       const next = eventsStore.getEvents().filter(e => e.id !== event.id);
@@ -866,8 +883,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     </div>
                   )}
                 </div>
-                <div className="relative mb-3">
+              <div className="relative mb-3">
+                  <label htmlFor="event-location-search" className="sr-only">Search city</label>
                   <input
+                    id="event-location-search"
                     type="text"
                     placeholder="Search city..."
                     value={locationSearch}
@@ -1193,6 +1212,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 <div className="bg-white border-t border-gray-200 px-5 py-4">
                   <div className="flex items-center gap-2">
                     <input
+                      aria-label={`Message ${activeConversation.user.name}`}
                       type="text"
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
@@ -1219,6 +1239,17 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={eventPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setEventPendingDelete(null);
+        }}
+        title="Delete event?"
+        description="This removes the event and cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleConfirmDeleteEvent}
+      />
     </div>
   );
 }

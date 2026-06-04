@@ -20,6 +20,7 @@ import { VideoPlayerOverlay } from './feed/VideoPlayerOverlay';
 import { FullScreenImageModal } from './feed/FullScreenImageModal';
 import { LikeAnimation, FeedAnimationStyles } from './feed/FeedAnimations';
 import { FeedContent } from './feed/FeedContent';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 type RouteTarget = {
   pathname: string;
@@ -60,6 +61,7 @@ export function Feed({
   const [likeAnimation, setLikeAnimation] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
   const [playingVideo, setPlayingVideo] = useState<{ postId: number; clipIndex: number; clips: HighlightClip[] } | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<{ images: string[]; currentIndex: number; postId: number } | null>(null);
+  const [pendingDeletePostId, setPendingDeletePostId] = useState<number | null>(null);
   const [isRestoringScroll, setIsRestoringScroll] = useState(
     !!sessionStorage.getItem('feedScrollPos') || !!sessionStorage.getItem('feedLastPostId')
   );
@@ -331,8 +333,7 @@ export function Feed({
     }
   }, []);
 
-  const handleDeletePost = useCallback(async (postId: number) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
+  const deletePostById = useCallback(async (postId: number) => {
     let previousPosts: Post[] = [];
     setPosts(prev => { previousPosts = prev; return prev.filter(p => p.id !== postId); });
     setSelectedPost(prev => (prev && prev.id === postId) ? null : prev);
@@ -344,6 +345,17 @@ export function Feed({
     }
     catch (error) { console.error('Error deleting post:', error); toast.error('Failed to delete post'); setPosts(previousPosts); }
   }, [setPosts]);
+
+  const handleDeletePost = useCallback(async (postId: number) => {
+    setPendingDeletePostId(postId);
+  }, []);
+
+  const handleConfirmDeletePost = useCallback(async () => {
+    if (!pendingDeletePostId) return;
+    const postId = pendingDeletePostId;
+    setPendingDeletePostId(null);
+    await deletePostById(postId);
+  }, [deletePostById, pendingDeletePostId]);
 
   const handlePostComment = useCallback(async (postId: number, text: string, parentId?: number) => {
     if (!text || !text.trim()) return;
@@ -611,6 +623,18 @@ export function Feed({
           onOpenUserProfile={handleOpenUserProfile}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingDeletePostId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeletePostId(null);
+        }}
+        title="Delete post?"
+        description="This removes the post from Eventz. This action cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleConfirmDeletePost}
+      />
 
       <FeedAnimationStyles />
     </>

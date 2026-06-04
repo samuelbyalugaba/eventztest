@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
-  MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX, Maximize
+  MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX, Maximize, Send
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import verifiedBadge from '../assets/verified-badge.png';
@@ -691,24 +691,6 @@ export function PostDetailModal({
               <CommentIcon className="h-[1.05rem] w-[1.05rem] overflow-visible" color="currentColor" />
               <span>{(post.comments_count || post.comments?.length || 0).toLocaleString()}</span>
             </button>
-
-            <div className="feed-action-spacer" />
-
-            <button
-              onClick={(e) => onShare(post, e)}
-              className="feed-action-icon-btn"
-              aria-label="Share post"
-            >
-              <Share2 className="h-4 w-4" />
-            </button>
-
-            <button
-              onClick={(e) => onSave(post.id, e)}
-              className={`feed-save-pill ${post.isSaved ? 'feed-save-saved' : ''}`}
-              aria-label={post.isSaved ? 'Unsave post' : 'Save post'}
-            >
-              <Bookmark className={`h-4 w-4 ${post.isSaved ? 'fill-current' : ''}`} />
-            </button>
           </div>
         </div>
 
@@ -894,13 +876,14 @@ export function PostDetailModal({
             <button
               onClick={handlePostComment}
               disabled={!commentText.trim()}
+              aria-label="Post comment"
               className={`p-1.5 rounded-full transition-all mb-0.5 ${
                 commentText.trim()
                   ? 'text-blue-500 hover:bg-blue-50'
                   : 'text-gray-300 cursor-not-allowed'
               }`}
             >
-              <span className="text-xs font-bold">Post</span>
+              <Send className="h-4 w-4" />
             </button>
           </div>
         </div>

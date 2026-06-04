@@ -1,12 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  getWebhookSignatureHeader,
+  verifyHmacSha256Signature,
+} from "../_shared/webhookSignature.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const WEBHOOK_SECRET = Deno.env.get("SNIPPE_WEBHOOK_SECRET") || "whsec_d43d38e09eec4180713f53e1bd01507db52ff9bbe221cedb9ac9e9c5b02496a2";
+const WEBHOOK_SECRET = Deno.env.get("SNIPPE_WEBHOOK_SECRET");
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,8 +18,21 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    console.log("Snippe Webhook Received:", JSON.stringify(body, null, 2));
+    const rawBody = await req.text();
+
+    if (!WEBHOOK_SECRET) {
+      console.error("SNIPPE_WEBHOOK_SECRET is not configured");
+      return new Response("Webhook not configured", { status: 500, headers: corsHeaders });
+    }
+
+    const signature = getWebhookSignatureHeader(req.headers);
+    const isValidSignature = await verifyHmacSha256Signature(rawBody, WEBHOOK_SECRET, signature);
+    if (!isValidSignature) {
+      console.error("Invalid Snippe webhook signature");
+      return new Response("Invalid signature", { status: 401, headers: corsHeaders });
+    }
+
+    const body = JSON.parse(rawBody);
 
     // Extract details
     // Structure typically: { event: "payment.completed", reference: "...", status: "...", metadata: {...} }
@@ -27,6 +44,7 @@ serve(async (req) => {
     const status = body.status || body.data?.status;
     const metadata = body.metadata || body.data?.metadata;
     const transactionId = metadata?.transaction_id;
+    console.log("Snippe Webhook Received:", { eventType, reference, status, transactionId });
 
     if (!transactionId) {
         console.warn("Webhook received without transaction_id metadata. Ignoring or manual check required.");

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
-  MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX
+  MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX, Maximize, Play, Send
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -42,6 +42,8 @@ interface PostDetailPageProps {
 
 const isVideo = (url?: string) => {
   if (!url) return false;
+  const raw = url.toLowerCase();
+  if (raw.includes('video') || raw.includes('highlight')) return true;
   const cleaned = url.split('#')[0].split('?')[0];
   return /\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(cleaned);
 };
@@ -73,6 +75,7 @@ export function PostDetailPage({
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState('');
   const [isSavingCaption, setIsSavingCaption] = useState(false);
+  const [isVideoPaused, setIsVideoPaused] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { offsetTop, offsetBottom } = useVisualViewport();
 
@@ -94,13 +97,10 @@ export function PostDetailPage({
         const playPromise = video.play();
         if (playPromise !== undefined) {
           playPromise.then(() => {
+            setIsVideoPaused(false);
             dispatchPlaying();
           }).catch(() => {
-            if (!video.muted) {
-              video.muted = true;
-              setIsMuted(true);
-              video.play().then(dispatchPlaying).catch(() => {});
-            }
+            setIsVideoPaused(true);
           });
         }
       };
@@ -116,6 +116,33 @@ export function PostDetailPage({
       };
     }
   }, [post.id, startTime]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const videos = document.querySelectorAll('video');
+      videos.forEach((video) => {
+        if (
+          document.fullscreenElement === video ||
+          (document as any).webkitFullscreenElement === video ||
+          (document as any).msFullscreenElement === video
+        ) {
+          video.controls = true;
+        } else {
+          video.controls = false;
+        }
+      });
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
 
   const updateCarouselHeight = useCallback(() => {
     if (!api) return;
@@ -153,6 +180,34 @@ export function PostDetailPage({
   const handleReply = (comment: any) => {
     setReplyingTo({ id: comment.id, name: comment.user.name });
     textareaRef.current?.focus();
+  };
+
+  const handleVideoPlaybackToggle = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      video.play().then(() => setIsVideoPaused(false)).catch(() => setIsVideoPaused(true));
+    } else {
+      video.pause();
+      setIsVideoPaused(true);
+    }
+  };
+
+  const requestVideoFullscreen = (video: HTMLVideoElement | null) => {
+    if (!video) return;
+    if (video.requestFullscreen) {
+      video.requestFullscreen();
+    } else if ((video as any).webkitRequestFullscreen) {
+      (video as any).webkitRequestFullscreen();
+    } else if ((video as any).webkitEnterFullscreen) {
+      (video as any).webkitEnterFullscreen();
+    } else if ((video as any).msRequestFullscreen) {
+      (video as any).msRequestFullscreen();
+    }
+    video.controls = true;
   };
 
   const handleReportPost = async () => {
@@ -383,7 +438,7 @@ export function PostDetailPage({
 
             if (highlightVideoUrl) {
               const posterCandidate = (mediaItems as string[]).find((u: string) => u && !isVideo(u));
-              videoPoster = posterCandidate;
+              videoPoster = posterCandidate || post.highlights?.[0]?.thumbnail;
               mediaItems = [highlightVideoUrl];
             }
 
@@ -419,7 +474,7 @@ export function PostDetailPage({
             if (mediaItems.length === 1) {
               const media = mediaItems[0];
               const isMediaVideo = isVideo(media) || !!post.video_url || media === highlightVideoUrl;
-              const posterToUse = media === highlightVideoUrl ? undefined : videoPoster;
+              const posterToUse = videoPoster;
               const aspectRatio = mediaAspectRatios[media] ?? 4 / 5;
 
               return (
@@ -434,15 +489,24 @@ export function PostDetailPage({
                    {isMediaVideo ? (
                       <>
                         <video 
+                          id={`video-detail-${post.id}`}
                           ref={videoRef}
-                          src={media} 
-                          className="absolute inset-0 w-full h-full object-contain"
+                          src={`${media}${media.includes('#') ? '' : '#t=0.1'}`}
+                          className="absolute inset-0 w-full h-full object-cover"
                           poster={posterToUse}
-                          controls
+                          controls={false}
                           playsInline
                           loop
-                          preload="auto"
+                          preload="metadata"
                           muted={isMuted}
+                          disablePictureInPicture
+                          controlsList="nodownload noplaybackrate noremoteplayback"
+                          onClick={handleVideoPlaybackToggle}
+                          onPlay={() => {
+                            setIsVideoPaused(false);
+                            window.dispatchEvent(new CustomEvent('video-play', { detail: { id: post.id } }));
+                          }}
+                          onPause={() => setIsVideoPaused(true)}
                           onLoadedMetadata={(e) => {
                             const v = e.currentTarget;
                             if (v.videoWidth > 0 && v.videoHeight > 0) {
@@ -451,14 +515,39 @@ export function PostDetailPage({
                             }
                           }}
                         />
+                        {isVideoPaused && (
+                          <button
+                            type="button"
+                            onClick={handleVideoPlaybackToggle}
+                            className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 text-white"
+                            aria-label="Play video"
+                          >
+                            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-black/45 pl-1 backdrop-blur-sm">
+                              <Play className="h-7 w-7 fill-current" />
+                            </span>
+                          </button>
+                        )}
                         <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            requestVideoFullscreen(videoRef.current);
+                          }}
+                          className="absolute bottom-4 left-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65 md:opacity-0 md:group-hover:opacity-100"
+                          aria-label="Open video fullscreen"
+                        >
+                          <Maximize className="h-5 w-5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setIsMuted(!isMuted);
                           }}
-                          className="absolute bottom-4 right-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                          className="absolute bottom-4 right-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65 md:opacity-0 md:group-hover:opacity-100"
+                          aria-label={isMuted ? 'Unmute video' : 'Mute video'}
                         >
-                          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                          {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                         </button>
                       </>
                    ) : (
@@ -487,7 +576,7 @@ export function PostDetailPage({
                   style={carouselHeight ? { height: `${carouselHeight}px` } : undefined}
                 >
                   {mediaItems.map((media: string, index: number) => {
-                    const isMediaVideo = isVideo(media);
+                    const isMediaVideo = isVideo(media) || media === post.video_url || (post.highlights && post.highlights.some((h: any) => h.videoUrl === media));
                     const isActive = index === (current - 1);
                     const aspectRatio = mediaAspectRatios[media] ?? 4 / 5;
                     
@@ -505,14 +594,23 @@ export function PostDetailPage({
                                    {isMediaVideo ? (
                                       <>
                                         <video 
+                                          id={`video-detail-${post.id}-${index}`}
                                           ref={isActive ? videoRef : null}
-                                          src={media} 
-                                          className="absolute inset-0 w-full h-full object-contain"
-                                          controls
+                                          src={`${media}${media.includes('#') ? '' : '#t=0.1'}`}
+                                          className="absolute inset-0 w-full h-full object-cover"
+                                          controls={false}
                                           playsInline
                                           loop
-                                          preload="auto"
+                                          preload="metadata"
                                           muted={isMuted}
+                                          disablePictureInPicture
+                                          controlsList="nodownload noplaybackrate noremoteplayback"
+                                          onClick={handleVideoPlaybackToggle}
+                                          onPlay={() => {
+                                            setIsVideoPaused(false);
+                                            window.dispatchEvent(new CustomEvent('video-play', { detail: { id: post.id } }));
+                                          }}
+                                          onPause={() => setIsVideoPaused(true)}
                                           onLoadedMetadata={(e) => {
                                             const v = e.currentTarget;
                                             if (v.videoWidth > 0 && v.videoHeight > 0) {
@@ -522,14 +620,41 @@ export function PostDetailPage({
                                             requestAnimationFrame(updateCarouselHeight);
                                           }}
                                         />
+                                        {isActive && isVideoPaused && (
+                                          <button
+                                            type="button"
+                                            onClick={handleVideoPlaybackToggle}
+                                            className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 text-white"
+                                            aria-label="Play video"
+                                          >
+                                            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-black/45 pl-1 backdrop-blur-sm">
+                                              <Play className="h-7 w-7 fill-current" />
+                                            </span>
+                                          </button>
+                                        )}
+                                        {isActive && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              requestVideoFullscreen(document.getElementById(`video-detail-${post.id}-${index}`) as HTMLVideoElement | null);
+                                            }}
+                                            className="absolute bottom-4 left-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65 md:opacity-0 md:group-hover:opacity-100"
+                                            aria-label="Open video fullscreen"
+                                          >
+                                            <Maximize className="h-5 w-5" />
+                                          </button>
+                                        )}
                                         <button
+                                           type="button"
                                            onClick={(e) => {
                                              e.stopPropagation();
                                              setIsMuted(!isMuted);
                                            }}
-                                           className="absolute bottom-4 right-4 p-2.5 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                                           className="absolute bottom-4 right-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65 md:opacity-0 md:group-hover:opacity-100"
+                                           aria-label={isMuted ? 'Unmute video' : 'Mute video'}
                                         >
-                                           {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                           {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                                         </button>
                                       </>
                                    ) : (
@@ -647,38 +772,20 @@ export function PostDetailPage({
               <CommentIcon className="h-[1.05rem] w-[1.05rem] overflow-visible" color="currentColor" />
               <span>{(post.comments_count || post.comments?.length || 0).toLocaleString()}</span>
             </button>
-
-            <div className="feed-action-spacer" />
-
-            <button
-              onClick={(e) => onShare(post, e)}
-              className="feed-action-icon-btn"
-              aria-label="Share post"
-            >
-              <Share2 className="h-4 w-4" />
-            </button>
-
-            <button
-              onClick={(e) => onSave(post.id, e)}
-              className={`feed-save-pill ${post.isSaved ? 'feed-save-saved' : ''}`}
-              aria-label={post.isSaved ? 'Unsave post' : 'Save post'}
-            >
-              <Bookmark className={`h-4 w-4 ${post.isSaved ? 'fill-current' : ''}`} />
-            </button>
           </div>
         </div>
 
-        {/* Comments Section - Mobile Native Style */}
+        {/* Comments Section */}
         <div className="flex-1 flex flex-col min-h-0 bg-white">
           {/* Header */}
           <div className="px-5 pt-4 pb-2 border-b border-gray-50">
             <h3 className="text-gray-900 font-bold text-base">
-              Comments ({post.comments?.length || 0})
+              Comments ({(post.comments_count || post.comments?.length || 0).toLocaleString()})
             </h3>
           </div>
 
           {/* Scrollable List */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          <div className="flex-1 overflow-y-auto px-5 py-4">
             {!post.comments || post.comments.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -693,108 +800,109 @@ export function PostDetailPage({
                 const replies = post.comments.filter((c: any) => c.parent_id);
 
                 return parentComments.map((comment: any) => (
-                  <div key={comment.id} className="space-y-4">
+                  <div key={comment.id} className="mb-4 space-y-2.5">
                     {/* Parent Comment */}
-                    <div className="flex gap-3">
+                    <div className="flex items-start gap-3">
                       <button
                         type="button"
                         onClick={(e) => handleCommentProfileClick(comment, e)}
-                        className="mt-1 h-8 w-8 flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        className="h-9 w-9 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                         aria-label={`Open ${comment.user.name}'s profile`}
                       >
                         <UserAvatar
                           src={comment.user.avatar}
                           name={comment.user.name}
-                          className="h-8 w-8 rounded-full object-cover"
+                          className="h-9 w-9 rounded-full object-cover"
                         />
                       </button>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
+                      <div className="min-w-0 flex-1 pt-0.5">
+                        <p className="text-[13px] leading-[18px] text-gray-900">
                           <button
                             type="button"
                             onClick={(e) => handleCommentProfileClick(comment, e)}
-                            className="flex items-center gap-1 text-xs font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                           >
                             {comment.user.name}
-                            {comment.user.is_organizer && (
-                              <img src={verifiedBadge} alt="Verified" className="w-3 h-3 select-none" loading="lazy" decoding="async" />
+                            {(comment.user.is_organizer || comment.user.isOrganizer || comment.user.verified) && (
+                              <img src={verifiedBadge} alt="Verified" className="h-3.5 w-3.5 select-none" loading="lazy" decoding="async" />
                             )}
                           </button>
-                          <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
-                        </div>
-                        <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>
-                        <div className="flex items-center gap-4 mt-2">
+                          {comment.text}
+                        </p>
+                        <div className="mt-0.5 flex h-4 items-center gap-4">
+                          <span className="text-[11px] font-semibold leading-none text-gray-400">{comment.timestamp}</span>
                           <button 
                             onClick={() => handleReply(comment)}
-                            className="text-xs text-gray-400 font-medium hover:text-gray-600"
+                            className="comment-inline-button text-[11px] font-semibold leading-none text-gray-500 transition-colors hover:text-gray-800"
                           >
                             Reply
-                          </button>
-                          <button 
-                            onClick={() => onLikeComment?.(comment.id)}
-                            className={`text-xs font-medium hover:text-gray-600 ${comment.is_liked ? 'text-pink-600' : 'text-gray-400'}`}
-                          >
-                            Like {comment.likes_count > 0 && `(${comment.likes_count})`}
                           </button>
                           {String(comment.user?.id || comment.user_id) !== String(currentUser?.id || '') && (
                             <button
                               onClick={() => handleReportComment(comment)}
-                              className="text-xs text-gray-400 font-medium hover:text-red-600"
+                              className="comment-inline-button text-[11px] font-semibold leading-none text-gray-500 transition-colors hover:text-red-600"
                             >
                               Report
                             </button>
                           )}
                         </div>
                       </div>
+                      <button
+                        onClick={() => onLikeComment?.(comment.id)}
+                        className={`comment-icon-button mt-1 flex flex-shrink-0 items-center justify-center rounded-full transition-colors ${comment.is_liked ? 'text-pink-600' : 'text-gray-400 hover:text-gray-700'}`}
+                        aria-label={comment.is_liked ? 'Unlike comment' : 'Like comment'}
+                      >
+                        <Heart className={`h-4 w-4 ${comment.is_liked ? 'fill-pink-600' : ''}`} />
+                      </button>
                     </div>
 
                     {/* Replies */}
                     {replies.filter((r: any) => r.parent_id === comment.id).map((reply: any) => (
-                      <div key={reply.id} className="flex gap-3 ml-11">
+                      <div key={reply.id} className="ml-12 flex items-start gap-2.5">
                         <button
                           type="button"
                           onClick={(e) => handleCommentProfileClick(reply, e)}
-                          className="mt-1 h-6 w-6 flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                          className="mt-0.5 h-7 w-7 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                           aria-label={`Open ${reply.user.name}'s profile`}
                         >
                           <UserAvatar
                             src={reply.user.avatar}
                             name={reply.user.name}
-                            className="h-6 w-6 rounded-full object-cover"
+                            className="h-7 w-7 rounded-full object-cover"
                           />
                         </button>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-0.5">
+                        <div className="min-w-0 flex-1 pt-0.5">
+                          <p className="text-[13px] leading-[18px] text-gray-900">
                             <button
                               type="button"
                               onClick={(e) => handleCommentProfileClick(reply, e)}
-                              className="flex items-center gap-1 text-[11px] font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                              className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                             >
                               {reply.user.name}
-                              {reply.user.is_organizer && (
-                                <img src={verifiedBadge} alt="Verified" className="w-2.5 h-2.5 select-none" loading="lazy" decoding="async" />
+                              {(reply.user.is_organizer || reply.user.isOrganizer || reply.user.verified) && (
+                                <img src={verifiedBadge} alt="Verified" className="h-3 w-3 select-none" loading="lazy" decoding="async" />
                               )}
                             </button>
-                            <span className="text-gray-400 text-[9px]">{reply.timestamp}</span>
-                          </div>
-                          <p className="text-gray-700 text-xs leading-snug">{reply.text}</p>
-                          <div className="flex items-center gap-4 mt-2">
+                            {reply.text}
+                          </p>
+                          <div className="mt-0.5 flex h-4 items-center gap-4">
+                            <span className="text-[10px] font-semibold leading-none text-gray-400">{reply.timestamp}</span>
                             <button 
                               onClick={() => handleReply(comment)} // Reply to parent for simple threading
-                              className="text-[10px] text-gray-400 font-medium hover:text-gray-600"
+                              className="comment-inline-button text-[10px] font-semibold leading-none text-gray-500 transition-colors hover:text-gray-800"
                             >
                               Reply
                             </button>
                             <button 
                               onClick={() => onLikeComment?.(reply.id)}
-                              className={`text-[10px] font-medium hover:text-gray-600 ${reply.is_liked ? 'text-pink-600' : 'text-gray-400'}`}
+                              className={`comment-inline-button text-[10px] font-semibold leading-none transition-colors ${reply.is_liked ? 'text-pink-600' : 'text-gray-500 hover:text-gray-800'}`}
                             >
-                              Like {reply.likes_count > 0 && `(${reply.likes_count})`}
+                              Like{reply.likes_count > 0 ? ` (${reply.likes_count})` : ''}
                             </button>
                             {String(reply.user?.id || reply.user_id) !== String(currentUser?.id || '') && (
                               <button
                                 onClick={() => handleReportComment(reply)}
-                                className="text-[10px] text-gray-400 font-medium hover:text-red-600"
+                                className="comment-inline-button text-[10px] font-semibold leading-none text-gray-500 transition-colors hover:text-red-600"
                               >
                                 Report
                               </button>
@@ -828,11 +936,11 @@ export function PostDetailPage({
               </button>
             </div>
           )}
-          <div className="flex items-end gap-3 bg-gray-50 rounded-3xl px-4 py-2">
+          <div className="flex items-end gap-2.5 rounded-[1.45rem] border border-gray-200 bg-gray-50 px-3 py-2.5 transition-all focus-within:border-gray-300 focus-within:bg-white">
             <UserAvatar
               src={currentUser?.user_metadata?.avatar_url || userProfile?.avatar_url}
               name={userProfile?.full_name || currentUser?.user_metadata?.full_name || userProfile?.username || "User"}
-              className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5"
+              className="h-8 w-8 flex-shrink-0 rounded-full object-cover"
             />
             <textarea
               ref={textareaRef}
@@ -840,23 +948,24 @@ export function PostDetailPage({
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Add a comment..."
               rows={1}
-              className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 focus:ring-0 resize-none min-h-[20px] max-h-[80px] py-1.5"
+              className="min-h-[20px] max-h-[110px] flex-1 resize-none border-none bg-transparent p-0 py-1.5 text-sm font-medium text-gray-900 placeholder-gray-400 focus:ring-0"
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';
-                target.style.height = `${Math.min(target.scrollHeight, 80)}px`;
+                target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
               }}
             />
             <button
               onClick={handlePostComment}
               disabled={!commentText.trim()}
-              className={`p-1.5 rounded-full transition-all mb-0.5 ${
+              aria-label="Post comment"
+              className={`inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all ${
                 commentText.trim()
-                  ? 'text-blue-500 hover:bg-blue-50'
-                  : 'text-gray-300 cursor-not-allowed'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-200 hover:bg-purple-700 active:scale-95'
+                  : 'cursor-not-allowed bg-transparent text-gray-300'
               }`}
             >
-              <span className="text-xs font-bold">Post</span>
+              <Send className="h-4 w-4" />
             </button>
           </div>
         </div>

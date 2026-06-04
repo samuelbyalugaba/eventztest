@@ -3,6 +3,7 @@ import { Search, ArrowLeft, PlusCircle, Trash2, MessageSquare } from 'lucide-rea
 import { UserAvatar } from './UserAvatar';
 import { Conversation } from '../types';
 import { searchProfiles } from '../utils/supabase/api';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 interface ChatListProps {
   conversations: Conversation[];
@@ -17,6 +18,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [conversationPendingDelete, setConversationPendingDelete] = useState<Conversation | null>(null);
 
   const visibleConversations = conversations.filter(conv => conv.hasMessages === true);
   const filteredConversations = visibleConversations.filter(conv => {
@@ -79,7 +81,9 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input 
+            id="chat-list-search"
             type="text" 
+            aria-label={isSearching ? 'Search people' : 'Search messages'}
             placeholder={isSearching ? "Search people..." : "Search messages..."}
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
@@ -220,9 +224,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
                       aria-label={`Delete conversation with ${conv.user.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm('Are you sure you want to delete this conversation?')) {
-                          onDeleteConversation?.(conv.id);
-                        }
+                        setConversationPendingDelete(conv);
                       }}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 opacity-70 transition hover:bg-red-50 hover:text-red-500 group-active:opacity-100"
                     >
@@ -235,6 +237,21 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={conversationPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setConversationPendingDelete(null);
+        }}
+        title="Delete conversation?"
+        description={`This removes the conversation${conversationPendingDelete ? ` with ${conversationPendingDelete.user.name}` : ''}.`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (!conversationPendingDelete) return;
+          onDeleteConversation?.(conversationPendingDelete.id);
+          setConversationPendingDelete(null);
+        }}
+      />
     </div>
   );
 }

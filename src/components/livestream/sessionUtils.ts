@@ -1,6 +1,16 @@
-import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
+import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 
-export const createStreamClient = () => AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+type AgoraRTCFactory = typeof import('agora-rtc-sdk-ng').default;
+
+const loadAgoraRTC = async (): Promise<AgoraRTCFactory> => {
+  const { default: AgoraRTC } = await import('agora-rtc-sdk-ng');
+  return AgoraRTC;
+};
+
+export const createStreamClient = async (): Promise<IAgoraRTCClient> => {
+  const AgoraRTC = await loadAgoraRTC();
+  return AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+};
 
 export const formatStreamElapsedTime = (seconds: number) => {
   const hrs = Math.floor(seconds / 3600);
@@ -36,6 +46,7 @@ export const HD_VIDEO_ENCODER_CONFIG = {
 export const HD_AUDIO_ENCODER_CONFIG = 'music_standard' as const; // 48kHz, ~40kbps
 
 export const initializeLocalTracks = async () => {
+  const AgoraRTC = await loadAgoraRTC();
   const cameras = await AgoraRTC.getCameras();
   const cameraId = cameras[0]?.deviceId;
   const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
@@ -65,6 +76,7 @@ export const switchLocalCamera = async ({
   currentCameraIndex: number;
   elementId?: string;
 }) => {
+  const AgoraRTC = await loadAgoraRTC();
   const cameras = availableCameras.length ? availableCameras : await AgoraRTC.getCameras();
   if (cameras.length < 2) {
     throw new Error('No secondary camera');

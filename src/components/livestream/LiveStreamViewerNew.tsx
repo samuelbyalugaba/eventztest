@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import Hls from 'hls.js';
-import AgoraRTC, { IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng';
+import type Hls from 'hls.js';
+import type { IAgoraRTCClient, IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../../utils/agora';
 import {
   getStreamMessages,
@@ -120,7 +120,8 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   // Agora (only used when no HLS playback url)
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
-  const client = useRef<ReturnType<typeof AgoraRTC.createClient> | null>(null);
+  const client = useRef<IAgoraRTCClient | null>(null);
+  const [agoraReady, setAgoraReady] = useState(false);
   const [viewerUid] = useState(() => `viewer-${Math.random().toString(36).slice(2, 11)}`);
 
   // HLS
@@ -130,9 +131,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const hlsRef = useRef<Hls | null>(null);
   const [hlsReady, setHlsReady] = useState(false);
   const [useIframePlayer, setUseIframePlayer] = useState(() => shouldUseIframePlayer(stream.playback_url));
-  const [isLandscapeSource, setIsLandscapeSource] = useState(false);
+  const [, setIsLandscapeSource] = useState(false);
   const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
-  const [isRotated, setIsRotated] = useState(false);
+  const [isRotated] = useState(false);
 
   useEffect(() => {
     setUseIframePlayer(shouldUseIframePlayer(stream.playback_url));
@@ -156,29 +157,34 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     return () => v.removeEventListener('loadedmetadata', onMeta);
   }, [hlsReady, isMobile]);
 
-  const handleRotate = async () => {
-    const container = hlsVideoRef.current?.parentElement?.parentElement;
-    try {
-      if (!document.fullscreenElement && container?.requestFullscreen) {
-        await container.requestFullscreen();
-      }
-      // Try native orientation lock (Android Chrome)
-      const orientation: any = (screen as any).orientation;
-      if (orientation?.lock) {
-        await orientation.lock('landscape').catch(() => {});
-        setIsRotated(false);
-        return;
-      }
-      // Fallback: CSS rotate (iOS Safari has no orientation lock API)
-      setIsRotated((r) => !r);
-    } catch {
-      setIsRotated((r) => !r);
+  useEffect(() => {
+    if (isHlsMode) {
+      setAgoraReady(false);
+      return;
     }
-  };
 
-  if (!isHlsMode && !client.current) {
-    client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
-  }
+    let cancelled = false;
+    setAgoraReady(false);
+
+    const loadClient = async () => {
+      try {
+        const { default: AgoraRTC } = await import('agora-rtc-sdk-ng');
+        if (cancelled) return;
+        if (!client.current) {
+          client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+        }
+        setAgoraReady(true);
+      } catch {
+        if (!cancelled) setVideoError('Failed to load live player');
+      }
+    };
+
+    void loadClient();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHlsMode]);
 
   // Keep ref in sync
   useEffect(() => { likesRef.current = likes; }, [likes]);
@@ -321,7 +327,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   // Agora (skipped when streaming via Cloudflare HLS / OBS)
   useEffect(() => {
-    if (isHlsMode) return;
+    if (isHlsMode || !agoraReady) return;
     const channelName = `event-${stream.id}`;
     const init = async () => {
       try {
@@ -352,7 +358,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     return () => {
       if (client.current) { client.current.leave(); client.current.removeAllListeners(); }
     };
-  }, [stream.id, isHlsMode]);
+  }, [stream.id, isHlsMode, agoraReady, viewerUid]);
 
   // Play remote Agora video tracks
   useEffect(() => {
@@ -384,6 +390,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     setHlsReady(true);
     setVideoError(null);
 
+    let cancelled = false;
     let hls: Hls | null = null;
     const url = stream.playback_url;
     // Detect Cloudflare LL-HLS endpoint to enable low-latency only when supported
@@ -432,8 +439,13 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       }
     };
 
-    if (Hls.isSupported()) {
-      hls = new Hls({
+    const startHlsPlayback = async () => {
+      try {
+        const { default: HlsConstructor } = await import('hls.js');
+        if (cancelled) return;
+
+        if (HlsConstructor.isSupported()) {
+      hls = new HlsConstructor({
         // Smooth playback tuned for Cloudflare standard HLS. Only enable
         // lowLatencyMode for the dedicated LL-HLS manifest — using it on a
         // standard HLS feed causes stalls and constant "buffering".
@@ -451,19 +463,19 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       });
       hlsRef.current = hls;
       hls.attachMedia(video);
-      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+      hls.on(HlsConstructor.Events.MEDIA_ATTACHED, () => {
         hls?.loadSource(url);
       });
-      hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
-      hls.on(Hls.Events.ERROR, (_e, data) => {
+      hls.on(HlsConstructor.Events.MANIFEST_PARSED, tryPlay);
+      hls.on(HlsConstructor.Events.ERROR, (_e, data) => {
         if (!data.fatal) return;
         setUseIframePlayer(true);
         // Try to recover from transient network/media errors before failing
         switch (data.type) {
-          case Hls.ErrorTypes.NETWORK_ERROR:
+          case HlsConstructor.ErrorTypes.NETWORK_ERROR:
             try { hls?.startLoad(); } catch {}
             break;
-          case Hls.ErrorTypes.MEDIA_ERROR:
+          case HlsConstructor.ErrorTypes.MEDIA_ERROR:
             try { hls?.recoverMediaError(); } catch {}
             break;
           default:
@@ -479,9 +491,16 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       return;
     }
 
-    tryPlay();
+        tryPlay();
+      } catch {
+        if (!cancelled) setUseIframePlayer(true);
+      }
+    };
+
+    void startHlsPlayback();
 
     return () => {
+      cancelled = true;
       window.clearTimeout(frameTimeout);
       video.removeEventListener('loadedmetadata', markReady);
       video.removeEventListener('canplay', markReady);

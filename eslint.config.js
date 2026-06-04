@@ -1,0 +1,82 @@
+import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  {
+    ignores: [
+      'android/**',
+      'ios/**',
+      'build/**',
+      'dist/**',
+      'node_modules/**',
+      'public/**',
+      'scripts/**',
+      'supabase/migrations/archive/**',
+      'supabase/functions/**',
+      'src/supabase/functions/**',
+      'src/integrations/supabase/types.ts',
+    ],
+  },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+      globals: {
+        Deno: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        crypto: 'readonly',
+        self: 'readonly',
+        caches: 'readonly',
+        clients: 'readonly',
+        navigator: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        performance: 'readonly',
+        ResizeObserver: 'readonly',
+        IntersectionObserver: 'readonly',
+        HTMLVideoElement: 'readonly',
+        HTMLTextAreaElement: 'readonly',
+        HTMLElement: 'readonly',
+        Event: 'readonly',
+        CustomEvent: 'readonly',
+        File: 'readonly',
+        FileReader: 'readonly',
+        Image: 'readonly',
+        HTMLMediaElement: 'readonly',
+      },
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-empty': 'off',
+      'no-useless-assignment': 'off',
+      'preserve-caught-error': 'off',
+      'prefer-const': 'off',
+      'no-console': 'off',
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+);

@@ -7,7 +7,6 @@ import {
   BellOff,
   Calendar,
   CheckCheck,
-  ChevronDown,
   ChevronRight,
   Heart,
   Inbox,
@@ -25,7 +24,6 @@ import {
   getPushPermission,
   getPushSubscriptionState,
   subscribeToPushNotifications,
-  unsubscribeFromPushNotifications,
   type PushSubscriptionState,
 } from '../../utils/pushNotifications';
 
@@ -175,22 +173,6 @@ export function NotificationsPanel({
     } catch (error: any) {
       await refreshPushState();
       toast.error(error?.message || 'Could not enable push notifications');
-    } finally {
-      setIsChangingPush(false);
-    }
-  };
-
-  const handleDisablePush = async () => {
-    if (!currentUser?.id || isChangingPush) return;
-
-    setIsChangingPush(true);
-    try {
-      await unsubscribeFromPushNotifications(currentUser.id);
-      await refreshPushState();
-      toast.success('Push notifications turned off');
-    } catch {
-      await refreshPushState();
-      toast.error('Could not turn off push notifications');
     } finally {
       setIsChangingPush(false);
     }
@@ -371,7 +353,6 @@ export function NotificationsPanel({
           </button>
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
             <h2 className="truncate text-xl font-semibold leading-none tracking-normal text-gray-950">{title}</h2>
-            <ChevronDown className="h-4 w-4 shrink-0 text-gray-900" />
             {unreadCount > 0 && <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />}
           </div>
           <button

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
 import { X, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { scanTicket } from '../utils/supabase/api';
+
+type Html5QrcodeInstance = import('html5-qrcode').Html5Qrcode;
 
 interface TicketScannerModalProps {
   eventId: number;
@@ -20,7 +21,7 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
   } | null>(null);
   const [isScanning, setIsScanning] = useState(true);
   const [showEventSelector, setShowEventSelector] = useState(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<Html5QrcodeInstance | null>(null);
   const regionId = 'reader';
   const selectorRef = useRef<HTMLDivElement>(null);
 
@@ -40,9 +41,14 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     // Initialize scanner
     const initScanner = async () => {
       try {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        if (cancelled) return;
+
         const scanner = new Html5Qrcode(regionId);
         scannerRef.current = scanner;
 
@@ -57,7 +63,7 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
           onScanFailure
         );
       } catch (err) {
-        toast.error("Failed to start camera. Please ensure permissions are granted.");
+        if (!cancelled) toast.error("Failed to start camera. Please ensure permissions are granted.");
       }
     };
 
@@ -66,9 +72,12 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
     }
 
     return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().then(() => {
-          scannerRef.current?.clear();
+      cancelled = true;
+      const scanner = scannerRef.current;
+      scannerRef.current = null;
+      if (scanner && scanner.isScanning) {
+        scanner.stop().then(() => {
+          scanner.clear();
         }).catch(err => console.error("Error stopping scanner:", err));
       }
     };

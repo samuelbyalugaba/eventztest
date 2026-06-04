@@ -96,7 +96,9 @@ export function AuthCallbackPage() {
           <p className="mt-1 text-sm text-gray-500">Use a strong password you have not used before.</p>
 
           <div className="mt-5 space-y-4">
+            <label htmlFor="recovery-password" className="sr-only">New password</label>
             <input
+              id="recovery-password"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -104,7 +106,9 @@ export function AuthCallbackPage() {
               autoComplete="new-password"
               className="h-11 w-full rounded-xl border border-gray-200 px-3 text-gray-900 outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
             />
+            <label htmlFor="recovery-confirm-password" className="sr-only">Confirm password</label>
             <input
+              id="recovery-confirm-password"
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
