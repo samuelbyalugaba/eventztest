@@ -187,15 +187,24 @@ interface EventDetailsProps {
   onSendMessage: (conversationId: number, messageText: string) => void;
 }
 
+const getInitialEvents = (): ApiEvent[] => {
+  const storedEvents = eventsStore.getEvents();
+  if (storedEvents.length > 0) return storedEvents;
+
+  const cachedEvents = queryClient.getQueryData<ApiEvent[]>(queryKeys.events.publicList);
+  return Array.isArray(cachedEvents) ? cachedEvents : [];
+};
+
 export function EventDetails({ conversations: globalConversations, onStartConversation, onSendMessage }: EventDetailsProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const initialEvents = React.useMemo(() => getInitialEvents(), []);
   
   // Initialize state directly from store
-  const [events, setEvents] = useState<ApiEvent[]>(eventsStore.getEvents());
+  const [events, setEvents] = useState<ApiEvent[]>(initialEvents);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isFetching, setIsFetching] = useState(eventsStore.getEvents().length === 0);
-  const [hasLoadedEvents, setHasLoadedEvents] = useState(eventsStore.getEvents().length > 0);
+  const [isFetching, setIsFetching] = useState(initialEvents.length === 0);
+  const [hasLoadedEvents, setHasLoadedEvents] = useState(initialEvents.length > 0);
 
   // Sync with store updates
   useEffect(() => {
@@ -286,9 +295,36 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState<TimeFilterId>('all');
   const [showWhenMenu, setShowWhenMenu] = useState(false);
-  const handleEventClick = (event: ApiEvent) => {
+
+  const getModalBackgroundLocation = () => {
     const backgroundBase = (location.state as any)?.backgroundLocation || location;
-    navigate(`/event/${event.id}`, { state: { backgroundLocation: backgroundBase, closeTo: backgroundBase } });
+    const params = new URLSearchParams(backgroundBase.search || '');
+    params.delete('search');
+
+    return {
+      ...backgroundBase,
+      search: params.toString() ? `?${params.toString()}` : '',
+    };
+  };
+
+  const handleEventClick = (event: ApiEvent) => {
+    const backgroundBase = getModalBackgroundLocation();
+    navigate(`/event/${event.id}`, {
+      state: {
+        backgroundLocation: backgroundBase,
+        closeTo: backgroundBase,
+        eventSnapshot: event,
+      },
+    });
+  };
+
+  const handleSearchEventSelect = (event: ApiEvent) => {
+    setShowSearchModal(false);
+    navigate(`/event/${event.id}`, {
+      state: {
+        eventSnapshot: event,
+      },
+    });
   };
 
   const [showFilters, setShowFilters] = useState(false);
@@ -376,6 +412,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       })
       .sort((a, b) => getEventDateTime(a).getTime() - getEventDateTime(b).getTime());
   }, [filteredEvents, selectedTimeFilter]);
+  const isInitialEventsLoading = !hasLoadedEvents && isFetching && events.length === 0;
+  const upcomingEventCountText = `${upcomingEvents.length} ${upcomingEvents.length === 1 ? 'event' : 'events'}`;
 
   useEffect(() => {
     const q = locationSearch.trim();
@@ -726,7 +764,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               <div className="min-w-0 pr-1">
                 <h3 className="truncate text-[15px] font-bold leading-tight text-gray-900">Upcoming Events</h3>
                 <p className="mt-1 h-4 whitespace-nowrap text-xs font-medium leading-4 text-gray-500 tabular-nums">
-                  {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'} found
+                  {isInitialEventsLoading ? (
+                    <span className="inline-block h-3 w-24 animate-pulse rounded-full bg-gray-200 align-middle" aria-label="Loading event count" />
+                  ) : (
+                    `${upcomingEventCountText} found`
+                  )}
                 </p>
               </div>
               <div className="relative z-30 flex-shrink-0">
@@ -976,7 +1018,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 onClick={() => setShowFilters(false)}
                 className="flex-[2] rounded-xl bg-purple-600 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(124,58,237,0.28)] transition-colors hover:bg-purple-700"
               >
-                Show {upcomingEvents.length} {upcomingEvents.length === 1 ? 'event' : 'events'}
+                {isInitialEventsLoading ? 'Loading events' : `Show ${upcomingEventCountText}`}
               </button>
             </div>
           </div>
@@ -1006,7 +1048,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         <PremiumSearchModal
           onClose={closeSearchModal}
           events={events}
-                    onEventSelect={(event: ApiEvent) => handleEventClick(event)}
+          onEventSelect={handleSearchEventSelect}
           onPersonSelect={(person) => setSelectedUser(person)}
           onVenueSelect={(venue) => {
             setSelectedLocation(venue.name);

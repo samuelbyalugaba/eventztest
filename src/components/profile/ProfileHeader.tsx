@@ -20,14 +20,41 @@ function CreatorBadge({ className = '' }: { className?: string }) {
     <img
       src={creatorBadge}
       alt="Creator badge"
-      className={`inline-block h-4 w-4 object-contain align-[-2px] drop-shadow-sm pointer-events-none select-none ${className}`}
+      className={`inline-block h-4 w-4 shrink-0 object-contain drop-shadow-sm pointer-events-none select-none ${className}`}
       style={{ visibility: 'visible', opacity: 1 }}
       loading="eager"
       onError={(e) => {
-        console.error('Badge image failed to load:', e);
         (e.target as HTMLImageElement).style.display = 'none';
       }}
     />
+  );
+}
+
+function ProfileTitle({
+  displayName,
+  showCreatorBadge,
+}: {
+  displayName: string;
+  showCreatorBadge: boolean;
+}) {
+  const name = (displayName || 'User').trim() || 'User';
+
+  if (!showCreatorBadge) {
+    return <>{name}</>;
+  }
+
+  const lastWordMatch = name.match(/^(.*\s)(\S+)$/);
+  const leadingText = lastWordMatch?.[1] ?? '';
+  const lastWord = lastWordMatch?.[2] ?? name;
+
+  return (
+    <>
+      {leadingText}
+      <span className="inline-flex items-center whitespace-nowrap align-baseline">
+        {lastWord}
+        <CreatorBadge className="ml-1.5 translate-y-px" />
+      </span>
+    </>
   );
 }
 
@@ -71,9 +98,8 @@ export function ProfileHeader({
             ) : (
               <>
                 <div className="min-w-0">
-                  <h1 className="whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
-                    {displayName || 'User'}
-                    {showCreatorBadge && <CreatorBadge className="ml-1.5" />}
+                  <h1 className="whitespace-normal break-words text-lg font-semibold leading-snug text-gray-900 sm:text-xl">
+                    <ProfileTitle displayName={displayName} showCreatorBadge={showCreatorBadge} />
                   </h1>
                 </div>
                 <p className="text-gray-500 font-medium text-sm truncate">
@@ -156,9 +182,8 @@ export function ProfileHeader({
           ) : (
             <>
               <div className="min-w-0">
-                <h1 className="whitespace-normal break-words text-xl font-semibold leading-snug text-gray-900">
-                  {displayName || 'User'}
-                  {showCreatorBadge && <CreatorBadge className="ml-1.5" />}
+                <h1 className="whitespace-normal break-words text-lg font-semibold leading-snug text-gray-900 sm:text-xl">
+                  <ProfileTitle displayName={displayName} showCreatorBadge={showCreatorBadge} />
                 </h1>
               </div>
               <p className="mt-1 truncate text-sm font-medium text-gray-500">

@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2, CheckCheck, Flag } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2, CheckCheck, Flag, X, ExternalLink, Download } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { Message, Profile, blockUser, getMessages, reportContent, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage, deleteMessage } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { useVisualViewport } from '../utils/useVisualViewport';
 import { askForReportReason, confirmBlockUser } from '../utils/moderation';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 interface ChatDetailProps {
   conversationId: number;
@@ -15,12 +16,18 @@ interface ChatDetailProps {
   onViewProfile?: () => void;
 }
 
+const isVideoMedia = (url?: string) => /\.(mp4|webm|ogg|ogv|mov|m4v|3gp|3gpp)(\?|#|$)/i.test(url || '');
+const isPlaceholderMediaText = (content?: string) => /^sent an? (image|video|media)$/i.test((content || '').trim());
+
 export function ChatDetail({ conversationId, recipient, currentUser, onBack, isOnline, onViewProfile }: ChatDetailProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [selectedMediaUrl, setSelectedMediaUrl] = useState<string | null>(null);
+  const [messagePendingDelete, setMessagePendingDelete] = useState<Message | null>(null);
   const { offsetTop, offsetBottom } = useVisualViewport();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollerRef = useRef<HTMLDivElement>(null);
@@ -133,27 +140,48 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isUploadingMedia || isSending) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Reset input so same file can be selected again
     e.target.value = '';
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      toast.error('Please choose an image or video');
+      return;
+    }
 
-    const toastId = toast.loading('Sending image...');
+    const isVideo = file.type.startsWith('video/');
+    const toastId = toast.loading(isVideo ? 'Sending video...' : 'Sending image...');
+    setIsUploadingMedia(true);
     try {
-      const imageUrl = await uploadImage(file, 'posts'); 
-      if (imageUrl) {
-        await sendMessage(conversationId, 'Sent an image', imageUrl);
-        toast.success('Image sent', { id: toastId });
+      const mediaUrl = await uploadImage(file, 'posts', `messages/${conversationId}`);
+      if (mediaUrl) {
+        const sent = await sendMessage(conversationId, isVideo ? 'Sent a video' : 'Sent an image', mediaUrl);
+        if (sent) {
+          setMessages(prev => {
+            if (prev.some(m => m.id === sent.id)) return prev;
+            return [...prev, sent];
+          });
+        }
+        getMessages(conversationId).then((msgs) => {
+          if (Array.isArray(msgs)) {
+            setMessages(msgs);
+            scrollToBottom();
+          }
+        }).catch(() => {});
+        toast.success(isVideo ? 'Video sent' : 'Image sent', { id: toastId });
         scrollToBottom();
       }
-    } catch (error) {
-      toast.error('Failed to send image', { id: toastId });
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to send media', { id: toastId });
+    } finally {
+      setIsUploadingMedia(false);
     }
   };
 
   const handleSend = async () => {
-    if (isSending) return;
+    if (isSending || isUploadingMedia) return;
     const text = messageText.trim();
     if (!text) return;
     setIsSending(true);
@@ -175,7 +203,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
       }).catch(() => {});
       scrollToBottom();
       inputRef.current?.focus();
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to send message');
       setMessageText(text);
     } finally {
@@ -190,15 +218,13 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
   };
 
   const handleDeleteMessage = async (messageId: number) => {
-    if (!confirm('Delete this message?')) return;
-    
     // Optimistic update
     setMessages(prev => prev.filter(m => m.id !== messageId));
     
     try {
       await deleteMessage(messageId);
       toast.success('Message deleted');
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete message');
       getMessages(conversationId).then(setMessages);
     }
@@ -265,7 +291,12 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
             <ArrowLeft className="w-6 h-6 text-gray-900" />
           </button>
           
-          <div className="relative">
+          <button
+            type="button"
+            onClick={onViewProfile}
+            aria-label="View profile"
+            className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          >
             <UserAvatar
               src={recipient.avatar_url}
               name={recipient.full_name || recipient.username}
@@ -274,24 +305,29 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
             {isOnline && (
               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
             )}
-          </div>
+          </button>
           
-          <div>
-            <div className="flex items-center gap-1">
-              <h2 className="text-base font-bold text-gray-900">{recipient.full_name || recipient.username}</h2>
+          <button
+            type="button"
+            onClick={onViewProfile}
+            className="min-w-0 text-left focus:outline-none"
+          >
+            <div className="flex min-w-0 items-center gap-1">
+              <h2 className="truncate text-base font-bold text-gray-900">{recipient.full_name || recipient.username}</h2>
               {recipient.verified && (
-                <svg className="w-3.5 h-3.5 text-blue-500 fill-current" viewBox="0 0 24 24">
+                <svg className="h-3.5 w-3.5 shrink-0 fill-current text-blue-500" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               )}
             </div>
-            <p className="text-xs text-gray-500">@{recipient.username?.replace(/^@/, '')} • {isOnline ? 'Active now' : 'Offline'}</p>
-          </div>
+            <p className="truncate text-xs text-gray-500">@{recipient.username?.replace(/^@/, '')} - {isOnline ? 'Active now' : 'Offline'}</p>
+          </button>
         </div>
 
         <div className="relative">
           <button 
             onClick={() => setShowMenu(!showMenu)}
+            aria-label="Conversation options"
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <MoreHorizontal className="w-6 h-6 text-gray-900" />
@@ -347,6 +383,9 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
             
             const showDateHeader = !prevMsgDate || msgDate.toDateString() !== prevMsgDate.toDateString();
             const dateHeader = showDateHeader ? formatDateHeader(msg.created_at) : null;
+            const hasMedia = Boolean(msg.image_url);
+            const mediaIsVideo = isVideoMedia(msg.image_url);
+            const visibleContent = hasMedia && isPlaceholderMediaText(msg.content) ? '' : msg.content;
             
             return (
               <React.Fragment key={msg.id}>
@@ -360,23 +399,40 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                 <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
                 <div className={`flex flex-col max-w-[75%] ${isMe ? 'items-end' : 'items-start'}`}>
                   <div 
-                    className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                    className={`${hasMedia && !visibleContent ? 'p-1' : 'px-4 py-3'} min-w-8 rounded-2xl text-sm leading-relaxed ${
                       isMe 
                         ? 'bg-blue-600 text-white rounded-br-none' 
                         : 'bg-white text-gray-900 shadow-sm rounded-bl-none border border-gray-100'
                     }`}
                   >
                     {msg.image_url && (
-                      <div className="mb-2">
-                        <img 
-                          src={msg.image_url} 
-                          alt="Shared" 
-                          className="rounded-lg max-h-60 object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                          onClick={() => window.open(msg.image_url, '_blank')}
-                        />
+                      <div className={visibleContent ? 'mb-2' : ''}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMediaUrl(msg.image_url || null)}
+                          aria-label={mediaIsVideo ? 'Open shared video' : 'Open shared image'}
+                          className="block overflow-hidden rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                        >
+                          {mediaIsVideo ? (
+                            <video
+                              src={`${msg.image_url}#t=0.1`}
+                              className="max-h-64 max-w-full bg-black object-contain"
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                          ) : (
+                            <img
+                              src={msg.image_url}
+                              alt="Shared media"
+                              className="max-h-64 max-w-full object-cover"
+                              loading="lazy"
+                            />
+                          )}
+                        </button>
                       </div>
                     )}
-                    {msg.content}
+                    {visibleContent}
                   </div>
                   <div className="mt-1 flex items-center gap-1">
                      <span className="text-[10px] text-gray-400 font-medium">
@@ -384,9 +440,9 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                      </span>
                      {isMe && (
                        <button 
-                         onClick={() => handleDeleteMessage(msg.id)}
-                         className="ml-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                         title="Delete message"
+                         onClick={() => setMessagePendingDelete(msg)}
+                         aria-label="Delete message"
+                         className="ml-2 text-gray-400 opacity-100 transition-colors hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
                        >
                          <Trash2 className="w-3 h-3" />
                        </button>
@@ -412,8 +468,8 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                              toast.error(error?.message || 'Failed to submit report');
                            }
                          }}
-                         className="ml-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                         title="Report message"
+                         aria-label="Report message"
+                         className="ml-2 text-gray-400 opacity-100 transition-colors hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
                        >
                          <Flag className="w-3 h-3" />
                        </button>
@@ -437,13 +493,16 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
           type="file" 
           ref={fileInputRef} 
           className="hidden" 
-          accept="image/*"
+          accept="image/*,video/*"
           onChange={handleFileChange}
         />
         <div className="flex items-center gap-2">
           <button 
+            type="button"
             onClick={handlePlusClick}
-            className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0"
+            disabled={isUploadingMedia || isSending}
+            aria-label="Attach media"
+            className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="w-5 h-5" />
           </button>
@@ -460,8 +519,11 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
             />
             {/* Sticker Icon inside input */}
              <button 
+               type="button"
                onClick={handleImageClick}
-               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full"
+               disabled={isUploadingMedia || isSending}
+               aria-label="Attach image or video"
+               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full disabled:cursor-not-allowed disabled:opacity-50"
              >
                <ImageIcon className="w-5 h-5 text-gray-500" />
              </button>
@@ -471,25 +533,97 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
             <button 
               type="button"
               onClick={handleSend}
-              className="p-2.5 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex-shrink-0"
-              disabled={isSending}
+              aria-label="Send message"
+              className="p-2.5 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex-shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSending || isUploadingMedia}
             >
               <Send className="w-5 h-5 ml-0.5" />
             </button>
           ) : (
             <button 
+              type="button"
               onClick={toggleListening}
+              disabled={isUploadingMedia || isSending}
+              aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
               className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${
                 isListening 
                   ? 'bg-red-100 text-red-600 animate-pulse' 
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <Mic className={`w-5 h-5 ${isListening ? 'animate-bounce' : ''}`} />
             </button>
           )}
         </div>
       </div>
+
+      {selectedMediaUrl && (
+        <div className="fixed inset-0 z-[90] flex flex-col bg-black">
+          <div className="flex items-center justify-between px-3 pb-3 pt-[calc(0.75rem+var(--eventz-safe-area-top))] text-white">
+            <button
+              type="button"
+              onClick={() => setSelectedMediaUrl(null)}
+              aria-label="Close media preview"
+              className="rounded-full p-2 transition hover:bg-white/10"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href={selectedMediaUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Open media in new tab"
+                className="rounded-full p-2 transition hover:bg-white/10"
+              >
+                <ExternalLink className="h-5 w-5" />
+              </a>
+              <a
+                href={selectedMediaUrl}
+                download
+                aria-label="Download media"
+                className="rounded-full p-2 transition hover:bg-white/10"
+              >
+                <Download className="h-5 w-5" />
+              </a>
+            </div>
+          </div>
+          <div className="flex min-h-0 flex-1 items-center justify-center p-2">
+            {isVideoMedia(selectedMediaUrl) ? (
+              <video
+                src={selectedMediaUrl}
+                controls
+                autoPlay
+                playsInline
+                className="max-h-full max-w-full"
+              />
+            ) : (
+              <img
+                src={selectedMediaUrl}
+                alt="Shared media"
+                className="max-h-full max-w-full object-contain"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={messagePendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setMessagePendingDelete(null);
+        }}
+        title="Delete message?"
+        description="This will remove this message from the conversation."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => {
+          if (!messagePendingDelete) return;
+          const messageId = messagePendingDelete.id;
+          setMessagePendingDelete(null);
+          await handleDeleteMessage(messageId);
+        }}
+      />
     </div>
   );
 }
