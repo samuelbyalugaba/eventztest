@@ -1,7 +1,11 @@
 apply plugin: 'com.android.application'
 
-def eventzVersionCode = (System.getenv("EVENTZ_VERSION_CODE") ?: (project.findProperty("EVENTZ_VERSION_CODE") ?: "4")).toInteger()
-def eventzVersionName = System.getenv("EVENTZ_VERSION_NAME") ?: (project.findProperty("EVENTZ_VERSION_NAME") ?: "1.0.3")
+def eventzVersionCode = (project.findProperty("EVENTZ_VERSION_CODE") ?: System.getenv("EVENTZ_VERSION_CODE") ?: "4").toInteger()
+def eventzVersionName = (project.findProperty("EVENTZ_VERSION_NAME") ?: System.getenv("EVENTZ_VERSION_NAME") ?: "1.0.3").toString()
+if (eventzVersionCode < 4) {
+    throw new GradleException("EVENTZ_VERSION_CODE must be at least 4 for the next Play Store upload. Check android/gradle.properties or pass -PEVENTZ_VERSION_CODE=4.")
+}
+logger.lifecycle("Eventz Android version: code=${eventzVersionCode}, name=${eventzVersionName}")
 def releaseStoreFile = System.getenv("EVENTZ_UPLOAD_STORE_FILE")
 def releaseStorePassword = System.getenv("EVENTZ_UPLOAD_STORE_PASSWORD")
 def releaseKeyAlias = System.getenv("EVENTZ_UPLOAD_KEY_ALIAS")
