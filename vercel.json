@@ -1,4 +1,43 @@
 {
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://appleid.apple.com https://accounts.google.com https://xikoggtidxqtjetiqsnj.supabase.co; script-src 'self' https://embed.cloudflarestream.com https://accounts.google.com https://apis.google.com https://www.gstatic.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://xikoggtidxqtjetiqsnj.supabase.co wss://xikoggtidxqtjetiqsnj.supabase.co https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://accounts.google.com https://appleid.apple.com https://*.agora.io wss://*.agora.io https://*.sd-rtn.com wss://*.sd-rtn.com https://*.edge.agora.io wss://*.edge.agora.io https://*.cloudflarestream.com https://*.videodelivery.net; media-src 'self' data: blob: https:; worker-src 'self' blob:; frame-src 'self' https://appleid.apple.com https://accounts.google.com https://iframe.videodelivery.net https://*.cloudflarestream.com; manifest-src 'self'; upgrade-insecure-requests"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(self), fullscreen=(self), payment=(), usb=(), bluetooth=()"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://app.eventz.live"
+        },
+        {
+          "key": "Vary",
+          "value": "Origin"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
