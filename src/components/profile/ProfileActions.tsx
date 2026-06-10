@@ -11,7 +11,6 @@ interface ProfileActionsProps {
   onStartOrganizerSetup?: () => void;
   onFollow: () => void;
   onMessage: () => void;
-  isMessaging?: boolean;
 }
 
 export function ProfileActions({
@@ -24,7 +23,6 @@ export function ProfileActions({
   onStartOrganizerSetup,
   onFollow,
   onMessage,
-  isMessaging = false,
 }: ProfileActionsProps) {
   if (isOwnProfile) {
     if (isOrganizer) {
@@ -92,11 +90,9 @@ export function ProfileActions({
       </button>
       <button
         onClick={onMessage}
-        disabled={isMessaging}
-        aria-busy={isMessaging}
-        className="flex-1 min-h-8 py-1.5 bg-white text-gray-700 border border-gray-200 rounded-lg font-medium text-[0.72rem] hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+        className="flex-1 min-h-8 py-1.5 bg-white text-gray-700 border border-gray-200 rounded-lg font-medium text-[0.72rem] hover:bg-gray-50 transition-all active:scale-95"
       >
-        {isMessaging ? 'Opening...' : 'Message'}
+        Message
       </button>
     </div>
   );

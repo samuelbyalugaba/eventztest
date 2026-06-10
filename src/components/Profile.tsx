@@ -58,7 +58,7 @@ interface ProfileProps {
   isPaused?: boolean;
 }
 
-export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup, onStartConversation, userId: userIdProp, onBack, onViewPost, isPaused = false }: ProfileProps) {
+export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizerSetup, userId: userIdProp, onBack, onViewPost, isPaused = false }: ProfileProps) {
   const { userId: userIdParam } = useParams<{ userId: string }>();
   const userId = userIdProp || userIdParam;
   const navigate = useNavigate();
@@ -93,7 +93,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [isStartingMessage, setIsStartingMessage] = useState(false);
   const [eventPendingDelete, setEventPendingDelete] = useState<AppEvent | null>(null);
 
   const [showTicketListModal, setShowTicketListModal] = useState(false);
@@ -356,37 +355,23 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         onDashboard={() => navigate('/dashboard')}
         onStartOrganizerSetup={onStartOrganizerSetup}
         onFollow={handleFollow}
-        isMessaging={isStartingMessage}
-        onMessage={async () => {
+        onMessage={() => {
           if (!currentUser) { toast.error('Please sign in to message'); return; }
           if (!userId) { toast.error('Could not find this profile'); return; }
-          if (isStartingMessage) return;
-          if (!onStartConversation) {
-            navigate('/messages', { state: { returnTo: currentRouteTarget } });
-            return;
-          }
 
-          setIsStartingMessage(true);
-          try {
-            const conversation = await onStartConversation({
+          navigate('/messages', {
+            state: {
+              returnTo: currentRouteTarget,
+              startConversationUser: {
               id: userId,
               name: displayName,
               username: userProfile?.username || '',
               avatar: userProfile?.avatar_url || '',
               verified: !!userProfile?.verified,
               isOrganizer: !!userProfile?.is_organizer,
-            });
-
-            if (conversation) {
-              navigate(`/messages/${conversation.id}`, { state: { returnTo: currentRouteTarget } });
-            } else {
-              toast.error('Could not start conversation');
-            }
-          } catch {
-            toast.error('Failed to start conversation');
-          } finally {
-            setIsStartingMessage(false);
-          }
+              },
+            },
+          });
         }}
       />
 
