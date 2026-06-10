@@ -13,7 +13,6 @@ import { useProfileData } from '../hooks/useProfileData';
 // Lazy-load heavy modals
 const SettingsModal = lazy(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
 const LiveSetupModal = lazy(() => import('./LiveSetupModal').then(m => ({ default: m.LiveSetupModal })));
-const ProfessionalDashboardModal = lazy(() => import('./ProfessionalDashboardModal').then(m => ({ default: m.ProfessionalDashboardModal })));
 const EventDetailModal = lazy(() => import('./EventDetailModal').then(m => ({ default: m.EventDetailModal })));
 const TicketViewer = lazy(() => import('./TicketViewer').then(m => ({ default: m.TicketViewer })));
 const WalletModal = lazy(() => import('./WalletModal').then(m => ({ default: m.WalletModal })));
@@ -99,8 +98,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
   const [showTicketListModal, setShowTicketListModal] = useState(false);
   const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);
-  const [showProfessionalDashboard, setShowProfessionalDashboard] = useState(false);
-
   const [showEventListModal, setShowEventListModal] = useState(false);
   
 
@@ -310,7 +307,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               isOrganizer={isOrganizer}
               onEditProfile={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
               onSettings={() => { setSettingsInitialView('main'); setShowSettingsModal(true); }}
-              onDashboard={() => setShowProfessionalDashboard(true)}
+              onDashboard={() => navigate('/dashboard')}
               onWallet={() => setShowWalletModal(true)}
               onLogout={onLogout}
             />
@@ -356,7 +353,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         isLoading={isLoading}
         isFollowing={isFollowing}
         onCreateEvent={onCreateEvent}
-        onDashboard={() => setShowProfessionalDashboard(true)}
+        onDashboard={() => navigate('/dashboard')}
         onStartOrganizerSetup={onStartOrganizerSetup}
         onFollow={handleFollow}
         isMessaging={isStartingMessage}
@@ -446,9 +443,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             onPurchaseTicket={() => toast.info("Please go to Events page to purchase tickets")}
             onPurchaseNormalTicket={() => toast.info("Please go to Events page to purchase tickets")}
           />
-        )}
-        {showProfessionalDashboard && (
-          <ProfessionalDashboardModal onClose={() => setShowProfessionalDashboard(false)} organizerProfile={userProfile} onCreateEvent={onCreateEvent || (() => {})} onEditEvent={onEditEvent} />
         )}
         {showWalletModal && (
           <WalletModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} />

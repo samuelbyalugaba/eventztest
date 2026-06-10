@@ -96,7 +96,7 @@ export function ProfileActions({
         aria-busy={isMessaging}
         className="flex-1 min-h-8 py-1.5 bg-white text-gray-700 border border-gray-200 rounded-lg font-medium text-[0.72rem] hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-60 disabled:active:scale-100"
       >
-        Message
+        {isMessaging ? 'Opening...' : 'Message'}
       </button>
     </div>
   );

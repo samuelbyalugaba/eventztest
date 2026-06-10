@@ -45,21 +45,80 @@ export function LiveFilterModals({
               <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
             </div>
             <div className="px-5 pb-8">
-              <h2 className="text-gray-900 text-lg mb-5">Filter by category</h2>
-              <div className="space-y-2">
+              <h2 className="mb-5 text-[17px] font-bold tracking-tight text-gray-950">Filter Live</h2>
+
+              <div className="mb-6">
+                <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500">Category</div>
+                <div className="grid grid-cols-2 gap-2">
                 {categories.map((category) => (
                   <button
                     key={category.id}
                     onClick={() => onCategorySelect(category.id)}
-                    className={`w-full text-left px-5 py-3.5 rounded-xl transition-all ${
+                    className={`min-h-10 rounded-xl px-3 text-left text-sm font-medium transition-all ${
                       selectedCategory === category.id
-                        ? 'bg-purple-600 text-white shadow-lg'
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-600/15'
+                        : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     {category.name}
                   </button>
                 ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500">Location</div>
+                  {selectedLocation !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => onLocationSelect('all')}
+                      className="text-xs font-semibold text-[#8A2BE2]"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="relative mb-3">
+                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={locationSearch}
+                    onChange={(e) => onLocationSearchChange(e.target.value)}
+                    placeholder="Search location..."
+                    className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-300"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                  {displayedLocations.length > 0 ? (
+                    displayedLocations.map((location) => {
+                      const isSelected = selectedLocation === location.id;
+                      return (
+                        <button
+                          key={location.id}
+                          onClick={() => onLocationSelect(location.id)}
+                          className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-all ${
+                            isSelected
+                              ? 'bg-[#8A2BE2] text-white shadow-lg shadow-purple-600/15'
+                              : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {location.icon ? (
+                            <location.icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                          ) : (
+                            <MapPin className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">{location.name}</span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-gray-200 py-6 text-center text-sm text-gray-500">
+                      No locations found
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

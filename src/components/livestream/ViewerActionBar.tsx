@@ -29,6 +29,9 @@ export function ViewerActionBar({
   isChatVisible = true,
   isDesktop = false,
 }: ViewerActionBarProps) {
+  const actionButtonClass =
+    'inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-xl border border-white/10 bg-black/50 p-0 text-white/80 backdrop-blur-xl transition-all hover:bg-white/10 active:scale-90';
+
   return (
     <div className="w-full">
       <form onSubmit={onSendMessage}>
@@ -47,7 +50,7 @@ export function ViewerActionBar({
                 />
                 <button
                   type="submit"
-                  className="text-primary hover:text-primary/80 transition-colors"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-primary transition-colors hover:bg-white/10 hover:text-primary/80 disabled:text-white/20"
                   disabled={!message.trim()}
                 >
                   <Send className="w-4 h-4" />
@@ -64,7 +67,7 @@ export function ViewerActionBar({
                 <button
                   type="button"
                   onClick={onToggleChat}
-                  className="p-2 rounded-xl bg-black/50 backdrop-blur-xl text-white/80 border border-white/10 hover:bg-white/10 transition-all"
+                  className={actionButtonClass}
                   title={isChatVisible ? 'Hide chat' : 'Show chat'}
                 >
                   {isChatVisible ? (
@@ -77,7 +80,7 @@ export function ViewerActionBar({
               <button
                 type="button"
                 onClick={onMuteToggle}
-                className="p-2 rounded-xl bg-black/50 backdrop-blur-xl text-white/80 border border-white/10 hover:bg-white/10 transition-all"
+                className={actionButtonClass}
               >
                 {isMuted ? <VolumeX className="w-4 h-4 md:w-5 md:h-5" /> : <Volume2 className="w-4 h-4 md:w-5 md:h-5" />}
               </button>
@@ -88,21 +91,21 @@ export function ViewerActionBar({
               <button
                 type="button"
                 onClick={onGift}
-                className="p-2 rounded-xl bg-black/50 backdrop-blur-xl text-yellow-400 border border-white/10 hover:bg-yellow-500/20 active:scale-90 transition-all"
+                className={`${actionButtonClass} text-yellow-400 hover:bg-yellow-500/20`}
               >
                 <Gift className="w-4 h-4 md:w-5 md:h-5" />
               </button>
               <button
                 type="button"
                 onClick={onShare}
-                className="p-2 rounded-xl bg-black/50 backdrop-blur-xl text-white/80 border border-white/10 hover:bg-white/10 transition-all"
+                className={actionButtonClass}
               >
                 <Share2 className="w-4 h-4 md:w-5 md:h-5" />
               </button>
               <button
                 type="button"
                 onClick={onLike}
-                className={`p-2 rounded-xl backdrop-blur-xl border transition-all active:scale-90 ${
+                className={`inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-xl border p-0 backdrop-blur-xl transition-all active:scale-90 ${
                   isLiked
                     ? 'bg-pink-600/80 text-white border-pink-500/50 shadow-lg shadow-pink-500/20'
                     : 'bg-black/50 text-white/80 border-white/10 hover:bg-pink-500/20'

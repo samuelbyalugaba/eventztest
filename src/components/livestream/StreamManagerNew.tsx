@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, SwitchCamera, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award } from 'lucide-react';
+import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, SwitchCamera, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToStreamPresence, sendStreamMessage, reportContent } from '../../utils/supabase/api';
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
@@ -20,6 +20,15 @@ interface StreamManagerProps {
 }
 
 type StreamPhase = 'setup' | 'live' | 'ended';
+
+const setupIconButtonClass =
+  'inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-xl border border-white/10 bg-white/10 p-0 text-white backdrop-blur-xl transition-transform active:scale-90';
+
+const studioControlButtonClass =
+  'inline-flex h-12 w-12 min-h-12 min-w-12 items-center justify-center rounded-2xl border border-white/10 p-0 backdrop-blur-xl transition-all active:scale-90';
+
+const liveRailButtonClass =
+  'inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/10 p-0 backdrop-blur-xl transition-all active:scale-90';
 
 export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerProps) {
   const isMobile = useIsMobile();
@@ -524,13 +533,13 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pb-4 pt-[calc(3rem+var(--eventz-safe-area-top))]">
           <div className="flex items-center justify-between">
-            <button onClick={handleRequestClose} className="p-2.5 rounded-xl bg-white/10 backdrop-blur-xl text-white border border-white/10">
+            <button onClick={handleRequestClose} className={setupIconButtonClass}>
               <X className="w-5 h-5" />
             </button>
             <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/10">
               <span className="text-white text-sm font-bold">Studio</span>
             </div>
-            <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-xl bg-white/10 backdrop-blur-xl text-white border border-white/10">
+            <button onClick={() => setShowSettings(true)} className={setupIconButtonClass}>
               <Settings className="w-5 h-5" />
             </button>
           </div>
@@ -539,13 +548,13 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         {/* Center controls */}
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
           <div className="flex items-center gap-6 pointer-events-auto">
-            <button onClick={toggleCameraDevice} className="p-3 rounded-2xl bg-white/10 backdrop-blur-xl text-white border border-white/10 active:scale-90 transition-transform" aria-label="Switch camera">
+            <button onClick={toggleCameraDevice} className={`${studioControlButtonClass} bg-white/10 text-white`} aria-label="Switch camera">
               <SwitchCamera className="w-6 h-6" />
             </button>
-            <button onClick={toggleCamera} className={`p-3 rounded-2xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${cameraEnabled ? 'bg-white/10 text-white' : 'bg-white text-black'}`}>
+            <button onClick={toggleCamera} className={`${studioControlButtonClass} ${cameraEnabled ? 'bg-white/10 text-white' : 'bg-white text-black'}`}>
               {cameraEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
             </button>
-            <button onClick={toggleMic} className={`p-3 rounded-2xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${micEnabled ? 'bg-white/10 text-white' : 'bg-white text-black'}`}>
+            <button onClick={toggleMic} className={`${studioControlButtonClass} ${micEnabled ? 'bg-white/10 text-white' : 'bg-white text-black'}`}>
               {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
             </button>
           </div>
@@ -736,7 +745,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           <div className="bg-gradient-to-b from-black/80 via-black/30 to-transparent h-32 pointer-events-auto">
             <div className="px-4 pt-[calc(3rem+var(--eventz-safe-area-top))] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button onClick={handleRequestClose} className="p-2 rounded-xl bg-white/10 backdrop-blur-xl text-white border border-white/10">
+                <button onClick={handleRequestClose} className={setupIconButtonClass}>
                   <X className="w-5 h-5" />
                 </button>
                 <div>
@@ -775,23 +784,23 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
           {/* Right action rail */}
           <div className="absolute bottom-32 right-4 flex flex-col items-center gap-3 pointer-events-auto">
-            <button onClick={toggleCameraDevice} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10 active:scale-90 transition-transform" aria-label="Switch camera">
+            <button onClick={toggleCameraDevice} className={`${liveRailButtonClass} bg-black/40 text-white`} aria-label="Switch camera">
               <SwitchCamera className="w-5 h-5" />
             </button>
-            <button onClick={toggleCamera} className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${cameraEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
+            <button onClick={toggleCamera} className={`${liveRailButtonClass} ${cameraEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
               {cameraEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
             </button>
-            <button onClick={toggleMic} className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${micEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
+            <button onClick={toggleMic} className={`${liveRailButtonClass} ${micEnabled ? 'bg-black/40 text-white' : 'bg-white text-black'}`}>
               {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
             </button>
             <button
               onClick={() => setIsChatVisible((v) => !v)}
               title={isChatVisible ? 'Hide chat' : 'Show chat'}
-              className={`p-2.5 rounded-xl backdrop-blur-xl border border-white/10 active:scale-90 transition-all ${isChatVisible ? 'bg-black/40 text-white' : 'bg-white text-black'}`}
+              className={`${liveRailButtonClass} ${isChatVisible ? 'bg-black/40 text-white' : 'bg-white text-black'}`}
             >
               {isChatVisible ? <MessageCircle className="w-5 h-5" /> : <MessageCircleOff className="w-5 h-5" />}
             </button>
-            <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-xl bg-black/40 backdrop-blur-xl text-white border border-white/10">
+            <button onClick={() => setShowSettings(true)} className={`${liveRailButtonClass} bg-black/40 text-white`}>
               <Settings className="w-5 h-5" />
             </button>
             <button onClick={toggleLive} className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white/20 bg-white text-red-600 active:scale-90 transition-all">
@@ -805,6 +814,31 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           <div className="absolute bottom-28 left-4 w-64 z-20 pointer-events-auto">
             <FloatingChat messages={chatMessages} maxVisible={3} onReportMessage={handleReportStreamMessage} />
           </div>
+        )}
+
+        {isMobile && isChatVisible && (
+          <form
+            onSubmit={handleSendMessage}
+            className="absolute bottom-[calc(1rem+var(--eventz-safe-area-bottom))] left-4 right-4 z-30 pointer-events-auto"
+          >
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/55 px-3 py-2.5 text-white shadow-2xl backdrop-blur-xl">
+              <input
+                value={chatMessage}
+                onChange={(event) => setChatMessage(event.target.value)}
+                placeholder="Message viewers..."
+                maxLength={200}
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-white/45"
+              />
+              <button
+                type="submit"
+                disabled={!chatMessage.trim()}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-950 transition-all active:scale-95 disabled:bg-white/10 disabled:text-white/30"
+                aria-label="Send stream message"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </form>
         )}
 
         {/* Hearts */}

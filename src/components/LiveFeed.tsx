@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, MapPin, Video, Smartphone, Clock } from 'lucide-react';
+import { Filter, Video, Smartphone, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from './ui/skeleton';
 import { normalizePlaceName } from '../utils/nominatim';
@@ -158,14 +158,8 @@ export function LiveFeed() {
     });
   };
 
-  const selectedLocationView = useMemo(() => {
-    return (
-      locations.find((c) => c.id === selectedLocation) ||
-      (selectedLocation === 'all'
-        ? locations[0]
-        : ({ id: selectedLocation, name: selectedLocation, icon: MapPin } as any))
-    );
-  }, [selectedLocation]);
+  const hasActiveFilters = selectedCategory !== 'all' || selectedLocation !== 'all';
+  const activeFiltersCount = (selectedCategory !== 'all' ? 1 : 0) + (selectedLocation !== 'all' ? 1 : 0);
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
@@ -182,27 +176,16 @@ export function LiveFeed() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowLocationFilter(true)}
-                className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
-              >
-                {selectedLocationView?.icon ? (
-                  (() => {
-                    const Icon = selectedLocationView.icon;
-                    return <Icon className="w-3.5 h-3.5 text-gray-700" />;
-                  })()
-                ) : (
-                  <MapPin className="w-3.5 h-3.5 text-gray-700" />
-                )}
-                <span className="text-xs font-medium text-gray-700 hidden sm:block">
-                  {(selectedLocationView as any)?.name ||
-                    (selectedLocation === 'all' ? 'All Cities' : selectedLocation)}
-                </span>
-              </button>
-              <button
                 onClick={() => setShowFilters(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100"
+                className="icon-circle-button relative rounded-full border border-gray-100 bg-white shadow-sm transition-all hover:bg-gray-50 group"
+                aria-label="Filter live streams"
               >
-                <Filter className="w-3.5 h-3.5 text-gray-700" />
+                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#8A2BE2]" />
+                {hasActiveFilters && (
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#8A2BE2] text-[10px] text-white shadow-md">
+                    {activeFiltersCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -298,10 +281,7 @@ export function LiveFeed() {
         locationSearch={locationSearch}
         categories={liveCategories}
         displayedLocations={displayedLocations}
-        onCategorySelect={(id) => {
-          setSelectedCategory(id);
-          setShowFilters(false);
-        }}
+        onCategorySelect={setSelectedCategory}
         onLocationSelect={handleLocationSelect}
         onLocationSearchChange={setLocationSearch}
         onCloseFilters={() => setShowFilters(false)}

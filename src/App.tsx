@@ -28,6 +28,7 @@ const EventDetailWrapper = lazy(() => import('./components/EventDetailWrapper').
 const LiveStreamPage = lazy(() => import('./components/LiveStreamPage').then(m => ({ default: m.LiveStreamPage })));
 const CreatePostPage = lazy(() => import('./components/CreatePostPage'));
 const MessagesPage = lazy(() => import('./components/MessagesPage'));
+const DashboardPage = lazy(() => import('./components/DashboardPage').then(m => ({ default: m.DashboardPage })));
 
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -143,6 +144,14 @@ export default function App() {
     };
   }, [isAuthenticated, currentUser?.id]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const handle = window.setTimeout(() => {
+      void import('./components/MessagesPage');
+    }, 1000);
+    return () => window.clearTimeout(handle);
+  }, [isAuthenticated]);
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -190,6 +199,7 @@ export default function App() {
     (location.pathname.startsWith('/event/') && !isEventModal) ||
     location.pathname.startsWith('/live/') ||
     location.pathname.startsWith('/messages') ||
+    location.pathname === '/dashboard' ||
     location.pathname === '/privacy' ||
     location.pathname === '/terms' ||
     location.pathname === '/delete-account' ||
@@ -415,6 +425,9 @@ export default function App() {
             } />
             <Route path="/messages/:conversationId" element={
               <Suspense fallback={<RouteFallback />}><MessagesPage /></Suspense>
+            } />
+            <Route path="/dashboard" element={
+              <Suspense fallback={<RouteFallback />}><DashboardPage /></Suspense>
             } />
             <Route path="/compose/post" element={
               <Suspense fallback={<RouteFallback />}><CreatePostPage /></Suspense>

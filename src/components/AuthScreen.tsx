@@ -39,7 +39,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
     if (!configured) {
       toast.error('System Error', {
         description: 'Database connection is missing. Please check your configuration.',
-        duration: Infinity,
+        duration: 4500,
       });
     }
   }, []);

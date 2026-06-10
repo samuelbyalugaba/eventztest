@@ -7,6 +7,46 @@ const loadAgoraRTC = async (): Promise<AgoraRTCFactory> => {
   return AgoraRTC;
 };
 
+const getCameraFacing = (camera: MediaDeviceInfo) => {
+  const label = camera.label || '';
+  if (/(front|user|facetime|selfie)/i.test(label)) return 'front';
+  if (/(back|rear|environment)/i.test(label)) return 'back';
+  return 'unknown';
+};
+
+const isAuxiliaryBackCamera = (camera: MediaDeviceInfo) => {
+  const label = camera.label || '';
+  return /(ultra|wide|tele|macro|zoom|depth|dual|triple|0\.5x|2x|3x)/i.test(label);
+};
+
+const uniqueCameras = (cameras: MediaDeviceInfo[]) => {
+  const seen = new Set<string>();
+  return cameras.filter((camera) => {
+    const key = camera.deviceId || camera.groupId || camera.label;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+export const getPreferredCameraPair = (cameras: MediaDeviceInfo[]) => {
+  const unique = uniqueCameras(cameras);
+  if (unique.length <= 2) return unique;
+
+  const frontCamera = unique.find((camera) => getCameraFacing(camera) === 'front');
+  const backCameras = unique.filter((camera) => getCameraFacing(camera) === 'back');
+  const standardBackCamera =
+    backCameras.find((camera) => !isAuxiliaryBackCamera(camera)) ||
+    backCameras[0];
+
+  const pair = uniqueCameras([
+    ...(frontCamera ? [frontCamera] : []),
+    ...(standardBackCamera ? [standardBackCamera] : []),
+  ]);
+
+  return pair.length >= 2 ? pair : unique.slice(0, 2);
+};
+
 export const createStreamClient = async (): Promise<IAgoraRTCClient> => {
   const AgoraRTC = await loadAgoraRTC();
   return AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
@@ -47,7 +87,7 @@ export const HD_AUDIO_ENCODER_CONFIG = 'music_standard' as const; // 48kHz, ~40k
 
 export const initializeLocalTracks = async () => {
   const AgoraRTC = await loadAgoraRTC();
-  const cameras = await AgoraRTC.getCameras();
+  const cameras = getPreferredCameraPair(await AgoraRTC.getCameras());
   const cameraId = cameras[0]?.deviceId;
   const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
     { encoderConfig: HD_AUDIO_ENCODER_CONFIG, AEC: true, ANS: true, AGC: true },
@@ -77,7 +117,7 @@ export const switchLocalCamera = async ({
   elementId?: string;
 }) => {
   const AgoraRTC = await loadAgoraRTC();
-  const cameras = availableCameras.length ? availableCameras : await AgoraRTC.getCameras();
+  const cameras = getPreferredCameraPair(availableCameras.length ? availableCameras : await AgoraRTC.getCameras());
   if (cameras.length < 2) {
     throw new Error('No secondary camera');
   }
