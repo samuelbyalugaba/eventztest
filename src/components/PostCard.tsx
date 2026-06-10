@@ -333,14 +333,22 @@ export const PostCard = React.memo(function PostCard({
     }
   };
 
-  const isCarousel = (post.content.images?.length ?? 0) > 1;
+  const normalizedImages = (post.content.images ?? [])
+    .filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+    .map((url) => url.trim());
+  const fallbackImage = typeof post.content.image === 'string' && post.content.image.trim().length > 0
+    ? post.content.image.trim()
+    : undefined;
+  const mediaItems = normalizedImages.length > 0 ? normalizedImages : (fallbackImage ? [fallbackImage] : []);
   const videoUrl = post.isHighlight && post.highlights?.[0]?.videoUrl;
-  const firstCarouselMedia = post.content.images?.[0];
-  const currentMedia = videoUrl || post.content.images?.[carouselIndex] || post.content.image;
+  const hasMedia = Boolean(videoUrl || mediaItems.length > 0);
+  const isCarousel = !videoUrl && mediaItems.length > 1;
+  const firstCarouselMedia = mediaItems[0];
+  const currentMedia = videoUrl || mediaItems[carouselIndex] || mediaItems[0];
   const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
   const videoPoster = post.isHighlight 
-    ? (post.highlights?.[0]?.thumbnail || post.content.images?.find((u) => !!u && !isVideo(u)))
-    : post.content.images?.find((u) => !!u && !isVideo(u));
+    ? (post.highlights?.[0]?.thumbnail || mediaItems.find((u) => !!u && !isVideo(u)))
+    : mediaItems.find((u) => !!u && !isVideo(u));
   const currentVideoSrc = currentMedia ? `${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}` : undefined;
   const getMediaFrameStyle = useCallback((media?: string): React.CSSProperties => {
     const referenceMedia = isCarousel ? firstCarouselMedia : media;
@@ -545,15 +553,16 @@ export const PostCard = React.memo(function PostCard({
       </div>
 
       {/* 2. MEDIA CONTENT */}
-      <div
-        className="feed-post-media group cursor-pointer"
-        onClick={(e) => { 
-          e.stopPropagation(); 
-          const startTime = videoRef.current?.currentTime || 0;
-          onViewPost?.(startTime, isMuted); 
-        }}
-      >
-        {isCarousel ? (
+      {hasMedia && (
+        <div
+          className="feed-post-media group cursor-pointer"
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            const startTime = videoRef.current?.currentTime || 0;
+            onViewPost?.(startTime, isMuted); 
+          }}
+        >
+          {isCarousel ? (
           <div onDoubleClick={handleDoubleTap}>
             <Carousel
               setApi={setApi}
@@ -564,7 +573,7 @@ export const PostCard = React.memo(function PostCard({
                 className="ml-0 transform-gpu transition-[height] duration-300 ease-out will-change-transform"
                 style={carouselHeight ? { height: `${carouselHeight}px` } : undefined}
               >
-                {post.content.images?.map((media, index) => {
+                {mediaItems.map((media, index) => {
                   const isMediaVideo = isVideo(media);
                   // Only attach ref if this is the ACTIVE slide to ensure IntersectionObserver works correctly
                   const isActive = index === carouselIndex;
@@ -687,7 +696,7 @@ export const PostCard = React.memo(function PostCard({
               
               {/* Carousel Indicators */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                {post.content.images?.map((_, idx) => (
+                {mediaItems.map((_, idx) => (
                   <div 
                     key={idx}
                     className={`w-1.5 h-1.5 rounded-full transition-all shadow-sm ${
@@ -698,7 +707,7 @@ export const PostCard = React.memo(function PostCard({
               </div>
             </Carousel>
           </div>
-        ) : (
+          ) : (
           /* SINGLE MEDIA RENDER (No Carousel) */
           <div
             data-media-frame="true"
@@ -799,15 +808,16 @@ export const PostCard = React.memo(function PostCard({
                 </div>
              )}
           </div>
-        )}
+          )}
 
-        {/* Double Tap Animation Overlay */}
-        {showLikeAnimation && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 animate-in zoom-in-50 duration-300">
-            <Heart className="w-24 h-24 text-purple-600 fill-purple-600 drop-shadow-xl animate-bounce" />
-          </div>
-        )}
-      </div>
+          {/* Double Tap Animation Overlay */}
+          {showLikeAnimation && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 animate-in zoom-in-50 duration-300">
+              <Heart className="w-24 h-24 text-purple-600 fill-purple-600 drop-shadow-xl animate-bounce" />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 3. TEXT CONTENT */}
       {(post.content.text || (post.content.hashtags?.length ?? 0) > 0) && (
