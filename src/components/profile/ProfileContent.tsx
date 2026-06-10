@@ -212,6 +212,27 @@ function MediaTab({ isLoading, posts, hasMore, isLoadingMore, onLoadMore, onOpen
   isLoading: boolean; posts: ApiPost[]; hasMore: boolean; isLoadingMore: boolean;
   onLoadMore: () => void; onOpenPost: (p: ApiPost) => void; isOwnProfile: boolean; isPaused: boolean;
 }) {
+  const isMediaVideo = (url?: string) => !!url && (/\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(url.split('#')[0].split('?')[0]) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight'));
+  const getPostMedia = (post: ApiPost) => {
+    const imageUrls = Array.isArray(post.image_urls) ? post.image_urls.filter((url): url is string => !!url?.trim()) : [];
+    const firstImage = imageUrls[0];
+    const videoSrc = post.video_url?.trim() || (isMediaVideo(firstImage) ? firstImage : undefined);
+    const isVideo = !!videoSrc;
+    const videoThumbnail = isVideo
+      ? (post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : imageUrls.find((u) => !!u && !isMediaVideo(u)))
+      : undefined;
+    return {
+      imageUrls,
+      firstImage,
+      videoSrc,
+      isVideo,
+      videoThumbnail,
+      isCarousel: imageUrls.length > 1,
+      hasMedia: isVideo || imageUrls.length > 0,
+    };
+  };
+  const mediaPosts = posts.filter((post) => getPostMedia(post).hasMedia);
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-3 gap-1">
@@ -220,7 +241,7 @@ function MediaTab({ isLoading, posts, hasMore, isLoadingMore, onLoadMore, onOpen
     );
   }
 
-  if (posts.length === 0) {
+  if (mediaPosts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-14 text-center">
         <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
@@ -232,17 +253,11 @@ function MediaTab({ isLoading, posts, hasMore, isLoadingMore, onLoadMore, onOpen
     );
   }
 
-  const isMediaVideo = (url?: string) => !!url && (/\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(url.split('#')[0].split('?')[0]) || url.toLowerCase().includes('video') || url.toLowerCase().includes('highlight'));
-
   return (
     <>
       <div className="grid grid-cols-3 gap-1 animate-in fade-in zoom-in duration-300">
-        {posts.map((post) => {
-          const firstImage = post.image_urls?.[0];
-          const videoSrc = post.video_url || (isMediaVideo(firstImage) ? firstImage : undefined);
-          const isVideo = !!videoSrc;
-          const videoThumbnail = isVideo ? (post.video_url && firstImage && !isMediaVideo(firstImage) ? firstImage : post.image_urls?.find((u: string) => !!u && !isMediaVideo(u))) : undefined;
-          const isCarousel = (post.image_urls?.length || 0) > 1;
+        {mediaPosts.map((post) => {
+          const { firstImage, videoSrc, isVideo, videoThumbnail, isCarousel } = getPostMedia(post);
           return (
             <div
               id={`profile-post-${post.id}`}
