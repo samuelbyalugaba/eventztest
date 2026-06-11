@@ -1331,62 +1331,6 @@ export const createTransaction = async (transactionData: {
   return data;
 };
 
-export const initiateSnippePayment = async (params: {
-  amount: number;
-  currency?: string;
-  phoneNumber: string; // e.g., "2557..."
-  provider: string; // "Airtel", "Tigo", "Halopesa", "Mpesa"
-  eventId: number;
-  ticketId?: number;
-  userId: string;
-  metadata?: any;
-}) => {
-
-  // When using --no-verify-jwt, invoke without auth headers/session context if needed, 
-  // but supabase-js client handles it.
-  // If we want to be explicit about headers:
-  const { data, error } = await supabase.functions.invoke('snippe-payment', {
-    body: {
-      ...params,
-      currency: params.currency || 'TZS'
-    },
-    headers: {
-      // 'Authorization': `Bearer ${anon_key}`, // Usually handled automatically
-    }
-  });
-
-
-  if (error) {
-    const response = (error as { context?: Response }).context;
-
-    if (response instanceof Response) {
-      const payload = await response.clone().json().catch(async () => {
-        const text = await response.text().catch(() => '');
-        return text ? { error: text } : null;
-      });
-
-      const message = payload && typeof payload === 'object'
-        ? ('error' in payload && typeof payload.error === 'string' ? payload.error : 'message' in payload && typeof payload.message === 'string' ? payload.message : null)
-        : null;
-
-      throw new Error(message || error.message);
-    }
-
-    throw error;
-  }
-
-  // Handle successful initiation but logical failure from Snippe
-  if (data && !data.success) {
-    throw new Error(data.error || 'Payment initiation failed');
-  }
-
-  // Handle case where Snippe returns success=true but data is missing
-  if (data && data.success && !data.data) {
-  }
-
-  return data;
-};
-
 export const waitForTransactionCompletion = async (transactionId: number, timeoutMs = 60000) => {
   return new Promise<boolean>((resolve) => {
     // 1. First check current status (it might already be done)

@@ -803,10 +803,10 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
             </button>
             <button
               onClick={() => setIsChatVisible((v) => !v)}
-              title={isChatVisible ? 'Hide chat' : 'Show chat'}
+              title={isChatVisible ? 'Comments open' : 'Comments closed'}
               className={`${liveRailButtonClass} ${isChatVisible ? 'bg-black/40 text-white' : 'bg-white text-black'}`}
             >
-              {isChatVisible ? <MessageCircleOff className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
+              {isChatVisible ? <MessageCircle className="w-5 h-5" /> : <MessageCircleOff className="w-5 h-5" />}
             </button>
             <button onClick={() => setShowSettings(true)} className={`${liveRailButtonClass} bg-black/40 text-white`}>
               <Settings className="w-5 h-5" />

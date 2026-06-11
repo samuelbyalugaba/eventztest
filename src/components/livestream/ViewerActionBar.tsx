@@ -69,12 +69,12 @@ export function ViewerActionBar({
                   type="button"
                   onClick={onToggleChat}
                   className={actionButtonClass}
-                  title={isChatVisible ? 'Hide chat' : 'Show chat'}
+                  title={isChatVisible ? 'Comments open' : 'Comments closed'}
                 >
                   {isChatVisible ? (
-                    <MessageCircleOff className="w-4 h-4 md:w-5 md:h-5" />
-                  ) : (
                     <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
+                  ) : (
+                    <MessageCircleOff className="w-4 h-4 md:w-5 md:h-5" />
                   )}
                 </button>
               )}
