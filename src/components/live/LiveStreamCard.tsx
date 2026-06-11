@@ -28,7 +28,7 @@ export const LiveStreamCard = memo(function LiveStreamCard({ stream, variant, on
     return (
       <div
         onClick={() => onClick(stream)}
-        className="relative flex-shrink-0 w-[75vw] sm:w-[320px] snap-center group cursor-pointer overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all duration-500 border border-gray-100 ring-1 ring-black/5"
+        className="relative flex-shrink-0 w-[70vw] sm:w-[300px] snap-center group cursor-pointer overflow-hidden rounded-xl shadow-sm hover:shadow-xl transition-all duration-500 border border-gray-100 ring-1 ring-black/5"
         style={{ aspectRatio: '16/9' }}
       >
         <ImageWithFallback
@@ -42,22 +42,22 @@ export const LiveStreamCard = memo(function LiveStreamCard({ stream, variant, on
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity"></div>
         
-        <div className="absolute top-3 left-3">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-red-600 shadow-lg shadow-red-600/20 backdrop-blur-sm border border-red-500/30">
+        <div className="absolute top-2.5 left-2.5">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-600 shadow-lg shadow-red-600/20 backdrop-blur-sm border border-red-500/30">
             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
             <span className="text-white text-[10px] font-black tracking-widest uppercase leading-none">Live</span>
           </div>
         </div>
         
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-2.5 right-2.5">
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white text-[10px] font-semibold">
             <Eye className="w-3 h-3 text-white/80" />
             <span>{stream.viewers?.toLocaleString() || 0}</span>
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-500">
-          <h3 className="text-white text-base font-bold mb-1.5 line-clamp-1 drop-shadow-sm">{stream.title}</h3>
+        <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-500">
+          <h3 className="text-white text-sm font-bold mb-1 line-clamp-1 drop-shadow-sm">{stream.title}</h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-white/80 text-[11px] font-medium">
               <MapPin className="w-3.5 h-3.5 text-white/60" />
@@ -73,7 +73,7 @@ export const LiveStreamCard = memo(function LiveStreamCard({ stream, variant, on
   return (
     <div
       onClick={() => onClick(stream)}
-      className="relative flex-shrink-0 w-[42vw] sm:w-[180px] snap-center group cursor-pointer overflow-hidden rounded-2xl shadow-sm hover:shadow-lg transition-all duration-500 border border-gray-100 ring-1 ring-black/5"
+      className="relative flex-shrink-0 w-[38vw] sm:w-[164px] snap-center group cursor-pointer overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-500 border border-gray-100 ring-1 ring-black/5"
       style={{ aspectRatio: '3/4' }}
     >
       <ImageWithFallback

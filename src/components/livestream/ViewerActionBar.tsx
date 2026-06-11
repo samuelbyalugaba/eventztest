@@ -39,19 +39,20 @@ export function ViewerActionBar({
           {/* Chat input — only on mobile when chat is visible */}
           {!isDesktop && isChatVisible && (
             <div className="flex items-center gap-2">
-              <div className="flex-1 bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 px-3.5 py-2.5 flex items-center gap-2 focus-within:border-primary/50 transition-colors">
+              <div className="flex-1 bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 px-3 py-2 flex items-center gap-2 focus-within:border-primary/50 transition-colors">
                 <input
                   type="text"
                   value={message}
                   onChange={(e) => onMessageChange(e.target.value)}
-                  placeholder="Say something…"
+                  placeholder="Chat..."
                   className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/40"
                   maxLength={200}
                 />
                 <button
                   type="submit"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-primary transition-colors hover:bg-white/10 hover:text-primary/80 disabled:text-white/20"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary/85 disabled:bg-white/10 disabled:text-white/30"
                   disabled={!message.trim()}
+                  aria-label="Send stream message"
                 >
                   <Send className="w-4 h-4" />
                 </button>

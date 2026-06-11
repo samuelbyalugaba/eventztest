@@ -2027,6 +2027,11 @@ export const getUpcomingStreams = async () => {
   return (data || []).filter((e: any) => !e.streaming?.isLive);
 };
 
+const notifyLiveStreamsUpdated = (eventId?: number, isLive?: boolean) => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('liveStreamsUpdated', { detail: { eventId, isLive } }));
+};
+
 export const updateEventStreamingStatus = async (eventId: number, isLive: boolean) => {
   // We need to merge with existing streaming data, not overwrite
   const { data: currentEvent } = await supabase.from('events').select('streaming').eq('id', eventId).single();
@@ -2066,6 +2071,8 @@ export const updateEventStreamingStatus = async (eventId: number, isLive: boolea
     } catch (cleanupError) {
     }
   }
+
+  notifyLiveStreamsUpdated(eventId, isLive);
 
   return data;
 };
@@ -2439,8 +2446,9 @@ export const sendStreamMessage = async (eventId: number, message: string) => {
 };
 
 export const subscribeToStreamMessages = (eventId: number, callback: (message: StreamMessage) => void) => {
+  const channelName = `stream-chat-${eventId}-${Math.random().toString(36).slice(2, 9)}`;
   return supabase
-    .channel(`stream_chat:${eventId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       {

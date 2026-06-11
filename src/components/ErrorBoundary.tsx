@@ -109,7 +109,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h1>
             <p className="text-gray-600 mb-4">
-              The application encountered an unexpected error.
+              EVENTZ hit an unexpected screen error. Try refreshing once; if it repeats, the details below will help trace it.
             </p>
             <div className="bg-gray-100 p-4 rounded overflow-auto mb-6 max-h-48">
               <code className="text-sm text-red-500 break-words">
@@ -134,7 +134,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={() => window.location.reload()}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
             >
-              Reload Application
+              Refresh app
             </button>
           </div>
         </div>

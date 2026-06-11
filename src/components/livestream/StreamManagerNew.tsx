@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, SwitchCamera, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award, Send } from 'lucide-react';
+import { Users, Activity, Mic, MicOff, Video, VideoOff, Radio, Settings, SwitchCamera, X, Copy, Eye, EyeOff, TrendingUp, MessageCircle, MessageCircleOff, Clock, Award, Send, Heart } from 'lucide-react';
 import { toast } from 'sonner';
-import { type Event, getStreamMessages, subscribeToStreamMessages, StreamMessage, getEventAnalytics, generateStreamKeys, getEventLikes, supabase, deleteEvent, subscribeToStreamPresence, sendStreamMessage, reportContent } from '../../utils/supabase/api';
+import { type Event, type StreamMessage, getStreamMessages, subscribeToStreamMessages, getEventAnalytics, generateStreamKeys, getEventLikes, subscribeToEventLikes, supabase, deleteEvent, subscribeToStreamPresence, sendStreamMessage, reportContent } from '../../utils/supabase/api';
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { AGORA_APP_ID, getAgoraToken } from '../../utils/agora';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
@@ -29,6 +29,12 @@ const studioControlButtonClass =
 
 const liveRailButtonClass =
   'inline-flex h-11 w-11 min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/10 p-0 backdrop-blur-xl transition-all active:scale-90';
+
+const appendStreamMessage = (prev: StreamMessage[], message: StreamMessage) => {
+  if (message.id && prev.some((item) => item.id === message.id)) return prev;
+  const next = [...prev, message];
+  return next.length > 200 ? next.slice(-200) : next;
+};
 
 export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerProps) {
   const isMobile = useIsMobile();
@@ -199,33 +205,25 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   // Chat & likes
   useEffect(() => {
     const loadChat = async () => {
-      if (!isLive) { setMessages([]); return; }
       try {
-        const msgs = await getStreamMessages(event.id);
-        if (msgs) setMessages(msgs);
-        const initialLikes = await getEventLikes(event.id);
+        const [msgs, initialLikes] = await Promise.all([
+          isLive ? getStreamMessages(event.id) : Promise.resolve([]),
+          getEventLikes(event.id),
+        ]);
+        setMessages((msgs || []).slice(-200));
         setLikes(initialLikes);
       } catch {}
     };
     loadChat();
 
     const sub = subscribeToStreamMessages(event.id, (msg) => {
-      setMessages((prev) => {
-        const next = [...prev, msg];
-        return next.length > 200 ? next.slice(-200) : next;
-      });
+      setMessages((prev) => appendStreamMessage(prev, msg));
     });
 
-    const likesSub = supabase
-      .channel(`likes:${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_likes', filter: `event_id=eq.${event.id}` }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setLikes((p) => p + 1);
-          setLikesAnimation((p) => [...p, generateHeart()]);
-        }
-        if (payload.eventType === 'DELETE') setLikes((p) => Math.max(0, p - 1));
-      })
-      .subscribe();
+    const likesSub = subscribeToEventLikes(event.id, ({ delta }) => {
+      setLikes((p) => Math.max(0, p + delta));
+      if (delta > 0) setLikesAnimation((p) => [...p, generateHeart()]);
+    });
 
     // Gift revenue tracking
     const giftSub = supabase
@@ -392,11 +390,16 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!chatMessage.trim()) return;
+    const text = chatMessage.trim();
+    if (!text) return;
+    setChatMessage('');
     try {
-      await sendStreamMessage(event.id, chatMessage);
-      setChatMessage('');
-    } catch { toast.error('Failed to send message'); }
+      const savedMessage = await sendStreamMessage(event.id, text);
+      setMessages((prev) => appendStreamMessage(prev, savedMessage));
+    } catch {
+      setChatMessage(text);
+      toast.error('Failed to send message');
+    }
   };
 
   const handleCopy = (text: string, label: string) => {
@@ -609,16 +612,16 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     if (!showSettings) return null;
     return (
       <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-lg flex items-end md:items-center justify-center" onClick={() => setShowSettings(false)}>
-        <div className="w-full max-w-lg bg-gray-900/95 border border-white/10 rounded-t-3xl md:rounded-3xl p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-2">
+        <div className="w-full max-w-lg bg-gray-900/95 border border-white/10 rounded-t-3xl md:rounded-3xl p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex min-w-0 flex-1 rounded-2xl bg-white/5 p-1">
               {(['settings', 'monetization', 'analytics'] as const).map((tab) => (
-                <button key={tab} onClick={() => setActiveSettingsTab(tab)} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${activeSettingsTab === tab ? 'bg-primary text-white' : 'bg-white/5 text-white/60'}`}>
+                <button key={tab} onClick={() => setActiveSettingsTab(tab)} className={`flex-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors ${activeSettingsTab === tab ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-white/60 hover:text-white'}`}>
                   {tab === 'settings' ? 'Settings' : tab === 'monetization' ? 'Monetize' : 'Analytics'}
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowSettings(false)} className="p-2 rounded-xl bg-white/10 text-white/70"><X className="w-4 h-4" /></button>
+            <button onClick={() => setShowSettings(false)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70"><X className="w-4 h-4" /></button>
           </div>
 
           {activeSettingsTab === 'settings' && (
@@ -776,6 +779,11 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               <span className="text-white text-xs font-bold">{viewerCount.toLocaleString()}</span>
             </div>
             <div className="w-px h-4 bg-white/20" />
+            <div className="flex items-center gap-1.5">
+              <Heart className="w-3.5 h-3.5 text-pink-400" />
+              <span className="text-white text-xs font-bold">{likes.toLocaleString()}</span>
+            </div>
+            <div className="w-px h-4 bg-white/20" />
             <div className={`flex items-center gap-1 text-[10px] font-bold ${streamHealth === 'good' ? 'text-green-400' : streamHealth === 'poor' ? 'text-yellow-400' : 'text-red-400'}`}>
               <Activity className="w-3.5 h-3.5" />
               <span>{streamHealth === 'good' ? 'GOOD' : streamHealth === 'poor' ? 'POOR' : 'BAD'}</span>
@@ -798,7 +806,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               title={isChatVisible ? 'Hide chat' : 'Show chat'}
               className={`${liveRailButtonClass} ${isChatVisible ? 'bg-black/40 text-white' : 'bg-white text-black'}`}
             >
-              {isChatVisible ? <MessageCircle className="w-5 h-5" /> : <MessageCircleOff className="w-5 h-5" />}
+              {isChatVisible ? <MessageCircleOff className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
             </button>
             <button onClick={() => setShowSettings(true)} className={`${liveRailButtonClass} bg-black/40 text-white`}>
               <Settings className="w-5 h-5" />
@@ -811,7 +819,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
         {/* Mobile: Floating chat overlay */}
         {isMobile && isChatVisible && (
-          <div className="absolute bottom-28 left-4 w-64 z-20 pointer-events-auto">
+          <div className="absolute bottom-24 left-3 w-[min(78vw,18rem)] z-20 pointer-events-auto">
             <FloatingChat messages={chatMessages} maxVisible={3} onReportMessage={handleReportStreamMessage} />
           </div>
         )}
@@ -819,20 +827,20 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         {isMobile && isChatVisible && (
           <form
             onSubmit={handleSendMessage}
-            className="absolute bottom-[calc(1rem+var(--eventz-safe-area-bottom))] left-4 right-4 z-30 pointer-events-auto"
+            className="absolute bottom-[calc(0.75rem+var(--eventz-safe-area-bottom))] left-3 right-3 z-30 pointer-events-auto"
           >
-            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/55 px-3 py-2.5 text-white shadow-2xl backdrop-blur-xl">
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/55 px-3 py-2 text-white shadow-2xl backdrop-blur-xl">
               <input
                 value={chatMessage}
                 onChange={(event) => setChatMessage(event.target.value)}
-                placeholder="Message viewers..."
+                placeholder="Chat..."
                 maxLength={200}
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-white/45"
               />
               <button
                 type="submit"
                 disabled={!chatMessage.trim()}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-950 transition-all active:scale-95 disabled:bg-white/10 disabled:text-white/30"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white transition-all active:scale-95 disabled:bg-white/10 disabled:text-white/30"
                 aria-label="Send stream message"
               >
                 <Send className="h-4 w-4" />

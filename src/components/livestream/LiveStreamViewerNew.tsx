@@ -17,12 +17,13 @@ import {
   unfollowUser,
   isFollowing,
   reportContent,
+  type StreamMessage,
   supabase,
 } from '../../utils/supabase/api';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { useIsMobile } from '../ui/use-mobile';
 import { ViewerHeader } from './ViewerHeader';
-import { FloatingChat, useMessageBuffer } from './FloatingChat';
+import { FloatingChat } from './FloatingChat';
 import { SidebarChat } from './SidebarChat';
 import { ViewerActionBar } from './ViewerActionBar';
 import { GiftPicker } from './GiftPicker';
@@ -85,6 +86,30 @@ function getCloudflareIframeUrl(url?: string) {
   return withAutoplayParams(url);
 }
 
+type ViewerChatMessage = {
+  id?: number;
+  userId?: string;
+  user: string;
+  text: string;
+  avatar?: string;
+  isGift?: boolean;
+};
+
+const mapStreamMessageToViewerChat = (msg: StreamMessage): ViewerChatMessage => ({
+  id: msg.id,
+  userId: msg.user_id,
+  user: msg.user?.full_name || (msg.user as any)?.username || 'User',
+  text: msg.message,
+  avatar: msg.user?.avatar_url,
+  isGift: msg.message?.startsWith('[Gift]'),
+});
+
+const appendViewerChatMessage = (prev: ViewerChatMessage[], message: ViewerChatMessage) => {
+  if (message.id && prev.some((item) => item.id === message.id)) return prev;
+  const next = [...prev, message];
+  return next.length > 200 ? next.slice(next.length - 200) : next;
+};
+
 export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) {
   const isMobile = useIsMobile();
 
@@ -92,7 +117,7 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   // User can tap the unmute control to enable audio.
   const [isMuted, setIsMuted] = useState(true);
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<{ id?: number; userId?: string; user: string; text: string; avatar?: string; isGift?: boolean }[]>([]);
+  const [messages, setMessages] = useState<ViewerChatMessage[]>([]);
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isFollowingHost, setIsFollowingHost] = useState(false);
@@ -113,7 +138,6 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   const pendingLikeRef = useRef(false); // Track pending like operation
   const likesRef = useRef(0); // Keep likes in sync via ref
   const isMutedRef = useRef(isMuted);
-  const { addMessage } = useMessageBuffer();
 
   // Playback mode: HLS (Cloudflare/OBS) when playback_url present, else Agora WebRTC
   const isHlsMode = Boolean(stream.playback_url);
@@ -231,8 +255,8 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
   // Real-time likes — ignore events during pending like operation
   useEffect(() => {
-    const channel = subscribeToEventLikes(stream.id, ({ delta }) => {
-      if (pendingLikeRef.current) return; // Skip during our own pending operation
+    const channel = subscribeToEventLikes(stream.id, ({ delta, userId }) => {
+      if (pendingLikeRef.current && userId === currentUserIdRef.current) return;
       setLikes((p) => Math.max(0, p + delta));
       if (delta > 0) {
         setHearts((p) => [...p, generateHeart()]);
@@ -247,31 +271,15 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
       try {
         const msgs = await getStreamMessages(stream.id);
         if (msgs) {
-          setMessages(
-            msgs.slice(-200).map((m: any) => ({
-              id: m.id,
-              userId: m.user_id,
-              user: m.user?.full_name || m.user?.username || 'User',
-              text: m.message,
-              avatar: m.user?.avatar_url,
-              isGift: m.message?.startsWith('[Gift]'),
-            }))
-          );
+          setMessages(msgs.slice(-200).map(mapStreamMessageToViewerChat));
         }
       } catch {}
     };
     loadChat();
 
     const sub = subscribeToStreamMessages(stream.id, (msg) => {
-      const newMsg = {
-        id: msg.id,
-        userId: msg.user_id,
-        user: msg.user?.full_name || (msg.user as any)?.username || 'User',
-        text: msg.message,
-        avatar: msg.user?.avatar_url,
-        isGift: msg.message?.startsWith('[Gift]'),
-      };
-      setMessages((prev) => addMessage(prev, newMsg));
+      const newMsg = mapStreamMessageToViewerChat(msg);
+      setMessages((prev) => appendViewerChatMessage(prev, newMsg));
 
       if (msg.message?.startsWith('[Gift]')) {
         const giftMatch = GIFT_OPTIONS.find((g) => msg.message.includes(g.amount.toString()));
@@ -609,22 +617,31 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
   // Handlers
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!message.trim()) return;
+    const text = message.trim();
+    if (!text) return;
+    setMessage('');
     try {
-      await sendStreamMessage(stream.id, message);
-      setMessage('');
-    } catch { toast.error('Failed to send message'); }
+      const savedMessage = await sendStreamMessage(stream.id, text);
+      setMessages((prev) => appendViewerChatMessage(prev, mapStreamMessageToViewerChat(savedMessage)));
+    } catch {
+      setMessage(text);
+      toast.error('Failed to send message');
+    }
   };
 
   const handleLike = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('Please login to like');
+      return;
+    }
     setHearts((p) => [...p, generateHeart(), generateHeart()]);
     pendingLikeRef.current = true; // Block subscription updates
     const newIsLiked = !isLiked;
     setIsLiked(newIsLiked);
     setLikes((p) => newIsLiked ? p + 1 : Math.max(0, p - 1));
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) await toggleLikeEvent(stream.id, user.id);
+      await toggleLikeEvent(stream.id, user.id);
     } catch {
       setIsLiked(!newIsLiked);
       setLikes((p) => !newIsLiked ? p + 1 : Math.max(0, p - 1));
@@ -837,9 +854,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
 
       {/* Floating chat overlay above the action bar (mobile) */}
       {isChatVisible && (
-        <div className="absolute left-3 right-3 bottom-20 pointer-events-none">
+        <div className="absolute left-3 bottom-20 w-[min(82vw,20rem)] pointer-events-none">
           <div className="pointer-events-auto">
-            <FloatingChat messages={messages} maxVisible={5} onReportMessage={handleReportStreamMessage} />
+            <FloatingChat messages={messages} maxVisible={4} onReportMessage={handleReportStreamMessage} />
           </div>
         </div>
       )}

@@ -118,14 +118,15 @@ export function SidebarChat({
             type="text"
             value={message}
             onChange={(e) => onMessageChange(e.target.value)}
-            placeholder="Send a message..."
+            placeholder="Chat..."
             className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/30"
             maxLength={200}
           />
           <button
             type="submit"
             disabled={!message.trim()}
-            className="text-primary hover:text-primary/80 disabled:text-white/20 transition-colors"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary/85 disabled:bg-white/10 disabled:text-white/30"
+            aria-label="Send stream message"
           >
             <Send className="w-4 h-4" />
           </button>

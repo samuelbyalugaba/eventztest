@@ -52,9 +52,9 @@ export function ProfileSidebar({
                   <UserAvatar name={displayName} className="w-full h-full text-base" />
                 )}
               </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-base leading-tight">{displayName}</h3>
-                <p className="text-gray-500 text-sm">@{username || 'user'}</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate font-bold text-gray-900 text-base leading-tight">{displayName}</h3>
+                <p className="truncate text-gray-500 text-sm">@{username || 'user'}</p>
               </div>
             </div>
           </div>

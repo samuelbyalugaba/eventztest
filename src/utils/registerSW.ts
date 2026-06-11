@@ -19,9 +19,14 @@ const unregisterServiceWorkers = async () => {
 
 export const registerServiceWorker = async () => {
   if ('serviceWorker' in navigator) {
+    const isLocalDevelopment =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '::1';
+
     // Capacitor ships bundled assets, so a PWA service worker can keep Android/iOS
     // WebViews pinned to stale JS chunks after an app update.
-    if (isNativeCapacitor()) {
+    if (isNativeCapacitor() || isLocalDevelopment) {
       try {
         await unregisterServiceWorkers();
         await clearEventzCaches();
@@ -31,7 +36,9 @@ export const registerServiceWorker = async () => {
     }
     try {
       let refreshing = false;
+      let userRequestedRefresh = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!userRequestedRefresh) return;
         if (refreshing) return;
         refreshing = true;
         window.location.reload();
@@ -56,11 +63,14 @@ export const registerServiceWorker = async () => {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // New service worker available, show update prompt
-              toast.success('New version available! Refresh to update.', {
+              toast.success('New version available.', {
                 duration: 10000,
                 action: {
                   label: 'Refresh',
-                  onClick: () => window.location.reload(),
+                  onClick: () => {
+                    userRequestedRefresh = true;
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  },
                 },
               });
             }

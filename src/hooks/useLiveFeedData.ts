@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getLiveStreams, getUpcomingStreams, subscribeToEventStreaming } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 
@@ -66,6 +66,7 @@ const mapUpcoming = (e: any): LiveStream => {
 
 export function useLiveFeedData() {
   const hasFreshCache = !!(liveFeedCache && Date.now() - liveFeedCache.ts < CACHE_TTL_MS);
+  const initialHasFreshCache = useRef(hasFreshCache);
   const [liveStreams, setLiveStreams] = useState<LiveStream[]>(
     hasFreshCache ? liveFeedCache!.liveStreams : [],
   );
@@ -74,9 +75,14 @@ export function useLiveFeedData() {
   );
   const [isLoading, setIsLoading] = useState(!hasFreshCache);
   const inFlight = useRef(false);
+  const pendingFetch = useRef(false);
 
-  const fetchStreams = async ({ showLoading }: { showLoading?: boolean } = {}) => {
-    if (inFlight.current) return;
+  const fetchStreams = useCallback(async ({ showLoading, clearCache }: { showLoading?: boolean; clearCache?: boolean } = {}) => {
+    if (clearCache) liveFeedCache = null;
+    if (inFlight.current) {
+      pendingFetch.current = true;
+      return;
+    }
     inFlight.current = true;
     if (showLoading) setIsLoading(true);
     try {
@@ -95,11 +101,15 @@ export function useLiveFeedData() {
     } finally {
       inFlight.current = false;
       setIsLoading(false);
+      if (pendingFetch.current) {
+        pendingFetch.current = false;
+        void fetchStreams();
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchStreams({ showLoading: !hasFreshCache });
+    fetchStreams({ showLoading: !initialHasFreshCache.current });
     const channel = supabase
       .channel('live-feed-updates')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
@@ -118,7 +128,15 @@ export function useLiveFeedData() {
       supabase.removeChannel(channel);
       clearInterval(cfInterval);
     };
-  }, []);
+  }, [fetchStreams]);
+
+  useEffect(() => {
+    const handleLiveStreamsUpdated = () => {
+      void fetchStreams({ clearCache: true });
+    };
+    window.addEventListener('liveStreamsUpdated', handleLiveStreamsUpdated);
+    return () => window.removeEventListener('liveStreamsUpdated', handleLiveStreamsUpdated);
+  }, [fetchStreams]);
 
   const liveIdsKey = liveStreams.map((s) => s.id).join(',');
   useEffect(() => {

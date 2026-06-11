@@ -41,11 +41,11 @@ export function FloatingChat({ messages, maxVisible = 6, onReportMessage }: Floa
   }, [messages.length]);
 
   return (
-    <div className="space-y-1.5 max-h-[30vh] overflow-y-auto scrollbar-hide">
+    <div className="space-y-1 max-h-[26vh] overflow-y-auto scrollbar-hide">
       {visibleMessages.map((m, i) => (
         <div
-          key={messages.length - maxVisible + i}
-          className={`flex items-start gap-2 backdrop-blur-xl rounded-2xl px-2.5 py-2 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+          key={m.id ?? `${messages.length - maxVisible + i}-${m.user}-${m.text}`}
+          className={`flex items-start gap-1.5 backdrop-blur-xl rounded-xl px-2 py-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
             m.isGift
               ? 'bg-yellow-500/15 border border-yellow-500/25'
               : 'bg-black/40 border border-white/5'
@@ -56,16 +56,16 @@ export function FloatingChat({ messages, maxVisible = 6, onReportMessage }: Floa
             <img
               src={m.avatar}
               alt=""
-              className="w-6 h-6 rounded-full object-cover ring-1 ring-white/20 flex-shrink-0"
+              className="w-5 h-5 rounded-full object-cover ring-1 ring-white/20 flex-shrink-0"
             />
           ) : (
-            <div className="w-6 h-6 rounded-full bg-primary/40 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+            <div className="w-5 h-5 rounded-full bg-primary/40 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
               {(m.user || 'U').charAt(0).toUpperCase()}
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <span className="text-[11px] font-semibold text-white/60 mr-1.5">{m.user}</span>
-            <span className="text-[12px] text-white leading-snug break-words">{m.text}</span>
+            <span className="text-[10px] font-semibold text-white/60 mr-1">{m.user}</span>
+            <span className="text-[11px] text-white leading-snug break-words">{m.text}</span>
           </div>
           {onReportMessage && m.id && (
             <button
