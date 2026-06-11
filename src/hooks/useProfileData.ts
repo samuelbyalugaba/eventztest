@@ -9,6 +9,34 @@ import { queryKeys } from '../queryKeys';
 
 type SavedEvent = AppEvent & { isSaved: boolean; hasReminder: boolean };
 
+const PROFILE_SUMMARY_CACHE_PREFIX = 'eventz-profile-summary-v1:';
+const PROFILE_SUMMARY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const readProfileSummaryCache = (profileId: string) => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(`${PROFILE_SUMMARY_CACHE_PREFIX}${profileId}`);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    if (!cached?.timestamp || Date.now() - cached.timestamp > PROFILE_SUMMARY_CACHE_TTL_MS) return null;
+    return cached.data || null;
+  } catch {
+    return null;
+  }
+};
+
+const writeProfileSummaryCache = (profileId: string, data: any) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      `${PROFILE_SUMMARY_CACHE_PREFIX}${profileId}`,
+      JSON.stringify({ data, timestamp: Date.now() }),
+    );
+  } catch {
+    // Keeping navigation fast should never make profile loading fail.
+  }
+};
+
 const removePostFromProfileCaches = (postId: number) => {
   queryClient.setQueriesData(
     { queryKey: queryKeys.profile.root },
@@ -31,6 +59,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const cachedOrgStats = useProfileStore((s) => s.organizerStats);
   const cachedFollowStats = useProfileStore((s) => s.followStats);
   const isOwnProfileCheck = !userId;
+  const hasInstantProfile = isOwnProfileCheck && !!cachedProfile;
 
   const [currentUser, setCurrentUser] = useState<any>(authUser ?? null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(isOwnProfileCheck && cachedProfile ? cachedProfile : null);
@@ -42,7 +71,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
   const [userPosts, setUserPosts] = useState<ApiPost[]>([]);
   const [streamedVideos, setStreamedVideos] = useState<CloudflareStream[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!hasInstantProfile);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [isLoadingMorePosts, setIsLoadingMorePosts] = useState(false);
   const [postsOffset, setPostsOffset] = useState(0);
@@ -89,18 +118,23 @@ export function useProfileData(userId?: string, activeTab?: string) {
       const viewerId = user?.id || null;
       const summaryKey = queryKeys.profile.summary(viewerId, targetUserId);
       const cachedData = queryClient.getQueryData<any>(summaryKey);
+      const persistedData = readProfileSummaryCache(targetUserId);
+      const instantData = cachedData ?? persistedData;
+      const storeProfile = isOwnProfileCheck && targetUserId === user?.id ? cachedProfile : null;
+      const storeFollowStats = isOwnProfileCheck && targetUserId === user?.id ? cachedFollowStats : null;
+      const storeOrgStats = isOwnProfileCheck && targetUserId === user?.id ? cachedOrgStats : null;
 
       if (lastLoadedProfileIdRef.current !== targetUserId) {
-        setUserProfile(cachedData?.profile ?? null);
-        setFollowStats(cachedData?.followStats ?? { followers: 0, following: 0 });
-        setIsFollowing(typeof cachedData?.isFollowing === 'boolean' ? cachedData.isFollowing : false);
-        setOrganizerStats(cachedData?.organizerStats ?? null);
+        setUserProfile(instantData?.profile ?? storeProfile ?? null);
+        setFollowStats(instantData?.followStats ?? storeFollowStats ?? { followers: 0, following: 0 });
+        setIsFollowing(typeof instantData?.isFollowing === 'boolean' ? instantData.isFollowing : false);
+        setOrganizerStats(instantData?.organizerStats ?? storeOrgStats ?? null);
         setPublishedEvents([]);
         setSavedEvents([]);
         setSavedPosts([]);
         setTicketEvents([]);
         setAttendedEvents([]);
-        setUserPosts(Array.isArray(cachedData?.posts) ? cachedData.posts : []);
+        setUserPosts(Array.isArray(instantData?.posts) ? instantData.posts : []);
         setStreamedVideos([]);
         savedEventsLoadedRef.current = false;
         ticketsLoadedRef.current = false;
@@ -109,14 +143,15 @@ export function useProfileData(userId?: string, activeTab?: string) {
         lastLoadedProfileIdRef.current = targetUserId;
       }
 
-      if (cachedData) {
-        if (Array.isArray(cachedData.posts)) {
-          setPostsOffset(cachedData.posts.length);
-          setHasMorePosts(cachedData.posts.length === POSTS_PAGE_SIZE);
+      if (instantData) {
+        if (Array.isArray(instantData.posts)) {
+          setPostsOffset(instantData.posts.length);
+          setHasMorePosts(instantData.posts.length === POSTS_PAGE_SIZE);
           setIsLoadingPosts(false);
         }
         setIsLoading(false);
       }
+      if (!instantData && storeProfile) setIsLoading(false);
 
       const profile = await getProfile(targetUserId);
       if (seq !== loadSeqRef.current) return;
@@ -158,13 +193,15 @@ export function useProfileData(userId?: string, activeTab?: string) {
       setIsLoadingPosts(false);
 
       try {
-        queryClient.setQueryData(summaryKey, {
+        const summaryPayload = {
           profile,
           followStats: { followers, following },
           isFollowing: !!followingFlag,
           organizerStats: stats,
           posts: posts || []
-        });
+        };
+        queryClient.setQueryData(summaryKey, summaryPayload);
+        writeProfileSummaryCache(targetUserId, summaryPayload);
       } catch {}
     } catch {
       setIsLoading(false);

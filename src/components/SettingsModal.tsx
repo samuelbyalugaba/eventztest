@@ -245,12 +245,12 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
         localStorage.setItem('eventz-user-profile', JSON.stringify(profileData));
       }
       toast.success('Profile updated successfully');
-      setCurrentView('main');
       dispatchProfileUpdated({
         userId: user?.id,
         fields: ['username','full_name','phone','bio','birthdate','avatar_url', ...(isCreatorProfile ? ['location','organizer_type'] : [])],
         avatar_url: profileData.avatarUrl || null,
       });
+      handleOpenChange(false);
     } catch (error) {
       const message = (error as any)?.message || (error as any)?.error_description || (error as any)?.details || 'Failed to save profile';
       toast.error(message);

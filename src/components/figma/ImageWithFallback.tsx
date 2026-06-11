@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { Film, Image } from 'lucide-react'
 import { getOptimizedImageUrl } from '../../utils/supabaseImage'
 
@@ -53,11 +53,6 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
   const hasSrc = !!src && String(src).trim() !== '' && String(src) !== 'null'
   const showFallback = !hasSrc || didError
 
-  useEffect(() => {
-    setDidError(false)
-    setIsLoading(true)
-  }, [src])
-
   // Optimized URL: serve right-sized WebP from Supabase transforms
   const optimizedSrc = useMemo(() => {
     if (!hasSrc || skipOptimize) return src
@@ -74,6 +69,28 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
     if (!hasSrc || skipOptimize) return undefined
     return getOptimizedImageUrl(src, { width: 20, quality: 20 })
   }, [src, hasSrc, skipOptimize])
+  const imageSrc = String(optimizedSrc || '')
+  const previousImageSrcRef = useRef<string | null>(null)
+  const imageRef = useRef<HTMLImageElement | null>(null)
+
+  useEffect(() => {
+    if (previousImageSrcRef.current === null) {
+      previousImageSrcRef.current = imageSrc || null
+      return
+    }
+    if (previousImageSrcRef.current === imageSrc) return
+    previousImageSrcRef.current = imageSrc || null
+    setDidError(false)
+    setIsLoading(true)
+  }, [imageSrc])
+
+  useEffect(() => {
+    const image = imageRef.current
+    if (image?.complete && image.naturalWidth > 0) {
+      setDidError(false)
+      setIsLoading(false)
+    }
+  }, [imageSrc])
 
   return (
     <>
@@ -112,7 +129,9 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
             />
           )}
           <img
-            src={optimizedSrc}
+            ref={imageRef}
+            key={imageSrc}
+            src={imageSrc}
             alt={alt}
             className={`w-full h-full ${imageClassName ?? 'object-cover'} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
             loading="lazy"

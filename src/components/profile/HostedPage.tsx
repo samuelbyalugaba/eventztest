@@ -122,14 +122,6 @@ export function HostedPage() {
   }, [hasInstantState, targetUserId]);
 
   const pastEvents = useMemo(() => events.filter(isPastEvent), [events]);
-  const eventIdsWithPlayableStreams = useMemo(() => {
-    return new Set(
-      streams
-        .filter(streamHasPlayback)
-        .map((stream) => stream.event_id)
-        .filter((id): id is number => typeof id === 'number')
-    );
-  }, [streams]);
 
   const filteredEvents = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -247,7 +239,6 @@ export function HostedPage() {
                   <HostedEventCard
                     key={event.id}
                     event={event}
-                    hasPlayback={eventIdsWithPlayableStreams.has(event.id) || Boolean(event.streaming?.replayAvailable && event.streaming?.playback_url)}
                     onOpen={() => openEvent(event)}
                   />
                 ))}
@@ -282,11 +273,9 @@ export function HostedPage() {
 
 function HostedEventCard({
   event,
-  hasPlayback,
   onOpen,
 }: {
   event: AppEvent;
-  hasPlayback: boolean;
   onOpen: () => void;
 }) {
   return (
@@ -306,16 +295,6 @@ function HostedEventCard({
           className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-black/15" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30">
-            <PlaySquare className="h-6 w-6 text-white" />
-          </div>
-        </div>
-        <div className={`absolute right-3 top-3 rounded-full px-3 py-1.5 text-xs font-bold text-white ${
-          hasPlayback ? 'bg-purple-600/85' : 'bg-black/35'
-        }`}>
-          {hasPlayback ? 'Playback ready' : 'No playback'}
-        </div>
       </div>
       <div className="flex items-end justify-between gap-3 p-4">
         <div className="min-w-0">

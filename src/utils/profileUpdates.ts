@@ -10,6 +10,10 @@ export type ProfileUpdatedDetail = {
 export const clearProfileDependentCaches = () => {
   try {
     window.localStorage.removeItem('eventz-feed-cache-v1');
+    window.localStorage.removeItem('eventz-auth-profile-cache-v1');
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith('eventz-profile-summary-v1:'))
+      .forEach((key) => window.localStorage.removeItem(key));
     window.sessionStorage.removeItem('feedScrollPos');
     window.sessionStorage.removeItem('feedLastPostId');
   } catch {

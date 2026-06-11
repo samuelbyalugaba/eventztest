@@ -7,6 +7,8 @@ import { useMessaging } from './contexts/MessagingContext';
 import { Toaster } from 'sonner';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
+import { queryClient } from './queryClient';
+import { queryKeys } from './queryKeys';
 import {
   CreatePageSkeleton,
   DashboardPageSkeleton,
@@ -80,7 +82,14 @@ export default function App() {
         const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
         if (cachedRaw) {
           const cached = JSON.parse(cachedRaw);
-          if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS) return;
+          if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS) {
+            const cachedPosts = Array.isArray(cached.posts) ? cached.posts : [];
+            queryClient.setQueryData(queryKeys.feed.firstPage(currentUser?.id), {
+              posts: cachedPosts,
+              count: cachedPosts.length,
+            });
+            return;
+          }
         }
         const fresh = await getPosts({ currentUserId: currentUser?.id, limit: 20, offset: 0 });
         const mapped = (fresh || []).map((p: any) => {
@@ -135,6 +144,10 @@ export default function App() {
           };
         });
         localStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ posts: mapped, timestamp: Date.now() }));
+        queryClient.setQueryData(queryKeys.feed.firstPage(currentUser?.id), {
+          posts: mapped,
+          count: mapped.length,
+        });
       } catch {/* silent */}
     };
 
@@ -160,6 +173,42 @@ export default function App() {
       void import('./components/MessagesPage');
     }, 1000);
     return () => window.clearTimeout(handle);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const preloadRoutes = () => {
+      void import('./components/EventDetails');
+      void import('./components/LiveFeed');
+      void import('./components/Feed');
+      void import('./components/Profile');
+      void import('./components/profile/ProfileListPage');
+      void import('./components/CreateEventWrapper');
+      void import('./components/PostDetailWrapper');
+      void import('./components/ProfileModalWrapper');
+      void import('./components/EventDetailWrapper');
+      void import('./components/LiveStreamPage');
+      void import('./components/CreatePostPage');
+      void import('./components/MessagesPage');
+      void import('./components/DashboardPage');
+    };
+
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    let scheduled: { type: 'idle' | 'timeout'; handle: number };
+    if (typeof w.requestIdleCallback === 'function') {
+      scheduled = { type: 'idle', handle: w.requestIdleCallback(preloadRoutes, { timeout: 1500 }) };
+    } else {
+      scheduled = { type: 'timeout', handle: window.setTimeout(preloadRoutes, 750) as unknown as number };
+    }
+
+    return () => {
+      if (scheduled.type === 'timeout') window.clearTimeout(scheduled.handle);
+      else w.cancelIdleCallback?.(scheduled.handle);
+    };
   }, [isAuthenticated]);
 
   const handleLogout = async () => {

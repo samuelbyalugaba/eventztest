@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getOptimizedImageUrl } from '../utils/supabaseImage';
 import verifiedBadge from '../assets/verified-badge.png';
 interface UserAvatarProps {
@@ -33,11 +33,27 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
     if (!src || src.trim() === '' || src === 'null') return src;
     return getOptimizedImageUrl(src, { width: sizePx[size] || 40, quality: 80 });
   }, [src, size]);
+  const imageSrc = optimizedSrc || src || '';
+  const previousImageSrcRef = useRef<string | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
+    if (previousImageSrcRef.current === null) {
+      previousImageSrcRef.current = imageSrc || null;
+      return;
+    }
+    if (previousImageSrcRef.current === imageSrc) return;
+    previousImageSrcRef.current = imageSrc || null;
     setImageError(false);
     setImageLoaded(false);
-  }, [optimizedSrc]);
+  }, [imageSrc]);
+
+  useEffect(() => {
+    const image = imageRef.current;
+    if (image?.complete && image.naturalWidth > 0) {
+      setImageLoaded(true);
+    }
+  }, [imageSrc]);
 
   const initials = useMemo(() => {
     if (!safeName) return '';
@@ -92,7 +108,9 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
           />
         )}
         <img
-          src={optimizedSrc || src}
+          ref={imageRef}
+          key={imageSrc}
+          src={imageSrc}
           alt={safeName || 'User'}
           className={`relative z-10 ${shapeClass} object-cover object-top w-full h-full transition-opacity duration-150 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="eager"

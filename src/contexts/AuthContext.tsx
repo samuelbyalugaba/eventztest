@@ -24,8 +24,31 @@ const AuthContext =
   globalThis.__eventzAuthContext ??
   (globalThis.__eventzAuthContext = createContext<AuthContextType | undefined>(undefined));
 
+const AUTH_PROFILE_CACHE_KEY = 'eventz-auth-profile-cache-v1';
 const slugifyUsername = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
-const PROFILE_BOOTSTRAP_TIMEOUT_MS = 4000;
+const readCachedAuthProfile = (userId: string) => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_PROFILE_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    return cached?.profile?.id === userId ? cached.profile : null;
+  } catch {
+    return null;
+  }
+};
+const writeCachedAuthProfile = (profile: any | null) => {
+  if (typeof window === 'undefined') return;
+  try {
+    if (profile) {
+      window.localStorage.setItem(AUTH_PROFILE_CACHE_KEY, JSON.stringify({ profile, timestamp: Date.now() }));
+    } else {
+      window.localStorage.removeItem(AUTH_PROFILE_CACHE_KEY);
+    }
+  } catch {
+    // Cache writes are best-effort only.
+  }
+};
 const buildUsernameCandidates = (seed: string) => {
   const base = slugifyUsername(seed) || 'user';
   const suffix = Date.now().toString(36).slice(-4);
@@ -52,10 +75,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsOrganizer(isOrg);
       setHasOrganizerProfile(isOrg || !!data.organizer_type);
       useProfileStore.getState().setProfile(data);
+      writeCachedAuthProfile(data);
     } else {
       setIsOrganizer(false);
       setHasOrganizerProfile(false);
       useProfileStore.getState().clear();
+      writeCachedAuthProfile(null);
     }
   };
 
@@ -105,13 +130,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const waitForProfileBootstrap = async (sessionUser: SupabaseUser) => {
-    await Promise.race([
-      ensureProfile(sessionUser),
-      new Promise((resolve) => {
-        window.setTimeout(resolve, PROFILE_BOOTSTRAP_TIMEOUT_MS);
-      }),
-    ]);
+  const startProfileBootstrap = (sessionUser: SupabaseUser) => {
+    const cached = useProfileStore.getState().profile || readCachedAuthProfile(sessionUser.id);
+    if (cached?.id === sessionUser.id) {
+      syncProfileState(cached);
+    }
+    void ensureProfile(sessionUser);
   };
 
   const fetchProfile = async (userId: string) => {
@@ -137,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session.user);
           setIsAuthenticated(true);
           void syncExistingPushSubscription(session.user.id);
-          await waitForProfileBootstrap(session.user);
+          startProfileBootstrap(session.user);
         } else {
           setUser(null);
           setIsAuthenticated(false);
@@ -156,19 +180,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        setIsLoading(true);
         setUser(session.user);
         setIsAuthenticated(true);
         void syncExistingPushSubscription(session.user.id);
-        try {
-          await waitForProfileBootstrap(session.user);
-        } finally {
-          setIsLoading(false);
-        }
+        startProfileBootstrap(session.user);
+        setIsLoading(false);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAuthenticated(false);
         syncProfileState(null);
+        setIsLoading(false);
       } else if (event === 'TOKEN_REFRESHED' && session) {
         setUser(session.user);
         setIsAuthenticated(true);
