@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { Film, Image } from 'lucide-react'
 import { getOptimizedImageUrl } from '../../utils/supabaseImage'
 
@@ -52,6 +52,11 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
 
   const hasSrc = !!src && String(src).trim() !== '' && String(src) !== 'null'
   const showFallback = !hasSrc || didError
+
+  useEffect(() => {
+    setDidError(false)
+    setIsLoading(true)
+  }, [src])
 
   // Optimized URL: serve right-sized WebP from Supabase transforms
   const optimizedSrc = useMemo(() => {

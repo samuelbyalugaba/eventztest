@@ -15,7 +15,7 @@ const navItems = [
 export function DesktopSidebar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { hasLiveEvents } = useMessaging();
 
   const handleLogout = async () => {
@@ -70,9 +70,9 @@ export function DesktopSidebar() {
 
       {user && (() => {
         const meta: any = user.user_metadata || {};
-        const displayName: string = meta.full_name || meta.name || meta.username || (user.email ? user.email.split('@')[0] : 'User');
-        const username: string = meta.username || (user.email ? user.email.split('@')[0] : 'user');
-        const avatarUrl: string | undefined = meta.avatar_url || meta.picture;
+        const displayName: string = profile?.full_name || profile?.username || meta.full_name || meta.name || meta.username || (user.email ? user.email.split('@')[0] : 'User');
+        const username: string = profile?.username || meta.username || (user.email ? user.email.split('@')[0] : 'user');
+        const avatarUrl: string | undefined = profile?.avatar_url || meta.avatar_url || meta.picture;
         return (
         <div className="p-3 border-t border-gray-200/70">
           <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition-colors">

@@ -20,6 +20,7 @@ import { ConfirmDialog } from './ui/confirm-dialog';
 import { eventsStore } from '../store/eventStore';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
+import { rememberRecentEvent } from '../utils/recentEvents';
 
 type LocationOption = {
   id: string;
@@ -308,6 +309,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   };
 
   const handleEventClick = (event: ApiEvent) => {
+    rememberRecentEvent(event);
     const backgroundBase = getModalBackgroundLocation();
     navigate(`/event/${event.id}`, {
       state: {
@@ -319,6 +321,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   };
 
   const handleSearchEventSelect = (event: ApiEvent) => {
+    rememberRecentEvent(event);
     setShowSearchModal(false);
     navigate(`/event/${event.id}`, {
       state: {

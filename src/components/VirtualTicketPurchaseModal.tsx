@@ -5,9 +5,10 @@ import { supabase } from '../utils/supabase/client';
 import { createTicket, createTransaction } from '../utils/supabase/api';
 import { extractCurrencyFromPrice, formatPrice } from '../utils/currencies';
 import type { Event as ApiEvent } from '../utils/supabase/api';
-import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, WALLET_PAYMENT_METHODS, type WalletPaymentMethod } from '../utils/walletCheckout';
+import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, type WalletPaymentMethod } from '../utils/walletCheckout';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
 import { ANDROID_PAID_VIRTUAL_ACCESS_NOTICE, isPaidVirtualAccessAllowed } from '../utils/platform';
+import { PaymentMethodSelector } from './tickets/PaymentMethodSelector';
 
 interface VirtualTicketPurchaseModalProps {
   isOpen: boolean;
@@ -231,22 +232,10 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                 {!isFreeVirtual && (
                 <div className="space-y-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {WALLET_PAYMENT_METHODS.map((method) => (
-                            <button
-                                key={method}
-                                type="button"
-                                onClick={() => setSelectedPaymentMethod(method)}
-                                className={`min-h-12 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                                    selectedPaymentMethod === method
-                                    ? 'border-purple-600 bg-purple-50 text-purple-700'
-                                    : 'border-gray-200 text-gray-600 hover:border-purple-200'
-                                }`}
-                            >
-                                {method}
-                            </button>
-                        ))}
-                    </div>
+                    <PaymentMethodSelector
+                        value={selectedPaymentMethod}
+                        onChange={setSelectedPaymentMethod}
+                    />
                     {selectedPaymentMethod === 'Wallet' && (
                         <div className={`p-4 rounded-xl border ${walletBalance >= price ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
                             <div className="flex justify-between items-center mb-1">
@@ -288,7 +277,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                 <button
                     onClick={handleTicketSubmit}
                     disabled={isSubmitting}
-                    className={`w-full bg-gradient-to-r from-purple-600 to-cyan-500 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-purple-200 flex items-center justify-center gap-2 transition-all ${
+                    className={`flex w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 py-3.5 text-center font-bold leading-tight text-white shadow-lg shadow-purple-200 transition-all ${
                         isSubmitting ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.02] hover:shadow-xl'
                     }`}
                 >
@@ -296,15 +285,15 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                         <>
-                            <span>
+                            <span className="min-w-0">
                               {isFreeVirtual
                                 ? 'Get Free Access'
                                 : `Pay ${formatPrice(event.streaming?.virtualPrice)}`}
                             </span>
                             {isFreeVirtual ? (
-                              <ArrowRight className="w-4 h-4" />
+                              <ArrowRight className="w-4 h-4 shrink-0" />
                             ) : (
-                              <CreditCard className="w-4 h-4" />
+                              <CreditCard className="w-4 h-4 shrink-0" />
                             )}
                         </>
                     )}

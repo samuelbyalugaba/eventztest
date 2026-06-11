@@ -7,6 +7,7 @@ import { SimplifiedTicketModal } from './SimplifiedTicketModal';
 import { getEventById, hasActiveVirtualTicket, type Event as ApiEvent } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 import { toast } from 'sonner';
+import { LivePageSkeleton } from './skeletons/PageSkeletons';
 
 export function LiveStreamPage() {
   const { id } = useParams<{ id: string }>();
@@ -61,11 +62,7 @@ export function LiveStreamPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LivePageSkeleton />;
   }
 
   if (!event) return null;

@@ -1,4 +1,4 @@
-import { useEffect, useRef, lazy, Suspense } from 'react';
+import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { AuthScreen } from './components/AuthScreen';
 import { Calendar, Menu, Radio, Search, User } from 'lucide-react';
@@ -7,7 +7,17 @@ import { useMessaging } from './contexts/MessagingContext';
 import { Toaster } from 'sonner';
 import { getPosts } from './utils/supabase/api';
 import { formatTimeAgo } from './utils/format';
-import { GenericPageSkeleton, FeedPageSkeleton, RouteFallback } from './components/skeletons/PageSkeletons';
+import {
+  CreatePageSkeleton,
+  DashboardPageSkeleton,
+  DetailPageSkeleton,
+  EventsPageSkeleton,
+  FeedPageSkeleton,
+  ListPageSkeleton,
+  LivePageSkeleton,
+  MessagesPageSkeleton,
+  ProfilePageSkeleton,
+} from './components/skeletons/PageSkeletons';
 import { DesktopSidebar } from './components/desktop/DesktopSidebar';
 import { RightRail } from './components/desktop/RightRail';
 import { LegalPage } from './components/legal/LegalPage';
@@ -213,6 +223,23 @@ export default function App() {
   const isLiveTab = effectivePath === '/live';
   const isOwnProfileTab = effectivePath === '/profile';
   const isKeepAliveTab = isEventsTab || isFeedTab || isLiveTab || isOwnProfileTab;
+  type KeepAliveTab = 'events' | 'feed' | 'live' | 'profile';
+  const activeKeepAliveTab: KeepAliveTab | null = isEventsTab
+    ? 'events'
+    : isFeedTab
+      ? 'feed'
+      : isLiveTab
+        ? 'live'
+        : isOwnProfileTab
+          ? 'profile'
+          : null;
+  const [mountedTabs, setMountedTabs] = useState<Set<KeepAliveTab>>(() => (
+    activeKeepAliveTab ? new Set([activeKeepAliveTab]) : new Set()
+  ));
+  const shouldMountEventsTab = activeKeepAliveTab === 'events' || mountedTabs.has('events');
+  const shouldMountFeedTab = activeKeepAliveTab === 'feed' || mountedTabs.has('feed');
+  const shouldMountLiveTab = activeKeepAliveTab === 'live' || mountedTabs.has('live');
+  const shouldMountProfileTab = activeKeepAliveTab === 'profile' || mountedTabs.has('profile');
 
   // Refs to manage scroll position of each tab
   const eventsScrollRef = useRef<HTMLDivElement>(null);
@@ -222,6 +249,17 @@ export default function App() {
 
   // Scroll to top on actual tab/page switches, but keep the list position when
   // opening modal routes over the current tab.
+  useEffect(() => {
+    if (activeKeepAliveTab) {
+      setMountedTabs((current) => {
+        if (current.has(activeKeepAliveTab)) return current;
+        const next = new Set(current);
+        next.add(activeKeepAliveTab);
+        return next;
+      });
+    }
+  }, [activeKeepAliveTab]);
+
   useEffect(() => {
     const isTabSwitch = prevTabPathRef.current !== effectivePath;
     if (isTabSwitch) {
@@ -316,51 +354,62 @@ export default function App() {
           ref={eventsScrollRef}
           style={{ display: isEventsTab ? 'block' : 'none' }}
           className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
+          data-eventz-view="events"
         >
-          <Suspense fallback={<GenericPageSkeleton />}>
-            <EventDetails
-              conversations={conversations}
-              onStartConversation={handleStartConversation}
-              onSendMessage={handleSendMessage}
-            />
-          </Suspense>
+          {shouldMountEventsTab && (
+            <Suspense fallback={<EventsPageSkeleton />}>
+              <EventDetails
+                conversations={conversations}
+                onStartConversation={handleStartConversation}
+                onSendMessage={handleSendMessage}
+              />
+            </Suspense>
+          )}
         </div>
-        <div style={{ display: isFeedTab ? 'block' : 'none' }} className="h-[100dvh] overflow-hidden">
-          <Suspense fallback={<FeedPageSkeleton />}>
-            <Feed
-              conversations={conversations}
-              onStartConversation={handleStartConversation}
-              currentUser={currentUser}
-              onViewPost={handleViewPost}
-              isPaused={!isFeedTab || !!backgroundLocation}
-            />
-          </Suspense>
+        <div style={{ display: isFeedTab ? 'block' : 'none' }} className="h-[100dvh] overflow-hidden" data-eventz-view="feed">
+          {shouldMountFeedTab && (
+            <Suspense fallback={<FeedPageSkeleton />}>
+              <Feed
+                conversations={conversations}
+                onStartConversation={handleStartConversation}
+                currentUser={currentUser}
+                onViewPost={handleViewPost}
+                isPaused={!isFeedTab || !!backgroundLocation}
+              />
+            </Suspense>
+          )}
         </div>
         <div 
           ref={liveScrollRef}
           style={{ display: isLiveTab ? 'block' : 'none' }}
           className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
+          data-eventz-view="live"
         >
-          <Suspense fallback={<GenericPageSkeleton />}>
-            <LiveFeed />
-          </Suspense>
+          {shouldMountLiveTab && (
+            <Suspense fallback={<LivePageSkeleton />}>
+              <LiveFeed />
+            </Suspense>
+          )}
         </div>
         <div 
           ref={profileScrollRef}
           style={{ display: isOwnProfileTab ? 'block' : 'none' }}
           className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
+          data-eventz-view="profile"
         >
-          <Suspense fallback={<GenericPageSkeleton />}>
-            <Profile
-              onLogout={handleLogout}
-              onCreateEvent={handleCreateEvent}
-              onEditEvent={handleEditEvent}
-              onStartOrganizerSetup={handleStartOrganizerSetup}
-              onStartConversation={handleStartConversation}
-              onViewPost={handleViewPost}
-              isPaused={!isOwnProfileTab || !!backgroundLocation}
-            />
-          </Suspense>
+          {shouldMountProfileTab && (
+            <Suspense fallback={<ProfilePageSkeleton />}>
+              <Profile
+                onLogout={handleLogout}
+                onCreateEvent={handleCreateEvent}
+                onEditEvent={handleEditEvent}
+                onStartOrganizerSetup={handleStartOrganizerSetup}
+                onStartConversation={handleStartConversation}
+                onViewPost={handleViewPost}
+                isPaused={!isOwnProfileTab || !!backgroundLocation}
+              />
+            </Suspense>
+          )}
         </div>
 
         <div 
@@ -375,16 +424,16 @@ export default function App() {
             <Route path="/live" element={null} />
             <Route path="/profile" element={null} />
             <Route path="/hosted" element={
-              <Suspense fallback={<RouteFallback />}><HostedPage /></Suspense>
+              <Suspense fallback={<ListPageSkeleton />}><HostedPage /></Suspense>
             } />
             <Route path="/followers" element={
-              <Suspense fallback={<RouteFallback />}><ProfileListPage type="followers" /></Suspense>
+              <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="followers" /></Suspense>
             } />
             <Route path="/following" element={
-              <Suspense fallback={<RouteFallback />}><ProfileListPage type="following" /></Suspense>
+              <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="following" /></Suspense>
             } />
             <Route path="/profile/:userId" element={
-              <Suspense fallback={<GenericPageSkeleton />}>
+              <Suspense fallback={<ProfilePageSkeleton />}>
                 <Profile
                   onLogout={handleLogout}
                   onCreateEvent={handleCreateEvent}
@@ -397,40 +446,40 @@ export default function App() {
               </Suspense>
             } />
             <Route path="/profile/:userId/hosted" element={
-              <Suspense fallback={<RouteFallback />}><HostedPage /></Suspense>
+              <Suspense fallback={<ListPageSkeleton />}><HostedPage /></Suspense>
             } />
             <Route path="/profile/:userId/followers" element={
-              <Suspense fallback={<RouteFallback />}><ProfileListPage type="followers" /></Suspense>
+              <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="followers" /></Suspense>
             } />
             <Route path="/profile/:userId/following" element={
-              <Suspense fallback={<RouteFallback />}><ProfileListPage type="following" /></Suspense>
+              <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="following" /></Suspense>
             } />
             <Route path="/create" element={
-              <Suspense fallback={<RouteFallback />}><CreateEventWrapper /></Suspense>
+              <Suspense fallback={<CreatePageSkeleton />}><CreateEventWrapper /></Suspense>
             } />
             <Route path="/edit-event/:id" element={
-              <Suspense fallback={<RouteFallback />}><CreateEventWrapper /></Suspense>
+              <Suspense fallback={<CreatePageSkeleton />}><CreateEventWrapper /></Suspense>
             } />
             <Route path="/post/:id" element={
-              <Suspense fallback={<RouteFallback />}><PostDetailWrapper /></Suspense>
+              <Suspense fallback={<DetailPageSkeleton />}><PostDetailWrapper /></Suspense>
             } />
             <Route path="/event/:id" element={
-              <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+              <Suspense fallback={<DetailPageSkeleton />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
             } />
             <Route path="/live/:id" element={
-              <Suspense fallback={<RouteFallback />}><LiveStreamPage /></Suspense>
+              <Suspense fallback={<LivePageSkeleton />}><LiveStreamPage /></Suspense>
             } />
             <Route path="/messages" element={
-              <Suspense fallback={<RouteFallback />}><MessagesPage /></Suspense>
+              <Suspense fallback={<MessagesPageSkeleton />}><MessagesPage /></Suspense>
             } />
             <Route path="/messages/:conversationId" element={
-              <Suspense fallback={<RouteFallback />}><MessagesPage /></Suspense>
+              <Suspense fallback={<MessagesPageSkeleton />}><MessagesPage /></Suspense>
             } />
             <Route path="/dashboard" element={
-              <Suspense fallback={<RouteFallback />}><DashboardPage /></Suspense>
+              <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
             } />
             <Route path="/compose/post" element={
-              <Suspense fallback={<RouteFallback />}><CreatePostPage /></Suspense>
+              <Suspense fallback={<CreatePageSkeleton />}><CreatePostPage /></Suspense>
             } />
             <Route path="/privacy" element={<LegalPage type="privacy" />} />
             <Route path="/terms" element={<LegalPage type="terms" />} />
@@ -443,13 +492,13 @@ export default function App() {
       {backgroundLocation && (
         <Routes>
           <Route path="/post/:id" element={
-            <Suspense fallback={<RouteFallback />}><PostDetailWrapper /></Suspense>
+            <Suspense fallback={<DetailPageSkeleton />}><PostDetailWrapper /></Suspense>
           } />
           <Route path="/event/:id" element={
-            <Suspense fallback={<RouteFallback />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+            <Suspense fallback={<DetailPageSkeleton />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
           } />
           <Route path="/profile" element={
-            <Suspense fallback={<RouteFallback />}>
+            <Suspense fallback={<ProfilePageSkeleton />}>
               <ProfileModalWrapper
                 onLogout={handleLogout}
                 onCreateEvent={handleCreateEvent}
@@ -461,7 +510,7 @@ export default function App() {
             </Suspense>
           } />
           <Route path="/profile/:userId" element={
-            <Suspense fallback={<RouteFallback />}>
+            <Suspense fallback={<ProfilePageSkeleton />}>
               <ProfileModalWrapper
                 onLogout={handleLogout}
                 onCreateEvent={handleCreateEvent}

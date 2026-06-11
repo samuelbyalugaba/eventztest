@@ -6,6 +6,7 @@ import { AuthScreen } from './AuthScreen';
 import { getEventById } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
+import { CreatePageSkeleton } from './skeletons/PageSkeletons';
 
 export function CreateEventWrapper() {
   const { id } = useParams<{ id: string }>();
@@ -63,11 +64,7 @@ export function CreateEventWrapper() {
   }
 
   if (isLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <CreatePageSkeleton />;
   }
 
   if (!isOrganizer || !hasOrganizerProfile) {

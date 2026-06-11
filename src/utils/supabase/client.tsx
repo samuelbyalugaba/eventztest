@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const normalizeEnv = (value: unknown) => (typeof value === 'string' ? value.trim() : undefined);
 const looksLikeJwt = (value: string) => value.split('.').length === 3;
@@ -27,7 +27,9 @@ export const isSupabaseConfigured = () => {
   );
 };
 
-export const supabase = createClient(
+type EventzSupabaseClient = SupabaseClient<any, 'public', 'public'>;
+
+const createSupabaseClientInstance = (): EventzSupabaseClient => createClient<any, 'public', 'public'>(
   resolvedSupabaseUrl,
   resolvedSupabaseKey,
   {
@@ -40,11 +42,12 @@ export const supabase = createClient(
   }
 );
 
-export const nativeOAuthSupabase = createClient(
+const createNativeOAuthSupabaseClientInstance = (): EventzSupabaseClient => createClient<any, 'public', 'public'>(
   resolvedSupabaseUrl,
   resolvedSupabaseKey,
   {
     auth: {
+      storageKey: 'eventz-native-oauth',
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
@@ -52,3 +55,19 @@ export const nativeOAuthSupabase = createClient(
     },
   }
 );
+
+type SupabaseClientInstance = EventzSupabaseClient;
+type NativeOAuthSupabaseClientInstance = EventzSupabaseClient;
+
+declare global {
+  var __eventzSupabaseClient: SupabaseClientInstance | undefined;
+  var __eventzNativeOAuthSupabaseClient: NativeOAuthSupabaseClientInstance | undefined;
+}
+
+export const supabase =
+  globalThis.__eventzSupabaseClient ??
+  (globalThis.__eventzSupabaseClient = createSupabaseClientInstance());
+
+export const nativeOAuthSupabase =
+  globalThis.__eventzNativeOAuthSupabaseClient ??
+  (globalThis.__eventzNativeOAuthSupabaseClient = createNativeOAuthSupabaseClientInstance());

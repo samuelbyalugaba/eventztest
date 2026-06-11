@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getOptimizedImageUrl } from '../utils/supabaseImage';
 import verifiedBadge from '../assets/verified-badge.png';
 interface UserAvatarProps {
@@ -33,6 +33,11 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
     if (!src || src.trim() === '' || src === 'null') return src;
     return getOptimizedImageUrl(src, { width: sizePx[size] || 40, quality: 80 });
   }, [src, size]);
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [optimizedSrc]);
 
   const initials = useMemo(() => {
     if (!safeName) return '';

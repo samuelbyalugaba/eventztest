@@ -377,23 +377,23 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
         type="button"
         onClick={handleAppleSignIn}
         disabled={isOAuthSubmitting || isSubmitting || !isConfigured}
-        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-2 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-2 text-center text-sm font-semibold leading-tight text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isAppleSubmitting ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <img src={appleIcon} alt="" aria-hidden="true" className="h-[18px] w-[18px] shrink-0 object-contain brightness-0" />
         )}
-        <span>Apple</span>
+        <span className="min-w-0 truncate">Apple</span>
       </button>
       <button
         type="button"
         onClick={handleGoogleSignIn}
         disabled={isOAuthSubmitting || isSubmitting || !isConfigured}
-        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-2 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-2 text-center text-sm font-semibold leading-tight text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isGoogleSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : renderGoogleIcon()}
-        <span>Google</span>
+        <span className="min-w-0 truncate">Google</span>
       </button>
     </div>
   );
@@ -483,7 +483,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                       type="button"
                       onClick={handleResetPassword}
                       disabled={isEmailActionSubmitting || isSubmitting || !isConfigured}
-                      className="text-xs font-semibold text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50"
+                      className="inline-flex min-h-0 items-center justify-center py-1 text-right text-xs font-semibold leading-tight text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50"
                     >
                       Forgot password?
                     </button>
@@ -515,7 +515,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 <button
                   type="submit"
                   disabled={isSubmitting || !isConfigured}
-                  className="w-full h-11 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-gray-900 px-4 text-center text-sm font-semibold leading-tight text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <span className="inline-flex items-center justify-center">
@@ -532,7 +532,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 type="button"
                 onClick={handleResendVerification}
                 disabled={isEmailActionSubmitting || isSubmitting || !isConfigured}
-                className="mt-3 w-full text-center text-xs font-semibold text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50"
+                className="mt-3 inline-flex min-h-0 w-full items-center justify-center py-1 text-center text-xs font-semibold leading-tight text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50"
               >
                 Resend verification email
               </button>
@@ -610,7 +610,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 <button
                   type="submit"
                   disabled={isSubmitting || !isConfigured}
-                  className="w-full h-11 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-gray-900 px-4 text-center text-sm font-semibold leading-tight text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <span className="inline-flex items-center justify-center">

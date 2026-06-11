@@ -8,6 +8,7 @@ import { CREATOR_CATEGORIES } from '../utils/categories';
 import { useAuth } from '../contexts/AuthContext';
 import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, TERMS_OF_SERVICE_URL } from '../utils/legal';
 import { DEFAULT_PRIVACY_SETTINGS, mapUserProfileToSettingsForm, uploadProfileAvatar, validateProfileImageFile } from './settings/profileSettingsShared';
+import { dispatchProfileUpdated } from '../utils/profileUpdates';
 
 type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
 
@@ -101,7 +102,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       await updateProfile(user.id, { avatar_url: publicUrl });
       await refreshProfile();
       toast.success('Profile photo updated successfully');
-      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['avatar_url'] } }));
+      dispatchProfileUpdated({ userId: user.id, fields: ['avatar_url'], avatar_url: publicUrl });
     } catch (error: any) {
       toast.error(error.message || 'Error uploading avatar');
     }
@@ -245,7 +246,11 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       }
       toast.success('Profile updated successfully');
       setCurrentView('main');
-      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['username','full_name','phone','bio','birthdate','avatar_url', ...(isCreatorProfile ? ['location','organizer_type'] : [])] } }));
+      dispatchProfileUpdated({
+        userId: user?.id,
+        fields: ['username','full_name','phone','bio','birthdate','avatar_url', ...(isCreatorProfile ? ['location','organizer_type'] : [])],
+        avatar_url: profileData.avatarUrl || null,
+      });
     } catch (error) {
       const message = (error as any)?.message || (error as any)?.error_description || (error as any)?.details || 'Failed to save profile';
       toast.error(message);

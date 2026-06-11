@@ -24,6 +24,7 @@ import { isSafeUrl } from '../utils/sanitize';
 import { CREATOR_CATEGORIES } from '../utils/categories';
 import { useAuth } from '../contexts/AuthContext';
 import { DEFAULT_PRIVACY_SETTINGS, mapOrganizerProfileToSettingsForm, uploadProfileAvatar, validateProfileImageFile } from './settings/profileSettingsShared';
+import { dispatchProfileUpdated } from '../utils/profileUpdates';
 
 interface OrganizerSettingsModalProps {
   onClose: () => void;
@@ -122,6 +123,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
         });
         await refreshProfile();
         toast.success('Profile photo updated successfully');
+        dispatchProfileUpdated({ userId: user.id, fields: ['avatar_url'], avatar_url: publicUrl });
       } catch (saveError) {
         toast.success('Photo uploaded. Please click Save to finish setup.');
       }
@@ -230,7 +232,11 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
       await refreshProfile();
       
       toast.success('Profile updated successfully');
-      window.dispatchEvent(new CustomEvent('profileUpdated'));
+      dispatchProfileUpdated({
+        userId: user.id,
+        fields: ['full_name', 'organizer_type', 'avatar_url', 'bio', 'location', 'website', 'contact_email', 'phone', 'birthdate'],
+        avatar_url: profileData.avatarUrl || null,
+      });
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to update profile';
       toast.error(`Failed to update profile: ${errorMessage}`);

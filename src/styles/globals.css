@@ -235,15 +235,13 @@ html {
 
   button,
   [role='button'],
+  a[role='button'] {
+    min-width: 0;
+  }
+
   input:not([type='checkbox']):not([type='radio']),
   select {
     min-height: 2.625rem;
-  }
-
-  button:has(svg),
-  [role='button']:has(svg),
-  a:has(svg) {
-    min-width: 2.625rem;
   }
 
   textarea {
@@ -292,16 +290,13 @@ html {
 }
 
 .event-discovery-page button,
-.event-discovery-page [role='button'],
+.event-discovery-page [role='button'] {
+  min-width: 0;
+}
+
 .event-discovery-page input:not([type='checkbox']):not([type='radio']),
 .event-discovery-page select {
   min-height: 2.5rem;
-}
-
-.event-discovery-page button:has(svg),
-.event-discovery-page [role='button']:has(svg),
-.event-discovery-page a:has(svg) {
-  min-width: 2.5rem;
 }
 
 .event-discovery-page .event-category-chip {

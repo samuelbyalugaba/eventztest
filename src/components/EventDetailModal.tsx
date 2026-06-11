@@ -889,47 +889,47 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
            <button 
              onClick={handleWatchLive}
              disabled={isCheckingVirtualAccess}
-             className="flex-1 bg-red-600 text-white py-3 rounded-xl font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2 animate-pulse shadow-lg shadow-red-200"
+             className="flex min-w-0 flex-1 animate-pulse items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-center font-medium leading-tight text-white shadow-lg shadow-red-200 transition-colors hover:bg-red-700"
            >
-             <Tv className="w-5 h-5" />
-             Watch Live
+             <Tv className="w-5 h-5 shrink-0" />
+             <span className="min-w-0">Watch Live</span>
            </button>
          ) : (
            !isEventPast && (
              externalTicketing ? (
-               <button
-                 onClick={handleExternalTicketing}
-                 className="flex-1 bg-[#8A2BE2] text-white py-3 rounded-xl font-medium hover:bg-[#7b26c9] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                <button
+                  onClick={handleExternalTicketing}
+                 className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#8A2BE2] py-3 text-center font-medium leading-tight text-white shadow-lg shadow-purple-200 transition-colors hover:bg-[#7b26c9]"
                >
-                 <Phone className="w-5 h-5" />
-                 Contact for ticketing
+                 <Phone className="w-5 h-5 shrink-0" />
+                 <span className="min-w-0">Contact for ticketing</span>
                </button>
              ) : (
-               <button
-                 onClick={() => !isFreeEvent && onPurchaseNormalTicket(event)}
-                 disabled={isFreeEvent}
-                 className={`flex-1 rounded-xl py-3 font-medium transition-colors flex items-center justify-center gap-2 ${
+                <button
+                  onClick={() => !isFreeEvent && onPurchaseNormalTicket(event)}
+                  disabled={isFreeEvent}
+                 className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl py-3 text-center font-medium leading-tight transition-colors ${
                    isFreeEvent
                      ? 'cursor-default bg-gray-100 text-gray-600 shadow-none'
                      : 'bg-[#8A2BE2] text-white hover:bg-[#7b26c9] shadow-lg shadow-purple-200'
                  }`}
                >
-                 <Ticket className="w-5 h-5" />
-                {isFreeEvent ? 'Free Event' : 'Get Tickets Now'}
+                 <Ticket className="w-5 h-5 shrink-0" />
+                 <span className="min-w-0">{isFreeEvent ? 'Free Event' : 'Get Tickets Now'}</span>
               </button>
              )
            )
          )}
          
          {isEventPast && (
-            <div className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-medium text-center cursor-not-allowed">
+            <div className="min-w-0 flex-1 rounded-xl bg-gray-100 py-3 text-center font-medium leading-tight text-gray-500 cursor-not-allowed">
               Event Ended
             </div>
          )}
 
          <button 
             onClick={handleToggleSave}
-            className={`w-14 bg-white border-2 ${isSaved ? 'border-[#FF4081] bg-[#FF4081]/10' : 'border-gray-200'} text-gray-700 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-all`}
+             className={`flex w-14 shrink-0 items-center justify-center rounded-xl border-2 text-gray-700 transition-all hover:bg-gray-50 ${isSaved ? 'border-[#FF4081] bg-[#FF4081]/10' : 'border-gray-200 bg-white'}`}
           >
             <Bell className={`w-6 h-6 ${isSaved ? 'fill-[#FF4081] text-[#FF4081]' : 'text-gray-400'}`} />
           </button>

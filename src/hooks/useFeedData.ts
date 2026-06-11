@@ -172,8 +172,15 @@ export function useFeedData(initialCurrentUser?: any) {
       }
       void loadPosts(false);
     };
+    const handleProfileUpdated = () => {
+      void loadPosts(false);
+    };
     window.addEventListener('postsUpdated', handlePostsUpdated);
-    return () => { window.removeEventListener('postsUpdated', handlePostsUpdated); };
+    window.addEventListener('profileUpdated', handleProfileUpdated);
+    return () => {
+      window.removeEventListener('postsUpdated', handlePostsUpdated);
+      window.removeEventListener('profileUpdated', handleProfileUpdated);
+    };
   }, []);
 
   const refreshNotifications = useCallback(async (options?: { silent?: boolean }) => {

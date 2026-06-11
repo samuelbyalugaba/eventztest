@@ -938,7 +938,7 @@ export function PostDetailPage({
           )}
           <div className="flex items-end gap-2.5 rounded-[1.45rem] border border-gray-200 bg-gray-50 px-3 py-2.5 transition-all focus-within:border-gray-300 focus-within:bg-white">
             <UserAvatar
-              src={currentUser?.user_metadata?.avatar_url || userProfile?.avatar_url}
+              src={userProfile?.avatar_url || currentUser?.user_metadata?.avatar_url}
               name={userProfile?.full_name || currentUser?.user_metadata?.full_name || userProfile?.username || "User"}
               className="h-8 w-8 flex-shrink-0 rounded-full object-cover"
             />

@@ -5,8 +5,9 @@ import { supabase } from '../utils/supabase/client';
 import { extractCurrencyFromPrice, currencies, formatPrice } from '../utils/currencies';
 import { createTransaction, createTicket } from '../utils/supabase/api';
 import { formatDateDMY } from '../utils/format';
-import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, WALLET_PAYMENT_METHODS, type WalletPaymentMethod } from '../utils/walletCheckout';
+import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, type WalletPaymentMethod } from '../utils/walletCheckout';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
+import { PaymentMethodSelector } from './tickets/PaymentMethodSelector';
 
 interface TicketTier {
   name: string;
@@ -373,22 +374,11 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
               {totalPrice > 0 && (
                 <div className="space-y-3">
                   <h3 className="font-semibold text-gray-900 text-sm">Payment Method</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {WALLET_PAYMENT_METHODS.map(method => (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => setSelectedPaymentMethod(method)}
-                        className={`min-h-12 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                          selectedPaymentMethod === method
-                            ? 'border-[#8A2BE2] bg-purple-50 text-purple-700'
-                            : 'border-gray-200 text-gray-600 hover:border-purple-200'
-                        }`}
-                      >
-                        {method}
-                      </button>
-                    ))}
-                  </div>
+                  <PaymentMethodSelector
+                    value={selectedPaymentMethod}
+                    onChange={setSelectedPaymentMethod}
+                    activeClassName="border-[#8A2BE2] bg-purple-50 text-purple-700"
+                  />
                   {selectedPaymentMethod === 'Wallet' && (
                     <div className={`p-4 rounded-xl border ${walletBalance >= totalPrice ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
                       <div className="flex items-center justify-between gap-3 mb-1">
@@ -448,7 +438,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                 setStep('checkout');
               }}
               disabled={totalTickets === 0}
-              className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${
+              className={`flex w-full min-w-0 items-center justify-center gap-2 rounded-xl py-3.5 text-center font-bold leading-tight text-white shadow-lg transition-all ${
                 totalTickets > 0 
                   ? 'bg-[#8A2BE2] shadow-purple-200 hover:bg-purple-700 hover:shadow-xl hover:scale-[1.02]' 
                   : 'bg-gray-300 shadow-none cursor-not-allowed'
@@ -456,18 +446,18 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             >
               {totalPrice === 0 ? (
                 <>
-                  <Ticket className="w-4 h-4" />
+                  <Ticket className="w-4 h-4 shrink-0" />
                   <span>Get Free Tickets</span>
                 </>
               ) : (
                 <>
                   <span>Checkout</span>
                   {totalTickets > 0 && (
-                    <span className="bg-white/20 px-2 py-0.5 rounded text-sm">
+                    <span className="shrink-0 rounded bg-white/20 px-2 py-0.5 text-sm">
                       {formatPrice(totalPrice.toString())}
                     </span>
                   )}
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 shrink-0" />
                 </>
               )}
             </button>
@@ -475,31 +465,31 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             <div className="flex gap-3">
               <button
                 onClick={() => setStep('select')}
-                className="px-4 py-3.5 rounded-xl border border-gray-200 text-gray-600 font-medium hover:bg-gray-100 transition-colors"
+                className="inline-flex shrink-0 items-center justify-center rounded-xl border border-gray-200 px-4 py-3.5 text-center font-medium leading-tight text-gray-600 transition-colors hover:bg-gray-100"
               >
                 Back
               </button>
               <button
                 onClick={handlePurchase}
                 disabled={isProcessing}
-                className={`flex-1 bg-gradient-to-r from-[#8A2BE2] to-purple-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 ${
+                className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A2BE2] to-purple-600 py-3.5 text-center font-bold leading-tight text-white shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl ${
                   isProcessing ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >
                 {isProcessing ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Processing...</span>
+                    <span className="min-w-0">Processing...</span>
                   </>
                 ) : totalPrice === 0 ? (
                   <>
-                    <span>Get Free Tickets</span>
-                    <Ticket className="w-4 h-4" />
+                    <span className="min-w-0">Get Free Tickets</span>
+                    <Ticket className="w-4 h-4 shrink-0" />
                   </>
                 ) : (
                   <>
-                    <span>Pay {currencySymbol} {totalPrice.toLocaleString()}</span>
-                    <CreditCard className="w-4 h-4" />
+                    <span className="min-w-0">Pay {currencySymbol} {totalPrice.toLocaleString()}</span>
+                    <CreditCard className="w-4 h-4 shrink-0" />
                   </>
                 )}
               </button>

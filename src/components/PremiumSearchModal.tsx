@@ -4,6 +4,13 @@ import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
+import {
+  clearRecentEvents,
+  LEGACY_RECENT_SEARCHES_KEY,
+  readLegacyRecentSearches,
+  readRecentEventIds,
+  rememberRecentEvent,
+} from '../utils/recentEvents';
 
 interface PremiumSearchModalProps {
   onClose: () => void;
@@ -38,17 +45,11 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
   const [venueResults, setVenueResults] = useState<VenueResult[]>([]);
   const [trendingData, setTrendingData] = useState<{ events: any[]; people: any[] }>({ events: [], people: [] });
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentEventIds, setRecentEventIds] = useState<string[]>([]);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('recentSearches');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setRecentSearches(Array.isArray(parsed) ? parsed : []);
-      }
-    } catch {
-      setRecentSearches([]);
-    }
+    setRecentSearches(readLegacyRecentSearches());
+    setRecentEventIds(readRecentEventIds());
 
     const loadTrending = async () => {
       try {
@@ -69,7 +70,7 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
     if (!trimmed) return;
     const next = [trimmed, ...recentSearches.filter((item) => item.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
     setRecentSearches(next);
-    localStorage.setItem('recentSearches', JSON.stringify(next));
+    localStorage.setItem(LEGACY_RECENT_SEARCHES_KEY, JSON.stringify(next));
   };
 
   useEffect(() => {
@@ -175,12 +176,17 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
   }, [events, normalizedQuery]);
 
   const recentEvent = useMemo(() => {
+    for (const recentId of recentEventIds) {
+      const match = events.find((event) => hasEventImage(event) && String(event.id) === recentId);
+      if (match) return match;
+    }
+
     for (const recent of recentSearches) {
       const match = events.find((event) => hasEventImage(event) && String(event.title || '').toLowerCase().includes(recent.toLowerCase()));
       if (match) return match;
     }
     return trendingEvents[0] || events.find(hasEventImage);
-  }, [events, recentSearches, trendingEvents]);
+  }, [events, recentEventIds, recentSearches, trendingEvents]);
 
   const hasQuery = searchQuery.trim().length > 0;
   const isSearching = isSearchingPeople || isSearchingVenues;
@@ -192,7 +198,9 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
   );
 
   const selectEvent = (event: any) => {
-    addToRecent(event.title || '');
+    const next = rememberRecentEvent(event);
+    setRecentEventIds(next.eventIds);
+    setRecentSearches(next.searches);
     onEventSelect(event);
   };
 
@@ -262,12 +270,13 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
             <div>
               <SectionHeader
                 title="Recent"
-                action={recentSearches.length > 0 ? (
+                action={recentEventIds.length > 0 || recentSearches.length > 0 ? (
                   <button
                     type="button"
                     onClick={() => {
                       setRecentSearches([]);
-                      localStorage.removeItem('recentSearches');
+                      setRecentEventIds([]);
+                      clearRecentEvents();
                     }}
                     className="text-sm font-semibold text-purple-700"
                   >

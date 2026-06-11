@@ -25,6 +25,7 @@ const AuthContext =
   (globalThis.__eventzAuthContext = createContext<AuthContextType | undefined>(undefined));
 
 const slugifyUsername = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+const PROFILE_BOOTSTRAP_TIMEOUT_MS = 4000;
 const buildUsernameCandidates = (seed: string) => {
   const base = slugifyUsername(seed) || 'user';
   const suffix = Date.now().toString(36).slice(-4);
@@ -104,6 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const waitForProfileBootstrap = async (sessionUser: SupabaseUser) => {
+    await Promise.race([
+      ensureProfile(sessionUser),
+      new Promise((resolve) => {
+        window.setTimeout(resolve, PROFILE_BOOTSTRAP_TIMEOUT_MS);
+      }),
+    ]);
+  };
+
   const fetchProfile = async (userId: string) => {
     try {
       const data = await getProfile(userId);
@@ -127,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session.user);
           setIsAuthenticated(true);
           void syncExistingPushSubscription(session.user.id);
-          void ensureProfile(session.user);
+          await waitForProfileBootstrap(session.user);
         } else {
           setUser(null);
           setIsAuthenticated(false);
@@ -146,10 +156,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        setIsLoading(true);
         setUser(session.user);
         setIsAuthenticated(true);
         void syncExistingPushSubscription(session.user.id);
-        void ensureProfile(session.user);
+        try {
+          await waitForProfileBootstrap(session.user);
+        } finally {
+          setIsLoading(false);
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAuthenticated(false);
