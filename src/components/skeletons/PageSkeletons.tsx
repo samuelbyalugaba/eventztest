@@ -409,14 +409,6 @@ export function FeedPageSkeleton() {
     </div>
   );
 }
-          </div>
-          <div className="h-4 w-3/4 bg-neutral-800 rounded" />
-          <div className="h-4 w-1/2 bg-neutral-800 rounded" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function RouteFallback() {
   return <DetailPageSkeleton />;
