@@ -8,40 +8,66 @@ function CircleBlock({ className }: { className: string }) {
   return <div className={`animate-pulse rounded-full bg-gray-200 ${className}`} />;
 }
 
+function EventCardsSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={index} className="overflow-hidden rounded-md bg-white shadow-sm">
+          <PulseBlock className="h-[9.75rem] w-full rounded-none bg-gray-200" />
+          <div className="space-y-1 p-1.5">
+            <PulseBlock className="h-3.5 w-5/6" />
+            <PulseBlock className="h-2.5 w-2/3 bg-gray-100" />
+            <PulseBlock className="h-2.5 w-1/2 bg-gray-100" />
+            <PulseBlock className="h-2.5 w-4/5 bg-gray-100" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function EventsPageSkeleton() {
   return (
-    <div className="min-h-screen bg-[#FAFAFA] px-4 pb-28 pt-[calc(1rem+var(--eventz-safe-area-top))]">
-      <div className="mb-5 space-y-3">
-        <PulseBlock className="h-5 w-20 bg-gray-300" />
-        <PulseBlock className="h-7 w-72 max-w-full" />
-        <div className="flex gap-2 overflow-hidden">
-          {[72, 118, 128, 76, 82].map((width) => (
-            <PulseBlock key={width} className="h-7 shrink-0 rounded-full" style={{ width }} />
-          ))}
-        </div>
-      </div>
-      <div className="mb-4 flex items-center justify-between">
-        <div className="space-y-2">
-          <PulseBlock className="h-5 w-36" />
-          <PulseBlock className="h-3 w-20 bg-gray-100" />
-        </div>
-        <PulseBlock className="h-9 w-24 rounded-xl" />
-      </div>
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-4">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <PulseBlock className="aspect-[4/5] w-full rounded-none" />
-            <div className="space-y-2 p-3">
-              <PulseBlock className="h-4 w-4/5" />
-              <PulseBlock className="h-3 w-3/5 bg-gray-100" />
-              <PulseBlock className="h-3 w-2/3 bg-gray-100" />
+    <div className="min-h-screen bg-gray-50">
+      <div className="event-discovery-page pb-20">
+        <div className="px-3 pb-6 pt-0">
+          <div className="sticky top-0 z-50 -mx-3 rounded-b-[24px] bg-gray-50/95 px-3 pb-3 pt-[calc(0.75rem+var(--eventz-safe-area-top))] backdrop-blur-sm">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-2">
+                <PulseBlock className="h-6 w-24 bg-gray-300" />
+                <PulseBlock className="h-4 w-72 max-w-full bg-gray-100" />
+              </div>
+              <CircleBlock className="h-10 w-10 bg-white" />
             </div>
           </div>
-        ))}
+
+          <div className="mt-2">
+            <div className="-mx-3 overflow-hidden px-3 pb-1">
+              <div className="flex w-max items-center gap-1.5">
+                {[40, 98, 86, 62, 70, 72, 76, 70].map((width, index) => (
+                  <PulseBlock key={`${width}-${index}`} className="h-[1.65rem] shrink-0 rounded-full bg-white" style={{ width }} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 space-y-6">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+              <div className="min-w-0 space-y-2 pr-1">
+                <PulseBlock className="h-4 w-32" />
+                <PulseBlock className="h-3 w-24 bg-gray-100" />
+              </div>
+              <PulseBlock className="h-8 w-20 rounded-full bg-white" />
+            </div>
+            <EventCardsSkeleton />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
+export { EventCardsSkeleton };
 
 export function ProfilePageSkeleton() {
   return (
@@ -88,25 +114,79 @@ export function ProfilePageSkeleton() {
 
 export function LivePageSkeleton() {
   return (
-    <div className="min-h-screen bg-[#FAFAFA] px-4 pb-24 pt-[calc(1rem+var(--eventz-safe-area-top))]">
-      <div className="mb-5 space-y-2">
-        <PulseBlock className="h-6 w-32" />
-        <PulseBlock className="h-4 w-56 bg-gray-100" />
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 pt-[var(--eventz-safe-area-top)] shadow-sm backdrop-blur-xl">
+        <div className="mx-auto max-w-4xl px-5 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CircleBlock className="h-2 w-2 bg-red-300" />
+              <PulseBlock className="h-5 w-24" />
+            </div>
+            <PulseBlock className="h-10 w-10 rounded-full bg-gray-100" />
+          </div>
+        </div>
       </div>
-      <div className="space-y-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-            <PulseBlock className="aspect-video w-full rounded-none bg-gray-300" />
-            <div className="flex items-center gap-3 p-3">
-              <CircleBlock className="h-10 w-10" />
+      <div className="mx-auto max-w-4xl px-5 py-6">
+        <LiveFeedContentSkeleton />
+      </div>
+    </div>
+  );
+}
+
+export function LiveFeedContentSkeleton() {
+  return (
+    <div className="space-y-8 animate-pulse">
+      <div>
+        <div className="mb-5 flex items-center gap-2.5 px-1">
+          <PulseBlock className="h-5 w-5 rounded-md" />
+          <div className="space-y-2">
+            <PulseBlock className="h-4 w-24" />
+            <PulseBlock className="h-3 w-32 bg-gray-100" />
+          </div>
+        </div>
+        <div className="-mx-5 flex gap-3 overflow-hidden px-5 pb-4">
+          {[0, 1].map((index) => (
+            <PulseBlock key={index} className="w-[70vw] flex-shrink-0 rounded-xl bg-gray-200 sm:w-[300px]" style={{ aspectRatio: '16 / 9' }} />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-5 flex items-center gap-2.5 px-1">
+          <PulseBlock className="h-5 w-5 rounded-md" />
+          <div className="space-y-2">
+            <PulseBlock className="h-4 w-28" />
+            <PulseBlock className="h-3 w-32 bg-gray-100" />
+          </div>
+        </div>
+        <div className="-mx-5 flex gap-3 overflow-hidden px-5 pb-4">
+          {[0, 1, 2].map((index) => (
+            <PulseBlock key={index} className="w-[38vw] flex-shrink-0 rounded-xl bg-gray-200 sm:w-[164px]" style={{ aspectRatio: '3 / 4' }} />
+          ))}
+        </div>
+      </div>
+
+      <div className="pt-2">
+        <div className="mb-5 flex items-center gap-2.5 px-1">
+          <PulseBlock className="h-5 w-5 rounded-md" />
+          <div className="space-y-2">
+            <PulseBlock className="h-4 w-24" />
+            <PulseBlock className="h-3 w-32 bg-gray-100" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="flex items-center gap-4 rounded-2xl border border-gray-50 bg-white p-2.5">
+              <PulseBlock className="h-16 w-16 flex-shrink-0 rounded-xl" />
               <div className="flex-1 space-y-2">
                 <PulseBlock className="h-4 w-3/4" />
                 <PulseBlock className="h-3 w-1/2 bg-gray-100" />
+                <PulseBlock className="h-3 w-1/3 bg-gray-100" />
               </div>
-              <PulseBlock className="h-8 w-16 rounded-full" />
+              <PulseBlock className="h-10 w-10 rounded-xl bg-gray-100" />
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -281,15 +361,54 @@ export function GenericPageSkeleton() {
 
 export function FeedPageSkeleton() {
   return (
-    <div className="min-h-screen bg-black animate-pulse">
-      <div className="h-screen w-full bg-neutral-900 flex items-end p-6">
-        <div className="w-full space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-neutral-800 rounded-full" />
-            <div className="space-y-2">
-              <div className="h-4 w-32 bg-neutral-800 rounded" />
-              <div className="h-3 w-20 bg-neutral-800/70 rounded" />
+    <div className="relative h-[100dvh] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+      <div className="fixed left-0 right-0 top-0 z-30 border-b border-gray-100 bg-white pt-[var(--eventz-safe-area-top)] lg:left-64 xl:left-72 xl:right-80">
+        <div className="px-3 pb-3 pt-4">
+          <div className="mb-1.5 flex items-center justify-between">
+            <PulseBlock className="h-6 w-44" />
+            <div className="flex items-center gap-2">
+              <PulseBlock className="h-9 w-9 rounded-lg bg-gray-100" />
+              <PulseBlock className="h-9 w-9 rounded-lg bg-gray-100" />
             </div>
+          </div>
+        </div>
+      </div>
+      <div className="h-[100dvh] overflow-hidden" style={{ paddingTop: '7rem' }}>
+        <div className="mx-auto max-w-2xl space-y-0 px-3 pb-[calc(6.5rem+var(--eventz-safe-area-bottom))] pt-3 xl:max-w-[640px]">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="mb-6 overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <CircleBlock className="h-10 w-10" />
+                  <div className="space-y-2">
+                    <PulseBlock className="h-4 w-24" />
+                    <PulseBlock className="h-3 w-32 bg-gray-100" />
+                  </div>
+                </div>
+                <CircleBlock className="h-8 w-8 bg-gray-100" />
+              </div>
+              <PulseBlock className="aspect-[4/5] w-full rounded-none sm:aspect-square md:aspect-[4/3]" />
+              <div className="px-4 py-3">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex gap-4">
+                    <CircleBlock className="h-8 w-8 bg-gray-100" />
+                    <CircleBlock className="h-8 w-8 bg-gray-100" />
+                    <CircleBlock className="h-8 w-8 bg-gray-100" />
+                  </div>
+                  <CircleBlock className="h-8 w-8 bg-gray-100" />
+                </div>
+                <div className="space-y-2">
+                  <PulseBlock className="h-4 w-full" />
+                  <PulseBlock className="h-4 w-3/4 bg-gray-100" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
           </div>
           <div className="h-4 w-3/4 bg-neutral-800 rounded" />
           <div className="h-4 w-1/2 bg-neutral-800 rounded" />

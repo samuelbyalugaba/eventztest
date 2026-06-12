@@ -1,6 +1,7 @@
 
 import { supabase } from './client';
 import { sendSocialPushNotification } from '../pushNotifications';
+import { sendSocialEmailNotification } from '../email';
 export { supabase };
 
 const normalizeEnv = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
@@ -469,6 +470,7 @@ export const toggleFollow = async (followerId: string, followingId: string) => {
       .insert({ follower_id: followerId, following_id: followingId });
     if (error) throw error;
     void sendSocialPushNotification('follow', { targetUserId: followingId });
+    void sendSocialEmailNotification('follow', { targetUserId: followingId });
     return true; // Followed
   }
 };
@@ -1832,6 +1834,7 @@ export const toggleLikePost = async (postId: number, userId: string) => {
     const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: userId });
     if (error) throw error;
     void sendSocialPushNotification('like', { postId });
+    void sendSocialEmailNotification('like', { postId });
     return true;
   }
 };
@@ -1908,6 +1911,7 @@ export const createPostComment = async (postId: number, userId: string, text: st
   if (error) throw error;
 
   void sendSocialPushNotification('comment', { postId, commentId: data.id });
+  void sendSocialEmailNotification('comment', { postId, commentId: data.id });
 
   return data;
 };

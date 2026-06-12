@@ -40,7 +40,7 @@ export function ProfileBio({ isLoading, isOrganizer, isOwnProfile, organizerCate
         )}
 
         <div className="flex items-start justify-between gap-3">
-          <p className={`${(isOrganizer && bio) ? 'text-gray-800 font-medium' : 'text-gray-600'} leading-relaxed text-sm`}>
+          <p className={`${(isOrganizer && bio) ? 'text-gray-800' : 'text-gray-600'} leading-relaxed text-sm`}>
             {trimmedBio ? (
               <>
                 {visibleBio}

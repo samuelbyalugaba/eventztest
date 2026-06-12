@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Filter, Video, Smartphone, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { Skeleton } from './ui/skeleton';
 import { normalizePlaceName } from '../utils/nominatim';
 import { locations, liveCategories, type LocationOption } from '../utils/locations';
 import { LiveStreamCard, StreamSectionHeader } from './live/LiveStreamCard';
@@ -10,6 +9,7 @@ import { UpcomingStreamCard } from './live/UpcomingStreamCard';
 import { LiveFilterModals } from './live/LiveFilterModals';
 import { useLiveFeedData, type LiveStream } from '../hooks/useLiveFeedData';
 import { useLocationPrefs } from '../hooks/useLocationPrefs';
+import { LiveFeedContentSkeleton } from './skeletons/PageSkeletons';
 
 const FEATURED_CATEGORIES = new Set([
   'entertainment',
@@ -17,52 +17,6 @@ const FEATURED_CATEGORIES = new Set([
   'business & tech',
   'religion',
 ]);
-
-function LiveFeedSkeleton() {
-  return (
-    <div className="max-w-4xl mx-auto px-5 py-6 space-y-8 animate-pulse">
-      {[1, 2, 3].map((section) => (
-        <div key={section}>
-          <div className="flex items-center gap-2.5 mb-5 px-1">
-            <Skeleton className="w-5 h-5 rounded-md" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-32" />
-            </div>
-          </div>
-          {section === 3 ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-4 p-2.5 bg-white rounded-2xl border border-gray-50">
-                  <Skeleton className="w-16 h-16 rounded-xl flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                    <Skeleton className="h-3 w-1/3" />
-                  </div>
-                  <Skeleton className="w-10 h-10 rounded-xl" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex overflow-x-auto gap-3 pb-4 -mx-5 px-5 scrollbar-hide">
-              {(section === 1 ? [1, 2] : [1, 2, 3]).map((i) => (
-                <Skeleton
-                  key={i}
-                  className={
-                    section === 1
-                      ? 'flex-shrink-0 w-[75vw] sm:w-[320px] aspect-video rounded-2xl'
-                      : 'flex-shrink-0 w-[42vw] sm:w-[180px] aspect-[3/4] rounded-2xl'
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export function LiveFeed() {
   const navigate = useNavigate();
@@ -194,7 +148,7 @@ export function LiveFeed() {
 
       <div className="max-w-4xl mx-auto px-5 py-6 space-y-8">
         {isLoading ? (
-          <LiveFeedSkeleton />
+          <LiveFeedContentSkeleton />
         ) : (
           <>
             <div>

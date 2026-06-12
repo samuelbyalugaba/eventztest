@@ -6,11 +6,35 @@ import { searchNominatim } from '../utils/nominatim';
 import { Sheet, SheetContent, SheetClose, SheetTitle, SheetDescription } from "./ui/sheet";
 import { CREATOR_CATEGORIES } from '../utils/categories';
 import { useAuth } from '../contexts/AuthContext';
-import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, TERMS_OF_SERVICE_URL } from '../utils/legal';
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_TEL, TERMS_OF_SERVICE_URL } from '../utils/legal';
 import { DEFAULT_PRIVACY_SETTINGS, mapUserProfileToSettingsForm, uploadProfileAvatar, validateProfileImageFile } from './settings/profileSettingsShared';
 import { dispatchProfileUpdated } from '../utils/profileUpdates';
+import { DEFAULT_EMAIL_PREFERENCES, getEmailPreferences, updateEmailPreferences, type EmailPreferenceUpdate } from '../utils/email';
 
-type SettingsView = 'main' | 'profile' | 'privacy' | 'help';
+type SettingsView = 'main' | 'profile' | 'email' | 'privacy' | 'help';
+
+const supportMailHref = (subject: string, body = '') => (
+  `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}${body ? `&body=${encodeURIComponent(body)}` : ''}`
+);
+
+const SUPPORT_FAQS = [
+  {
+    question: 'How do I update my profile?',
+    answer: 'Open Settings, choose Edit Profile, update your details, then tap Save Changes.',
+  },
+  {
+    question: 'How do I create or manage events?',
+    answer: 'Use Create Event from your profile. Organizers can manage events from Dashboard.',
+  },
+  {
+    question: 'Where can I find my tickets?',
+    answer: 'Open Profile, then use the Tickets tab or Wallet to see your purchased tickets.',
+  },
+  {
+    question: 'How do I report a problem?',
+    answer: 'Use Contact Support or Send Feedback here and include the event, account, or payment details involved.',
+  },
+];
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -21,6 +45,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
   const { user, profile, refreshProfile } = useAuth();
   const [currentView, setCurrentView] = useState<SettingsView>(initialView);
   const [isOpen, setIsOpen] = useState(true);
+  const [showFaqs, setShowFaqs] = useState(false);
 
   // Helper to handle closing via sheet
   const handleOpenChange = (open: boolean) => {
@@ -111,6 +136,8 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
 
 
   const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY_SETTINGS);
+  const [emailPreferences, setEmailPreferences] = useState(DEFAULT_EMAIL_PREFERENCES);
+  const [isSavingEmailPreferences, setIsSavingEmailPreferences] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
@@ -165,6 +192,12 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
             }
 
             // Notification Settings Migration removed
+            try {
+              const prefs = await getEmailPreferences(user.id);
+              setEmailPreferences({ ...DEFAULT_EMAIL_PREFERENCES, ...prefs });
+            } catch {
+              setEmailPreferences(DEFAULT_EMAIL_PREFERENCES);
+            }
 
 
             // Apply any migration updates
@@ -259,6 +292,31 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
 
   // Notifications settings removed as per unused warning
 
+  const handleSaveEmailPreferences = async () => {
+    if (!user) {
+      toast.error('Please sign in to update email preferences');
+      return;
+    }
+
+    setIsSavingEmailPreferences(true);
+    try {
+      await updateEmailPreferences(user.id, emailPreferences);
+      toast.success('Email preferences updated');
+      setCurrentView('main');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update email preferences');
+    } finally {
+      setIsSavingEmailPreferences(false);
+    }
+  };
+
+  const toggleEmailPreference = (key: keyof EmailPreferenceUpdate) => {
+    setEmailPreferences((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  };
+
 
   const handleSavePrivacy = async () => {
     try {
@@ -352,7 +410,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {currentView !== 'main' && currentView !== 'profile' && (
-                  <button 
+                  <button
                     onClick={() => setCurrentView('main')}
                     className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
                   >
@@ -362,6 +420,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                 <h2 className="text-xl font-bold text-gray-900 tracking-tight">
                   {currentView === 'main' ? 'Settings' : 
                    currentView === 'profile' ? 'Edit Profile' :
+                   currentView === 'email' ? 'Email' :
                    currentView === 'privacy' ? 'Privacy' : 'Help & Support'}
                 </h2>
               </div>
@@ -387,6 +446,22 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                       <div className="flex-1">
                         <p className="text-gray-900 font-bold text-base">Edit Profile</p>
                         <p className="text-gray-500 text-xs mt-0.5">Update your personal information</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentView('email')}
+                    className="w-full p-4 bg-white border border-gray-100 rounded-2xl hover:border-purple-200 hover:shadow-md transition-all group text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Mail className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-gray-900 font-bold text-base">Email Preferences</p>
+                        <p className="text-gray-500 text-xs mt-0.5">Choose what Eventz sends to your inbox</p>
                       </div>
                       <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
                     </div>
@@ -658,6 +733,76 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
           {/* Notifications View */}
           {/* Removed Notifications View */}
 
+          {currentView === 'email' && (
+            <div className="space-y-6 pb-10">
+              <div className="rounded-xl border border-purple-100 bg-purple-50 p-5">
+                <div className="flex items-start gap-3">
+                  <Mail className="mt-0.5 h-5 w-5 text-purple-600" />
+                  <div>
+                    <p className="mb-1 text-sm font-semibold text-gray-900">Inbox controls</p>
+                    <p className="text-sm leading-5 text-gray-600">Account security, email verification, password reset, and ticket emails are always sent when needed.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  {
+                    key: 'product_updates' as const,
+                    title: 'Product updates',
+                    desc: 'New features, release notes, and platform changes.',
+                  },
+                  {
+                    key: 'event_reminders' as const,
+                    title: 'Event reminders',
+                    desc: 'Upcoming event and live stream reminders.',
+                  },
+                  {
+                    key: 'social_notifications' as const,
+                    title: 'Social notifications',
+                    desc: 'Likes, comments, follows, and community activity.',
+                  },
+                  {
+                    key: 'marketing' as const,
+                    title: 'Marketing emails',
+                    desc: 'Promotions, highlights, and occasional recommendations.',
+                  },
+                ].map((item) => (
+                  <div key={item.key} className="rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-purple-200">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="mb-1 text-sm font-medium text-gray-900">{item.title}</p>
+                        <p className="text-xs leading-5 text-gray-500">{item.desc}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggleEmailPreference(item.key)}
+                        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                          emailPreferences[item.key] ? 'bg-[#8A2BE2]' : 'bg-gray-300'
+                        }`}
+                        aria-pressed={emailPreferences[item.key]}
+                        aria-label={`Toggle ${item.title}`}
+                      >
+                        <div className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
+                          emailPreferences[item.key] ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleSaveEmailPreferences}
+                disabled={isSavingEmailPreferences}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-purple-600 text-sm font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-60"
+              >
+                {isSavingEmailPreferences ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                <span>Save Email Preferences</span>
+              </button>
+            </div>
+          )}
+
           {/* Privacy & Security View */}
           {currentView === 'privacy' && (
             <div className="space-y-6">
@@ -834,7 +979,10 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
               </div>
 
               {/* Help Options */}
-              <button className="w-full p-4 bg-white border border-gray-200 rounded-xl hover:border-purple-200 hover:bg-purple-50 transition-all group text-left">
+              <a
+                href={supportMailHref('EVENTZ Support Request', 'Hi EVENTZ Support,\n\nI need help with:\n\n')}
+                className="block w-full p-4 bg-white border border-gray-200 rounded-xl hover:border-purple-200 hover:bg-purple-50 transition-all group text-left"
+              >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
                     <MessageCircle className="w-5 h-5 text-[#8A2BE2]" />
@@ -845,9 +993,14 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                   </div>
                   <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600" />
                 </div>
-              </button>
+              </a>
 
-              <button className="w-full p-4 bg-white border border-gray-200 rounded-xl hover:border-purple-200 hover:bg-purple-50 transition-all group text-left">
+              <button
+                type="button"
+                aria-expanded={showFaqs}
+                onClick={() => setShowFaqs((current) => !current)}
+                className="w-full p-4 bg-white border border-gray-200 rounded-xl hover:border-purple-200 hover:bg-purple-50 transition-all group text-left"
+              >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center group-hover:bg-cyan-200 transition-colors">
                     <HelpCircle className="w-5 h-5 text-cyan-600" />
@@ -859,8 +1012,21 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                   <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600" />
                 </div>
               </button>
+              {showFaqs && (
+                <div className="space-y-3 rounded-xl border border-cyan-100 bg-cyan-50/60 p-4">
+                  {SUPPORT_FAQS.map((faq) => (
+                    <div key={faq.question} className="border-b border-cyan-100 pb-3 last:border-0 last:pb-0">
+                      <p className="text-sm font-semibold text-gray-900">{faq.question}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-gray-600">{faq.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-              <button className="w-full p-4 bg-white border border-gray-200 rounded-xl hover:border-purple-200 hover:bg-purple-50 transition-all group text-left">
+              <a
+                href={supportMailHref('EVENTZ Feedback', 'Hi EVENTZ Team,\n\nMy feedback is:\n\n')}
+                className="block w-full p-4 bg-white border border-gray-200 rounded-xl hover:border-purple-200 hover:bg-purple-50 transition-all group text-left"
+              >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-200 transition-colors">
                     <Heart className="w-5 h-5 text-pink-600" />
@@ -871,7 +1037,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                   </div>
                   <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600" />
                 </div>
-              </button>
+              </a>
 
               {/* Contact Info */}
               <div className="bg-white border border-gray-200 rounded-xl p-5 mt-6">
@@ -885,11 +1051,9 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                   </div>
                   <div className="flex items-center gap-3">
                     <Phone className="w-4 h-4 text-gray-400" />
-                    <p className="text-gray-600 text-sm">+255 700 123 456</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    <p className="text-gray-600 text-sm">Dar es Salaam, Tanzania</p>
+                    <a href={`tel:${SUPPORT_PHONE_TEL}`} className="text-gray-600 text-sm hover:text-purple-700">
+                      {SUPPORT_PHONE}
+                    </a>
                   </div>
                 </div>
               </div>

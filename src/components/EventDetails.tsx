@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EventGridSkeleton } from './skeletons/EventCardSkeleton';
+import { EventCardsSkeleton, EventsPageSkeleton } from './skeletons/PageSkeletons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Calendar, CalendarDays, ChevronDown, ChevronLeft, X, Filter, Search, Send, Star, CheckCircle2, MessageCircle, Music2, GraduationCap, BriefcaseBusiness, Palette, Landmark, Dumbbell, Shirt, LocateFixed, Check } from 'lucide-react';
@@ -672,6 +672,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     if (selectedEvent) setSelectedEvent(null);
   };
 
+  if (isInitialEventsLoading) {
+    return <EventsPageSkeleton />;
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="event-discovery-page pb-20">
@@ -848,7 +852,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             )}
 
             {events.length === 0 && (!hasLoadedEvents || isFetching) && (
-              <EventGridSkeleton count={6} />
+              <EventCardsSkeleton count={6} />
             )}
           </div>
         </div>
