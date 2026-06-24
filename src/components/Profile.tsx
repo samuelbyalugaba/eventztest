@@ -227,10 +227,11 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const computedHostedCount = pastHostedEvents.length + additionalHostedStreams.length;
 
   // Persist hosted/attended counts to the store so they survive page reloads
-  const storedCounts = useProfileStore((s) => ({ hostedCount: s.hostedCount, attendedCount: s.attendedCount }));
+  const cachedHostedCount = useProfileStore((s) => s.hostedCount);
+  const cachedAttendedCount = useProfileStore((s) => s.attendedCount);
   const hostedDataReady = !isLoadingOrganizerEvents && !isLoadingStreamedVideos;
-  const hostedCount = hostedDataReady ? computedHostedCount : storedCounts.hostedCount;
-  const attendedCount = !isLoadingTickets ? attendedEvents.length : storedCounts.attendedCount;
+  const hostedCount = hostedDataReady ? computedHostedCount : cachedHostedCount;
+  const attendedCount = !isLoadingTickets ? attendedEvents.length : cachedAttendedCount;
 
   // Save computed counts to persisted store for next visit
   useEffect(() => {
