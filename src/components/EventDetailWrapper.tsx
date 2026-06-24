@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { EventDetailModal } from './EventDetailModal';
 import { getEventById, type Event as ApiEvent } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { SimplifiedTicketModal } from './SimplifiedTicketModal';
-import { RouteFallback } from './skeletons/PageSkeletons';
-import { getCachedEventDetail, setCachedEventDetail } from '../store/eventDetailCache';
+import { DetailPageSkeleton } from './skeletons/PageSkeletons';
+
+const EVENT_DETAIL_KEY = (id: number) => ['event', 'detail', id] as const;
 
 interface EventDetailWrapperProps {
   onStartConversation?: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean }) => void;
@@ -25,12 +27,6 @@ type EventRouteState = {
   eventSnapshot?: ApiEvent;
 };
 
-const getImmediateEvent = (eventId: number | null, routeState: EventRouteState | null) => {
-  if (!eventId || Number.isNaN(eventId)) return null;
-  if (routeState?.eventSnapshot?.id === eventId) return routeState.eventSnapshot;
-  return getCachedEventDetail(eventId);
-};
-
 export function EventDetailWrapper({ 
   onStartConversation
 }: EventDetailWrapperProps) {
@@ -39,9 +35,20 @@ export function EventDetailWrapper({
   const location = useLocation();
   const eventId = id ? parseInt(id, 10) : null;
   const routeState = location.state as EventRouteState | null;
-  const immediateEvent = getImmediateEvent(eventId, routeState);
-  const [event, setEvent] = useState<ApiEvent | null>(immediateEvent);
-  const [loading, setLoading] = useState(!immediateEvent);
+
+  const routeSnapshot = eventId && routeState?.eventSnapshot?.id === eventId
+    ? routeState.eventSnapshot
+    : undefined;
+
+  const { data: event, isPending: loading, isError } = useQuery({
+    queryKey: EVENT_DETAIL_KEY(eventId!),
+    queryFn: () => getEventById(eventId!),
+    enabled: eventId !== null && !Number.isNaN(eventId),
+    initialData: routeSnapshot,
+    staleTime: 60_000,
+    retry: 1,
+  });
+
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const closeTarget = routeState?.closeTo || routeState?.backgroundLocation || { pathname: '/events' };
@@ -55,56 +62,28 @@ export function EventDetailWrapper({
   };
 
   useEffect(() => {
-    let cancelled = false;
+    if (!eventId || Number.isNaN(eventId)) {
+      navigate('/events', { replace: true });
+    }
+  }, [eventId, navigate]);
 
-    const fetchEvent = async () => {
-      if (!eventId || Number.isNaN(eventId)) {
+  useEffect(() => {
+    if (loading) return;
+    if (isError) {
+      if (!event) {
+        toast.error('Failed to load event');
         navigate('/events', { replace: true });
-        return;
       }
-
-      const cachedOrSnapshot = getImmediateEvent(eventId, routeState);
-      if (cachedOrSnapshot) {
-        setEvent(cachedOrSnapshot);
-        setCachedEventDetail(cachedOrSnapshot);
-        setLoading(false);
-      } else {
-        setEvent(null);
-        setLoading(true);
-      }
-
-      try {
-        const fetchedEvent = await getEventById(eventId);
-        if (cancelled) return;
-
-        if (fetchedEvent) {
-          setEvent(fetchedEvent);
-          setCachedEventDetail(fetchedEvent);
-        } else if (!cachedOrSnapshot) {
-          toast.error('Event not found');
-          navigate('/events', { replace: true });
-        }
-      } catch (error) {
-        if (!cachedOrSnapshot) {
-          toast.error('Failed to load event');
-          navigate('/events', { replace: true });
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void fetchEvent();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId, location.state, navigate, routeState]);
+      return;
+    }
+    if (event === null) {
+      toast.error('Event not found');
+      navigate('/events', { replace: true });
+    }
+  }, [loading, isError, event, navigate]);
 
   if (loading) {
-    return <RouteFallback />;
+    return <DetailPageSkeleton />;
   }
 
   if (!event) return null;

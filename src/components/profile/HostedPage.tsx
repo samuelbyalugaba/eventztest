@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Calendar, PlaySquare, Search } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Skeleton } from '../ui/skeleton';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   getOrganizerEvents,
@@ -217,10 +218,10 @@ export function HostedPage() {
           <div className="space-y-6">
             {[0, 1, 2].map((item) => (
               <div key={item} className="overflow-hidden rounded-2xl bg-white shadow-sm">
-                <div className="aspect-[1.75] bg-gray-100 animate-pulse" />
+                <Skeleton className="aspect-[1.75] rounded-none" />
                 <div className="space-y-3 p-5">
-                  <div className="h-5 w-40 rounded bg-gray-100 animate-pulse" />
-                  <div className="h-7 w-64 max-w-full rounded bg-gray-100 animate-pulse" />
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-7 w-64 max-w-full" />
                 </div>
               </div>
             ))}

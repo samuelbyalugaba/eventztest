@@ -159,14 +159,5 @@
 .dash-payout-summary strong{font-size:15px;font-weight:900;color:#111827}
 .dash-empty-card{border:1px dashed #D1D5DB;background:#fff;border-radius:16px;padding:28px;text-align:center;color:#6B7280;font-size:13px;font-weight:700}
 .dash-empty-inline{border:1px dashed #E5E7EB;background:#FAFAFA;border-radius:12px;padding:18px;text-align:center;color:#6B7280;font-size:12px;font-weight:800}
-.dash-skeleton{position:relative;overflow:hidden;background:#E5E7EB}
-.dash-skeleton:after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:dashShimmer 1.2s infinite}
-.dash-skeleton-circle{width:38px;height:38px;border-radius:999px}
-.dash-skeleton-line{height:11px;border-radius:999px;margin:5px 0}
-.dash-skeleton-line.wide{width:150px}
-.dash-skeleton-line.narrow{width:108px}
-.dash-skeleton-action{width:38px;height:38px;border-radius:999px;background:rgba(255,255,255,.22)}
-.dash-skeleton-card{height:154px;border-radius:18px;margin-bottom:16px}
-.dash-skeleton-tile{height:104px;border-radius:16px}
-@keyframes dashShimmer{100%{transform:translateX(100%)}}
+
 @media(min-width:700px){.dash-shell{height:min(844px,calc(100dvh - 24px));margin:12px auto;border-radius:36px;box-shadow:0 28px 80px rgba(15,23,42,.2)}}

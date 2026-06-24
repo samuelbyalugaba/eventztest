@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerEvents, getOrganizerStats, type Event as ApiEvent } from '../utils/supabase/api';
 import { getLocalWalletBalance } from '../utils/ntzs-api';
+import { Skeleton } from './ui/skeleton';
 import '../styles/dashboard.css';
 
 const TicketScannerModal = lazy(() => import('./TicketScannerModal').then((module) => ({ default: module.TicketScannerModal })));
@@ -1110,22 +1111,22 @@ function DashboardLoading() {
     <>
       <header className="dash-topbar">
         <div className="dash-top-id">
-          <div className="dash-skeleton dash-skeleton-circle" />
-          <div className="min-w-0 flex-1">
-            <div className="dash-skeleton dash-skeleton-line wide" />
-            <div className="dash-skeleton dash-skeleton-line narrow" />
+          <Skeleton.Circle className="h-[38px] w-[38px] bg-white/30" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-3 w-[150px] rounded-full bg-white/40" />
+            <Skeleton className="h-3 w-[108px] rounded-full bg-white/25" />
           </div>
         </div>
-        <div className="dash-skeleton dash-skeleton-action" />
+        <Skeleton className="h-[38px] w-[38px] rounded-full bg-white/25" />
       </header>
       <div className="dash-scroll">
         <div className="dash-pad">
-          <div className="dash-skeleton dash-skeleton-card" />
+          <Skeleton className="mb-4 h-[154px] rounded-[18px]" />
           <div className="dash-kgrid">
-            <div className="dash-skeleton dash-skeleton-tile" />
-            <div className="dash-skeleton dash-skeleton-tile" />
-            <div className="dash-skeleton dash-skeleton-tile" />
-            <div className="dash-skeleton dash-skeleton-tile" />
+            <Skeleton className="h-[104px] rounded-[16px]" />
+            <Skeleton className="h-[104px] rounded-[16px]" />
+            <Skeleton className="h-[104px] rounded-[16px]" />
+            <Skeleton className="h-[104px] rounded-[16px]" />
           </div>
         </div>
       </div>

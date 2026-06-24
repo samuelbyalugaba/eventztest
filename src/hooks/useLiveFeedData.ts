@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getLiveStreams, getUpcomingStreams, subscribeToEventStreaming } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 
@@ -23,14 +24,8 @@ export interface LiveStream {
   host_avatar?: string;
 }
 
-interface CacheEntry {
-  liveStreams: LiveStream[];
-  upcomingStreams: LiveStream[];
-  ts: number;
-}
-
-let liveFeedCache: CacheEntry | null = null;
 const CACHE_TTL_MS = 60_000;
+const QUERY_KEY = ['live-feed', 'streams'];
 
 const mapLive = (e: any): LiveStream => {
   const profile = e.organizer;
@@ -65,96 +60,71 @@ const mapUpcoming = (e: any): LiveStream => {
 };
 
 export function useLiveFeedData() {
-  const hasFreshCache = !!(liveFeedCache && Date.now() - liveFeedCache.ts < CACHE_TTL_MS);
-  const initialHasFreshCache = useRef(hasFreshCache);
-  const [liveStreams, setLiveStreams] = useState<LiveStream[]>(
-    hasFreshCache ? liveFeedCache!.liveStreams : [],
-  );
-  const [upcomingStreams, setUpcomingStreams] = useState<LiveStream[]>(
-    hasFreshCache ? liveFeedCache!.upcomingStreams : [],
-  );
-  const [isLoading, setIsLoading] = useState(!hasFreshCache);
-  const inFlight = useRef(false);
-  const pendingFetch = useRef(false);
+  const queryClient = useQueryClient();
 
-  const fetchStreams = useCallback(async ({ showLoading, clearCache }: { showLoading?: boolean; clearCache?: boolean } = {}) => {
-    if (clearCache) liveFeedCache = null;
-    if (inFlight.current) {
-      pendingFetch.current = true;
-      return;
-    }
-    inFlight.current = true;
-    if (showLoading) setIsLoading(true);
-    try {
+  const liveQuery = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: async () => {
       const [live, upcoming] = await Promise.all([getLiveStreams(), getUpcomingStreams()]);
-      const nextLive = live ? (live.map(mapLive) as LiveStream[]) : [];
-      const nextUpcoming = upcoming
-        ? (upcoming
-            .filter((e: any) => e.description !== 'Instant live stream')
-            .map(mapUpcoming) as LiveStream[])
-        : [];
-      setLiveStreams(nextLive);
-      setUpcomingStreams(nextUpcoming);
-      liveFeedCache = { liveStreams: nextLive, upcomingStreams: nextUpcoming, ts: Date.now() };
-    } catch {
-      // swallow — UI keeps last good data
-    } finally {
-      inFlight.current = false;
-      setIsLoading(false);
-      if (pendingFetch.current) {
-        pendingFetch.current = false;
-        void fetchStreams();
-      }
-    }
-  }, []);
+      return {
+        liveStreams: live ? (live.map(mapLive) as LiveStream[]) : [],
+        upcomingStreams: upcoming
+          ? (upcoming
+              .filter((e: any) => e.description !== 'Instant live stream')
+              .map(mapUpcoming) as LiveStream[])
+          : [],
+      };
+    },
+    staleTime: CACHE_TTL_MS,
+    gcTime: CACHE_TTL_MS * 2,
+  });
 
-  useEffect(() => {
-    fetchStreams({ showLoading: !initialHasFreshCache.current });
-    const channel = supabase
-      .channel('live-feed-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-        fetchStreams();
-      })
-      .subscribe();
+  const invalidate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+  }, [queryClient]);
 
-    // Poll Cloudflare to detect OBS-driven streams that go live without a webhook.
-    const pollCf = () => {
-      supabase.functions.invoke('cloudflare-stream-status', { body: {} }).catch(() => {});
-    };
-    pollCf();
-    const cfInterval = setInterval(pollCf, 15_000);
+  const liveStreams = liveQuery.data?.liveStreams ?? [];
+  const upcomingStreams = liveQuery.data?.upcomingStreams ?? [];
+  const isLoading = liveQuery.isPending;
 
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(cfInterval);
-    };
-  }, [fetchStreams]);
-
-  useEffect(() => {
-    const handleLiveStreamsUpdated = () => {
-      void fetchStreams({ clearCache: true });
-    };
-    window.addEventListener('liveStreamsUpdated', handleLiveStreamsUpdated);
-    return () => window.removeEventListener('liveStreamsUpdated', handleLiveStreamsUpdated);
-  }, [fetchStreams]);
-
+  /* Real-time subscriptions for viewer count updates */
   const liveIdsKey = liveStreams.map((s) => s.id).join(',');
+
   useEffect(() => {
     if (liveStreams.length === 0) return;
     const channels = liveStreams.map((s) =>
-      subscribeToEventStreaming(s.id, (streaming) => {
-        const next = streaming?.liveViewers ?? 0;
-        setLiveStreams((prev) => {
-          const found = prev.find((p) => p.id === s.id);
-          if (!found || found.viewers === next) return prev;
-          return prev.map((p) => (p.id === s.id ? { ...p, viewers: next } : p));
-        });
+      subscribeToEventStreaming(s.id, () => {
+        invalidate();
       }),
     );
     return () => {
       channels.forEach((c) => c.unsubscribe());
     };
-  }, [liveIdsKey]);
+  }, [liveIdsKey, invalidate]);
+
+  /* Polling for OBS-driven streams without webhooks */
+  useEffect(() => {
+    const pollCf = () => {
+      supabase.functions.invoke('cloudflare-stream-status', { body: {} }).catch(() => {});
+    };
+    pollCf();
+    const cfInterval = setInterval(pollCf, 15_000);
+    return () => clearInterval(cfInterval);
+  }, []);
+
+  /* DB change subscription */
+  useEffect(() => {
+    const channel = supabase
+      .channel('live-feed-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        invalidate();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [invalidate]);
 
   return { liveStreams, upcomingStreams, isLoading };
 }

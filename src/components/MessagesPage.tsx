@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { Skeleton } from './ui/skeleton';
 import { ChatList } from './ChatList';
 import { ChatDetail } from './ChatDetail';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,23 +68,79 @@ const toOptimisticConversation = (value: unknown): Conversation | null => {
   return conversation as Conversation;
 };
 
+function ChatDetailSkeleton() {
+  return (
+    <div className="fixed inset-0 z-[70] flex h-[100dvh] flex-col bg-white">
+      <div
+        className="fixed left-0 right-0 z-20 flex items-center justify-between border-b border-gray-100 bg-white px-4"
+        style={{ height: "calc(3.5rem + var(--eventz-safe-area-top))", paddingTop: "var(--eventz-safe-area-top)" }}
+      >
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="flex items-center gap-2">
+            <Skeleton.Circle className="h-10 w-10" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          </div>
+        </div>
+        <Skeleton className="h-8 w-8 rounded-full" />
+      </div>
+
+      <div className="flex-1 bg-gray-50 px-4 pt-20 pb-28">
+        <div className="space-y-5">
+          <div className="flex justify-start">
+            <Skeleton className="h-8 w-48 rounded-2xl rounded-bl-sm" />
+          </div>
+          <div className="flex justify-end">
+            <Skeleton className="h-10 w-36 rounded-2xl rounded-br-sm" />
+          </div>
+          <div className="flex justify-start">
+            <Skeleton className="h-12 w-56 rounded-2xl rounded-bl-sm" />
+          </div>
+          <div className="flex justify-end">
+            <Skeleton className="h-8 w-40 rounded-2xl rounded-br-sm" />
+          </div>
+          <div className="flex justify-start">
+            <Skeleton className="h-9 w-44 rounded-2xl rounded-bl-sm" />
+          </div>
+          <div className="flex justify-end">
+            <Skeleton className="h-10 w-52 rounded-2xl rounded-br-sm" />
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-100 bg-white px-3 pt-3 pb-[calc(0.9rem+var(--eventz-safe-area-bottom))]"
+      >
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-10 flex-1 rounded-full" />
+          <Skeleton className="h-10 w-10 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MessagesLoading() {
   return (
     <div className="fixed inset-0 z-[70] flex h-[100dvh] flex-col bg-white">
       <div className="flex min-h-[calc(4rem+var(--eventz-safe-area-top))] items-center gap-3 border-b border-gray-100 px-5 pt-[var(--eventz-safe-area-top)]">
-        <div className="h-10 w-10 rounded-full bg-gray-100 animate-pulse" />
+        <Skeleton.Circle className="h-10 w-10" />
         <div className="space-y-2">
-          <div className="h-4 w-32 rounded bg-gray-100 animate-pulse" />
-          <div className="h-3 w-20 rounded bg-gray-100 animate-pulse" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-20" />
         </div>
       </div>
       <div className="flex-1 space-y-4 bg-gray-50 p-5">
         {[0, 1, 2].map((item) => (
           <div key={item} className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-full bg-white shadow-sm animate-pulse" />
+            <Skeleton.Circle className="h-14 w-14 shadow-sm" />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-36 rounded bg-white shadow-sm animate-pulse" />
-              <div className="h-3 w-52 max-w-full rounded bg-white shadow-sm animate-pulse" />
+              <Skeleton className="h-4 w-36 shadow-sm" />
+              <Skeleton className="h-3 w-52 max-w-full shadow-sm" />
             </div>
           </div>
         ))}
@@ -250,7 +307,7 @@ export default function MessagesPage() {
   }
 
   if (startConversationUser) {
-    return <MessagesLoading />;
+    return <ChatDetailSkeleton />;
   }
 
   if (isLoadingConversations) {

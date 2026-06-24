@@ -133,7 +133,7 @@ export function FeedHeader({
             >
               <Bell className={`h-[18px] w-[18px] ${showNotifications ? 'text-purple-600' : 'text-gray-700'}`} />
               {/* Notification Badge */}
-              {notifications.filter(n => !n.read).length > 0 && (
+              {(notifications ?? []).filter(n => !n.read).length > 0 && (
                 <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
               )}
             </button>

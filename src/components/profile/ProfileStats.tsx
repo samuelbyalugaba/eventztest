@@ -10,6 +10,25 @@ interface ProfileStatsProps {
   onFollowingClick: () => void;
 }
 
+function StatValue({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 rounded-lg py-1">
+      <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
+        {value}
+      </div>
+      <div className="text-[0.61rem] leading-[0.78rem] text-gray-500 font-medium uppercase tracking-wider">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function formatStat(n: number): string {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
 export function ProfileStats({
   isOrganizer,
   hostedCount,
@@ -21,18 +40,25 @@ export function ProfileStats({
   onFollowersClick,
   onFollowingClick,
 }: ProfileStatsProps) {
+  if (!dataReady) {
+    return (
+      <div className="flex items-center justify-between px-3.5 mb-3.5">
+        <StatValue value="-" label={isOrganizer ? 'Hosted' : 'Attended'} />
+        <StatValue value="-" label="Followers" />
+        <StatValue value="-" label="Following" />
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="flex items-center justify-between px-3.5 mb-3.5 transition-opacity duration-200"
-      style={{ opacity: dataReady ? 1 : 0 }}
-    >
+    <div className="flex items-center justify-between px-3.5 mb-3.5">
       <button
         type="button"
         className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 rounded-lg py-1"
         onClick={onHostedClick}
       >
         <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
-          {isOrganizer ? (hostedCount ?? 0) : attendedCount}
+          {formatStat(isOrganizer ? (hostedCount ?? 0) : attendedCount)}
         </div>
         <div className="text-[0.61rem] leading-[0.78rem] text-gray-500 font-medium uppercase tracking-wider">
           {isOrganizer ? 'Hosted' : 'Attended'}
@@ -44,7 +70,7 @@ export function ProfileStats({
         onClick={onFollowersClick}
       >
         <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
-          {followers}
+          {formatStat(followers)}
         </div>
         <div className="text-[0.61rem] leading-[0.78rem] text-gray-500 font-medium uppercase tracking-wider">
           Followers
@@ -56,7 +82,7 @@ export function ProfileStats({
         onClick={onFollowingClick}
       >
         <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
-          {following}
+          {formatStat(following)}
         </div>
         <div className="text-[0.61rem] leading-[0.78rem] text-gray-500 font-medium uppercase tracking-wider">
           Following

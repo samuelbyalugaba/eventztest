@@ -16,6 +16,11 @@ export const queryKeys = {
     root: ['profile'] as const,
     summary: (viewerId: string | null | undefined, profileId: string) => ['profile', 'summary', viewerId || 'anon', profileId] as const,
     posts: (profileId: string, offset: number) => ['profile', 'posts', profileId, offset] as const,
+    organizerEvents: (profileId: string) => ['profile', profileId, 'organizer-events'] as const,
+    savedEvents: (profileId: string) => ['profile', profileId, 'saved-events'] as const,
+    savedPosts: (profileId: string) => ['profile', profileId, 'saved-posts'] as const,
+    tickets: (profileId: string) => ['profile', profileId, 'tickets'] as const,
+    streamedVideos: (profileId: string) => ['profile', profileId, 'streamed-videos'] as const,
   },
   wallet: {
     transactions: (userId: string) => ['wallet', 'transactions', userId] as const,

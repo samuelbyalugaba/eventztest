@@ -4,6 +4,7 @@ import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { CommentIcon } from './icons/CommentIcon';
 import verifiedBadge from '../assets/verified-badge.png';
+import { Skeleton } from './ui/skeleton';
 import { 
   Share2, Bookmark, MoreHorizontal,
   Volume2, VolumeX, Maximize,
@@ -590,7 +591,7 @@ export const PostCard = React.memo(function PostCard({
                           <div className="absolute inset-0 bg-[#F6F6F6]" />
                         ) : isMediaVideo ? (
                           <div className="absolute inset-0 bg-[#F6F6F6]">
-                            {isVideoLoading && isActive && !videoPoster && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
+                            {isVideoLoading && isActive && !videoPoster && <Skeleton className="absolute inset-0 rounded-none z-10" />}
                             {videoError && isActive && (
                               <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-100 px-5 text-center text-xs font-medium text-gray-500">
                                 {videoError}
@@ -718,7 +719,7 @@ export const PostCard = React.memo(function PostCard({
              {isCurrentMediaVideo ? (
                 /* ... Existing Video Logic for Single File ... */
                 <div className="relative h-full w-full overflow-hidden bg-[#F6F6F6]">
-                  {isVideoLoading && !videoPoster && <div className="absolute inset-0 bg-gray-200 animate-pulse z-10" />}
+                  {isVideoLoading && !videoPoster && <Skeleton className="absolute inset-0 rounded-none z-10" />}
                   {videoError && (
                     <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-100 px-5 text-center text-xs font-medium text-gray-500">
                       {videoError}

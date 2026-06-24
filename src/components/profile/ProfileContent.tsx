@@ -1,4 +1,5 @@
 import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon, PlaySquare, Radio } from 'lucide-react';
+import { Skeleton } from '../ui/skeleton';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { EventCard } from '../EventCard';
 import type { ProfileTab } from './ProfileTabs';
@@ -144,8 +145,8 @@ function StreamedTab({ isLoading, streams }: { isLoading: boolean; streams: Clou
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="aspect-video bg-gray-100 rounded-2xl animate-pulse" />
-        <div className="aspect-video bg-gray-100 rounded-2xl animate-pulse" />
+        <Skeleton className="aspect-video rounded-2xl" />
+        <Skeleton className="aspect-video rounded-2xl" />
       </div>
     );
   }
@@ -236,7 +237,7 @@ function MediaTab({ isLoading, posts, hasMore, isLoadingMore, onLoadMore, onOpen
   if (isLoading) {
     return (
       <div className="grid grid-cols-3 gap-1">
-        {[...Array(9)].map((_, i) => <div key={i} className="aspect-square bg-gray-200 rounded animate-pulse" />)}
+        {[...Array(9)].map((_, i) => <Skeleton key={i} className="aspect-square" />)}
       </div>
     );
   }
@@ -315,8 +316,8 @@ function SavedTab({ isLoading, events, posts, onEventClick, onOpenPost, currentU
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
-        <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
+        <Skeleton className="h-24 rounded-2xl" />
+        <Skeleton className="h-24 rounded-2xl" />
       </div>
     );
   }
@@ -382,8 +383,8 @@ function UpcomingTab({ isLoading, events, onEventClick, currentUserId, onEditEve
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
-        <div className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+        <Skeleton className="h-28 rounded-2xl" />
+        <Skeleton className="h-28 rounded-2xl" />
       </div>
     );
   }
@@ -430,7 +431,7 @@ function TicketsTab({ isLoading, groups, onGroupClick }: { isLoading: boolean; g
   if (isLoading) {
     return (
       <div className="grid grid-cols-3 gap-1">
-        {[...Array(9)].map((_, i) => <div key={i} className="aspect-square bg-gray-200 rounded animate-pulse" />)}
+        {[...Array(9)].map((_, i) => <Skeleton key={i} className="aspect-square" />)}
       </div>
     );
   }

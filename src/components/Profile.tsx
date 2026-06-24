@@ -9,6 +9,9 @@ import { Conversation, Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
 import { EventListModal } from './EventListModal';
 import { useProfileData } from '../hooks/useProfileData';
+import { useProfileStore } from '../store/profileStore';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 
 // Lazy-load heavy modals
 const SettingsModal = lazy(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
@@ -112,6 +115,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     userPosts,
     streamedVideos,
     isLoading,
+    isProfileError,
+    refetchProfile,
     isLoadingPosts,
     isLoadingMorePosts,
     hasMorePosts,
@@ -123,10 +128,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     isFollowing,
     isOwnProfile,
     isOrganizer,
-    setPublishedEvents,
-    setSavedEvents,
-    setFollowStats,
-    setIsFollowing,
     loadMorePosts,
   } = useProfileData(userId, activeTab);
 
@@ -156,8 +157,16 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     setEventPendingDelete(null);
     try {
       await deleteEvent(event.id);
-      setPublishedEvents(prev => prev.filter(e => e.id !== event.id));
-      setSavedEvents(prev => prev.filter(e => e.id !== event.id));
+      if (userId) {
+        queryClient.setQueryData(queryKeys.profile.organizerEvents(userId), (prev: any) => {
+          if (!Array.isArray(prev)) return prev;
+          return prev.filter((e: any) => e.id !== event.id);
+        });
+        queryClient.setQueryData(queryKeys.profile.savedEvents(userId), (prev: any) => {
+          if (!Array.isArray(prev)) return prev;
+          return prev.filter((e: any) => e.id !== event.id);
+        });
+      }
       if (selectedEvent?.id === event.id) setSelectedEvent(null);
       window.dispatchEvent(new Event('eventsUpdated'));
       toast.success('Event deleted');
@@ -215,7 +224,21 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const pastHostedEvents = publishedEvents.filter(e => new Date(e.date) < new Date());
   const pastHostedEventIds = new Set(pastHostedEvents.map((event) => event.id));
   const additionalHostedStreams = streamedVideos.filter((stream) => !stream.event_id || !pastHostedEventIds.has(stream.event_id));
-  const hostedCount = pastHostedEvents.length + additionalHostedStreams.length;
+  const computedHostedCount = pastHostedEvents.length + additionalHostedStreams.length;
+
+  // Persist hosted/attended counts to the store so they survive page reloads
+  const storedCounts = useProfileStore((s) => ({ hostedCount: s.hostedCount, attendedCount: s.attendedCount }));
+  const hostedDataReady = !isLoadingOrganizerEvents && !isLoadingStreamedVideos;
+  const hostedCount = hostedDataReady ? computedHostedCount : storedCounts.hostedCount;
+  const attendedCount = !isLoadingTickets ? attendedEvents.length : storedCounts.attendedCount;
+
+  // Save computed counts to persisted store for next visit
+  useEffect(() => {
+    if (hostedDataReady) useProfileStore.getState().setHostedCount(computedHostedCount);
+  }, [computedHostedCount, hostedDataReady]);
+  useEffect(() => {
+    if (!isLoadingTickets) useProfileStore.getState().setAttendedCount(attendedEvents.length);
+  }, [attendedEvents.length, isLoadingTickets]);
   const profileSubpagePath = (section: 'hosted' | 'followers' | 'following') => (
     userId ? `/profile/${userId}/${section}` : `/${section}`
   );
@@ -283,6 +306,24 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     }
   };
 
+  if (isProfileError) {
+    return (
+      <div className="bg-white min-h-screen pb-14 px-4 pt-[calc(0.95rem+var(--eventz-safe-area-top))] sm:px-5 flex flex-col items-center justify-center text-center">
+        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+          <span className="text-red-500 text-2xl font-bold">!</span>
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Could not load profile</h2>
+        <p className="text-gray-500 mb-6 max-w-sm">This profile may not exist or is temporarily unavailable.</p>
+        <button
+          onClick={() => refetchProfile()}
+          className="rounded-full bg-[#8A2BE2] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7C3AED]"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white min-h-screen pb-14 px-4 pt-[calc(0.95rem+var(--eventz-safe-area-top))] sm:px-5">
       <ProfileHeader
@@ -331,7 +372,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       <ProfileStats
         isOrganizer={isOrganizer}
         hostedCount={hostedCount}
-        attendedCount={attendedEvents.length}
+        attendedCount={attendedCount}
         followers={followStats.followers}
         following={followStats.following}
         dataReady={!isLoading}
@@ -417,7 +458,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       )}
 
       {/* Modals - lazy-loaded with Suspense */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"><div className="h-10 w-10 animate-spin rounded-full border-2 border-white/30 border-t-white" /></div>}>
         {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} initialView={settingsInitialView} />}
         {showLiveSetupModal && <LiveSetupModal isOpen={showLiveSetupModal} onClose={() => setShowLiveSetupModal(false)} />}
         {showTicketViewer && selectedTicket && <TicketViewer ticket={selectedTicket} onClose={() => setShowTicketViewer(false)} />}

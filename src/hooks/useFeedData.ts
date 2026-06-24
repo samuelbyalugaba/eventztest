@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getFollowedUserIds, getNotifications, getPosts, getProfile, type Notification } from '../utils/supabase/api';
@@ -7,19 +8,25 @@ import type { Post } from '../types';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
 
-const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEED_PAGE_SIZE = 20;
 
 export const removePostFromFeedCache = (postId: number) => {
   queryClient.setQueriesData(
     { queryKey: queryKeys.feed.root },
     (cached: unknown) => {
-      if (Array.isArray(cached)) return cached.filter((post: Post) => post.id !== postId);
-      if (cached && typeof cached === 'object' && Array.isArray((cached as { posts?: Post[] }).posts)) {
+      if (!cached || typeof cached !== 'object') return cached;
+      const data = cached as Record<string, unknown>;
+      if (Array.isArray(data.pages)) {
         return {
-          ...cached,
-          posts: (cached as { posts: Post[] }).posts.filter((post) => post.id !== postId),
+          ...data,
+          pages: (data.pages as Array<{ posts: Post[] }>).map((page) => ({
+            ...page,
+            posts: page.posts.filter((post: Post) => post.id !== postId),
+          })),
         };
+      }
+      if (Array.isArray(data.posts)) {
+        return { ...data, posts: (data.posts as Post[]).filter((post) => post.id !== postId) };
       }
       return cached;
     },
@@ -31,12 +38,19 @@ export const removeUserPostsFromFeedCache = (userId: string) => {
   queryClient.setQueriesData(
     { queryKey: queryKeys.feed.root },
     (cached: unknown) => {
-      if (Array.isArray(cached)) return cached.filter(isDifferentUser);
-      if (cached && typeof cached === 'object' && Array.isArray((cached as { posts?: Post[] }).posts)) {
+      if (!cached || typeof cached !== 'object') return cached;
+      const data = cached as Record<string, unknown>;
+      if (Array.isArray(data.pages)) {
         return {
-          ...cached,
-          posts: (cached as { posts: Post[] }).posts.filter(isDifferentUser),
+          ...data,
+          pages: (data.pages as Array<{ posts: Post[] }>).map((page) => ({
+            ...page,
+            posts: page.posts.filter(isDifferentUser),
+          })),
         };
+      }
+      if (Array.isArray(data.posts)) {
+        return { ...data, posts: (data.posts as Post[]).filter(isDifferentUser) };
       }
       return cached;
     },
@@ -44,136 +58,101 @@ export const removeUserPostsFromFeedCache = (userId: string) => {
 };
 
 export function useFeedData(initialCurrentUser?: any) {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(initialCurrentUser || null);
-  const [isLoading, setIsLoading] = useState(true);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
-  const nextOffsetRef = useRef(0);
-  const isLoadingMoreRef = useRef(false);
+  const initialUserLoaded = useRef(false);
 
   useEffect(() => {
     setCurrentUser(initialCurrentUser || null);
   }, [initialCurrentUser]);
 
-  const loadPosts = async (useCacheFirst: boolean) => {
-    setIsLoading(true);
-    try {
+  const postsQuery = useInfiniteQuery({
+    queryKey: queryKeys.feed.firstPage(currentUser?.id),
+    queryFn: async ({ pageParam }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
       if (user) {
-        try { const profile = await getProfile(user.id); setCurrentUserProfile(profile || null); } catch { setCurrentUserProfile(null); }
-        try { const following = await getFollowedUserIds(user.id); setFollowingIds(new Set(following)); } catch (e) { console.error('Error loading following:', e); }
-      }
-
-      const firstPageKey = queryKeys.feed.firstPage(user?.id);
-      const cachedPage = useCacheFirst
-        ? queryClient.getQueryData<{ posts: Post[]; count: number }>(firstPageKey)
-        : undefined;
-
-      if (cachedPage) {
-        nextOffsetRef.current = cachedPage.count;
-        setHasMore(cachedPage.count === FEED_PAGE_SIZE);
-        setPosts(cachedPage.posts);
-        setIsLoading(false);
-      }
-
-      if (!useCacheFirst) {
-        await queryClient.invalidateQueries({ queryKey: firstPageKey });
-      }
-
-      const page = await queryClient.fetchQuery({
-        queryKey: firstPageKey,
-        staleTime: FEED_CACHE_TTL_MS,
-        queryFn: async () => {
-          const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset: 0 });
-          return {
-            posts: fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [],
-            count: fresh?.length ?? 0,
-          };
-        },
-      });
-
-      const freshCount = page.count;
-      nextOffsetRef.current = freshCount;
-      setHasMore(freshCount === FEED_PAGE_SIZE);
-
-      setPosts((prev) => {
-        if (useCacheFirst && sessionStorage.getItem('feedScrollPos') && prev.length > page.posts.length) {
-          const merged = [...prev];
-          page.posts.forEach((post, i) => { merged[i] = post; });
-          return merged;
+        setCurrentUser(user);
+        if (!initialUserLoaded.current) {
+          initialUserLoaded.current = true;
+          try {
+            const profile = await getProfile(user.id);
+            setCurrentUserProfile(profile || null);
+          } catch {
+            setCurrentUserProfile(null);
+          }
+          try {
+            const following = await getFollowedUserIds(user.id);
+            setFollowingIds(new Set(following));
+          } catch (e) {
+            console.error('Error loading following:', e);
+          }
         }
-        return page.posts;
-      });
-    } catch (error) {
-      console.error('Error loading posts:', error);
-      toast.error('Failed to load posts');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLoadMore = async () => {
-    if (isLoadingMoreRef.current || isLoadingMore || !hasMore) return;
-    isLoadingMoreRef.current = true;
-    setIsLoadingMore(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const offset = Math.max(nextOffsetRef.current, posts.length);
-      const fresh = await queryClient.fetchQuery({
-        queryKey: queryKeys.feed.page(user?.id, offset),
-        staleTime: FEED_CACHE_TTL_MS,
-        queryFn: () => getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset }),
-      });
-      const freshCount = fresh?.length ?? 0;
-      nextOffsetRef.current = offset + freshCount;
-
-      if (!fresh || freshCount === 0) {
-        setHasMore(false);
-        return;
       }
-
-      const mapped = mapPostsToViewModel(fresh);
-      const existingIds = new Set(posts.map((p) => p.id));
-      const uniqueMapped = mapped.filter((p) => !existingIds.has(p.id));
-
-      if (uniqueMapped.length === 0) {
-        setHasMore(false);
-        return;
-      }
-
-      setPosts((prev) => {
-        const latestIds = new Set(prev.map((p) => p.id));
-        return [...prev, ...mapped.filter((p) => !latestIds.has(p.id))];
+      const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset: pageParam as number });
+      return {
+        posts: fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [],
+        count: fresh?.length ?? 0,
+      };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+      if (lastPage.count < FEED_PAGE_SIZE) return undefined;
+      return (lastPageParam as number) + FEED_PAGE_SIZE;
+    },
+    staleTime: 5 * 60 * 1000,
+    select: (data) => {
+      const allPosts = data.pages.flatMap((page) => page.posts);
+      const seen = new Set<number>();
+      return allPosts.filter((post) => {
+        if (seen.has(post.id)) return false;
+        seen.add(post.id);
+        return true;
       });
-      setHasMore(freshCount === FEED_PAGE_SIZE);
-    } catch (error) {
-      console.error('Error loading more posts:', error);
-    } finally {
-      isLoadingMoreRef.current = false;
-      setIsLoadingMore(false);
+    },
+  });
+
+  const isLoading = postsQuery.isPending && postsQuery.data === undefined;
+  const posts = postsQuery.data ?? [];
+  const hasMore = postsQuery.hasNextPage ?? false;
+  const isLoadingMore = postsQuery.isFetchingNextPage;
+
+  const handleLoadMore = useCallback(() => {
+    if (!postsQuery.isFetchingNextPage && postsQuery.hasNextPage) {
+      postsQuery.fetchNextPage();
     }
-  };
+  }, [postsQuery]);
+
+  const feedQueryKey = queryKeys.feed.firstPage(currentUser?.id);
+  const setPosts: React.Dispatch<React.SetStateAction<Post[]>> = useCallback((updater) => {
+    queryClient.setQueryData(feedQueryKey, (old: unknown) => {
+      if (!old || typeof old !== 'object') return old;
+      const data = old as { pages: Array<{ posts: Post[]; count: number }>; pageParams: unknown[] };
+      if (!Array.isArray(data.pages)) return old;
+      const currentFlat = data.pages.flatMap((page) => page.posts);
+      const nextFlat = typeof updater === 'function'
+        ? (updater as (prev: Post[]) => Post[])(currentFlat)
+        : updater;
+      let cursor = 0;
+      return {
+        ...data,
+        pages: data.pages.map((page) => {
+          const slice = nextFlat.slice(cursor, cursor + page.posts.length);
+          cursor += page.posts.length;
+          return { ...page, posts: slice };
+        }),
+      };
+    });
+  }, [feedQueryKey, queryClient]);
 
   useEffect(() => {
-    void loadPosts(true);
-    const handlePostsUpdated = (event: Event) => {
-      const deletedPostId = (event as CustomEvent<{ deletedPostId?: number }>).detail?.deletedPostId;
-      if (typeof deletedPostId === 'number') {
-        removePostFromFeedCache(deletedPostId);
-        setPosts((prev) => prev.filter((post) => post.id !== deletedPostId));
-        setIsLoading(false);
-        return;
-      }
-      void loadPosts(false);
+    const handlePostsUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
     };
     const handleProfileUpdated = () => {
-      void loadPosts(false);
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
     };
     window.addEventListener('postsUpdated', handlePostsUpdated);
     window.addEventListener('profileUpdated', handleProfileUpdated);
@@ -197,9 +176,10 @@ export function useFeedData(initialCurrentUser?: any) {
         staleTime: 60_000,
         queryFn: () => getNotifications(currentUser.id),
       });
-      setNotifications(data);
+      setNotifications(data ?? []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      setNotifications([]);
     } finally {
       if (!options?.silent) setNotificationsLoading(false);
     }
@@ -234,7 +214,6 @@ export function useFeedData(initialCurrentUser?: any) {
     notifications,
     notificationsLoading,
     currentUserProfile,
-    loadPosts,
     handleLoadMore,
     refreshNotifications,
     setNotifications,

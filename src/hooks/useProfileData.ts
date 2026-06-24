@@ -1,6 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
-import { getProfile, getUserTickets, getSavedEvents, getSavedPosts, getFollowersCount, getFollowingCount, getProfilePostsGrid, subscribeToSavedEvents, subscribeToSavedPosts, getOrganizerStats, getOrganizerEvents, checkIsFollowing, getProfileStreamedVideos } from '../utils/supabase/api';
+import {
+  getProfile,
+  getUserTickets,
+  getSavedEvents,
+  getSavedPosts,
+  getFollowersCount,
+  getFollowingCount,
+  getProfilePostsGrid,
+  subscribeToSavedEvents,
+  subscribeToSavedPosts,
+  getOrganizerStats,
+  getOrganizerEvents,
+  checkIsFollowing,
+  getProfileStreamedVideos,
+} from '../utils/supabase/api';
 import type { ApiPost, Profile as UserProfile, Ticket, Event as AppEvent, CloudflareStream } from '../utils/supabase/api';
 import { useProfileStore } from '../store/profileStore';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,49 +24,8 @@ import { queryKeys } from '../queryKeys';
 
 type SavedEvent = AppEvent & { isSaved: boolean; hasReminder: boolean };
 
-const PROFILE_SUMMARY_CACHE_PREFIX = 'eventz-profile-summary-v1:';
-const PROFILE_SUMMARY_CACHE_TTL_MS = 5 * 60 * 1000;
-
-const readProfileSummaryCache = (profileId: string) => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(`${PROFILE_SUMMARY_CACHE_PREFIX}${profileId}`);
-    if (!raw) return null;
-    const cached = JSON.parse(raw);
-    if (!cached?.timestamp || Date.now() - cached.timestamp > PROFILE_SUMMARY_CACHE_TTL_MS) return null;
-    return cached.data || null;
-  } catch {
-    return null;
-  }
-};
-
-const writeProfileSummaryCache = (profileId: string, data: any) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(
-      `${PROFILE_SUMMARY_CACHE_PREFIX}${profileId}`,
-      JSON.stringify({ data, timestamp: Date.now() }),
-    );
-  } catch {
-    // Keeping navigation fast should never make profile loading fail.
-  }
-};
-
-const removePostFromProfileCaches = (postId: number) => {
-  queryClient.setQueriesData(
-    { queryKey: queryKeys.profile.root },
-    (cached: unknown) => {
-      if (Array.isArray(cached)) return cached.filter((post: ApiPost) => post.id !== postId);
-      if (cached && typeof cached === 'object' && Array.isArray((cached as { posts?: ApiPost[] }).posts)) {
-        return {
-          ...cached,
-          posts: (cached as { posts: ApiPost[] }).posts.filter((post) => post.id !== postId),
-        };
-      }
-      return cached;
-    }
-  );
-};
+const POSTS_PAGE_SIZE = 18;
+const PROFILE_CACHE_TTL_MS = 60_000;
 
 export function useProfileData(userId?: string, activeTab?: string) {
   const { user: authUser } = useAuth();
@@ -59,376 +33,231 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const cachedOrgStats = useProfileStore((s) => s.organizerStats);
   const cachedFollowStats = useProfileStore((s) => s.followStats);
   const isOwnProfileCheck = !userId;
-  const hasInstantProfile = isOwnProfileCheck && !!cachedProfile;
 
   const [currentUser, setCurrentUser] = useState<any>(authUser ?? null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(isOwnProfileCheck && cachedProfile ? cachedProfile : null);
-  const [organizerStats, setOrganizerStats] = useState<any>(isOwnProfileCheck && cachedOrgStats ? cachedOrgStats : null);
-  const [publishedEvents, setPublishedEvents] = useState<any[]>([]);
-  const [savedEvents, setSavedEvents] = useState<SavedEvent[]>([]);
-  const [savedPosts, setSavedPosts] = useState<ApiPost[]>([]);
-  const [attendedEvents, setAttendedEvents] = useState<AppEvent[]>([]);
-  const [ticketEvents, setTicketEvents] = useState<Ticket[]>([]);
-  const [userPosts, setUserPosts] = useState<ApiPost[]>([]);
-  const [streamedVideos, setStreamedVideos] = useState<CloudflareStream[]>([]);
-  const [isLoading, setIsLoading] = useState(!hasInstantProfile);
-  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
-  const [isLoadingMorePosts, setIsLoadingMorePosts] = useState(false);
-  const [postsOffset, setPostsOffset] = useState(0);
-  const [hasMorePosts, setHasMorePosts] = useState(false);
-  const [isLoadingSavedEvents, setIsLoadingSavedEvents] = useState(false);
-  const [isLoadingTickets, setIsLoadingTickets] = useState(false);
-  const [isLoadingOrganizerEvents, setIsLoadingOrganizerEvents] = useState(false);
-  const [isLoadingStreamedVideos, setIsLoadingStreamedVideos] = useState(false);
-  const [followStats, setFollowStats] = useState(isOwnProfileCheck && cachedFollowStats ? cachedFollowStats : { followers: 0, following: 0 });
-  const [isFollowing, setIsFollowing] = useState(false);
 
-  const loadSeqRef = useRef(0);
-  const lastLoadedProfileIdRef = useRef<string | null>(null);
-  const savedEventsLoadedRef = useRef(false);
-  const ticketsLoadedRef = useRef(false);
-  const organizerEventsLoadedRef = useRef(false);
-  const organizerEventsSeqRef = useRef(0);
-  const streamedVideosLoadedRef = useRef(false);
-  const savedEventsSubscriptionRef = useRef<any>(null);
-
-  const isOwnProfile = !userId || (currentUser && userId === currentUser.id);
-  const isOrganizer = userProfile?.is_organizer || false;
-  const POSTS_PAGE_SIZE = 18;
-  const PROFILE_CACHE_TTL_MS = 60_000;
-  const PROFILE_SCROLL_KEY = 'eventz_profile_scroll';
-  const PROFILE_POST_ID_KEY = 'eventz_profile_post_id';
-
-  const loadData = async () => {
-    const seq = ++loadSeqRef.current;
-    try {
-      setIsLoading(true);
-      setIsLoadingPosts(true);
-      setIsLoadingMorePosts(false);
-      setPostsOffset(0);
-      setHasMorePosts(false);
-
-      const user = authUser;
-      if (seq !== loadSeqRef.current) return;
-
-      if (user) setCurrentUser(user);
-      const targetUserId = userId || user?.id;
-      if (!targetUserId) return;
-
-      const viewerId = user?.id || null;
-      const summaryKey = queryKeys.profile.summary(viewerId, targetUserId);
-      const cachedData = queryClient.getQueryData<any>(summaryKey);
-      const persistedData = readProfileSummaryCache(targetUserId);
-      const instantData = cachedData ?? persistedData;
-      const storeProfile = isOwnProfileCheck && targetUserId === user?.id ? cachedProfile : null;
-      const storeFollowStats = isOwnProfileCheck && targetUserId === user?.id ? cachedFollowStats : null;
-      const storeOrgStats = isOwnProfileCheck && targetUserId === user?.id ? cachedOrgStats : null;
-
-      if (lastLoadedProfileIdRef.current !== targetUserId) {
-        setUserProfile(instantData?.profile ?? storeProfile ?? null);
-        setFollowStats(instantData?.followStats ?? storeFollowStats ?? { followers: 0, following: 0 });
-        setIsFollowing(typeof instantData?.isFollowing === 'boolean' ? instantData.isFollowing : false);
-        setOrganizerStats(instantData?.organizerStats ?? storeOrgStats ?? null);
-        setPublishedEvents([]);
-        setSavedEvents([]);
-        setSavedPosts([]);
-        setTicketEvents([]);
-        setAttendedEvents([]);
-        setUserPosts(Array.isArray(instantData?.posts) ? instantData.posts : []);
-        setStreamedVideos([]);
-        savedEventsLoadedRef.current = false;
-        ticketsLoadedRef.current = false;
-        organizerEventsLoadedRef.current = false;
-        streamedVideosLoadedRef.current = false;
-        lastLoadedProfileIdRef.current = targetUserId;
-      }
-
-      if (instantData) {
-        if (Array.isArray(instantData.posts)) {
-          setPostsOffset(instantData.posts.length);
-          setHasMorePosts(instantData.posts.length === POSTS_PAGE_SIZE);
-          setIsLoadingPosts(false);
-        }
-        setIsLoading(false);
-      }
-      if (!instantData && storeProfile) setIsLoading(false);
-
-      const profile = await getProfile(targetUserId);
-      if (seq !== loadSeqRef.current) return;
-      if (profile) {
-         setUserProfile(profile);
-         if (profile.is_organizer) {
-           void loadOrganizerEventsIfNeeded(true);
-         }
-       }
-
-      const [followers, following, followingFlag, stats] = await Promise.all([
-        getFollowersCount(targetUserId),
-        getFollowingCount(targetUserId),
-        user && targetUserId !== user.id ? checkIsFollowing(user.id, targetUserId) : Promise.resolve(false),
-        profile?.is_organizer ? getOrganizerStats(targetUserId) : Promise.resolve(null),
-      ]);
-
-      if (seq !== loadSeqRef.current) return;
-
-      if (stats) {
-        setOrganizerStats(stats);
-        if (isOwnProfile) useProfileStore.getState().setOrganizerStats(stats);
-      }
-      const newFollowStats = { followers, following };
-      setFollowStats(newFollowStats);
-      if (isOwnProfile) useProfileStore.getState().setFollowStats(newFollowStats);
-      setIsFollowing(!!followingFlag);
-      setIsLoading(false);
-
-      const posts = await queryClient.fetchQuery({
-        queryKey: queryKeys.profile.posts(targetUserId, 0),
-        staleTime: PROFILE_CACHE_TTL_MS,
-        queryFn: () => getProfilePostsGrid({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: 0 }),
-      });
-      if (seq !== loadSeqRef.current) return;
-      setUserPosts(posts || []);
-      setPostsOffset((posts || []).length);
-      setHasMorePosts((posts || []).length === POSTS_PAGE_SIZE);
-      setIsLoadingPosts(false);
-
-      try {
-        const summaryPayload = {
-          profile,
-          followStats: { followers, following },
-          isFollowing: !!followingFlag,
-          organizerStats: stats,
-          posts: posts || []
-        };
-        queryClient.setQueryData(summaryKey, summaryPayload);
-        writeProfileSummaryCache(targetUserId, summaryPayload);
-      } catch {}
-    } catch {
-      setIsLoading(false);
-      setIsLoadingPosts(false);
-    } finally {
-      if (seq === loadSeqRef.current) setIsLoading(false);
-    }
-  };
+  const targetUserId = userId || currentUser?.id;
+  const viewerId = authUser?.id || null;
+  const isOwnProfile = !userId || (userId === authUser?.id);
+  const isOrganizer = cachedProfile?.is_organizer || false;
 
   useEffect(() => {
     setCurrentUser(authUser ?? null);
   }, [authUser]);
 
-  const loadMorePosts = async () => {
-    if (isLoadingPosts || isLoadingMorePosts || !hasMorePosts) return;
-    const targetUserId = userId || currentUser?.id;
-    if (!targetUserId) return;
-    try {
-      setIsLoadingMorePosts(true);
-      const next = await queryClient.fetchQuery({
-        queryKey: queryKeys.profile.posts(targetUserId, postsOffset),
-        staleTime: PROFILE_CACHE_TTL_MS,
-        queryFn: () => getProfilePostsGrid({ authorId: targetUserId, limit: POSTS_PAGE_SIZE, offset: postsOffset }),
-      });
-      const nextPosts = next || [];
-      setUserPosts((prev) => [...prev, ...nextPosts]);
-      setPostsOffset((prev) => prev + nextPosts.length);
-      setHasMorePosts(nextPosts.length === POSTS_PAGE_SIZE);
-    } finally {
-      setIsLoadingMorePosts(false);
-    }
-  };
-
-  const loadOrganizerEventsIfNeeded = async (isOrganizerOverride?: boolean, force = false) => {
-    const isOrg = isOrganizerOverride !== undefined ? isOrganizerOverride : userProfile?.is_organizer;
-    if (!isOrg || (!force && (isLoadingOrganizerEvents || organizerEventsLoadedRef.current))) return;
-    const targetUserId = userId || currentUser?.id;
-    if (!targetUserId) return;
-    const seq = ++organizerEventsSeqRef.current;
-    try {
-      setIsLoadingOrganizerEvents(true);
-      const events = await getOrganizerEvents(targetUserId);
-      if (seq !== organizerEventsSeqRef.current) return;
-      if (events) {
-        const mapEvent = (e: any) => ({ ...e, coverImage: e.image_url || e.coverImage, price: e.price_range || e.price });
-        setPublishedEvents(events.map(mapEvent));
-      }
-      organizerEventsLoadedRef.current = true;
-    } finally {
-      if (seq === organizerEventsSeqRef.current) setIsLoadingOrganizerEvents(false);
-    }
-  };
-
-  const loadSavedEventsIfNeeded = async () => {
-    if (!isOwnProfile || isLoadingSavedEvents || savedEventsLoadedRef.current) return;
-    const targetUserId = userId || currentUser?.id;
-    if (!targetUserId) return;
-    try {
-      setIsLoadingSavedEvents(true);
-      const [saved, posts] = await Promise.all([
-        getSavedEvents(targetUserId),
-        getSavedPosts(targetUserId),
+  /* Profile summary — single query */
+  const profileQuery = useQuery({
+    queryKey: queryKeys.profile.summary(viewerId, targetUserId || ''),
+    queryFn: async () => {
+      const profile = await getProfile(targetUserId!);
+      const [followers, following, followingFlag, stats] = await Promise.all([
+        getFollowersCount(targetUserId!),
+        getFollowingCount(targetUserId!),
+        authUser && targetUserId !== authUser.id
+          ? checkIsFollowing(authUser.id, targetUserId!)
+          : Promise.resolve(false),
+        profile?.is_organizer ? getOrganizerStats(targetUserId!) : Promise.resolve(null),
       ]);
-      if (saved) setSavedEvents(saved as unknown as SavedEvent[]);
-      if (posts) setSavedPosts(posts);
-      savedEventsLoadedRef.current = true;
-    } finally {
-      setIsLoadingSavedEvents(false);
-    }
-  };
 
-  const loadTicketsIfNeeded = async () => {
-    if (isOrganizer || isLoadingTickets || ticketsLoadedRef.current) return;
-    const targetUserId = userId || currentUser?.id;
-    if (!targetUserId) return;
-    try {
-      setIsLoadingTickets(true);
-      const tickets = await getUserTickets(targetUserId);
-      if (tickets) {
-        setTicketEvents(tickets);
-        const attended = tickets
-          .filter((t) => {
-            if (!t.event?.date) return false;
-            const d = new Date(t.event.date);
-            return !isNaN(d.getTime()) && d < new Date();
-          })
-          .map((t) => t.event!)
-          .filter((e) => !!e);
-        setAttendedEvents(Array.from(new Map(attended.map((item) => [item.id, item])).values()));
+      const followStats = { followers, following };
+
+      if (profile) {
+        useProfileStore.getState().setProfile(profile);
+        useProfileStore.getState().setFollowStats(followStats);
+        if (stats) useProfileStore.getState().setOrganizerStats(stats);
       }
-      ticketsLoadedRef.current = true;
-    } finally {
-      setIsLoadingTickets(false);
-    }
-  };
 
-  const loadStreamedVideosIfNeeded = async () => {
-    if (isLoadingStreamedVideos || streamedVideosLoadedRef.current) return;
-    const targetUserId = userId || currentUser?.id;
-    if (!targetUserId) return;
-    try {
-      setIsLoadingStreamedVideos(true);
-      const streams = await getProfileStreamedVideos(targetUserId);
-      setStreamedVideos(streams || []);
-      streamedVideosLoadedRef.current = true;
-    } finally {
-      setIsLoadingStreamedVideos(false);
-    }
-  };
+      return { profile, followStats, isFollowing: !!followingFlag, organizerStats: stats };
+    },
+    enabled: !!targetUserId,
+    staleTime: PROFILE_CACHE_TTL_MS,
+    placeholderData: () => {
+      if (cachedProfile && targetUserId === cachedProfile.id) {
+        return {
+          profile: cachedProfile,
+          followStats: cachedFollowStats || { followers: 0, following: 0 },
+          isFollowing: false,
+          organizerStats: cachedOrgStats || null,
+        };
+      }
+      return undefined;
+    },
+  });
 
+  const isLoading = profileQuery.isPending && !profileQuery.isPlaceholderData;
+  const isProfileError = profileQuery.isError;
+
+  const userProfile = profileQuery.data?.profile ?? null;
+  const followStats = profileQuery.data?.followStats ?? { followers: 0, following: 0 };
+  const isFollowing = profileQuery.data?.isFollowing ?? false;
+  const organizerStats = profileQuery.data?.organizerStats ?? null;
+
+  /* Posts grid — infinite query */
+  const postsQuery = useInfiniteQuery({
+    queryKey: queryKeys.profile.posts(targetUserId || '', 0),
+    queryFn: async ({ pageParam }) => {
+      const posts = await getProfilePostsGrid({
+        authorId: targetUserId!,
+        limit: POSTS_PAGE_SIZE,
+        offset: pageParam as number,
+      });
+      return posts || [];
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+      if (!lastPage || lastPage.length < POSTS_PAGE_SIZE) return undefined;
+      return (lastPageParam as number) + POSTS_PAGE_SIZE;
+    },
+    enabled: !!targetUserId,
+    staleTime: PROFILE_CACHE_TTL_MS,
+    select: (data) => data.pages.flat(),
+  });
+
+  const userPosts = postsQuery.data ?? [];
+  const isLoadingPosts = postsQuery.isPending;
+  const hasMorePosts = postsQuery.hasNextPage ?? false;
+  const isLoadingMorePosts = postsQuery.isFetchingNextPage;
+
+  const loadMorePosts = useCallback(() => {
+    if (postsQuery.hasNextPage && !postsQuery.isFetchingNextPage) {
+      postsQuery.fetchNextPage();
+    }
+  }, [postsQuery]);
+
+  /* Tab-specific data via useQuery */
+
+  const organizerEventsQuery = useQuery({
+    queryKey: queryKeys.profile.organizerEvents(targetUserId || ''),
+    queryFn: () =>
+      getOrganizerEvents(targetUserId!).then((events) =>
+        events
+          ? events.map((e: any) => ({ ...e, coverImage: e.image_url || e.coverImage, price: e.price_range || e.price }))
+          : [],
+      ),
+    enabled: !!targetUserId && isOrganizer && activeTab === 'upcoming',
+    staleTime: PROFILE_CACHE_TTL_MS,
+  });
+
+  const savedEventsQuery = useQuery({
+    queryKey: queryKeys.profile.savedEvents(targetUserId || ''),
+    queryFn: () => getSavedEvents(targetUserId!) as Promise<SavedEvent[]>,
+    enabled: !!targetUserId && isOwnProfileCheck && activeTab === 'saved',
+    staleTime: PROFILE_CACHE_TTL_MS,
+  });
+
+  const savedPostsQuery = useQuery({
+    queryKey: queryKeys.profile.savedPosts(targetUserId || ''),
+    queryFn: () => getSavedPosts(targetUserId!),
+    enabled: !!targetUserId && isOwnProfileCheck && activeTab === 'saved',
+    staleTime: PROFILE_CACHE_TTL_MS,
+  });
+
+  const ticketsQuery = useQuery({
+    queryKey: queryKeys.profile.tickets(targetUserId || ''),
+    queryFn: () => getUserTickets(targetUserId!),
+    enabled: !!targetUserId && !isOrganizer,
+    staleTime: PROFILE_CACHE_TTL_MS,
+  });
+
+  const streamedVideosQuery = useQuery({
+    queryKey: queryKeys.profile.streamedVideos(targetUserId || ''),
+    queryFn: () => getProfileStreamedVideos(targetUserId!),
+    enabled: !!targetUserId && activeTab === 'streamed',
+    staleTime: PROFILE_CACHE_TTL_MS,
+  });
+
+  const publishedEvents = organizerEventsQuery.data ?? [];
+  const isLoadingOrganizerEvents = organizerEventsQuery.isPending;
+
+  const savedEvents = savedEventsQuery.data ?? [];
+  const isLoadingSavedEvents = savedEventsQuery.isPending;
+
+  const savedPosts = savedPostsQuery.data ?? [];
+
+  const ticketEvents = ticketsQuery.data ?? [];
+  const isLoadingTickets = ticketsQuery.isPending;
+
+  const streamedVideos = streamedVideosQuery.data ?? [];
+  const isLoadingStreamedVideos = streamedVideosQuery.isPending;
+
+  const attendedEvents = useMemo(() => {
+    if (!ticketEvents.length) return [];
+    const attended = ticketEvents
+      .filter((t: Ticket) => {
+        if (!t.event?.date) return false;
+        const d = new Date(t.event.date);
+        return !isNaN(d.getTime()) && d < new Date();
+      })
+      .map((t: Ticket) => t.event!)
+      .filter((e): e is AppEvent => !!e);
+    return Array.from(new Map(attended.map((item) => [item.id, item])).values());
+  }, [ticketEvents]);
+
+  /* Event listeners for real-time updates */
   useEffect(() => {
-    const handleProfileUpdated = () => { void loadData(); };
+    const handleProfileUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.summary(viewerId, targetUserId || '') });
+    };
     const handleSavedPostsUpdated = () => {
-      savedEventsLoadedRef.current = false;
-      if (activeTab === 'saved') void loadSavedEventsIfNeeded();
+      if (targetUserId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.profile.savedEvents(targetUserId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.profile.savedPosts(targetUserId) });
+      }
     };
     const handleEventsUpdated = () => {
-      organizerEventsLoadedRef.current = false;
-      void loadOrganizerEventsIfNeeded(true, true);
+      if (targetUserId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.profile.organizerEvents(targetUserId) });
+      }
     };
     const handlePostsUpdated = (event: Event) => {
       const deletedPostId = (event as CustomEvent<{ deletedPostId?: number }>).detail?.deletedPostId;
       if (typeof deletedPostId === 'number') {
-        removePostFromProfileCaches(deletedPostId);
-        setUserPosts((prev) => prev.filter((post) => post.id !== deletedPostId));
-        setPostsOffset((offset) => Math.max(0, offset - 1));
-        setSavedPosts((prev) => prev.filter((post) => post.id !== deletedPostId));
-        if (sessionStorage.getItem(PROFILE_POST_ID_KEY) === String(deletedPostId)) {
-          sessionStorage.removeItem(PROFILE_POST_ID_KEY);
-          sessionStorage.removeItem(PROFILE_SCROLL_KEY);
-        }
+        queryClient.setQueriesData(
+          { queryKey: queryKeys.profile.root },
+          (cached: unknown) => {
+            if (Array.isArray(cached)) return cached.filter((post: ApiPost) => post.id !== deletedPostId);
+            return cached;
+          },
+        );
         return;
       }
-      void loadData();
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
     };
-    window.addEventListener('profileUpdated', handleProfileUpdated as EventListener);
-    window.addEventListener('savedPostsUpdated', handleSavedPostsUpdated as EventListener);
-    window.addEventListener('eventsUpdated', handleEventsUpdated as EventListener);
-    window.addEventListener('postsUpdated', handlePostsUpdated as EventListener);
+
+    window.addEventListener('profileUpdated', handleProfileUpdated);
+    window.addEventListener('savedPostsUpdated', handleSavedPostsUpdated);
+    window.addEventListener('eventsUpdated', handleEventsUpdated);
+    window.addEventListener('postsUpdated', handlePostsUpdated);
     return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdated as EventListener);
-      window.removeEventListener('savedPostsUpdated', handleSavedPostsUpdated as EventListener);
-      window.removeEventListener('eventsUpdated', handleEventsUpdated as EventListener);
-      window.removeEventListener('postsUpdated', handlePostsUpdated as EventListener);
+      window.removeEventListener('profileUpdated', handleProfileUpdated);
+      window.removeEventListener('savedPostsUpdated', handleSavedPostsUpdated);
+      window.removeEventListener('eventsUpdated', handleEventsUpdated);
+      window.removeEventListener('postsUpdated', handlePostsUpdated);
     };
-  }, [userId, isOwnProfile, authUser?.id, activeTab, currentUser?.id]);
+  }, [targetUserId, viewerId]);
 
+  /* Subscriptions for saved items — real-time invalidations */
   useEffect(() => {
-    if (activeTab === 'upcoming') void loadOrganizerEventsIfNeeded();
-  }, [activeTab, userProfile?.is_organizer, currentUser?.id, userId]);
+    let savedEventsSub: any = null;
+    let savedPostsSub: any = null;
 
-  useEffect(() => {
-    if (activeTab === 'saved') void loadSavedEventsIfNeeded();
-  }, [activeTab, isOwnProfile, currentUser?.id, userId]);
-
-  useEffect(() => {
-    if (activeTab === 'tickets') void loadTicketsIfNeeded();
-  }, [activeTab, isOrganizer, currentUser?.id, userId]);
-
-  useEffect(() => {
-    if (activeTab === 'streamed') void loadStreamedVideosIfNeeded();
-  }, [activeTab, currentUser?.id, userId]);
-
-  useEffect(() => {
-    if (isOrganizer) void loadStreamedVideosIfNeeded();
-  }, [isOrganizer, currentUser?.id, userId]);
-
-  useEffect(() => {
-    void loadTicketsIfNeeded();
-  }, [isOrganizer, currentUser?.id, userId]);
-
-  useEffect(() => {
-    if (isLoading || userPosts.length === 0) return;
-    const savedScroll = sessionStorage.getItem(PROFILE_SCROLL_KEY);
-    const savedPostId = sessionStorage.getItem(PROFILE_POST_ID_KEY);
-    if (!savedScroll && !savedPostId) return;
-    const restore = () => {
-      if (savedPostId) {
-        const el = document.getElementById(`profile-post-${savedPostId}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          sessionStorage.removeItem(PROFILE_SCROLL_KEY);
-          sessionStorage.removeItem(PROFILE_POST_ID_KEY);
-          return;
-        }
-      }
-      const scrollY = parseInt(savedScroll || '0', 10);
-      if (!isNaN(scrollY) && scrollY >= 0) window.scrollTo({ top: scrollY, behavior: 'smooth' });
-      sessionStorage.removeItem(PROFILE_SCROLL_KEY);
-      sessionStorage.removeItem(PROFILE_POST_ID_KEY);
-    };
-    const timeoutId = setTimeout(restore, 150);
-    return () => clearTimeout(timeoutId);
-  }, [isLoading, userPosts.length]);
-
-  useEffect(() => {
-    void loadData();
-    let savedEventsSubscription: any = null;
-    let savedPostsSubscription: any = null;
-    const setupSubscription = async () => {
-      const user = authUser;
-      if (isOwnProfile && user) {
-        const refreshSavedItems = async () => {
-          try {
-            const [saved, posts] = await Promise.all([
-              getSavedEvents(user.id),
-              getSavedPosts(user.id),
-            ]);
-            if (saved) setSavedEvents(saved as unknown as SavedEvent[]);
-            if (posts) setSavedPosts(posts);
-            savedEventsLoadedRef.current = true;
-          } catch (e) {
-            console.error('Error refreshing saved items:', e);
-          }
+    const setup = async () => {
+      if (isOwnProfileCheck && authUser) {
+        const refresh = () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.profile.savedEvents(authUser.id) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.profile.savedPosts(authUser.id) });
         };
-        savedEventsSubscription = subscribeToSavedEvents(user.id, refreshSavedItems);
-        savedPostsSubscription = subscribeToSavedPosts(user.id, refreshSavedItems);
-        savedEventsSubscriptionRef.current = savedEventsSubscription;
+        savedEventsSub = subscribeToSavedEvents(authUser.id, refresh);
+        savedPostsSub = subscribeToSavedPosts(authUser.id, refresh);
       }
     };
-    void setupSubscription();
+    void setup();
+
     return () => {
-      if (savedEventsSubscription) savedEventsSubscription.unsubscribe?.();
-      if (savedPostsSubscription) savedPostsSubscription.unsubscribe?.();
-      savedEventsSubscriptionRef.current = null;
+      savedEventsSub?.unsubscribe?.();
+      savedPostsSub?.unsubscribe?.();
     };
-  }, [userId, isOwnProfile, authUser?.id]);
+  }, [authUser, isOwnProfileCheck]);
 
   return {
     currentUser,
@@ -442,6 +271,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
     userPosts,
     streamedVideos,
     isLoading,
+    isProfileError,
     isLoadingPosts,
     isLoadingMorePosts,
     hasMorePosts,
@@ -449,14 +279,11 @@ export function useProfileData(userId?: string, activeTab?: string) {
     isLoadingOrganizerEvents,
     isLoadingTickets,
     isLoadingStreamedVideos,
-    followStats,
     isFollowing,
+    followStats,
     isOwnProfile,
     isOrganizer,
-    setPublishedEvents,
-    setSavedEvents,
-    setFollowStats,
-    setIsFollowing,
     loadMorePosts,
+    refetchProfile: () => profileQuery.refetch(),
   };
 }

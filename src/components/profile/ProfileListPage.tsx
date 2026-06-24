@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Search } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Skeleton } from '../ui/skeleton';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   getFollowedUserIds,
@@ -218,12 +219,12 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
           <div className="space-y-5">
             {[0, 1, 2, 3].map((item) => (
               <div key={item} className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-gray-100 animate-pulse" />
+                <Skeleton.Circle className="h-12 w-12" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 w-36 rounded bg-gray-100 animate-pulse" />
-                  <div className="h-4 w-28 rounded bg-gray-100 animate-pulse" />
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-4 w-28" />
                 </div>
-                <div className="h-9 w-20 rounded-lg bg-gray-100 animate-pulse" />
+                <Skeleton className="h-9 w-20 rounded-lg" />
               </div>
             ))}
           </div>

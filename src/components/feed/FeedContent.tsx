@@ -1,6 +1,6 @@
 import { MessageCircle } from 'lucide-react';
 import { PostCard } from '../PostCard';
-import { PostSkeleton } from '../PostSkeleton';
+import { PostSkeleton } from '../skeletons/PageSkeletons';
 import { Post } from '../../types';
 
 interface FeedContentProps {

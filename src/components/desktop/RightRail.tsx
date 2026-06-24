@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, TrendingUp, Sparkles, Calendar } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Skeleton } from '../ui/skeleton';
 import { getEvents } from '../../utils/supabase/api';
 
 interface TrendingEvent {
@@ -58,10 +59,10 @@ export function RightRail() {
             <div className="space-y-3">
               {[0, 1, 2].map(i => (
                 <div key={i} className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-gray-100 animate-pulse" />
+                  <Skeleton className="w-12 h-12 rounded-lg" />
                   <div className="flex-1 space-y-1.5">
-                    <div className="h-3 bg-gray-100 rounded w-3/4 animate-pulse" />
-                    <div className="h-2.5 bg-gray-100 rounded w-1/2 animate-pulse" />
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="h-2.5 w-1/2" />
                   </div>
                 </div>
               ))}

@@ -106,7 +106,7 @@ export function NotificationsPanel({
   const [isChangingPush, setIsChangingPush] = useState(false);
   const isNativeApp = useMemo(() => isNativeCapacitor(), []);
 
-  const unreadCount = useMemo(() => notifications.filter((notification) => !notification.read).length, [notifications]);
+  const unreadCount = useMemo(() => (notifications ?? []).filter((notification) => !notification.read).length, [notifications]);
   const title = useMemo(() => {
     return (
       currentUserProfile?.username ||
@@ -119,11 +119,12 @@ export function NotificationsPanel({
   }, [currentUser, currentUserProfile]);
 
   const visibleNotifications = useMemo(() => {
-    if (activeTab === 'unread') return notifications.filter((notification) => !notification.read);
-    if (activeTab === 'people') return notifications.filter((notification) => notification.type === 'follow');
-    if (activeTab === 'comments') return notifications.filter((notification) => notification.type === 'comment');
-    if (activeTab === 'professional') return notifications.filter((notification) => notification.type === 'event');
-    return notifications;
+    const items = notifications ?? [];
+    if (activeTab === 'unread') return items.filter((notification) => !notification.read);
+    if (activeTab === 'people') return items.filter((notification) => notification.type === 'follow');
+    if (activeTab === 'comments') return items.filter((notification) => notification.type === 'comment');
+    if (activeTab === 'professional') return items.filter((notification) => notification.type === 'event');
+    return items;
   }, [activeTab, notifications]);
 
   const refreshPushState = useCallback(async () => {

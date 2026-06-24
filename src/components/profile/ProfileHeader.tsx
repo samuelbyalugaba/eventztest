@@ -1,5 +1,6 @@
 import { ChevronLeft, Radio } from 'lucide-react';
 import { UserAvatar } from '../UserAvatar';
+import { Skeleton } from '../ui/skeleton';
 import creatorBadge from '../../assets/verified-badge.png';
 
 interface ProfileHeaderProps {
@@ -78,7 +79,7 @@ export function ProfileHeader({
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="w-16 h-16 rounded-full overflow-hidden bg-white ring-1 ring-gray-200">
             {isLoading ? (
-              <div className="w-full h-full bg-gray-200 animate-pulse" />
+              <Skeleton className="w-full h-full rounded-none" />
             ) : (
               <UserAvatar
                 src={profileImage}
@@ -92,8 +93,8 @@ export function ProfileHeader({
           <div className="flex-1 min-w-0">
             {isLoading ? (
               <div className="space-y-2">
-                <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
-                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-20" />
               </div>
             ) : (
               <>
@@ -162,7 +163,7 @@ export function ProfileHeader({
       <div className="flex min-w-0 items-center gap-3">
         <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-white ring-1 ring-gray-200">
           {isLoading ? (
-            <div className="h-full w-full animate-pulse bg-gray-200" />
+            <Skeleton className="h-full w-full rounded-none" />
           ) : (
             <UserAvatar
               src={profileImage}
@@ -176,8 +177,8 @@ export function ProfileHeader({
         <div className="min-w-0 flex-1">
           {isLoading ? (
             <div className="space-y-2">
-              <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
-              <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-20" />
             </div>
           ) : (
             <>

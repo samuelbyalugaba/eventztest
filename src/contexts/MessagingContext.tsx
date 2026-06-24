@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   getConversations,
-  getMessages,
   sendMessage,
   startConversation,
   markMessagesAsRead,
@@ -12,8 +12,11 @@ import {
   subscribeToOnlineUsers,
   deleteConversation,
 } from '../utils/supabase/api';
+import { queryClient } from '../queryClient';
 import { Conversation, Message } from '../types';
 import { useAuth } from './AuthContext';
+
+const CONVERSATIONS_KEY = (userId: string) => ['conversations', userId] as const;
 
 interface OnlineFriend {
   id: string;
@@ -44,55 +47,45 @@ interface MessagingContextValue {
 
 const MessagingContext = createContext<MessagingContextValue | null>(null);
 
+async function fetchAndFormatConversations(userId: string): Promise<Conversation[]> {
+  const apiConvs = await getConversations(userId);
+  return apiConvs.map((c: any) => {
+    const other = c.participant1_id === userId ? c.participant2 : c.participant1;
+    return {
+      id: c.id,
+      user: {
+        id: other?.id,
+        name: other?.full_name || 'Unknown User',
+        username: other?.username || '',
+        avatar: other?.avatar_url,
+        verified: other?.verified || false,
+        isOrganizer: other?.is_organizer || false,
+      },
+      lastMessage: {
+        text: c.last_message?.content || '',
+        timestamp: c.last_message
+          ? new Date(c.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : '',
+        isRead: c.last_message?.is_read || false,
+      },
+      hasMessages: !!c.last_message,
+      unreadCount: c.unread_count || 0,
+      messages: [],
+    };
+  });
+}
+
 export function MessagingProvider({ children }: { children: ReactNode }) {
   const { user: currentUser, isAuthenticated } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [onlineFriends, setOnlineFriends] = useState<OnlineFriend[]>([]);
   const [hasLiveEvents, setHasLiveEvents] = useState(false);
 
-  // Fetch conversations
-  useEffect(() => {
-    if (!isAuthenticated || !currentUser) {
-      setConversations([]);
-      setIsLoadingConversations(false);
-      return;
-    }
-    (async () => {
-      setIsLoadingConversations(true);
-      try {
-        const apiConvs = await getConversations(currentUser.id);
-        const formatted: Conversation[] = apiConvs.map((c: any) => {
-          const other = c.participant1_id === currentUser.id ? c.participant2 : c.participant1;
-          return {
-            id: c.id,
-            user: {
-              id: other?.id,
-              name: other?.full_name || 'Unknown User',
-              username: other?.username || '',
-              avatar: other?.avatar_url,
-              verified: other?.verified || false,
-              isOrganizer: other?.is_organizer || false,
-            },
-            lastMessage: {
-              text: c.last_message?.content || '',
-              timestamp: c.last_message
-                ? new Date(c.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : '',
-              isRead: c.last_message?.is_read || false,
-            },
-            hasMessages: !!c.last_message,
-            unreadCount: c.unread_count || 0,
-            messages: [],
-          };
-        });
-        setConversations(formatted);
-      } catch {/* silent */}
-      finally {
-        setIsLoadingConversations(false);
-      }
-    })();
-  }, [isAuthenticated, currentUser]);
+  const { data: conversations = [], isPending: isLoadingConversations } = useQuery({
+    queryKey: currentUser ? CONVERSATIONS_KEY(currentUser.id) : ['conversations', '__noop__'],
+    queryFn: () => fetchAndFormatConversations(currentUser!.id),
+    enabled: !!isAuthenticated && !!currentUser,
+    staleTime: 60_000,
+  });
 
   // Live events polling
   useEffect(() => {
@@ -112,7 +105,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
     const sub = subscribeToAllMessages((newMessage: any) => {
-      setConversations(prev => {
+      queryClient.setQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id), (prev) => {
+        if (!prev) return prev;
         const idx = prev.findIndex(c => c.id === newMessage.conversation_id);
         if (idx < 0) return prev;
         const conv = prev[idx];
@@ -163,7 +157,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
 
   const handleStartConversation = useCallback(async (user: StartConversationUser): Promise<Conversation | null> => {
     if (!currentUser) return null;
-    const existing = conversations.find(conv => {
+    const currentConvs = queryClient.getQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id)) || [];
+    const existing = currentConvs.find(conv => {
       if (user.id && conv.user.id === user.id) return true;
       if (conv.user.username && user.username) {
         return conv.user.username.toLowerCase().trim() === user.username.toLowerCase().trim();
@@ -189,28 +184,35 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
           unreadCount: 0,
           messages: [],
         };
-        setConversations(prev => [newConv, ...prev]);
+        queryClient.setQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id), (prev) => {
+          if (!prev) return [newConv];
+          return [newConv, ...prev];
+        });
         return newConv;
       } catch {/* silent */}
     }
     return null;
-  }, [currentUser, conversations]);
+  }, [currentUser]);
 
   const handleSendMessage = useCallback(async (conversationId: number, messageText: string) => {
     if (!messageText.trim() || !currentUser) return;
-    const previousConversation = conversations.find(conv => conv.id === conversationId);
+    const currentConvs = queryClient.getQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id)) || [];
+    const previousConversation = currentConvs.find(conv => conv.id === conversationId);
     const tempId = Date.now();
     const tempMsg: Message = {
       id: tempId, senderId: 0, text: messageText,
       timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
       read: true,
     };
-    setConversations(prev => prev.map(conv => conv.id === conversationId ? {
-      ...conv,
-      messages: [...conv.messages, tempMsg],
-      lastMessage: { text: tempMsg.text, timestamp: 'Just now', isRead: true },
-      hasMessages: true,
-    } : conv));
+    queryClient.setQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id), (prev) => {
+      if (!prev) return prev;
+      return prev.map(conv => conv.id === conversationId ? {
+        ...conv,
+        messages: [...conv.messages, tempMsg],
+        lastMessage: { text: tempMsg.text, timestamp: 'Just now', isRead: true },
+        hasMessages: true,
+      } : conv);
+    });
     try {
       const sent = await sendMessage(conversationId, messageText);
       if (sent) {
@@ -219,82 +221,60 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
           timestamp: new Date(sent.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
           read: true,
         };
-        setConversations(prev => prev.map(conv => conv.id === conversationId ? {
-          ...conv,
-          messages: conv.messages.map(m => m.id === tempId ? real : m),
-          lastMessage: { text: real.text, timestamp: 'Just now', isRead: true },
-          hasMessages: true,
-        } : conv));
+        queryClient.setQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id), (prev) => {
+          if (!prev) return prev;
+          return prev.map(conv => conv.id === conversationId ? {
+            ...conv,
+            messages: conv.messages.map(m => m.id === tempId ? real : m),
+            lastMessage: { text: real.text, timestamp: 'Just now', isRead: true },
+            hasMessages: true,
+          } : conv);
+        });
       }
     } catch {
-      setConversations(prev => prev.map(conv => conv.id === conversationId ? {
-        ...conv,
-        messages: conv.messages.filter(m => m.id !== tempId),
-        lastMessage: previousConversation?.lastMessage || conv.lastMessage,
-        hasMessages: previousConversation?.hasMessages || false,
-      } : conv));
+      queryClient.setQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id), (prev) => {
+        if (!prev) return prev;
+        return prev.map(conv => conv.id === conversationId ? {
+          ...conv,
+          messages: conv.messages.filter(m => m.id !== tempId),
+          lastMessage: previousConversation?.lastMessage || conv.lastMessage,
+          hasMessages: previousConversation?.hasMessages || false,
+        } : conv);
+      });
       toast.error('Failed to send message');
     }
-  }, [currentUser, conversations]);
+  }, [currentUser]);
 
   const handleMarkAsRead = useCallback(async (conversationId: number) => {
     if (!currentUser) return;
-    setConversations(prev => prev.map(conv => conv.id === conversationId ? {
-      ...conv,
-      unreadCount: 0,
-      messages: conv.messages.map(m => ({ ...m, read: true })),
-      lastMessage: { ...conv.lastMessage, isRead: true },
-    } : conv));
+    queryClient.setQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id), (prev) => {
+      if (!prev) return prev;
+      return prev.map(conv => conv.id === conversationId ? {
+        ...conv,
+        unreadCount: 0,
+        messages: conv.messages.map(m => ({ ...m, read: true })),
+        lastMessage: { ...conv.lastMessage, isRead: true },
+      } : conv);
+    });
     try { await markMessagesAsRead(conversationId, currentUser.id); } catch {/* silent */}
   }, [currentUser]);
 
   const handleDeleteConversation = useCallback(async (conversationId: number) => {
-    const snapshot = conversations;
-    setConversations(prev => prev.filter(c => c.id !== conversationId));
+    if (!currentUser) return;
+    const prevAll = queryClient.getQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id)) || [];
+    queryClient.setQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id), (prev) => {
+      if (!prev) return prev;
+      return prev.filter(c => c.id !== conversationId);
+    });
     try {
       await deleteConversation(conversationId);
       toast.success('Conversation deleted');
     } catch {
       toast.error('Failed to delete conversation');
-      setConversations(snapshot);
-      // best-effort refresh
-      if (currentUser) {
-        try {
-          const apiConvs = await getConversations(currentUser.id);
-          const formatted: Conversation[] = await Promise.all(apiConvs.map(async (c: any) => {
-            const other = c.participant1_id === currentUser.id ? c.participant2 : c.participant1;
-            const msgs = await getMessages(c.id);
-            return {
-              id: c.id,
-              user: {
-                id: other?.id,
-                name: other?.full_name || 'Unknown User',
-                username: other?.username || '',
-                avatar: other?.avatar_url,
-                verified: other?.verified || false,
-                isOrganizer: other?.is_organizer || false,
-              },
-              lastMessage: {
-                text: c.last_message?.content || '',
-                timestamp: c.last_message ? new Date(c.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-                isRead: c.last_message?.is_read || false,
-              },
-              hasMessages: !!c.last_message,
-              unreadCount: c.unread_count || 0,
-              messages: msgs.map((m: any) => ({
-                id: m.id,
-                senderId: m.sender_id === currentUser.id ? 0 : parseInt(m.sender_id) || 1,
-                text: m.content,
-                timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                read: m.is_read,
-              })),
-            };
-          }));
-          setConversations(formatted);
-        } catch {/* silent */}
-      }
+      queryClient.setQueryData(CONVERSATIONS_KEY(currentUser.id), prevAll);
+      queryClient.invalidateQueries({ queryKey: CONVERSATIONS_KEY(currentUser.id) });
     }
-  }, [conversations, currentUser]);
+  }, [currentUser]);
 
   const value = useMemo<MessagingContextValue>(() => ({
     conversations,

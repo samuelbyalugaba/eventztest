@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { MapPin, Search, X } from 'lucide-react';
+import { Skeleton } from './ui/skeleton';
 import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -442,10 +443,10 @@ function SearchRowSkeleton({ rank }: { rank?: number }) {
   return (
     <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3">
       {rank && <span className="w-5 shrink-0 text-center text-sm font-semibold text-gray-300">{rank}</span>}
-      <div className="h-14 w-16 shrink-0 animate-pulse rounded-lg bg-gray-100" />
+      <Skeleton className="h-14 w-16 shrink-0 rounded-lg" />
       <div className="min-w-0 flex-1 space-y-2">
-        <div className="h-3.5 w-3/4 animate-pulse rounded bg-gray-100" />
-        <div className="h-3 w-32 animate-pulse rounded bg-gray-100" />
+        <Skeleton className="h-3.5 w-3/4" />
+        <Skeleton className="h-3 w-32" />
       </div>
     </div>
   );

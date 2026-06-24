@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { EventCardsSkeleton, EventsPageSkeleton } from './skeletons/PageSkeletons';
+import { Skeleton } from './ui/skeleton';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Calendar, CalendarDays, ChevronDown, ChevronLeft, X, Filter, Search, Send, Star, CheckCircle2, MessageCircle, Music2, GraduationCap, BriefcaseBusiness, Palette, Landmark, Dumbbell, Shirt, LocateFixed, Check } from 'lucide-react';
@@ -772,7 +773,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 <h3 className="truncate text-[15px] font-bold leading-tight text-gray-900">Upcoming Events</h3>
                 <p className="mt-1 h-4 whitespace-nowrap text-xs font-medium leading-4 text-gray-500 tabular-nums">
                   {isInitialEventsLoading ? (
-                    <span className="inline-block h-3 w-24 animate-pulse rounded-full bg-gray-200 align-middle" aria-label="Loading event count" />
+                    <Skeleton className="inline-block h-3 w-24 align-middle" aria-label="Loading event count" />
                   ) : (
                     `${upcomingEventCountText} found`
                   )}

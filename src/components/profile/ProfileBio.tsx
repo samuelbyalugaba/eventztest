@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Skeleton } from '../ui/skeleton';
 
 interface ProfileBioProps {
   isLoading: boolean;
@@ -25,7 +26,7 @@ export function ProfileBio({ isLoading, isOrganizer, isOwnProfile, organizerCate
   if (isLoading) {
     return (
       <div className="mb-4">
-        <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+        <Skeleton className="h-4 w-48" />
       </div>
     );
   }

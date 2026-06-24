@@ -20,6 +20,7 @@ import {
   MessagesPageSkeleton,
   ProfilePageSkeleton,
 } from './components/skeletons/PageSkeletons';
+import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { DesktopSidebar } from './components/desktop/DesktopSidebar';
 import { RightRail } from './components/desktop/RightRail';
 import { LegalPage } from './components/legal/LegalPage';
@@ -41,6 +42,7 @@ const LiveStreamPage = lazy(() => import('./components/LiveStreamPage').then(m =
 const CreatePostPage = lazy(() => import('./components/CreatePostPage'));
 const MessagesPage = lazy(() => import('./components/MessagesPage'));
 const DashboardPage = lazy(() => import('./components/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const SearchPage = lazy(() => import('./components/SearchPage').then(m => ({ default: m.SearchPage })));
 
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -85,8 +87,8 @@ export default function App() {
           if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS) {
             const cachedPosts = Array.isArray(cached.posts) ? cached.posts : [];
             queryClient.setQueryData(queryKeys.feed.firstPage(currentUser?.id), {
-              posts: cachedPosts,
-              count: cachedPosts.length,
+              pages: [{ posts: cachedPosts, count: cachedPosts.length }],
+              pageParams: [0],
             });
             return;
           }
@@ -145,8 +147,8 @@ export default function App() {
         });
         localStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ posts: mapped, timestamp: Date.now() }));
         queryClient.setQueryData(queryKeys.feed.firstPage(currentUser?.id), {
-          posts: mapped,
-          count: mapped.length,
+          pages: [{ posts: mapped, count: mapped.length }],
+          pageParams: [0],
         });
       } catch {/* silent */}
     };
@@ -266,7 +268,7 @@ export default function App() {
     isProfileSubpagePath(backgroundLocation?.pathname);
   const effectiveLocation = backgroundLocation || location;
   const effectivePath = effectiveLocation.pathname;
-  const isSearchTab = effectivePath === '/events' && new URLSearchParams(effectiveLocation.search).get('search') === '1';
+  const isSearchTab = effectivePath === '/search';
   const isEventsTab = effectivePath === '/events' || effectivePath === '/';
   const isFeedTab = effectivePath === '/feed';
   const isLiveTab = effectivePath === '/live';
@@ -323,12 +325,35 @@ export default function App() {
     prevTabPathRef.current = effectivePath;
   }, [effectivePath, isEventsTab, isLiveTab, isOwnProfileTab]);
 
+  const [authTimedOut, setAuthTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (!isCheckingAuth) {
+      setAuthTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setAuthTimedOut(true), 10000);
+    return () => clearTimeout(timer);
+  }, [isCheckingAuth]);
+
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-[#8A2BE2]/30 border-t-[#8A2BE2] rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-600 font-medium">Loading EVENTZ...</p>
+          <div className="w-16 h-16 border-4 border-[#8A2BE2]/30 border-t-[#8A2BE2] rounded-full animate-spin mx-auto" />
+          {authTimedOut ? (
+            <div className="space-y-3">
+              <p className="text-red-500 font-medium">Taking longer than expected</p>
+              <button
+                onClick={() => { setAuthTimedOut(false); window.location.reload(); }}
+                className="rounded-full bg-[#8A2BE2] px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7C3AED]"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <p className="text-gray-600 font-medium">Loading EVENTZ...</p>
+          )}
         </div>
       </div>
     );
@@ -406,26 +431,30 @@ export default function App() {
           data-eventz-view="events"
         >
           {shouldMountEventsTab && (
-            <Suspense fallback={<EventsPageSkeleton />}>
-              <EventDetails
-                conversations={conversations}
-                onStartConversation={handleStartConversation}
-                onSendMessage={handleSendMessage}
-              />
-            </Suspense>
+            <RouteErrorBoundary>
+              <Suspense fallback={<EventsPageSkeleton />}>
+                <EventDetails
+                  conversations={conversations}
+                  onStartConversation={handleStartConversation}
+                  onSendMessage={handleSendMessage}
+                />
+              </Suspense>
+            </RouteErrorBoundary>
           )}
         </div>
         <div style={{ display: isFeedTab ? 'block' : 'none' }} className="h-[100dvh] overflow-hidden" data-eventz-view="feed">
           {shouldMountFeedTab && (
-            <Suspense fallback={<FeedPageSkeleton />}>
-              <Feed
-                conversations={conversations}
-                onStartConversation={handleStartConversation}
-                currentUser={currentUser}
-                onViewPost={handleViewPost}
-                isPaused={!isFeedTab || !!backgroundLocation}
-              />
-            </Suspense>
+            <RouteErrorBoundary>
+              <Suspense fallback={<FeedPageSkeleton />}>
+                <Feed
+                  conversations={conversations}
+                  onStartConversation={handleStartConversation}
+                  currentUser={currentUser}
+                  onViewPost={handleViewPost}
+                  isPaused={!isFeedTab || !!backgroundLocation}
+                />
+              </Suspense>
+            </RouteErrorBoundary>
           )}
         </div>
         <div 
@@ -447,17 +476,19 @@ export default function App() {
           data-eventz-view="profile"
         >
           {shouldMountProfileTab && (
-            <Suspense fallback={<ProfilePageSkeleton />}>
-              <Profile
-                onLogout={handleLogout}
-                onCreateEvent={handleCreateEvent}
-                onEditEvent={handleEditEvent}
-                onStartOrganizerSetup={handleStartOrganizerSetup}
-                onStartConversation={handleStartConversation}
-                onViewPost={handleViewPost}
-                isPaused={!isOwnProfileTab || !!backgroundLocation}
-              />
-            </Suspense>
+            <RouteErrorBoundary>
+              <Suspense fallback={<ProfilePageSkeleton />}>
+                <Profile
+                  onLogout={handleLogout}
+                  onCreateEvent={handleCreateEvent}
+                  onEditEvent={handleEditEvent}
+                  onStartOrganizerSetup={handleStartOrganizerSetup}
+                  onStartConversation={handleStartConversation}
+                  onViewPost={handleViewPost}
+                  isPaused={!isOwnProfileTab || !!backgroundLocation}
+                />
+              </Suspense>
+            </RouteErrorBoundary>
           )}
         </div>
 
@@ -482,17 +513,19 @@ export default function App() {
               <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="following" /></Suspense>
             } />
             <Route path="/profile/:userId" element={
-              <Suspense fallback={<ProfilePageSkeleton />}>
-                <Profile
-                  onLogout={handleLogout}
-                  onCreateEvent={handleCreateEvent}
-                  onEditEvent={handleEditEvent}
-                  onStartOrganizerSetup={handleStartOrganizerSetup}
-                  onStartConversation={handleStartConversation}
-                  onViewPost={handleViewPost}
-                  isPaused={!!backgroundLocation}
-                />
-              </Suspense>
+              <RouteErrorBoundary>
+                <Suspense fallback={<ProfilePageSkeleton />}>
+                  <Profile
+                    onLogout={handleLogout}
+                    onCreateEvent={handleCreateEvent}
+                    onEditEvent={handleEditEvent}
+                    onStartOrganizerSetup={handleStartOrganizerSetup}
+                    onStartConversation={handleStartConversation}
+                    onViewPost={handleViewPost}
+                    isPaused={!!backgroundLocation}
+                  />
+                </Suspense>
+              </RouteErrorBoundary>
             } />
             <Route path="/profile/:userId/hosted" element={
               <Suspense fallback={<ListPageSkeleton />}><HostedPage /></Suspense>
@@ -510,19 +543,34 @@ export default function App() {
               <Suspense fallback={<CreatePageSkeleton />}><CreateEventWrapper /></Suspense>
             } />
             <Route path="/post/:id" element={
-              <Suspense fallback={<DetailPageSkeleton />}><PostDetailWrapper /></Suspense>
+              <RouteErrorBoundary>
+                <Suspense fallback={<DetailPageSkeleton />}><PostDetailWrapper /></Suspense>
+              </RouteErrorBoundary>
             } />
             <Route path="/event/:id" element={
-              <Suspense fallback={<DetailPageSkeleton />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+              <RouteErrorBoundary>
+                <Suspense fallback={<DetailPageSkeleton />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+              </RouteErrorBoundary>
             } />
             <Route path="/live/:id" element={
               <Suspense fallback={<LivePageSkeleton />}><LiveStreamPage /></Suspense>
             } />
+            <Route path="/search" element={
+              <RouteErrorBoundary>
+                <Suspense fallback={<div className="flex h-[100dvh] items-center justify-center bg-white"><div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" /></div>}>
+                  <SearchPage />
+                </Suspense>
+              </RouteErrorBoundary>
+            } />
             <Route path="/messages" element={
-              <Suspense fallback={<MessagesPageSkeleton />}><MessagesPage /></Suspense>
+              <RouteErrorBoundary>
+                <Suspense fallback={<MessagesPageSkeleton />}><MessagesPage /></Suspense>
+              </RouteErrorBoundary>
             } />
             <Route path="/messages/:conversationId" element={
-              <Suspense fallback={<MessagesPageSkeleton />}><MessagesPage /></Suspense>
+              <RouteErrorBoundary>
+                <Suspense fallback={<MessagesPageSkeleton />}><MessagesPage /></Suspense>
+              </RouteErrorBoundary>
             } />
             <Route path="/dashboard" element={
               <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
@@ -599,9 +647,11 @@ export default function App() {
                 )}
               </Link>
               <Link
-                to="/events?search=1"
+                to="/search"
                 aria-label="Search"
-                className="bottom-search-link relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 px-1 py-1 text-purple-600 transition-colors"
+                className={`bottom-search-link relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 px-1 py-1 transition-colors ${
+                  location.pathname === '/search' ? 'text-purple-600' : 'text-gray-500'
+                }`}
               >
                 <span className="bottom-search-orb">
                   <Search className="h-3.5 w-3.5" />
