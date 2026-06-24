@@ -25,6 +25,7 @@ import { DesktopSidebar } from './components/desktop/DesktopSidebar';
 import { RightRail } from './components/desktop/RightRail';
 import { LegalPage } from './components/legal/LegalPage';
 import { DeleteAccountPage } from './components/legal/DeleteAccountPage';
+import { SupportPage } from './components/support/SupportPage';
 import { HostedPage } from './components/profile/HostedPage';
 import { AuthCallbackPage } from './components/AuthCallbackPage';
 
@@ -580,6 +581,7 @@ export default function App() {
             } />
             <Route path="/privacy" element={<LegalPage type="privacy" />} />
             <Route path="/terms" element={<LegalPage type="terms" />} />
+            <Route path="/support" element={<SupportPage />} />
             <Route path="/delete-account" element={<DeleteAccountPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
           </Routes>
