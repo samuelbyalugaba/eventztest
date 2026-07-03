@@ -188,7 +188,7 @@ export default function CreatePostPage() {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1080 }, height: { ideal: 1920 } },
+        video: { facingMode: facing },
         audio: true,
       });
       streamRef.current = stream;
@@ -276,8 +276,10 @@ export default function CreatePostPage() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.translate(width, 0);
-    ctx.scale(-1, 1);
+    if (facingMode === 'user') {
+      ctx.translate(width, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, 0, 0, width, height);
 
     canvas.toBlob((blob) => {
@@ -287,7 +289,7 @@ export default function CreatePostPage() {
       setCapturedMedia({ file, url: URL.createObjectURL(file), kind: 'image' });
       setView('compose');
     }, 'image/jpeg', 0.92);
-  }, [cameraReady, capturedMedia]);
+  }, [cameraReady, capturedMedia, facingMode]);
 
   const startRecording = useCallback(() => {
     const stream = streamRef.current;
@@ -433,7 +435,7 @@ export default function CreatePostPage() {
             style={{
               position: 'absolute', inset: 0,
               width: '100%', height: '100%', objectFit: 'cover',
-              transform: 'scaleX(-1)',
+              transform: facingMode === 'user' ? 'scaleX(-1)' : undefined,
               opacity: cameraReady ? 1 : 0,
               transition: 'opacity 0.3s ease',
             }}
