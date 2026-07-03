@@ -23,6 +23,7 @@ const C = {
 };
 
 const GRADIENT = `linear-gradient(135deg, ${C.violet}, ${C.purple})`;
+const GRADIENT_FALLBACK = C.purple;
 const CHAR_LIMIT = 240;
 const LONG_PRESS_MS = 200;
 
@@ -129,15 +130,17 @@ function ShutterButton({ isRecording, onTap, onStartRecording, onStopRecording }
         <>
           <span style={{
             position: 'absolute', inset: 0, borderRadius: '50%',
-            background: GRADIENT, filter: 'blur(15px)', opacity: 0.65,
+            backgroundColor: GRADIENT_FALLBACK,
+            backgroundImage: GRADIENT, filter: 'blur(15px)', opacity: 0.65,
           }} />
           <span style={{
             position: 'absolute', inset: 0, borderRadius: '50%',
-            background: GRADIENT, padding: 4,
+            backgroundColor: GRADIENT_FALLBACK,
+            backgroundImage: GRADIENT, padding: 4,
           }}>
             <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: '50%', background: C.void }} />
           </span>
-          <span style={{ position: 'relative', width: 56, height: 56, borderRadius: '50%', background: GRADIENT }} />
+          <span style={{ position: 'relative', width: 56, height: 56, borderRadius: '50%', backgroundColor: GRADIENT_FALLBACK, backgroundImage: GRADIENT }} />
         </>
       )}
     </button>
@@ -576,7 +579,8 @@ export default function CreatePostPage() {
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '8px 12px', borderRadius: 10, maxWidth: '55%',
                     border: '1px solid transparent',
-                    background: GRADIENT,
+                    backgroundColor: GRADIENT_FALLBACK,
+                    backgroundImage: GRADIENT,
                     color: '#0E0B1F',
                     fontSize: 12.5, fontWeight: 700,
                     cursor: 'pointer', transition: 'all 0.15s ease',
@@ -660,7 +664,9 @@ export default function CreatePostPage() {
                   padding: '11px 24px', borderRadius: 100, border: 'none',
                   cursor: canPost && !isPosting ? 'pointer' : 'default',
                   color: canPost && !isPosting ? '#0E0B1F' : C.mute,
-                  background: canPost && !isPosting ? GRADIENT : 'rgba(255,255,255,0.08)',
+                  background: canPost && !isPosting ? undefined : 'rgba(255,255,255,0.08)',
+                  backgroundColor: canPost && !isPosting ? GRADIENT_FALLBACK : undefined,
+                  backgroundImage: canPost && !isPosting ? GRADIENT : undefined,
                   boxShadow: canPost && !isPosting ? '0 6px 22px -4px rgba(110,79,224,0.6)' : 'none',
                   transition: 'all 0.2s ease',
                   display: 'flex', alignItems: 'center', gap: 6,

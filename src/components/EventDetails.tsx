@@ -269,6 +269,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
         if (error.name === 'AbortError') {
           return;
         }
+        console.error('Failed to fetch events:', error);
       } finally {
         setIsFetching(false);
       }
