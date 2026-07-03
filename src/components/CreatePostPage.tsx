@@ -296,21 +296,22 @@ export default function CreatePostPage() {
     if (!stream || !cameraReady) return;
     try {
       recordingChunksRef.current = [];
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : 'video/webm';
+      const types = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+      const mimeType = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+      if (!mimeType) { toast.error('Recording not supported on this device'); return; }
+      const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
       const recorder = new MediaRecorder(stream, { mimeType });
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) recordingChunksRef.current.push(e.data);
       };
       recorder.onstop = () => {
-        const blob = new Blob(recordingChunksRef.current, { type: 'video/webm' });
-        const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'video/webm' });
+        const blob = new Blob(recordingChunksRef.current, { type: mimeType });
+        const file = new File([blob], `recording_${Date.now()}.${ext}`, { type: mimeType });
         if (capturedMedia) URL.revokeObjectURL(capturedMedia.url);
         setCapturedMedia({ file, url: URL.createObjectURL(file), kind: 'video' });
         setView('compose');
       };
-      recorder.start();
+      recorder.start(100);
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
       setRecordingDuration(0);
