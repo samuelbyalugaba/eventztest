@@ -191,15 +191,20 @@ export default function CreatePostPage() {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing },
+        video: {
+          facingMode: facing,
+          width: { ideal: 960 },
+          height: { ideal: 720 },
+        },
         audio: true,
       });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().then(() => setCameraReady(true)).catch(() => setCameraReady(true));
+      } else {
+        setCameraReady(true);
       }
-      setCameraReady(true);
     } catch {
       setCameraReady(false);
       setCameraError(true);
@@ -436,6 +441,7 @@ export default function CreatePostPage() {
           <video
             ref={videoRef}
             autoPlay playsInline muted
+            onLoadedData={() => setCameraReady(true)}
             style={{
               position: 'absolute', inset: 0,
               width: '100%', height: '100%', objectFit: 'cover',
