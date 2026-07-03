@@ -1,0 +1,287 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .wallet-root { background: #F4F1FF; min-height: 100vh; display: flex; flex-direction: column; max-width: 390px; margin: 0 auto; font-family: var(--font-sans); }
+  .topbar { background: #F4F1FF; padding: 16px 20px 12px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar-back { width: 38px; height: 38px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 0.5px solid #DDD6FE; }
+  .topbar-back i { font-size: 18px; color: #6B21E8; }
+  .topbar-title { font-size: 18px; font-weight: 500; color: #1A0533; }
+  .topbar-menu { width: 38px; height: 38px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 0.5px solid #DDD6FE; }
+  .topbar-menu i { font-size: 18px; color: #6B21E8; }
+
+  .balance-card {
+    margin: 0 16px 20px;
+    border-radius: 24px;
+    padding: 28px 24px 28px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #5B21B6 0%, #7C3AED 50%, #9333EA 100%);
+  }
+  .bc-orb1 { position: absolute; top: -50px; right: -50px; width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,0.07); }
+  .bc-orb2 { position: absolute; bottom: -60px; left: -40px; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,0.05); }
+  .bc-orb3 { position: absolute; bottom: 30px; right: 30px; width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.06); }
+  .bc-dots { position: absolute; top: 20px; right: 20px; display: flex; gap: 5px; }
+  .bc-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.3); }
+  .bc-dot.active { background: rgba(255,255,255,0.9); }
+  .bc-label { font-size: 10px; font-weight: 500; letter-spacing: 1.8px; color: rgba(255,255,255,0.6); text-transform: uppercase; margin-bottom: 10px; position: relative; z-index: 1; }
+  .bc-amount { font-size: 42px; font-weight: 500; color: #fff; position: relative; z-index: 1; letter-spacing: -1px; margin-bottom: 6px; display: flex; align-items: baseline; gap: 6px; }
+  .bc-currency { font-size: 22px; font-weight: 400; opacity: 0.75; letter-spacing: 0; }
+  .bc-updated { font-size: 11px; color: rgba(255,255,255,0.5); position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; }
+  .bc-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ADE80; flex-shrink: 0; }
+
+  .main-sheet { background: #fff; border-radius: 28px 28px 0 0; padding: 22px 16px 32px; flex: 1; border: 0.5px solid #EDE9FE; border-bottom: none; }
+
+  .tabs { display: flex; background: #F4F1FF; border-radius: 14px; padding: 4px; margin-bottom: 22px; }
+  .tab { flex: 1; text-align: center; padding: 9px 0; font-size: 13px; font-weight: 500; color: #7C3AED; border-radius: 11px; cursor: pointer; transition: all 0.18s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .tab i { font-size: 15px; }
+  .tab.active { background: #7C3AED; color: #fff; }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 500; color: #6B21E8; letter-spacing: 0.4px; }
+  .select-wrap { position: relative; }
+  .form-select { width: 100%; background: #FAFAFA; border: 1.5px solid #EDE9FE; border-radius: 14px; padding: 13px 40px 13px 14px; font-size: 14px; color: #1A0533; outline: none; font-family: var(--font-sans); appearance: none; -webkit-appearance: none; transition: border-color 0.2s; }
+  .form-select:focus { border-color: #7C3AED; background: #fff; }
+  .select-wrap::after { content: ''; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #7C3AED; pointer-events: none; }
+  .form-input-wrap { position: relative; }
+  .form-input { width: 100%; background: #FAFAFA; border: 1.5px solid #EDE9FE; border-radius: 14px; padding: 13px 14px; font-size: 14px; color: #1A0533; outline: none; font-family: var(--font-sans); transition: border-color 0.2s; }
+  .form-input:focus { border-color: #7C3AED; background: #fff; }
+  .form-input.with-pre { padding-left: 54px; }
+  .form-input.with-flag { padding-left: 78px; }
+  .input-pre { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 500; color: #7C3AED; pointer-events: none; }
+  .input-flag { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #6B7280; display: flex; align-items: center; gap: 4px; pointer-events: none; white-space: nowrap; }
+  .quick-amts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .qa-btn { padding: 7px 15px; background: #F4F1FF; border: 1px solid #DDD6FE; border-radius: 20px; font-size: 12px; font-weight: 500; color: #7C3AED; cursor: pointer; font-family: var(--font-sans); transition: all 0.15s; }
+  .qa-btn:hover, .qa-btn.sel { background: #7C3AED; color: #fff; border-color: #7C3AED; }
+  .cta-btn { width: 100%; background: #7C3AED; color: #fff; border: none; border-radius: 16px; padding: 16px; font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; font-family: var(--font-sans); transition: background 0.2s; }
+  .cta-btn:hover { background: #6D28D9; }
+  .cta-btn.dark { background: #1A0533; }
+  .cta-btn.dark:hover { background: #2D0A5A; }
+  .max-note { font-size: 12px; color: #D97706; display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+  .max-note i { font-size: 14px; }
+  .stat-row { display: flex; gap: 10px; margin-bottom: 18px; }
+  .stat-card { flex: 1; background: #FAFAFA; border: 0.5px solid #EDE9FE; border-radius: 14px; padding: 12px 14px; }
+  .stat-val { font-size: 15px; font-weight: 500; color: #1A0533; }
+  .stat-lbl { font-size: 10px; color: #8B7BB0; margin-top: 3px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .txn-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 0.5px solid #F4F1FF; }
+  .txn-row:last-child { border-bottom: none; }
+  .txn-ico { width: 42px; height: 42px; border-radius: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .txn-ico.in { background: #ECFDF5; }
+  .txn-ico.in i { color: #059669; font-size: 18px; }
+  .txn-ico.out { background: #FEF3F2; }
+  .txn-ico.out i { color: #DC2626; font-size: 18px; }
+  .txn-ico.pend { background: #FFFBEB; }
+  .txn-ico.pend i { color: #D97706; font-size: 18px; }
+  .txn-info { flex: 1; }
+  .txn-name { font-size: 14px; font-weight: 500; color: #1A0533; }
+  .txn-date { font-size: 11px; color: #8B7BB0; margin-top: 2px; }
+  .txn-amt { font-size: 14px; font-weight: 500; }
+  .txn-amt.in { color: #059669; }
+  .txn-amt.out { color: #DC2626; }
+  .txn-amt.pend { color: #D97706; }
+  .hidden { display: none; }
+</style>
+
+<h2 class="sr-only">Eventz wallet — view balance, deposit, withdraw, and transaction history</h2>
+
+<div class="wallet-root">
+
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="topbar-back"><i class="ti ti-arrow-left" aria-hidden="true"></i></div>
+      <span class="topbar-title">My Wallet</span>
+    </div>
+    <div class="topbar-menu"><i class="ti ti-dots-vertical" aria-hidden="true"></i></div>
+  </div>
+
+  <!-- PREMIUM BALANCE CARD — clean, no buttons inside -->
+  <div class="balance-card">
+    <div class="bc-orb1"></div>
+    <div class="bc-orb2"></div>
+    <div class="bc-orb3"></div>
+    <div class="bc-dots">
+      <div class="bc-dot active"></div>
+      <div class="bc-dot"></div>
+      <div class="bc-dot"></div>
+    </div>
+    <div class="bc-label">Total Wallet Balance</div>
+    <div class="bc-amount">
+      <span class="bc-currency">TSh</span>
+      <span id="balAmt">0</span>
+    </div>
+    <div class="bc-updated">
+      <div class="bc-live-dot"></div>
+      Live · Updated just now
+    </div>
+  </div>
+
+  <!-- SHEET -->
+  <div class="main-sheet">
+    <div class="tabs">
+      <div class="tab active" id="tab-deposit" onclick="switchTab('deposit')">
+        <i class="ti ti-plus" aria-hidden="true"></i> Deposit
+      </div>
+      <div class="tab" id="tab-withdraw" onclick="switchTab('withdraw')">
+        <i class="ti ti-arrow-up-right" aria-hidden="true"></i> Withdraw
+      </div>
+      <div class="tab" id="tab-history" onclick="switchTab('history')">
+        <i class="ti ti-history" aria-hidden="true"></i> History
+      </div>
+    </div>
+
+    <!-- DEPOSIT PANE -->
+    <div id="pane-deposit">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-val" style="color:#059669;">TSh 0</div>
+          <div class="stat-lbl">Total Deposited</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:#7C3AED;">M-Pesa</div>
+          <div class="stat-lbl">Default method</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Mobile Money Provider</div>
+        <div class="select-wrap">
+          <select class="form-select">
+            <option>M-Pesa (Vodacom)</option>
+            <option>Airtel Money</option>
+            <option>Tigo Pesa</option>
+            <option>Halopesa</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Amount (TZS)</div>
+        <div class="form-input-wrap">
+          <span class="input-pre">TSh</span>
+          <input class="form-input with-pre" type="number" placeholder="Enter amount" id="depAmt" />
+        </div>
+        <div class="quick-amts">
+          <button class="qa-btn" onclick="setAmt('depAmt',5000,this)">5K</button>
+          <button class="qa-btn" onclick="setAmt('depAmt',10000,this)">10K</button>
+          <button class="qa-btn" onclick="setAmt('depAmt',20000,this)">20K</button>
+          <button class="qa-btn" onclick="setAmt('depAmt',50000,this)">50K</button>
+          <button class="qa-btn" onclick="setAmt('depAmt',100000,this)">100K</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Phone Number</div>
+        <div class="form-input-wrap">
+          <span class="input-flag">🇹🇿 +255</span>
+          <input class="form-input with-flag" type="tel" placeholder="7XX XXX XXX" id="depPhone" />
+        </div>
+      </div>
+      <button class="cta-btn" onclick="confirmDeposit()">
+        <i class="ti ti-shield-check" style="font-size:18px;" aria-hidden="true"></i>
+        Confirm Deposit
+      </button>
+    </div>
+
+    <!-- WITHDRAW PANE -->
+    <div id="pane-withdraw" class="hidden">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-val" style="color:#DC2626;">TSh 0</div>
+          <div class="stat-lbl">Total Withdrawn</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:#7C3AED;">TSh 0</div>
+          <div class="stat-lbl">Max Withdrawable</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Mobile Money Provider</div>
+        <div class="select-wrap">
+          <select class="form-select">
+            <option>M-Pesa (Vodacom)</option>
+            <option>Airtel Money</option>
+            <option>Tigo Pesa</option>
+            <option>Halopesa</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Amount (TZS)</div>
+        <div class="form-input-wrap">
+          <span class="input-pre">TSh</span>
+          <input class="form-input with-pre" type="number" placeholder="Enter amount" id="wdAmt" />
+        </div>
+        <div class="max-note">
+          <i class="ti ti-info-circle" aria-hidden="true"></i>
+          Maximum withdrawable: TSh 0
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Phone Number</div>
+        <div class="form-input-wrap">
+          <span class="input-flag">🇹🇿 +255</span>
+          <input class="form-input with-flag" type="tel" placeholder="7XX XXX XXX" id="wdPhone" />
+        </div>
+      </div>
+      <button class="cta-btn dark">
+        <i class="ti ti-arrow-up-right" style="font-size:18px;" aria-hidden="true"></i>
+        Confirm Withdraw
+      </button>
+    </div>
+
+    <!-- HISTORY PANE -->
+    <div id="pane-history" class="hidden">
+      <div class="txn-row">
+        <div class="txn-ico in"><i class="ti ti-arrow-down-left" aria-hidden="true"></i></div>
+        <div class="txn-info">
+          <div class="txn-name">Deposit via M-Pesa</div>
+          <div class="txn-date">13 Jun 2026 · 09:46 AM</div>
+        </div>
+        <div class="txn-amt in">+TSh 20,000</div>
+      </div>
+      <div class="txn-row">
+        <div class="txn-ico out"><i class="ti ti-ticket" aria-hidden="true"></i></div>
+        <div class="txn-info">
+          <div class="txn-name">Ticket — Tech Summit</div>
+          <div class="txn-date">12 Jun 2026 · 03:22 PM</div>
+        </div>
+        <div class="txn-amt out">-TSh 15,000</div>
+      </div>
+      <div class="txn-row">
+        <div class="txn-ico pend"><i class="ti ti-clock" aria-hidden="true"></i></div>
+        <div class="txn-info">
+          <div class="txn-name">Withdraw to Airtel Money</div>
+          <div class="txn-date">11 Jun 2026 · 10:10 AM · Pending</div>
+        </div>
+        <div class="txn-amt pend">-TSh 5,000</div>
+      </div>
+      <div class="txn-row">
+        <div class="txn-ico in"><i class="ti ti-arrow-down-left" aria-hidden="true"></i></div>
+        <div class="txn-info">
+          <div class="txn-name">Deposit via Tigo Pesa</div>
+          <div class="txn-date">10 Jun 2026 · 08:55 AM</div>
+        </div>
+        <div class="txn-amt in">+TSh 10,000</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(name) {
+  ['deposit','withdraw','history'].forEach(t => {
+    document.getElementById('tab-'+t).classList.remove('active');
+    document.getElementById('pane-'+t).classList.add('hidden');
+  });
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('pane-'+name).classList.remove('hidden');
+}
+function setAmt(id, val, el) {
+  document.getElementById(id).value = val;
+  document.querySelectorAll('.qa-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function confirmDeposit() {
+  const amt = document.getElementById('depAmt').value;
+  const phone = document.getElementById('depPhone').value;
+  if (!amt || Number(amt) <= 0) { alert('Please enter a valid amount.'); return; }
+  if (!phone) { alert('Please enter your phone number.'); return; }
+  sendPrompt('I want to deposit TSh ' + Number(amt).toLocaleString() + ' to my Eventz wallet via M-Pesa. Phone: +255' + phone);
+}
+</script>

@@ -44,6 +44,7 @@ const CreatePostPage = lazy(() => import('./components/CreatePostPage'));
 const MessagesPage = lazy(() => import('./components/MessagesPage'));
 const DashboardPage = lazy(() => import('./components/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const SearchPage = lazy(() => import('./components/SearchPage').then(m => ({ default: m.SearchPage })));
+const WalletPage = lazy(() => import('./components/WalletPage').then(m => ({ default: m.WalletPage })));
 
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -195,6 +196,7 @@ export default function App() {
       void import('./components/CreatePostPage');
       void import('./components/MessagesPage');
       void import('./components/DashboardPage');
+      void import('./components/WalletPage');
     };
 
     const w = window as Window & {
@@ -262,6 +264,7 @@ export default function App() {
     location.pathname.startsWith('/live/') ||
     location.pathname.startsWith('/messages') ||
     location.pathname === '/dashboard' ||
+    location.pathname === '/wallet' ||
     location.pathname === '/privacy' ||
     location.pathname === '/terms' ||
     location.pathname === '/delete-account' ||
@@ -575,6 +578,9 @@ export default function App() {
             } />
             <Route path="/dashboard" element={
               <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+            } />
+            <Route path="/wallet" element={
+              <Suspense fallback={<DashboardPageSkeleton />}><WalletPage /></Suspense>
             } />
             <Route path="/compose/post" element={
               <Suspense fallback={<CreatePageSkeleton />}><CreatePostPage /></Suspense>

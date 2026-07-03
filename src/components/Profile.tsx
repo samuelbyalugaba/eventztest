@@ -18,8 +18,6 @@ const SettingsModal = lazy(() => import('./SettingsModal').then(m => ({ default:
 const LiveSetupModal = lazy(() => import('./LiveSetupModal').then(m => ({ default: m.LiveSetupModal })));
 const EventDetailModal = lazy(() => import('./EventDetailModal').then(m => ({ default: m.EventDetailModal })));
 const TicketViewer = lazy(() => import('./TicketViewer').then(m => ({ default: m.TicketViewer })));
-const WalletModal = lazy(() => import('./WalletModal').then(m => ({ default: m.WalletModal })));
-
 import { ProfileHeader } from './profile/ProfileHeader';
 import { ProfileBio } from './profile/ProfileBio';
 import { ProfileStats } from './profile/ProfileStats';
@@ -95,7 +93,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null);
   const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showWalletModal, setShowWalletModal] = useState(false);
   const [eventPendingDelete, setEventPendingDelete] = useState<AppEvent | null>(null);
 
   const [showTicketListModal, setShowTicketListModal] = useState(false);
@@ -349,7 +346,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               onEditProfile={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
               onSettings={() => { setSettingsInitialView('main'); setShowSettingsModal(true); }}
               onDashboard={() => navigate('/dashboard')}
-              onWallet={() => setShowWalletModal(true)}
+               onWallet={() => navigate('/wallet')}
               onLogout={onLogout}
             />
           ) : (
@@ -470,9 +467,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             onPurchaseTicket={() => toast.info("Please go to Events page to purchase tickets")}
             onPurchaseNormalTicket={() => toast.info("Please go to Events page to purchase tickets")}
           />
-        )}
-        {showWalletModal && (
-          <WalletModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} />
         )}
       </Suspense>
       {showTicketListModal && (
