@@ -297,8 +297,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     if (!currentUser || !targetUserId) return;
     try {
       await toggleFollow(currentUser.id, targetUserId);
-      queryClient.invalidateQueries({ queryKey: queryKeys.profile.follow(targetUserId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.profile.followStats(targetUserId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
     } catch (err) {
       toast.error('Failed to update follow status');
     }
