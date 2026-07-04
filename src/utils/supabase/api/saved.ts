@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import type { Event } from './events';
+
 import type { ApiPost } from './posts';
 
 export const getSavedEvents = async (userId: string) => {

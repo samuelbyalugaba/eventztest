@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getLiveStreams, getUpcomingStreams, subscribeToEventStreaming } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';

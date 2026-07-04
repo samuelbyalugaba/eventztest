@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+
 import { Skeleton } from '../ui/skeleton';
 
 /* ------------------------------------------------------------------ */
@@ -295,8 +295,8 @@ export function LiveFeedContentSkeleton() {
 
 function LiveFeedSection({
   icon,
-  title,
-  subtitle,
+  title: _title,
+  subtitle: _subtitle,
   children,
 }: {
   icon: React.ReactNode;

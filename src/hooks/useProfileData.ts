@@ -16,7 +16,7 @@ import {
   checkIsFollowing,
   getProfileStreamedVideos,
 } from '../utils/supabase/api';
-import type { ApiPost, Profile as UserProfile, Ticket, Event as AppEvent, CloudflareStream } from '../utils/supabase/api';
+import type { ApiPost, Ticket, Event as AppEvent } from '../utils/supabase/api';
 import { useProfileStore } from '../store/profileStore';
 import { useAuth } from '../contexts/AuthContext';
 import { queryClient } from '../queryClient';
@@ -140,7 +140,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
 
   const savedEventsQuery = useQuery({
     queryKey: queryKeys.profile.savedEvents(targetUserId || ''),
-    queryFn: () => getSavedEvents(targetUserId!) as Promise<SavedEvent[]>,
+    queryFn: () => getSavedEvents(targetUserId!) as unknown as Promise<SavedEvent[]>,
     enabled: !!targetUserId && isOwnProfileCheck && activeTab === 'saved',
     staleTime: PROFILE_CACHE_TTL_MS,
   });

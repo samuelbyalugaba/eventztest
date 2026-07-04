@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, MoreVertical, Plus, ArrowUpRight, History,
   ShieldCheck, Info, ArrowDownLeft, Ticket, Clock, Smartphone,
+  CreditCard, WalletCards,
 } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { toast } from 'sonner';
 import { ntzsApi, getLocalWalletBalance } from '../utils/ntzs-api';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
+import '../styles/dashboard.css';
 
 type Tx = {
   id: string | number;
@@ -386,27 +388,23 @@ export function WalletPage() {
       </div>
 
       {/* ── Balance Card ── */}
-      <div className="relative mx-4 mb-5 rounded-[24px] overflow-hidden bg-gradient-to-br from-[#5B21B6] via-[#7C3AED] to-[#9333EA] px-6 pt-7 pb-7">
-        <div className="absolute -top-[50px] -right-[50px] w-[180px] h-[180px] rounded-full bg-white/[0.07]" />
-        <div className="absolute -bottom-[60px] -left-[40px] w-[150px] h-[150px] rounded-full bg-white/[0.05]" />
-        <div className="absolute bottom-[30px] right-[30px] w-[80px] h-[80px] rounded-full bg-white/[0.06]" />
-        <div className="absolute top-5 right-5 flex gap-[5px]">
-          <div className="w-[7px] h-[7px] rounded-full bg-white/90" />
-          <div className="w-[7px] h-[7px] rounded-full bg-white/30" />
-          <div className="w-[7px] h-[7px] rounded-full bg-white/30" />
+      <section className="dash-wallet-card mx-4 mb-5">
+        <div className="dash-wallet-label">
+          <CreditCard className="h-3.5 w-3.5" />
+          Total wallet balance
         </div>
-        <p className="text-[10px] font-medium tracking-[1.8px] text-white/60 uppercase mb-2.5 relative z-[1]">
-          Total Wallet Balance
-        </p>
-        <div className="text-[42px] font-medium text-white relative z-[1] tracking-[-1px] mb-1.5 flex items-baseline gap-1.5">
-          <span className="text-[22px] font-normal opacity-75">TSh</span>
-          <span>{balance.toLocaleString()}</span>
-        </div>
-        <div className="text-[11px] text-white/50 relative z-[1] flex items-center gap-1.5">
-          <div className="w-[6px] h-[6px] rounded-full bg-[#4ADE80] shrink-0" />
-          Live &middot; Updated just now
-        </div>
-      </div>
+        <div className="dash-wallet-amount">TSh {balance.toLocaleString()}</div>
+        <div className="dash-wallet-scope">Live · Updated just now</div>
+        <button
+          type="button"
+          className="dash-wallet-withdraw"
+          onClick={() => setActiveTab('withdraw')}
+        >
+          <WalletCards className="h-3.5 w-3.5" />
+          Withdraw
+        </button>
+      </section>
+
 
       {/* ── Main Sheet ── */}
       <div className="bg-white rounded-t-[28px] flex-1 border border-[#EDE9FE] border-b-0 px-4 pt-[22px] pb-8">

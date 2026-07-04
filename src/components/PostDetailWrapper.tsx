@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { PostDetailPage } from './PostDetailPage';
 import { getPostById, toggleLikePost, toggleSavePost, deletePost, createPostComment, toggleLikeComment, updatePostCaption } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
@@ -94,7 +94,6 @@ export function PostDetailWrapper() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
   const postId = id ? parseInt(id, 10) : null;
   const initialPost = location.state?.post || null;
   const startTime = location.state?.startTime || 0;

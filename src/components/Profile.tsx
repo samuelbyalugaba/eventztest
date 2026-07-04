@@ -217,7 +217,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     acc[eventId].push(ticket);
     return acc;
   }, {} as Record<number, Ticket[]>);
-  const uniqueTicketGroups = Object.values(groupedTickets);
+  const uniqueTicketGroups = Object.values(groupedTickets) as Ticket[][];
   const pastHostedEvents = publishedEvents.filter(e => new Date(e.date) < new Date());
   const pastHostedEventIds = new Set(pastHostedEvents.map((event) => event.id));
   const additionalHostedStreams = streamedVideos.filter((stream) => !stream.event_id || !pastHostedEventIds.has(stream.event_id));
@@ -297,8 +297,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     if (!currentUser || !targetUserId) return;
     try {
       await toggleFollow(currentUser.id, targetUserId);
-      setIsFollowing(prev => !prev);
-      setFollowStats(prev => ({ ...prev, followers: prev.followers + (isFollowing ? -1 : 1) }));
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
     } catch (err) {
       toast.error('Failed to update follow status');
     }
