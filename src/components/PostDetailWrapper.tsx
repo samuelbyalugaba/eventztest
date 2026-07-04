@@ -94,7 +94,6 @@ export function PostDetailWrapper() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
   const postId = id ? parseInt(id, 10) : null;
   const initialPost = location.state?.post || null;
   const startTime = location.state?.startTime || 0;
