@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, MoreVertical, Plus, ArrowUpRight, History,
   ShieldCheck, Info, ArrowDownLeft, Ticket, Clock, Smartphone,
-  CreditCard, WalletCards,
+  CreditCard,
 } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { toast } from 'sonner';
@@ -395,14 +395,6 @@ export function WalletPage() {
         </div>
         <div className="dash-wallet-amount">TSh {balance.toLocaleString()}</div>
         <div className="dash-wallet-scope">Live · Updated just now</div>
-        <button
-          type="button"
-          className="dash-wallet-withdraw"
-          onClick={() => setActiveTab('withdraw')}
-        >
-          <WalletCards className="h-3.5 w-3.5" />
-          Withdraw
-        </button>
       </section>
 
 
