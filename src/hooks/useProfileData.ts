@@ -140,7 +140,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
 
   const savedEventsQuery = useQuery({
     queryKey: queryKeys.profile.savedEvents(targetUserId || ''),
-    queryFn: () => getSavedEvents(targetUserId!) as Promise<SavedEvent[]>,
+    queryFn: () => getSavedEvents(targetUserId!) as unknown as Promise<SavedEvent[]>,
     enabled: !!targetUserId && isOwnProfileCheck && activeTab === 'saved',
     staleTime: PROFILE_CACHE_TTL_MS,
   });
