@@ -16,8 +16,8 @@ const C = {
   glass: 'rgba(255,255,255,0.05)',
   glass2: 'rgba(255,255,255,0.09)',
   hairline: 'rgba(255,255,255,0.12)',
-  violet: '#6E4FE0',
-  purple: '#A35CFF',
+  violet: '#7C3AED',
+  purple: '#9333EA',
   ink: '#F3F1FC',
   mute: 'rgba(243,241,252,0.55)',
 };

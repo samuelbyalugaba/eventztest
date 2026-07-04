@@ -80,7 +80,7 @@ export function TicketListModal({ isOpen, eventName, tickets, onClose, onSelectT
                   <p className="font-semibold text-gray-900 mb-0.5">
                     {ticket.ticket_type} Ticket
                   </p>
-                  <p className="text-xs text-gray-500 font-mono">
+                  <p className="text-xs text-gray-500">
                     #{ticket.ticket_number.split('-').pop()}
                   </p>
                 </div>

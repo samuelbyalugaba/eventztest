@@ -192,11 +192,9 @@ export default function KilifairCreate() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '32px 16px',
-        fontFamily: 'Inter, sans-serif',
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
         * { box-sizing: border-box; }
         textarea::placeholder { color: ${C.mute}; }
         @keyframes breathe {
@@ -288,7 +286,7 @@ function CameraView({ onCapture }) {
           >
             <ImagePlus size={20} />
           </button>
-          <span style={{ fontSize: 10.5, color: C.mute, fontFamily: 'Inter, sans-serif' }}>Gallery</span>
+          <span style={{ fontSize: 10.5, color: C.mute }}>Gallery</span>
         </div>
 
         <ShutterButton onClick={onCapture} />
@@ -343,7 +341,6 @@ function ComposeView({
             color: C.ink,
             fontSize: 16,
             lineHeight: 1.5,
-            fontFamily: 'Inter, sans-serif',
             minHeight: 44,
           }}
         />
@@ -363,7 +360,6 @@ function ComposeView({
               color: locationOn ? '#0E0B1F' : C.mute,
               fontSize: 12.5,
               fontWeight: locationOn ? 700 : 400,
-              fontFamily: 'Inter, sans-serif',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
@@ -385,7 +381,6 @@ function ComposeView({
               color: C.ink,
               fontSize: 12.5,
               fontWeight: 600,
-              fontFamily: 'Inter, sans-serif',
               cursor: 'pointer',
               marginLeft: 'auto',
             }}
@@ -420,7 +415,6 @@ function ComposeView({
                     color: C.ink,
                     background: a === audience ? 'rgba(110,79,224,0.22)' : 'transparent',
                     cursor: 'pointer',
-                    fontFamily: 'Inter, sans-serif',
                   }}
                 >
                   {a}
@@ -434,7 +428,6 @@ function ComposeView({
           <span
             style={{
               fontSize: 11.5,
-              fontFamily: 'Space Grotesk, sans-serif',
               fontWeight: 600,
               color: over ? '#FF6B6B' : C.mute,
               letterSpacing: '0.04em',
@@ -446,7 +439,6 @@ function ComposeView({
           <button
             disabled={!canPost}
             style={{
-              fontFamily: 'Space Grotesk, sans-serif',
               fontWeight: 700,
               fontSize: 14,
               padding: '11px 30px',

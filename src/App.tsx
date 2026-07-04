@@ -400,7 +400,7 @@ export default function App() {
         closeButton
         toastOptions={{
           duration: 2500,
-          className: 'font-sans',
+          className: '',
           style: {
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',

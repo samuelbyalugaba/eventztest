@@ -654,14 +654,14 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
                   <div className="space-y-1.5">
                     <label className="text-white/60 text-xs">Stream URL</label>
                     <div className="flex items-center gap-2 bg-white/5 rounded-xl p-2.5 border border-white/10">
-                      <input type="text" value={rtmpUrl} readOnly className="bg-transparent text-white/70 text-xs flex-1 outline-none font-mono" />
+                      <input type="text" value={rtmpUrl} readOnly className="bg-transparent text-white/70 text-xs flex-1 outline-none" />
                       <button onClick={() => handleCopy(rtmpUrl, 'URL')} className="text-white/50 hover:text-white"><Copy className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-white/60 text-xs">Stream Key</label>
                     <div className="flex items-center gap-2 bg-white/5 rounded-xl p-2.5 border border-white/10">
-                      <input type={showKey ? 'text' : 'password'} value={streamKey} readOnly className="bg-transparent text-white/70 text-xs flex-1 outline-none font-mono" />
+                      <input type={showKey ? 'text' : 'password'} value={streamKey} readOnly className="bg-transparent text-white/70 text-xs flex-1 outline-none" />
                       <button onClick={() => setShowKey(!showKey)} className="text-white/50 hover:text-white">{showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}</button>
                       <button onClick={() => handleCopy(streamKey, 'Key')} className="text-white/50 hover:text-white"><Copy className="w-3.5 h-3.5" /></button>
                     </div>
@@ -772,7 +772,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
           {/* Floating HUD pill */}
           <div className="absolute left-1/2 -translate-x-1/2 top-28 flex items-center gap-3 bg-black/50 backdrop-blur-2xl px-4 py-2 rounded-2xl border border-white/10 shadow-2xl pointer-events-auto">
-            <span className="text-white font-mono text-xs font-bold">{formatTime(elapsedTime)}</span>
+            <span className="text-white text-xs font-bold">{formatTime(elapsedTime)}</span>
             <div className="w-px h-4 bg-white/20" />
             <div className="flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-white/60" />

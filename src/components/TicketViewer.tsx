@@ -228,7 +228,7 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
                 <div className="space-y-3">
                   <div>
                     <p className="text-white/70 text-xs mb-1">Ticket Number</p>
-                    <p className="text-white font-mono text-sm">{ticketNumber}</p>
+                    <p className="text-white text-sm">{ticketNumber}</p>
                   </div>
                   <div>
                     <p className="text-white/70 text-xs mb-1">Price</p>

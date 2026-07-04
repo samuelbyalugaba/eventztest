@@ -1,4 +1,4 @@
-.eventz-dashboard{position:fixed;inset:0;z-index:70;background:#F0F2F5;color:#111827;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.eventz-dashboard{position:fixed;inset:0;z-index:70;background:#F0F2F5;color:#111827;-webkit-font-smoothing:antialiased}
 .eventz-dashboard *{box-sizing:border-box}
 .dash-shell{height:100%;width:100%;max-width:520px;margin:0 auto;background:#F0F2F5;overflow:hidden;display:flex;flex-direction:column;position:relative}
 .dash-topbar{background:linear-gradient(135deg,#7C3AED 0%,#5B21B6 100%);padding:calc(14px + var(--eventz-safe-area-top)) 16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
@@ -35,7 +35,7 @@
 .dash-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .dash-scroll::-webkit-scrollbar{display:none}
 .dash-pad{padding:14px 16px calc(86px + var(--eventz-safe-area-bottom))}
-.dash-wallet-card{background:linear-gradient(135deg,#7C3AED 0%,#4C1D95 100%);border-radius:18px;padding:20px;margin-bottom:14px;position:relative;overflow:hidden;color:#fff}
+.dash-wallet-card{background:linear-gradient(135deg,#7C3AED 0%,#9333EA 100%);border-radius:18px;padding:20px;margin-bottom:14px;position:relative;overflow:hidden;color:#fff}
 .dash-wallet-card:before{content:"";position:absolute;top:-42px;right:-42px;width:150px;height:150px;border-radius:999px;background:rgba(255,255,255,.07)}
 .dash-wallet-label{position:relative;z-index:1;font-size:10px;font-weight:800;color:rgba(255,255,255,.72);display:flex;align-items:center;gap:6px;margin-bottom:7px;text-transform:uppercase;letter-spacing:.06em}
 .dash-wallet-amount{position:relative;z-index:1;font-size:30px;font-weight:900;letter-spacing:-1.4px;line-height:1;margin-bottom:4px}
