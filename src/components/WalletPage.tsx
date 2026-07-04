@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, MoreVertical, Plus, ArrowUpRight, History,
   ShieldCheck, Info, ArrowDownLeft, Ticket, Clock, Smartphone,
+  CreditCard, WalletCards,
 } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { toast } from 'sonner';
 import { ntzsApi, getLocalWalletBalance } from '../utils/ntzs-api';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
+import '../styles/dashboard.css';
 
 type Tx = {
   id: string | number;
