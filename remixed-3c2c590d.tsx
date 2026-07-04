@@ -286,7 +286,7 @@ function CameraView({ onCapture }) {
           >
             <ImagePlus size={20} />
           </button>
-          <span style={{ fontSize: 10.5, color: C.mute }}>Gallery</span>
+          <span style={{ fontSize: 12, color: C.mute }}>Gallery</span>
         </div>
 
         <ShutterButton onClick={onCapture} />
@@ -358,7 +358,7 @@ function ComposeView({
               border: `1px solid ${locationOn ? 'transparent' : C.hairline}`,
               background: locationOn ? GRADIENT : C.glass,
               color: locationOn ? '#0E0B1F' : C.mute,
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: locationOn ? 700 : 400,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
@@ -379,7 +379,7 @@ function ComposeView({
               border: `1px solid ${C.hairline}`,
               background: C.glass,
               color: C.ink,
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
               marginLeft: 'auto',
@@ -410,7 +410,7 @@ function ComposeView({
                   onClick={() => { setAudience(a); setAudienceOpen(false); }}
                   style={{
                     padding: '10px 14px',
-                    fontSize: 12.5,
+                    fontSize: 13,
                     fontWeight: a === audience ? 600 : 400,
                     color: C.ink,
                     background: a === audience ? 'rgba(110,79,224,0.22)' : 'transparent',
@@ -427,7 +427,7 @@ function ComposeView({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span
             style={{
-              fontSize: 11.5,
+              fontSize: 13,
               fontWeight: 600,
               color: over ? '#FF6B6B' : C.mute,
               letterSpacing: '0.04em',

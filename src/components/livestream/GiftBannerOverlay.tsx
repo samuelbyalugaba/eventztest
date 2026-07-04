@@ -20,11 +20,11 @@ export function GiftBannerOverlay({ banners }: GiftBannerOverlayProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="text-white text-xs font-bold truncate">{banner.senderName}</span>
-              <span className="text-white/50 text-[10px]">sent</span>
+              <span className="text-white/50 text-2xs">sent</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-yellow-400 text-[11px] font-bold">{banner.gift.name}</span>
-              <span className="text-white/40 text-[10px]">• TZS {banner.gift.amount.toLocaleString()}</span>
+              <span className="text-yellow-400 text-xs font-bold">{banner.gift.name}</span>
+              <span className="text-white/40 text-2xs">• TZS {banner.gift.amount.toLocaleString()}</span>
             </div>
           </div>
         </div>

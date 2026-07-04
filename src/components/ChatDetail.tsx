@@ -435,7 +435,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                     {visibleContent}
                   </div>
                   <div className="mt-1 flex items-center gap-1">
-                     <span className="text-[10px] text-gray-400 font-medium">
+                     <span className="text-2xs text-gray-400 font-medium">
                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                      </span>
                      {isMe && (

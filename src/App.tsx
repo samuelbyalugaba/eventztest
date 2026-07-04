@@ -409,7 +409,7 @@ export default function App() {
             color: '#1a1a1a',
             boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
             padding: '16px',
-            fontSize: '14px',
+            fontSize: 14,
             fontWeight: 500,
           },
           classNames: {

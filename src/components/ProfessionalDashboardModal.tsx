@@ -176,7 +176,7 @@ export function ProfessionalDashboardModal({
               <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
                 <Star className="w-5 h-5 text-gray-900" />
               </div>
-              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
+              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-2xs font-bold rounded-lg">+0%</span>
             </div>
             <div>
               <p className="text-gray-500 font-medium text-xs mb-1">Events Attended</p>
@@ -190,7 +190,7 @@ export function ProfessionalDashboardModal({
               <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-gray-900" />
               </div>
-              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
+              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-2xs font-bold rounded-lg">+0%</span>
             </div>
             <div>
               <p className="text-gray-500 font-medium text-xs mb-1">Events Created</p>
@@ -204,7 +204,7 @@ export function ProfessionalDashboardModal({
               <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
                 <Ticket className="w-5 h-5 text-gray-900" />
               </div>
-              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
+              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-2xs font-bold rounded-lg">+0%</span>
             </div>
             <div>
               <p className="text-gray-500 font-medium text-xs mb-1">Tickets Purchased</p>
@@ -218,7 +218,7 @@ export function ProfessionalDashboardModal({
               <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
                 <Ticket className="w-5 h-5 text-gray-900" />
               </div>
-              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
+              <span className="px-2 py-1 bg-gray-50 text-gray-600 text-2xs font-bold rounded-lg">+0%</span>
             </div>
             <div>
               <p className="text-gray-500 font-medium text-xs mb-1">Tickets Sold</p>
@@ -237,7 +237,7 @@ export function ProfessionalDashboardModal({
                 <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
                   <DollarSign className="w-5 h-5 text-gray-900" />
                 </div>
-                <span className="px-2 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-lg">+0%</span>
+                <span className="px-2 py-1 bg-gray-50 text-gray-600 text-2xs font-bold rounded-lg">+0%</span>
               </div>
               <div>
                 <p className="text-gray-500 font-medium text-xs mb-1">Revenue</p>
@@ -300,7 +300,7 @@ export function ProfessionalDashboardModal({
               <div>
                 <p className="text-gray-500 font-medium text-xs mb-1">Peak Views</p>
                 <h3 className="text-xl font-bold text-gray-900">0</h3>
-                <p className="text-gray-400 text-[10px]">Concurrent: 0</p>
+                <p className="text-gray-400 text-2xs">Concurrent: 0</p>
               </div>
             </div>
 
@@ -314,7 +314,7 @@ export function ProfessionalDashboardModal({
               <div>
                 <p className="text-gray-500 font-medium text-xs mb-1">Stream Time</p>
                 <h3 className="text-xl font-bold text-gray-900">0h 0m</h3>
-                <p className="text-gray-400 text-[10px]">Last 30 days</p>
+                <p className="text-gray-400 text-2xs">Last 30 days</p>
               </div>
             </div>
           </div>

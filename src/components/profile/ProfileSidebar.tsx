@@ -77,7 +77,7 @@ export function ProfileSidebar({
               className="w-full flex items-center gap-3.5 px-5 py-3.5 text-red-600 hover:bg-red-50 transition-colors"
             >
               <LogOut className="w-5 h-5 stroke-[1.5]" />
-              <span className="font-medium text-[15px]">Log out</span>
+              <span className="font-medium text-sm">Log out</span>
             </button>
           </div>
         </div>
@@ -94,7 +94,7 @@ function SidebarButton({ icon, label, onClick }: { icon: React.ReactNode; label:
     >
       <div className="flex items-center gap-3.5 text-gray-700 group-hover:text-gray-900">
         {icon}
-        <span className="font-medium text-[15px]">{label}</span>
+        <span className="font-medium text-sm">{label}</span>
       </div>
       <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
     </button>

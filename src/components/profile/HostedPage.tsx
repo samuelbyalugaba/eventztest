@@ -182,7 +182,7 @@ export function HostedPage() {
           <button
             type="button"
             onClick={() => setActiveView('events')}
-            className={`h-10 flex-1 rounded-xl px-2.5 text-[12px] font-bold leading-none transition active:scale-[0.98] ${
+            className={`h-10 flex-1 rounded-xl px-2.5 text-xs font-bold leading-none transition active:scale-[0.98] ${
               activeView === 'events'
                 ? 'bg-white text-gray-950 shadow-sm'
                 : 'bg-white/70 text-gray-500'
@@ -193,7 +193,7 @@ export function HostedPage() {
           <button
             type="button"
             onClick={() => setActiveView('streams')}
-            className={`h-10 flex-1 rounded-xl px-2.5 text-[12px] font-bold leading-none transition active:scale-[0.98] ${
+            className={`h-10 flex-1 rounded-xl px-2.5 text-xs font-bold leading-none transition active:scale-[0.98] ${
               activeView === 'streams'
                 ? 'bg-white text-gray-950 shadow-sm'
                 : 'bg-white/70 text-gray-500'

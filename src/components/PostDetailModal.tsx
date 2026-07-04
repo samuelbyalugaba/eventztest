@@ -647,7 +647,7 @@ export function PostDetailModal({
 
           {/* Post Content */}
           {post.content?.text && (
-            <div className="text-gray-800 text-[15px] leading-relaxed">
+            <div className="text-gray-800 text-sm leading-relaxed">
               {post.content.text}
             </div>
           )}
@@ -746,7 +746,7 @@ export function PostDetailModal({
                               <img src={verifiedBadge} alt="Verified" className="w-3 h-3 select-none" loading="lazy" decoding="async" />
                             )}
                           </button>
-                          <span className="text-gray-400 text-[10px]">{comment.timestamp}</span>
+                          <span className="text-gray-400 text-2xs">{comment.timestamp}</span>
                         </div>
                         <p className="text-gray-700 text-sm leading-snug">{comment.text}</p>
                         <div className="flex items-center gap-4 mt-2">
@@ -794,33 +794,33 @@ export function PostDetailModal({
                             <button
                               type="button"
                               onClick={(e) => handleCommentProfileClick(reply, e)}
-                              className="flex items-center gap-1 text-[11px] font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                              className="flex items-center gap-1 text-xs font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                             >
                               {reply.user.name}
                               {reply.user.is_organizer && (
                                 <img src={verifiedBadge} alt="Verified" className="w-2.5 h-2.5 select-none" loading="lazy" decoding="async" />
                               )}
                             </button>
-                            <span className="text-gray-400 text-[9px]">{reply.timestamp}</span>
+                            <span className="text-gray-400 text-2xs">{reply.timestamp}</span>
                           </div>
                           <p className="text-gray-700 text-xs leading-snug">{reply.text}</p>
                           <div className="flex items-center gap-4 mt-2">
                             <button 
                               onClick={() => handleReply(comment)} // Reply to parent for simple threading
-                              className="text-[10px] text-gray-400 font-medium hover:text-gray-600"
+                              className="text-2xs text-gray-400 font-medium hover:text-gray-600"
                             >
                               Reply
                             </button>
                             <button 
                               onClick={() => onLikeComment?.(reply.id)}
-                              className={`text-[10px] font-medium hover:text-gray-600 ${reply.is_liked ? 'text-pink-600' : 'text-gray-400'}`}
+                              className={`text-2xs font-medium hover:text-gray-600 ${reply.is_liked ? 'text-pink-600' : 'text-gray-400'}`}
                             >
                               Like {reply.likes_count > 0 && `(${reply.likes_count})`}
                             </button>
                             {String(reply.user?.id || reply.user_id) !== String(currentUser?.id || '') && (
                               <button
                                 onClick={() => handleReportComment(reply)}
-                                className="text-[10px] text-gray-400 font-medium hover:text-red-600"
+                                className="text-2xs text-gray-400 font-medium hover:text-red-600"
                               >
                                 Report
                               </button>

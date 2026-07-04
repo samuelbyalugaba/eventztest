@@ -463,11 +463,11 @@ function TicketsTab({ isLoading, groups, onGroupClick }: { isLoading: boolean; g
               alt={`Event ${ticket.event?.title}`}
               className="w-full h-full object-cover"
             />
-            <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-[10px]">
+            <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/80 rounded text-white text-2xs">
               {tickets.length} Ticket{tickets.length > 1 ? 's' : ''}
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
-              <p className="text-white text-[10px] line-clamp-1 font-medium">{ticket.event?.title}</p>
+              <p className="text-white text-2xs line-clamp-1 font-medium">{ticket.event?.title}</p>
             </div>
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">

@@ -109,7 +109,7 @@ export function RightRail() {
           </p>
         </section>
 
-        <p className="text-[11px] text-gray-400 px-1">© Eventz · Built for nightlife</p>
+        <p className="text-xs text-gray-400 px-1">© Eventz · Built for nightlife</p>
       </div>
     </aside>
   );

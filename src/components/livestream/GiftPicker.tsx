@@ -46,8 +46,8 @@ export function GiftPicker({ isOpen, onClose, onSendGift, isSending }: GiftPicke
               }}
             >
               <span className="text-sm font-bold" style={{ color: gift.color }}>{gift.iconLabel}</span>
-              <span className="text-white/90 text-[10px] font-semibold">{gift.name}</span>
-              <span className="text-white/50 text-[9px]">TZS {gift.amount.toLocaleString()}</span>
+              <span className="text-white/90 text-2xs font-semibold">{gift.name}</span>
+              <span className="text-white/50 text-2xs">TZS {gift.amount.toLocaleString()}</span>
             </button>
           ))}
         </div>

@@ -44,8 +44,8 @@ export function ViewerHeader({
             <span className="truncate text-white text-xs font-bold tracking-tight max-w-[38vw] sm:max-w-[220px]">{host}</span>
             <Shield className="w-3.5 h-3.5 text-blue-400" />
           </div>
-          <div className="flex items-center gap-2 text-[10px]">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-600/90 text-[8px] font-black tracking-[0.15em] text-white">
+          <div className="flex items-center gap-2 text-2xs">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-600/90 text-2xs font-black tracking-[0.15em] text-white">
               LIVE
             </span>
             <span className="flex items-center gap-1 text-white/70">
@@ -59,7 +59,7 @@ export function ViewerHeader({
       <div className="flex shrink-0 items-center gap-1.5">
         <button
           onClick={onFollow}
-          className={`px-2.5 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-xl transition-all duration-300 ${
+          className={`px-2.5 py-1.5 rounded-full text-xs font-bold backdrop-blur-xl transition-all duration-300 ${
             isFollowing
               ? 'bg-white/10 text-white/90 border border-white/20'
               : 'bg-primary text-white shadow-lg'

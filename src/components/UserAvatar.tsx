@@ -16,9 +16,9 @@ export function UserAvatar({ src, name, size = 'md', verified, className = '', o
   const safeName = name || '';
 
   const sizeClasses = {
-    'xs': 'w-6 h-6 text-[10px]',
-    'sm': 'w-8 h-8 text-[12px]',
-    'md': 'w-10 h-10 text-[14px]',
+    'xs': 'w-6 h-6 text-2xs',
+    'sm': 'w-8 h-8 text-xs',
+    'md': 'w-10 h-10 text-sm',
     'lg': 'w-12 h-12 text-[16px]',
     'xl': 'w-14 h-14 text-[18px]',
     '2xl': 'w-16 h-16 text-[20px]',

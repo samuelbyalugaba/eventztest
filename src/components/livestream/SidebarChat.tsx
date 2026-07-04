@@ -74,7 +74,7 @@ export function SidebarChat({
                 className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-0.5"
               />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-primary/50 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+              <div className="w-6 h-6 rounded-full bg-primary/50 text-white flex items-center justify-center text-2xs font-bold flex-shrink-0 mt-0.5">
                 {(m.user || 'U').charAt(0).toUpperCase()}
               </div>
             )}
@@ -105,7 +105,7 @@ export function SidebarChat({
             setAutoScroll(true);
             endRef.current?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="mx-3 mb-1 py-1 text-[11px] text-center text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+          className="mx-3 mb-1 py-1 text-xs text-center text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
         >
           ↓ New messages
         </button>

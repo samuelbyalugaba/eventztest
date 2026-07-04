@@ -180,7 +180,7 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="truncate">{event.title}</p>
-                        <p className="text-[10px] text-gray-500 truncate">
+                        <p className="text-2xs text-gray-500 truncate">
                           {new Date(event.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         </p>
                       </div>

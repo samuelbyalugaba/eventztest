@@ -688,7 +688,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex flex-col">
                 <h1 className="text-[22px] font-bold leading-tight tracking-tight text-gray-900">EVENTZ</h1>
-                <p className="text-[13px] font-medium leading-snug text-gray-600">Discover amazing events happening around you</p>
+                <p className="text-xs font-medium leading-snug text-gray-600">Discover amazing events happening around you</p>
               </div>
               <button 
                 onClick={() => setShowFilters(true)}
@@ -696,7 +696,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               >
                 <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#8A2BE2]" />
                 {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#8A2BE2] text-white text-[10px] rounded-full flex items-center justify-center shadow-md">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#8A2BE2] text-white text-2xs rounded-full flex items-center justify-center shadow-md">
                     {activeFiltersCount}
                   </span>
                 )}
@@ -718,7 +718,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       type="button"
                       aria-pressed={isSelected}
                       onClick={() => handleCategorySelect(category.id)}
-                      className={`event-category-chip flex h-[1.65rem] flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-semibold transition-all ${
+                      className={`event-category-chip flex h-[1.65rem] flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 text-xs font-semibold transition-all ${
                         isSelected
                           ? 'border-gray-950 bg-gray-950 text-white shadow-sm'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
@@ -745,7 +745,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       <button
                         key={subcategory}
                         onClick={() => setSelectedSubcategory(selectedSubcategory === subcategory ? '' : subcategory)}
-                        className={`event-subcategory-chip flex h-[1.65rem] flex-shrink-0 items-center rounded-full border px-2.5 text-[11px] font-semibold transition-all ${
+                        className={`event-subcategory-chip flex h-[1.65rem] flex-shrink-0 items-center rounded-full border px-2.5 text-xs font-semibold transition-all ${
                           selectedSubcategory === subcategory
                             ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
                             : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'
@@ -771,7 +771,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 />
               )}
               <div className="min-w-0 pr-1">
-                <h3 className="truncate text-[15px] font-bold leading-tight text-gray-900">Upcoming Events</h3>
+                <h3 className="truncate text-sm font-bold leading-tight text-gray-900">Upcoming Events</h3>
                 <p className="mt-1 h-4 whitespace-nowrap text-xs font-medium leading-4 text-gray-500 tabular-nums">
                   {isInitialEventsLoading ? (
                     <Skeleton className="inline-block h-3 w-24 align-middle" aria-label="Loading event count" />
@@ -785,7 +785,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   type="button"
                   aria-expanded={showWhenMenu}
                   onClick={() => setShowWhenMenu((open) => !open)}
-                  className={`flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold shadow-sm transition-all ${
+                  className={`flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold shadow-sm transition-all ${
                     selectedTimeFilter !== 'all'
                       ? 'border-purple-200 bg-purple-50 text-purple-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
@@ -798,7 +798,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
                 {showWhenMenu && (
                   <div className="absolute right-0 top-11 z-30 w-52 overflow-hidden rounded-2xl border border-gray-100 bg-white py-3 shadow-xl">
-                    <div className="px-4 pb-2 text-[10px] font-bold uppercase text-gray-500">Filter by time</div>
+                    <div className="px-4 pb-2 text-2xs font-bold uppercase text-gray-500">Filter by time</div>
                     <div className="space-y-1">
                       {timeFilters.map((filter) => {
                         const isSelected = selectedTimeFilter === filter.id;
@@ -886,7 +886,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
             <div className="max-h-[72vh] overflow-y-auto px-5 py-5">
               <div className="mb-6">
-                <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.09em] text-gray-400">Location</div>
+                <div className="mb-3 text-2xs font-bold uppercase tracking-[0.09em] text-gray-400">Location</div>
 
                 <div className="mb-3 rounded-xl border border-purple-100 bg-purple-50 px-3.5 py-3">
                   <div className="flex items-center justify-between gap-3">
@@ -896,7 +896,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       </div>
                       <div className="min-w-0">
                         <div className="truncate text-sm font-bold text-gray-950">{locationBannerTitle}</div>
-                        <div className="text-[11px] font-medium text-purple-600">
+                        <div className="text-xs font-medium text-purple-600">
                           {locationBannerSub}
                         </div>
                       </div>
@@ -904,7 +904,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     <button
                       type="button"
                       onClick={() => setShowCountryPicker((open) => !open)}
-                      className="shrink-0 text-[11px] font-bold text-purple-700 transition-colors hover:text-purple-900"
+                      className="shrink-0 text-xs font-bold text-purple-700 transition-colors hover:text-purple-900"
                     >
                       {showCountryPicker ? 'Done' : 'Change'}
                     </button>
@@ -925,7 +925,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                                 : 'border-purple-100 bg-white/70 text-gray-700 hover:border-purple-200'
                             }`}
                           >
-                            <span className="w-6 text-[11px] font-bold">{country.code}</span>
+                            <span className="w-6 text-xs font-bold">{country.code}</span>
                             <span className="min-w-0 flex-1 truncate text-xs font-semibold">{country.name}</span>
                             {active && <Check className="h-3.5 w-3.5 shrink-0" />}
                           </button>
@@ -958,10 +958,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     <LocateFixed className="h-3.5 w-3.5" />
                   </span>
                   <span className="min-w-0 flex-1 text-sm font-semibold text-gray-700">Use my current location</span>
-                  <span className="shrink-0 text-[11px] font-medium text-gray-400">{detectStatus}</span>
+                  <span className="shrink-0 text-xs font-medium text-gray-400">{detectStatus}</span>
                 </button>
 
-                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.07em] text-gray-400">
+                <div className="mb-2 text-2xs font-bold uppercase tracking-[0.07em] text-gray-400">
                   {locationSearch.trim() ? 'Matching cities' : `Popular cities in ${selectedCountry.name}`}
                 </div>
 
@@ -994,7 +994,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               <div className="mx-0 mb-5 h-px bg-gray-100" />
 
               <div className="mb-1">
-                <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.09em] text-gray-400">Category</div>
+                <div className="mb-3 text-2xs font-bold uppercase tracking-[0.09em] text-gray-400">Category</div>
                 <div className="flex flex-wrap gap-1.5">
                   {categories.map((category) => (
                     <button

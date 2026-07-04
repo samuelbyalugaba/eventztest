@@ -136,7 +136,7 @@ export function LiveFeed() {
               >
                 <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#8A2BE2]" />
                 {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#8A2BE2] text-[10px] text-white shadow-md">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#8A2BE2] text-2xs text-white shadow-md">
                     {activeFiltersCount}
                   </span>
                 )}

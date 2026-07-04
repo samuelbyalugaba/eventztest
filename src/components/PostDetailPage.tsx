@@ -728,7 +728,7 @@ export function PostDetailPage({
 
           {/* Post Content */}
           {post.content?.text && (
-            <div className="text-gray-800 text-[15px] leading-relaxed">
+            <div className="text-gray-800 text-sm leading-relaxed">
               {post.content.text}
             </div>
           )}
@@ -816,7 +816,7 @@ export function PostDetailPage({
                         />
                       </button>
                       <div className="min-w-0 flex-1 pt-0.5">
-                        <p className="text-[13px] leading-[18px] text-gray-900">
+                        <p className="text-xs leading-[18px] text-gray-900">
                           <button
                             type="button"
                             onClick={(e) => handleCommentProfileClick(comment, e)}
@@ -830,17 +830,17 @@ export function PostDetailPage({
                           {comment.text}
                         </p>
                         <div className="mt-0.5 flex h-4 items-center gap-4">
-                          <span className="text-[11px] font-semibold leading-none text-gray-400">{comment.timestamp}</span>
+                          <span className="text-xs font-semibold leading-none text-gray-400">{comment.timestamp}</span>
                           <button 
                             onClick={() => handleReply(comment)}
-                            className="comment-inline-button text-[11px] font-semibold leading-none text-gray-500 transition-colors hover:text-gray-800"
+                            className="comment-inline-button text-xs font-semibold leading-none text-gray-500 transition-colors hover:text-gray-800"
                           >
                             Reply
                           </button>
                           {String(comment.user?.id || comment.user_id) !== String(currentUser?.id || '') && (
                             <button
                               onClick={() => handleReportComment(comment)}
-                              className="comment-inline-button text-[11px] font-semibold leading-none text-gray-500 transition-colors hover:text-red-600"
+                              className="comment-inline-button text-xs font-semibold leading-none text-gray-500 transition-colors hover:text-red-600"
                             >
                               Report
                             </button>
@@ -872,7 +872,7 @@ export function PostDetailPage({
                           />
                         </button>
                         <div className="min-w-0 flex-1 pt-0.5">
-                          <p className="text-[13px] leading-[18px] text-gray-900">
+                          <p className="text-xs leading-[18px] text-gray-900">
                             <button
                               type="button"
                               onClick={(e) => handleCommentProfileClick(reply, e)}
@@ -886,23 +886,23 @@ export function PostDetailPage({
                             {reply.text}
                           </p>
                           <div className="mt-0.5 flex h-4 items-center gap-4">
-                            <span className="text-[10px] font-semibold leading-none text-gray-400">{reply.timestamp}</span>
+                            <span className="text-2xs font-semibold leading-none text-gray-400">{reply.timestamp}</span>
                             <button 
                               onClick={() => handleReply(comment)} // Reply to parent for simple threading
-                              className="comment-inline-button text-[10px] font-semibold leading-none text-gray-500 transition-colors hover:text-gray-800"
+                              className="comment-inline-button text-2xs font-semibold leading-none text-gray-500 transition-colors hover:text-gray-800"
                             >
                               Reply
                             </button>
                             <button 
                               onClick={() => onLikeComment?.(reply.id)}
-                              className={`comment-inline-button text-[10px] font-semibold leading-none transition-colors ${reply.is_liked ? 'text-pink-600' : 'text-gray-500 hover:text-gray-800'}`}
+                              className={`comment-inline-button text-2xs font-semibold leading-none transition-colors ${reply.is_liked ? 'text-pink-600' : 'text-gray-500 hover:text-gray-800'}`}
                             >
                               Like{reply.likes_count > 0 ? ` (${reply.likes_count})` : ''}
                             </button>
                             {String(reply.user?.id || reply.user_id) !== String(currentUser?.id || '') && (
                               <button
                                 onClick={() => handleReportComment(reply)}
-                                className="comment-inline-button text-[10px] font-semibold leading-none text-gray-500 transition-colors hover:text-red-600"
+                                className="comment-inline-button text-2xs font-semibold leading-none text-gray-500 transition-colors hover:text-red-600"
                               >
                                 Report
                               </button>

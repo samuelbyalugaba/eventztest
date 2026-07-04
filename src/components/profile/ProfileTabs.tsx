@@ -14,7 +14,7 @@ export function ProfileTabs({ activeTab, onTabChange, isOwnProfile, isOrganizer 
     <div className="bg-gray-100 p-1 rounded-xl flex mb-5 overflow-x-auto scrollbar-hide">
       <TabButton active={activeTab === 'media'} onClick={() => onTabChange('media')} icon={<LayoutGrid className="w-3 h-3" />} label="Posts" />
 
-      {isOwnProfile && !isOrganizer && (
+      {isOwnProfile && (
         <TabButton active={activeTab === 'tickets'} onClick={() => onTabChange('tickets')} icon={<TicketIcon className="w-3 h-3" />} label="Tickets" />
       )}
 

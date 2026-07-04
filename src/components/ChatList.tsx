@@ -205,14 +205,14 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
                     
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <h3 className="truncate text-[15px] font-semibold leading-tight text-gray-900">{conv.user.name}</h3>
+                        <h3 className="truncate text-sm font-semibold leading-tight text-gray-900">{conv.user.name}</h3>
                         {(conv.unreadCount || 0) > 0 && (
-                          <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-purple-600 px-1 text-[9px] font-bold leading-none text-white">
+                          <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-purple-600 px-1 text-2xs font-bold leading-none text-white">
                             {conv.unreadCount}
                           </span>
                         )}
                       </div>
-                      <p className={`mt-1 truncate text-[13px] leading-tight ${
+                      <p className={`mt-1 truncate text-xs leading-tight ${
                           (conv.unreadCount || 0) > 0 ? 'text-gray-900 font-semibold' : 'text-gray-500'
                         }`}>
                         {previewText}

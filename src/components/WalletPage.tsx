@@ -410,7 +410,7 @@ export function WalletPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 text-center py-[9px] text-[13px] font-medium rounded-[11px] transition-all duration-[0.18s] flex items-center justify-center gap-1.5 ${
+                className={`flex-1 text-center py-[9px] text-xs font-medium rounded-[11px] transition-all duration-[0.18s] flex items-center justify-center gap-1.5 ${
                   isActive ? 'bg-[#7C3AED] text-white' : 'text-[#7C3AED]'
                 }`}
               >
@@ -426,22 +426,22 @@ export function WalletPage() {
           <div>
             <div className="flex gap-2.5 mb-[18px]">
               <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                <div className="text-[15px] font-medium text-[#059669]">TSh {totalDeposited.toLocaleString()}</div>
-                <div className="text-[10px] text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Deposited</div>
+                <div className="text-sm font-medium text-[#059669]">TSh {totalDeposited.toLocaleString()}</div>
+                <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Deposited</div>
               </div>
               <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                <div className="text-[15px] font-medium text-[#7C3AED]">M-Pesa</div>
-                <div className="text-[10px] text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Default method</div>
+                <div className="text-sm font-medium text-[#7C3AED]">M-Pesa</div>
+                <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Default method</div>
               </div>
             </div>
 
             <div className="flex flex-col gap-[6px] mb-4">
-              <label className="text-[12px] font-medium text-[#6B21E8] tracking-[0.4px]">Mobile Money Provider</label>
+              <label className="text-xs font-medium text-[#6B21E8] tracking-[0.4px]">Mobile Money Provider</label>
               <div className="relative">
                 <select
                   value={provider}
                   onChange={e => setProvider(e.target.value)}
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-[14px] text-[#1A0533] outline-none appearance-none transition-colors focus:border-[#7C3AED] focus:bg-white pr-10"
+                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-sm text-[#1A0533] outline-none appearance-none transition-colors focus:border-[#7C3AED] focus:bg-white pr-10"
                 >
                   <option>M-Pesa (Vodacom)</option>
                   <option>Airtel Money</option>
@@ -455,15 +455,15 @@ export function WalletPage() {
             </div>
 
             <div className="flex flex-col gap-[6px] mb-4">
-              <label className="text-[12px] font-medium text-[#6B21E8] tracking-[0.4px]">Amount (TZS)</label>
+              <label className="text-xs font-medium text-[#6B21E8] tracking-[0.4px]">Amount (TZS)</label>
               <div className="relative">
-                <span className="absolute left-[14px] top-1/2 -translate-y-1/2 text-[13px] font-medium text-[#7C3AED] pointer-events-none">TSh</span>
+                <span className="absolute left-[14px] top-1/2 -translate-y-1/2 text-xs font-medium text-[#7C3AED] pointer-events-none">TSh</span>
                 <input
                   type="number"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   placeholder="Enter amount"
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-[14px] text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
+                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
                 />
               </div>
               <div className="flex gap-2 flex-wrap mt-2">
@@ -471,7 +471,7 @@ export function WalletPage() {
                   <button
                     key={qa}
                     onClick={() => setAmount(String(qa))}
-                    className={`px-[15px] py-[7px] rounded-[20px] text-[12px] font-medium transition-all ${
+                    className={`px-[15px] py-[7px] rounded-[20px] text-xs font-medium transition-all ${
                       Number(amount) === qa
                         ? 'bg-[#7C3AED] text-white border border-[#7C3AED]'
                         : 'bg-[#F4F1FF] text-[#7C3AED] border border-[#DDD6FE]'
@@ -484,9 +484,9 @@ export function WalletPage() {
             </div>
 
             <div className="flex flex-col gap-[6px] mb-4">
-              <label className="text-[12px] font-medium text-[#6B21E8] tracking-[0.4px]">Phone Number</label>
+              <label className="text-xs font-medium text-[#6B21E8] tracking-[0.4px]">Phone Number</label>
               <div className="relative">
-                <span className="absolute left-[14px] top-1/2 -translate-y-1/2 text-[13px] text-[#6B7280] flex items-center gap-1 pointer-events-none whitespace-nowrap">
+                <span className="absolute left-[14px] top-1/2 -translate-y-1/2 text-xs text-[#6B7280] flex items-center gap-1 pointer-events-none whitespace-nowrap">
                   <Smartphone className="w-3.5 h-3.5" /> +255
                 </span>
                 <input
@@ -494,7 +494,7 @@ export function WalletPage() {
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   placeholder="7XX XXX XXX"
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-[14px] text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
+                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
                 />
               </div>
             </div>
@@ -502,7 +502,7 @@ export function WalletPage() {
             <button
               onClick={handleDeposit}
               disabled={isProcessing}
-              className="w-full bg-[#7C3AED] text-white rounded-[16px] py-4 text-[15px] font-medium flex items-center justify-center gap-2 transition-colors hover:bg-[#6D28D9] disabled:opacity-50 mt-2"
+              className="w-full bg-[#7C3AED] text-white rounded-[16px] py-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors hover:bg-[#6D28D9] disabled:opacity-50 mt-2"
             >
               <ShieldCheck className="w-[18px] h-[18px]" />
               {isProcessing ? 'Processing...' : 'Confirm Deposit'}
@@ -515,22 +515,22 @@ export function WalletPage() {
           <div>
             <div className="flex gap-2.5 mb-[18px]">
               <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                <div className="text-[15px] font-medium text-[#DC2626]">TSh {totalWithdrawn.toLocaleString()}</div>
-                <div className="text-[10px] text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Withdrawn</div>
+                <div className="text-sm font-medium text-[#DC2626]">TSh {totalWithdrawn.toLocaleString()}</div>
+                <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Withdrawn</div>
               </div>
               <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                <div className="text-[15px] font-medium text-[#7C3AED]">TSh {balance.toLocaleString()}</div>
-                <div className="text-[10px] text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Max Withdrawable</div>
+                <div className="text-sm font-medium text-[#7C3AED]">TSh {balance.toLocaleString()}</div>
+                <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Max Withdrawable</div>
               </div>
             </div>
 
             <div className="flex flex-col gap-[6px] mb-4">
-              <label className="text-[12px] font-medium text-[#6B21E8] tracking-[0.4px]">Mobile Money Provider</label>
+              <label className="text-xs font-medium text-[#6B21E8] tracking-[0.4px]">Mobile Money Provider</label>
               <div className="relative">
                 <select
                   value={provider}
                   onChange={e => setProvider(e.target.value)}
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-[14px] text-[#1A0533] outline-none appearance-none transition-colors focus:border-[#7C3AED] focus:bg-white pr-10"
+                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-sm text-[#1A0533] outline-none appearance-none transition-colors focus:border-[#7C3AED] focus:bg-white pr-10"
                 >
                   <option>M-Pesa (Vodacom)</option>
                   <option>Airtel Money</option>
@@ -544,31 +544,31 @@ export function WalletPage() {
             </div>
 
             <div className="flex flex-col gap-[6px] mb-4">
-              <label className="text-[12px] font-medium text-[#6B21E8] tracking-[0.4px]">Amount (TZS)</label>
+              <label className="text-xs font-medium text-[#6B21E8] tracking-[0.4px]">Amount (TZS)</label>
               <div className="relative">
-                <span className="absolute left-[14px] top-1/2 -translate-y-1/2 text-[13px] font-medium text-[#7C3AED] pointer-events-none">TSh</span>
+                <span className="absolute left-[14px] top-1/2 -translate-y-1/2 text-xs font-medium text-[#7C3AED] pointer-events-none">TSh</span>
                 <input
                   type="number"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   placeholder="Enter amount"
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-[14px] text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
+                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
                 />
               </div>
-                <div className="flex items-center gap-1 mt-1.5 text-[12px] text-[#D97706]">
+                <div className="flex items-center gap-1 mt-1.5 text-xs text-[#D97706]">
                   <Info className="w-[14px] h-[14px]" />
                   Maximum withdrawable: TSh {balance.toLocaleString()}
                 </div>
-                <div className="flex items-center gap-1 text-[12px] text-[#6B7280]">
+                <div className="flex items-center gap-1 text-xs text-[#6B7280]">
                   <Info className="w-[14px] h-[14px]" />
                   Minimum withdrawal: TSh 5,000
                 </div>
               </div>
 
               <div className="flex flex-col gap-[6px] mb-4">
-                <label className="text-[12px] font-medium text-[#6B21E8] tracking-[0.4px]">Phone Number</label>
+                <label className="text-xs font-medium text-[#6B21E8] tracking-[0.4px]">Phone Number</label>
               <div className="relative">
-                <span className="absolute left-[14px] top-1/2 -translate-y-1/2 text-[13px] text-[#6B7280] flex items-center gap-1 pointer-events-none whitespace-nowrap">
+                <span className="absolute left-[14px] top-1/2 -translate-y-1/2 text-xs text-[#6B7280] flex items-center gap-1 pointer-events-none whitespace-nowrap">
                   <Smartphone className="w-3.5 h-3.5" /> +255
                 </span>
                 <input
@@ -576,7 +576,7 @@ export function WalletPage() {
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   placeholder="7XX XXX XXX"
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-[14px] text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
+                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
                 />
               </div>
             </div>
@@ -584,7 +584,7 @@ export function WalletPage() {
             <button
               onClick={handleWithdraw}
               disabled={isProcessing}
-              className="w-full bg-[#1A0533] text-white rounded-[16px] py-4 text-[15px] font-medium flex items-center justify-center gap-2 transition-colors hover:bg-[#2D0A5A] disabled:opacity-50 mt-2"
+              className="w-full bg-[#1A0533] text-white rounded-[16px] py-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors hover:bg-[#2D0A5A] disabled:opacity-50 mt-2"
             >
               <ArrowUpRight className="w-[18px] h-[18px]" />
               {isProcessing ? 'Processing...' : 'Confirm Withdraw'}
@@ -629,12 +629,12 @@ export function WalletPage() {
                         <Icon className={`w-[18px] h-[18px] ${iconClass}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[14px] font-medium text-[#1A0533] truncate">{getTxLabel(t)}</div>
-                        <div className="text-[11px] text-[#8B7BB0] mt-[2px]">
+                        <div className="text-sm font-medium text-[#1A0533] truncate">{getTxLabel(t)}</div>
+                        <div className="text-xs text-[#8B7BB0] mt-[2px]">
                           {new Date(t.created_at).toLocaleDateString()} &middot; {t.status === 'pending' ? 'Pending' : t.provider}
                         </div>
                       </div>
-                      <span className={`text-[14px] font-medium shrink-0 ${
+                      <span className={`text-sm font-medium shrink-0 ${
                         isOut ? 'text-[#DC2626]' : 'text-[#059669]'
                       }`}>
                         {isOut ? '-' : '+'}{t.currency || 'TZS'} {t.amount.toLocaleString()}
@@ -648,7 +648,7 @@ export function WalletPage() {
         )}
 
         {/* ── Footer ── */}
-        <p className="text-center text-[11px] leading-5 text-gray-500 mt-6">
+        <p className="text-center text-xs leading-5 text-gray-500 mt-6">
           Wallet activity is subject to the{' '}
           <a href={TERMS_OF_SERVICE_URL} className="font-medium text-gray-700 underline underline-offset-2">Terms</a>
           {' '}and{' '}

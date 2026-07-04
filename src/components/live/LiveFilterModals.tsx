@@ -48,7 +48,7 @@ export function LiveFilterModals({
               <h2 className="mb-5 text-[17px] font-bold tracking-tight text-gray-950">Filter Live</h2>
 
               <div className="mb-6">
-                <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500">Category</div>
+                <div className="mb-3 text-2xs font-bold uppercase tracking-[0.1em] text-gray-500">Category</div>
                 <div className="grid grid-cols-2 gap-2">
                 {categories.map((category) => (
                   <button
@@ -68,7 +68,7 @@ export function LiveFilterModals({
 
               <div>
                 <div className="mb-3 flex items-center justify-between">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500">Location</div>
+                  <div className="text-2xs font-bold uppercase tracking-[0.1em] text-gray-500">Location</div>
                   {selectedLocation !== 'all' && (
                     <button
                       type="button"

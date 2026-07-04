@@ -590,7 +590,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 >
                   <div className="mb-0.5 flex items-center justify-between gap-2">
                     <p className="text-sm text-gray-600">Location</p>
-                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold leading-none text-purple-700 shadow-sm">
+                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 text-2xs font-semibold leading-none text-purple-700 shadow-sm">
                       Maps
                       <ExternalLink className="h-2.5 w-2.5" />
                     </span>
@@ -717,7 +717,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                          <div className="min-w-0">
                           <span className="font-medium text-gray-900 block">{tier.name}</span>
                           {tierPerks.length > 0 && (
-                            <p className="mt-1 max-w-full text-[12px] leading-snug text-gray-500 [overflow-wrap:anywhere]">
+                            <p className="mt-1 max-w-full text-xs leading-snug text-gray-500 [overflow-wrap:anywhere]">
                               {tierPerks.slice(0, 4).join(' • ')}
                               {tierPerks.length > 4 ? ` • +${tierPerks.length - 4} more` : ''}
                             </p>

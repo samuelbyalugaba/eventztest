@@ -856,7 +856,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
           <div className="space-y-5 p-4">
             <div>
-              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Event name</label>
+              <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Event name</label>
               <input
                 type="text"
                 value={formData.title}
@@ -868,7 +868,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="min-w-0">
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Date</label>
+                <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Date</label>
                 <div className="relative">
                   <input
                     type="date"
@@ -887,7 +887,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 </div>
               </div>
               <div className="min-w-0">
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Time</label>
+                <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Time</label>
                 <div className="relative">
                   <input
                     type="time"
@@ -908,7 +908,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             </div>
 
             <div>
-              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Venue / Location</label>
+              <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Venue / Location</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
@@ -922,7 +922,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             </div>
 
             <div>
-              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Category</label>
+              <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Category</label>
               <button
                 type="button"
                 onClick={() => setCategoryOpen((open) => !open)}
@@ -954,7 +954,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                           }`}
                         >
                           <Icon className={`mx-auto mb-2 h-5 w-5 ${active ? 'text-purple-600' : 'text-gray-500'}`} />
-                          <span className="block text-[11px] font-medium leading-tight">{category.name}</span>
+                          <span className="block text-xs font-medium leading-tight">{category.name}</span>
                         </button>
                       );
                     })}
@@ -974,7 +974,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                         updateForm('subcategory', subcategory.name);
                         setCategoryOpen(false);
                       }}
-                      className={`create-subcategory-chip inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition ${
+                      className={`create-subcategory-chip inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-medium transition ${
                         active ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-200'
                       }`}
                     >
@@ -993,7 +993,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 <button
                   type="button"
                   onClick={() => updateForm('ticketMode', 'tiers')}
-                  className={`create-ticket-mode-button inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition ${
+                  className={`create-ticket-mode-button inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition ${
                     formData.ticketMode === 'tiers' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
                   }`}
                 >
@@ -1003,7 +1003,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 <button
                   type="button"
                   onClick={() => updateForm('ticketMode', 'free')}
-                  className={`create-ticket-mode-button inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition ${
+                  className={`create-ticket-mode-button inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition ${
                     formData.ticketMode === 'free' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
                   }`}
                 >
@@ -1015,7 +1015,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               <select
                 value={formData.currency}
                 onChange={(e) => handleCurrencyChange(e.target.value)}
-                className="create-currency-select h-7 max-w-[88px] rounded-full border border-gray-200 bg-gray-100 px-2.5 text-[11px] font-semibold text-gray-700 outline-none focus:border-purple-500"
+                className="create-currency-select h-7 max-w-[88px] rounded-full border border-gray-200 bg-gray-100 px-2.5 text-xs font-semibold text-gray-700 outline-none focus:border-purple-500"
                 aria-label="Currency"
               >
                 {createCurrencies.map((currency) => (
@@ -1053,7 +1053,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                         className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none"
                         aria-label="Ticket tier name"
                       />
-                      <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-purple-700">
+                      <span className="rounded-full bg-purple-50 px-2.5 py-1 text-2xs font-bold uppercase tracking-wide text-purple-700">
                         {tier.badge || 'TIER'}
                       </span>
                       <button
@@ -1068,7 +1068,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Price ({formData.currency})</label>
+                        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-gray-500">Price ({formData.currency})</label>
                         <input
                           type="number"
                           min="0"
@@ -1080,7 +1080,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Capacity</label>
+                        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-gray-500">Capacity</label>
                         <div className="flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-1.5 focus-within:border-purple-500">
                           <button
                             type="button"
@@ -1114,7 +1114,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
                     {tier.name.toLowerCase().includes('early') && (
                       <div className="mt-3">
-                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Sale ends</label>
+                        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-gray-500">Sale ends</label>
                         <input
                           type="date"
                           value={tier.saleEnds || ''}
@@ -1125,7 +1125,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     )}
 
                     <div className="mt-3">
-                      <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Perks</label>
+                      <label className="mb-2 block text-2xs font-bold uppercase tracking-wide text-gray-500">Perks</label>
                       {customFeatures.length > 0 && (
                         <div className="mb-2 flex flex-wrap gap-2 rounded-xl border border-purple-100 bg-purple-50/60 p-2">
                           {customFeatures.map((feature) => (
@@ -1133,7 +1133,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                               key={feature}
                               type="button"
                               onClick={() => toggleTierFeature(index, feature)}
-                              className="inline-flex min-w-0 items-center gap-1 rounded-full bg-white px-2.5 py-1.5 text-[11px] font-semibold text-purple-700 shadow-sm"
+                              className="inline-flex min-w-0 items-center gap-1 rounded-full bg-white px-2.5 py-1.5 text-xs font-semibold text-purple-700 shadow-sm"
                               aria-label={`Remove ${feature}`}
                             >
                               <span className="truncate">{feature}</span>
@@ -1151,7 +1151,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                               type="button"
                               onClick={() => toggleTierFeature(index, feature)}
                               aria-pressed={active}
-                              className={`inline-flex h-9 min-w-0 items-center justify-start gap-1.5 rounded-lg border px-2.5 text-left text-[11px] font-medium transition ${
+                              className={`inline-flex h-9 min-w-0 items-center justify-start gap-1.5 rounded-lg border px-2.5 text-left text-xs font-medium transition ${
                                 active ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-600'
                               }`}
                             >
@@ -1201,7 +1201,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 </button>
 
                 <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-                  <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
+                  <div className="mb-3 flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">
                     <BarChart3 className="h-4 w-4 text-purple-600" />
                     Live revenue estimate
                   </div>
@@ -1211,7 +1211,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                       const subtotal = (Number(tier.priceNumeric) || 0) * (Number(tier.available) || 0);
                       return (
                         <div key={tier.clientId ? `revenue-${tier.clientId}` : `revenue-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-2 text-center">
-                          <p className="truncate text-[11px] font-medium" style={{ color: tier.color || TIER_COLORS[index % TIER_COLORS.length] }}>
+                          <p className="truncate text-xs font-medium" style={{ color: tier.color || TIER_COLORS[index % TIER_COLORS.length] }}>
                             {tier.name || `Tier ${index + 1}`}
                           </p>
                           <p className="mt-1 text-sm font-semibold">{formData.currency} {subtotal.toLocaleString()}</p>
@@ -1265,7 +1265,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 </div>
 
                 <div className="pt-3">
-                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-gray-500">What's included</label>
+                  <label className="mb-2 block text-2xs font-bold uppercase tracking-wide text-gray-500">What's included</label>
                   <div className="flex flex-wrap gap-2">
                     {['Free entry', 'Refreshments', 'Networking', 'Certificate'].map((perk) => {
                       const active = formData.freePerks.includes(perk);
@@ -1274,7 +1274,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                           key={perk}
                           type="button"
                           onClick={() => toggleFreePerk(perk)}
-                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-[11px] font-medium ${
+                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium ${
                             active ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-600'
                           }`}
                         >
@@ -1319,7 +1319,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             <div className="h-px bg-gray-200" />
 
             <div>
-              <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-gray-500">
+              <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
                 <Settings className="h-4 w-4 text-purple-600" />
                 Event settings
               </div>
@@ -1366,7 +1366,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
               {formData.settings.virtualTickets && (
                 <div className="mt-3 rounded-2xl border border-purple-100 bg-purple-50 p-3">
-                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-purple-700">Virtual ticket price ({formData.currency})</label>
+                  <label className="mb-2 block text-2xs font-bold uppercase tracking-wide text-purple-700">Virtual ticket price ({formData.currency})</label>
                   <input
                     type="number"
                     min="0"
@@ -1389,7 +1389,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
               {formData.settings.externalTicketing && (
                 <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Ticketing contact phone</label>
+                  <label className="mb-2 block text-2xs font-bold uppercase tracking-wide text-gray-500">Ticketing contact phone</label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
@@ -1405,7 +1405,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
             </div>
 
             <div>
-              <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">Description</label>
+              <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => updateForm('description', e.target.value)}

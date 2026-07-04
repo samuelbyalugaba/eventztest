@@ -267,7 +267,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                 </div>
                 )}
 
-                <p className="text-center text-[11px] leading-5 text-gray-500">
+                <p className="text-center text-xs leading-5 text-gray-500">
                   By continuing, you agree to the{' '}
                   <a href={TERMS_OF_SERVICE_URL} className="font-medium text-gray-700 underline underline-offset-2">Terms</a>
                   {' '}and{' '}

@@ -128,6 +128,13 @@ html.capacitor-android {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --text-2xs: 0.75rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
 }
 
 @layer base {
@@ -413,40 +420,7 @@ html {
   }
 }
 
-@layer utilities {
-  .text-\[8px\],
-  .text-\[9px\],
-  .text-\[10px\] {
-    font-size: 0.75rem !important;
-    line-height: 1rem !important;
-  }
 
-  .text-\[11px\],
-  .text-\[12px\] {
-    font-size: 0.8125rem !important;
-    line-height: 1.125rem !important;
-  }
-
-  .text-\[13px\] {
-    font-size: 0.8125rem !important;
-    line-height: 1.125rem !important;
-  }
-
-  .text-\[15px\] {
-    font-size: 0.875rem !important;
-    line-height: 1.25rem !important;
-  }
-
-  .text-xs {
-    font-size: 0.8125rem !important;
-    line-height: 1.125rem !important;
-  }
-
-  .text-sm {
-    font-size: 0.875rem !important;
-    line-height: 1.25rem !important;
-  }
-}
 
 .feed-post-card {
   margin-right: -0.75rem;

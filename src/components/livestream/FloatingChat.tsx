@@ -60,22 +60,22 @@ export function FloatingChat({ messages, maxVisible = 6, onReportMessage }: Floa
               className="mt-0.5 h-6 w-6 flex-shrink-0 rounded-full object-cover ring-1 ring-white/25"
             />
           ) : (
-            <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/60 text-[9px] font-bold text-white ring-1 ring-white/20">
+            <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/60 text-2xs font-bold text-white ring-1 ring-white/20">
               {(m.user || 'U').charAt(0).toUpperCase()}
             </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="max-w-[9rem] truncate text-[10px] font-bold leading-none text-white/75">
+              <span className="max-w-[9rem] truncate text-2xs font-bold leading-none text-white/75">
                 {m.user}
               </span>
               {m.isGift && (
-                <span className="rounded-full bg-yellow-400/20 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-yellow-200">
+                <span className="rounded-full bg-yellow-400/20 px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide text-yellow-200">
                   Gift
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-[12px] leading-snug text-white [overflow-wrap:anywhere]">
+            <p className="mt-0.5 text-xs leading-snug text-white [overflow-wrap:anywhere]">
               {m.text}
             </p>
           </div>

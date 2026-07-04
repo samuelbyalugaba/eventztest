@@ -461,28 +461,28 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-white/50 text-[10px] uppercase tracking-wider">Duration</span>
+                  <span className="text-white/50 text-2xs uppercase tracking-wider">Duration</span>
                 </div>
                 <span className="text-white text-lg font-bold">{formatTime(endStats.duration)}</span>
               </div>
               <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
                 <div className="flex items-center gap-2 mb-1">
                   <Users className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="text-white/50 text-[10px] uppercase tracking-wider">Peak viewers</span>
+                  <span className="text-white/50 text-2xs uppercase tracking-wider">Peak viewers</span>
                 </div>
                 <span className="text-white text-lg font-bold">{endStats.peakViewers.toLocaleString()}</span>
               </div>
               <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUp className="w-3.5 h-3.5 text-green-400" />
-                  <span className="text-white/50 text-[10px] uppercase tracking-wider">Revenue</span>
+                  <span className="text-white/50 text-2xs uppercase tracking-wider">Revenue</span>
                 </div>
                 <span className="text-white text-lg font-bold">TZS {endStats.totalRevenue.toLocaleString()}</span>
               </div>
               <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
                 <div className="flex items-center gap-2 mb-1">
                   <MessageCircle className="w-3.5 h-3.5 text-yellow-400" />
-                  <span className="text-white/50 text-[10px] uppercase tracking-wider">Messages</span>
+                  <span className="text-white/50 text-2xs uppercase tracking-wider">Messages</span>
                 </div>
                 <span className="text-white text-lg font-bold">{endStats.chatMessages.toLocaleString()}</span>
               </div>
@@ -492,11 +492,11 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               <div className="flex items-center gap-6">
                 <div className="text-center">
                   <span className="text-pink-400 text-lg font-bold">{endStats.totalLikes}</span>
-                  <p className="text-white/40 text-[9px] uppercase">Likes</p>
+                  <p className="text-white/40 text-2xs uppercase">Likes</p>
                 </div>
                 <div className="text-center">
                   <span className="text-yellow-400 text-lg font-bold">{endStats.totalGifts}</span>
-                  <p className="text-white/40 text-[9px] uppercase">Gifts</p>
+                  <p className="text-white/40 text-2xs uppercase">Gifts</p>
                 </div>
               </div>
             </div>
@@ -695,19 +695,19 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                    <span className="text-white/50 text-[10px] uppercase">Viewers</span>
+                    <span className="text-white/50 text-2xs uppercase">Viewers</span>
                     <p className="text-white text-lg font-bold">{viewerCount.toLocaleString()}</p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                    <span className="text-white/50 text-[10px] uppercase">Peak</span>
+                    <span className="text-white/50 text-2xs uppercase">Peak</span>
                     <p className="text-white text-lg font-bold">{peakViewersRef.current}</p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                    <span className="text-white/50 text-[10px] uppercase">Likes</span>
+                    <span className="text-white/50 text-2xs uppercase">Likes</span>
                     <p className="text-white text-lg font-bold">{likes}</p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                    <span className="text-white/50 text-[10px] uppercase">Revenue</span>
+                    <span className="text-white/50 text-2xs uppercase">Revenue</span>
                     <p className="text-white text-lg font-bold">TZS {totalRevenue.toLocaleString()}</p>
                   </div>
                 </div>
@@ -756,7 +756,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
                   <div className="flex items-center gap-2 mt-0.5">
                     <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-500/20 border border-red-500/40">
                       <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                      <span className="text-red-200 text-[9px] font-black tracking-[0.15em]">LIVE</span>
+                      <span className="text-red-200 text-2xs font-black tracking-[0.15em]">LIVE</span>
                     </div>
                   </div>
                 </div>
@@ -784,7 +784,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
               <span className="text-white text-xs font-bold">{likes.toLocaleString()}</span>
             </div>
             <div className="w-px h-4 bg-white/20" />
-            <div className={`flex items-center gap-1 text-[10px] font-bold ${streamHealth === 'good' ? 'text-green-400' : streamHealth === 'poor' ? 'text-yellow-400' : 'text-red-400'}`}>
+            <div className={`flex items-center gap-1 text-2xs font-bold ${streamHealth === 'good' ? 'text-green-400' : streamHealth === 'poor' ? 'text-yellow-400' : 'text-red-400'}`}>
               <Activity className="w-3.5 h-3.5" />
               <span>{streamHealth === 'good' ? 'GOOD' : streamHealth === 'poor' ? 'POOR' : 'BAD'}</span>
             </div>

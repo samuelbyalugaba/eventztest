@@ -493,7 +493,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
             </div>
           )}
           {step === 'checkout' && (
-            <p className="mt-3 text-center text-[11px] leading-5 text-gray-500">
+            <p className="mt-3 text-center text-xs leading-5 text-gray-500">
               By continuing, you agree to the{' '}
               <a href={TERMS_OF_SERVICE_URL} className="font-medium text-gray-700 underline underline-offset-2">Terms</a>
               {' '}and{' '}

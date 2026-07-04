@@ -64,7 +64,7 @@ export function ProfileBio({ isLoading, isOrganizer, isOwnProfile, organizerCate
           {!trimmedBio && isOwnProfile && (
             <button
               onClick={onSetBio}
-              className="ml-3 px-2.5 py-1 text-[11px] rounded-full bg-purple-50 text-purple-700 font-semibold hover:bg-purple-100 transition-colors"
+              className="ml-3 px-2.5 py-1 text-xs rounded-full bg-purple-50 text-purple-700 font-semibold hover:bg-purple-100 transition-colors"
             >
               Set Bio
             </button>

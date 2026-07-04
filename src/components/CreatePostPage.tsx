@@ -492,7 +492,7 @@ export default function CreatePostPage() {
                 width: 10, height: 10, borderRadius: '50%', background: '#FF3B30',
                 animation: 'recPulse 1s ease-in-out infinite',
               }} />
-              <span style={{ color: '#fff', fontSize: 15, fontWeight: 600, letterSpacing: '0.05em' }}>
+              <span style={{ color: '#fff', fontSize: 14, fontWeight: 600, letterSpacing: '0.05em' }}>
                 {formatDuration(recordingDuration)}
               </span>
             </div>
@@ -517,7 +517,7 @@ export default function CreatePostPage() {
               >
                 <ImagePlus size={20} />
               </button>
-              <span style={{ fontSize: 10.5, color: C.mute }}>Gallery</span>
+              <span style={{ fontSize: 12, color: C.mute }}>Gallery</span>
             </div>
 
             <ShutterButton
@@ -588,7 +588,7 @@ export default function CreatePostPage() {
                     backgroundColor: GRADIENT_FALLBACK,
                     backgroundImage: GRADIENT,
                     color: '#0E0B1F',
-                    fontSize: 12.5, fontWeight: 700,
+                    fontSize: 13, fontWeight: 700,
                     cursor: 'pointer', transition: 'all 0.15s ease',
                     overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
                   }}
@@ -627,7 +627,7 @@ export default function CreatePostPage() {
                           key={i}
                           onClick={() => handleLocationSelect(s)}
                           style={{
-                            padding: '10px 14px', fontSize: 12.5, color: C.ink,
+                            padding: '10px 14px', fontSize: 13, color: C.ink,
                             cursor: 'pointer',
                             borderBottom: i < locationSuggestions.length - 1 ? `1px solid ${C.hairline}` : undefined,
                           }}
@@ -646,7 +646,7 @@ export default function CreatePostPage() {
                     padding: '8px 12px', borderRadius: 10, maxWidth: '55%',
                     border: `1px solid ${C.hairline}`,
                     background: C.glass, color: C.mute,
-                    fontSize: 12.5, fontWeight: 400,
+                    fontSize: 13, fontWeight: 400,
                     cursor: 'pointer', transition: 'all 0.15s ease',
                   }}
                 >
@@ -656,7 +656,7 @@ export default function CreatePostPage() {
               )}
 
               <span style={{
-                marginLeft: 'auto', fontSize: 11.5, fontWeight: 600,
+                marginLeft: 'auto', fontSize: 13, fontWeight: 600,
                 color: remaining < 0 ? '#FF6B6B' : C.mute,
               }}>
                 {remaining < 24 ? `${remaining} LEFT` : ''}
