@@ -162,7 +162,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
         return;
       }
       
-      const { nUser, balanceTzs } = await ensureWalletBalanceForPurchase({
+      const { balanceTzs } = await ensureWalletBalanceForPurchase({
         userId: user.id,
         email: user.email || '',
         amount: totalPrice,
@@ -176,34 +176,31 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
       });
       setWalletBalance(balanceTzs);
 
-      const transaction = await createTransaction({
-        user_id: user.id,
-        event_id: event.id,
-        amount: totalPrice,
-        currency: currency,
-        provider: 'Wallet',
-        status: 'pending',
-        metadata: {
-          type: 'payment',
-          customer_name: formData.name,
-          customer_email: formData.email,
-          selections: JSON.stringify(selections),
-          total_quantity: totalTickets,
-          wallet_funding_method: selectedPaymentMethod
-        }
+      // Transfer funds from buyer's wallet to organizer's wallet via edge function
+      const { data: payData, error: payErr } = await supabase.functions.invoke('wallet-ticket-payment', {
+        body: {
+          eventId: event.id,
+          amount: totalPrice,
+          currency,
+          metadata: {
+            customer_name: formData.name,
+            customer_email: formData.email,
+            selections: JSON.stringify(selections),
+            total_quantity: totalTickets,
+            wallet_funding_method: selectedPaymentMethod,
+          },
+        },
       });
 
-      const { ntzsApi } = await import('../utils/ntzs-api');
-      await ntzsApi.withdraw(nUser.id, totalPrice, 'wallet-payment');
+      if (payErr || (payData as any)?.error) {
+        const msg = (payData as any)?.error || payErr?.message || 'Wallet payment failed';
+        throw new Error(msg);
+      }
 
-      const { error: updateErr } = await supabase
-        .from('transactions')
-        .update({ status: 'completed' })
-        .eq('id', transaction.id)
-        .eq('user_id', user.id);
-      if (updateErr) throw new Error('Failed to verify wallet payment');
+      const transactionId = (payData as any)?.transactionId;
+      if (!transactionId) throw new Error('Payment succeeded but transaction was not recorded');
 
-      await finalizeTicketCreation(user.id, transaction.id);
+      await finalizeTicketCreation(user.id, transactionId);
 
     } catch (error: any) {
       toast.error(error.message || 'Payment failed');
