@@ -1,6 +1,6 @@
 import { supabase } from './client';
 import type { Profile } from './profile';
-import { getBlockedUserIds } from './moderation';
+
 import { deleteFile } from './storage';
 
 export type Event = {

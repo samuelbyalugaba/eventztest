@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import type { Profile } from './profile';
+
 
 export const getFollowedUserIds = async (userId: string) => {
   const { data, error } = await supabase

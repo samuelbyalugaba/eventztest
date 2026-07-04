@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+
 import { Skeleton } from '../ui/skeleton';
 
 /* ------------------------------------------------------------------ */
