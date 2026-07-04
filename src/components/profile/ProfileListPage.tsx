@@ -134,7 +134,8 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
         else next.delete(person.id);
         return next;
       });
-    } catch {
+    } catch (err) {
+      console.error('Follow toggle failed', err);
       setFollowingIds((prev) => {
         const next = new Set(prev);
         if (wasFollowing) next.add(person.id);

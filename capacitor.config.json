@@ -2,17 +2,5 @@
   "appId": "com.eventz.live",
   "appName": "Eventz",
   "webDir": "dist",
-  "plugins": {
-    "SystemBars": {
-      "insetsHandling": "css",
-      "style": "LIGHT",
-      "hidden": false,
-      "animation": "NONE"
-    },
-    "StatusBar": {
-      "overlaysWebView": false,
-      "style": "LIGHT",
-      "backgroundColor": "#FAFAFA"
-    }
-  }
+  "plugins": {}
 }

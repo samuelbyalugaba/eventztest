@@ -36,7 +36,6 @@ import { Skeleton } from './ui/skeleton';
 import '../styles/dashboard.css';
 
 const TicketScannerModal = lazy(() => import('./TicketScannerModal').then((module) => ({ default: module.TicketScannerModal })));
-const WalletModal = lazy(() => import('./WalletModal').then((module) => ({ default: module.WalletModal })));
 
 type ScreenId =
   | 'dash'
@@ -1155,7 +1154,6 @@ export function DashboardPage() {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannerEventId, setScannerEventId] = useState<number | null>(null);
-  const [showWallet, setShowWallet] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [tickets, setTickets] = useState<DashboardTicket[]>([]);
   const [transactions, setTransactions] = useState<DashboardTransaction[]>([]);
@@ -1381,7 +1379,7 @@ export function DashboardPage() {
   };
 
   const openWithdraw = () => {
-    setShowWallet(true);
+    navigate('/wallet');
   };
 
   const go = (next: ScreenId, nextDetail?: DashboardScope) => {
@@ -1464,11 +1462,6 @@ export function DashboardPage() {
             onEventChange={(event) => setScannerEventId(event.id)}
             onClose={() => setShowScanner(false)}
           />
-        </Suspense>
-      ) : null}
-      {showWallet ? (
-        <Suspense fallback={<DashboardModalFallback />}>
-          <WalletModal isOpen={showWallet} onClose={() => setShowWallet(false)} />
         </Suspense>
       ) : null}
     </div>

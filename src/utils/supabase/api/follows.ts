@@ -24,6 +24,8 @@ export const checkIsFollowing = async (followerId: string, followingId: string) 
 };
 
 export const toggleFollow = async (followerId: string, followingId: string) => {
+  if (followerId === followingId) return false;
+
   const { data: existing, error: fetchError } = await supabase
     .from('follows')
     .select('id')
@@ -45,12 +47,16 @@ export const toggleFollow = async (followerId: string, followingId: string) => {
       .from('follows')
       .insert({ follower_id: followerId, following_id: followingId });
     if (error) throw error;
-    const [{ sendSocialPushNotification }, { sendSocialEmailNotification }] = await Promise.all([
-      import('../../pushNotifications'),
-      import('../../email'),
-    ]);
-    void sendSocialPushNotification('follow', { targetUserId: followingId });
-    void sendSocialEmailNotification('follow', { targetUserId: followingId });
+    try {
+      const [{ sendSocialPushNotification }, { sendSocialEmailNotification }] = await Promise.all([
+        import('../../pushNotifications'),
+        import('../../email'),
+      ]);
+      void sendSocialPushNotification('follow', { targetUserId: followingId });
+      void sendSocialEmailNotification('follow', { targetUserId: followingId });
+    } catch {
+      // Notification delivery is best-effort
+    }
     return true;
   }
 };

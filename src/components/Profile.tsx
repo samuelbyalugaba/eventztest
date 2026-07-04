@@ -295,10 +295,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const handleFollow = async () => {
     const targetUserId = userId || currentUser?.id;
     if (!currentUser || !targetUserId) return;
+    if (currentUser.id === targetUserId) return;
     try {
       await toggleFollow(currentUser.id, targetUserId);
-      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.summary(currentUser.id, targetUserId) });
     } catch (err) {
+      console.error('Follow toggle failed', err);
       toast.error('Failed to update follow status');
     }
   };
