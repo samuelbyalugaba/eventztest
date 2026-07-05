@@ -31,7 +31,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { type Event as ApiEvent } from '../utils/supabase/api';
-import { getLocalWalletBalance, ntzsApi } from '../utils/ntzs-api';
+
 import { prefetchUserStats } from '../utils/statsPrefetch';
 import { useProfileStore } from '../store/profileStore';
 import { Skeleton } from './ui/skeleton';
