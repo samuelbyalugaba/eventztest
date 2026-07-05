@@ -727,7 +727,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       {Icon && <Icon className="h-[0.8rem] w-[0.8rem]" />}
                       <span>{category.chipName || category.name}</span>
                     </button>
-                  ))}
+                  );
+                })}
                 </div>
 
             {selectedCategory !== 'all' && (
@@ -755,6 +756,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 </div>
               </div>
             )}
+          </div>
           </div>
 
           {/* Events List */}

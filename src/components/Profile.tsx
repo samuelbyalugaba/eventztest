@@ -47,6 +47,7 @@ type TicketViewerTicket = {
   ticketType: string;
   price: string;
   qrCode: string;
+  ticketNumber?: string;
 };
 
 interface ProfileProps {
