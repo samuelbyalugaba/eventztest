@@ -119,7 +119,7 @@ const baseLayout = ({
               <td style="padding:10px 28px 30px">
                 <h1 style="margin:0 0 14px;font-size:24px;line-height:1.25;color:#111827">${escapeHtml(title)}</h1>
                 <div style="font-size:15px;line-height:1.65;color:#374151">${body}</div>
-                <p style="margin:28px 0 4px"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#8A2BE2;color:#fff;text-decoration:none;font-weight:700;border-radius:999px;padding:12px 20px">${escapeHtml(ctaLabel)}</a></p>
+                <p style="margin:28px 0 4px"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#7C3AED;color:#fff;text-decoration:none;font-weight:700;border-radius:999px;padding:12px 20px">${escapeHtml(ctaLabel)}</a></p>
               </td>
             </tr>
             <tr>

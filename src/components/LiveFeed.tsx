@@ -134,9 +134,9 @@ export function LiveFeed() {
                 className="icon-circle-button relative rounded-full border border-gray-100 bg-white shadow-sm transition-all hover:bg-gray-50 group"
                 aria-label="Filter live streams"
               >
-                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#8A2BE2]" />
+                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#7C3AED]" />
                 {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#8A2BE2] text-2xs text-white shadow-md">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#7C3AED] text-2xs text-white shadow-md">
                     {activeFiltersCount}
                   </span>
                 )}

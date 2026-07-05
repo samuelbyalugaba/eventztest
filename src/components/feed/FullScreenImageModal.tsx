@@ -55,7 +55,7 @@ export function FullScreenImageModal({ images, currentIndex: initialIndex, postI
       </div>
 
       {images.length > 1 && (
-        <div className="absolute top-6 left-6 bg-[#8A2BE2]/90 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium z-20">
+        <div className="absolute top-6 left-6 bg-[#7C3AED]/90 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium z-20">
           {currentIndex + 1} / {images.length}
         </div>
       )}

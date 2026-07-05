@@ -531,7 +531,7 @@ export function MediaViewer({ media, initialIndex, onClose, type }: MediaViewerP
                 onTouchStart={handleProgressTouchStart}
               >
                 <div 
-                  className="absolute inset-y-0 left-0 bg-[#8A2BE2] rounded-full transition-all"
+                  className="absolute inset-y-0 left-0 bg-[#7C3AED] rounded-full transition-all"
                   style={{ width: `${progress}%` }}
                 />
                 {/* Scrubber handle */}

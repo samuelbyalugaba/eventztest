@@ -47,11 +47,11 @@ function DetailCalendarIcon() {
       />
       <path
         d="M9 13C9 9.7 11.7 7 15 7h18c3.3 0 6 2.7 6 6v7H9v-7Z"
-        fill="#8A2BE2"
+        fill="#7C3AED"
       />
       <path d="M16 5v8M32 5v8" stroke="#111827" strokeWidth="3.5" strokeLinecap="round" />
       <path d="M15 27h5M24 27h5M33 27h2M15 34h5M30 35l-4-4 1.9-1.9 2.1 2.1 5.2-5.2 1.8 1.9L30 35Z" fill="#CBD5E1" />
-      <path d="M30 35l-4-4 1.9-1.9 2.1 2.1 5.2-5.2 1.8 1.9L30 35Z" fill="#8A2BE2" />
+      <path d="M30 35l-4-4 1.9-1.9 2.1 2.1 5.2-5.2 1.8 1.9L30 35Z" fill="#7C3AED" />
     </svg>
   );
 }
@@ -539,7 +539,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 {(event.organizer || event.organizer_id) && (
                   <button
                     onClick={handleOrganizerProfileClick}
-                    className="mt-2 text-sm text-gray-600 hover:text-[#8A2BE2] transition-colors text-left"
+                    className="mt-2 text-sm text-gray-600 hover:text-[#7C3AED] transition-colors text-left"
                   >
                     by <span className="font-semibold text-purple-600">{organizerDisplayName}</span>
                   </button>
@@ -577,7 +577,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             {/* Location */}
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-8 h-8 text-[#8A2BE2]" strokeWidth={2.2} />
+                <MapPin className="w-8 h-8 text-[#7C3AED]" strokeWidth={2.2} />
               </div>
               {locationMapsUrl ? (
                 <a
@@ -898,7 +898,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
              externalTicketing ? (
                 <button
                   onClick={handleExternalTicketing}
-                 className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#8A2BE2] py-3 text-center font-medium leading-tight text-white shadow-lg shadow-purple-200 transition-colors hover:bg-[#7b26c9]"
+                 className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#7C3AED] py-3 text-center font-medium leading-tight text-white shadow-lg shadow-purple-200 transition-colors hover:bg-[#6D28D9]"
                >
                  <Phone className="w-5 h-5 shrink-0" />
                  <span className="min-w-0">Contact for ticketing</span>
@@ -910,7 +910,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                  className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl py-3 text-center font-medium leading-tight transition-colors ${
                    isFreeEvent
                      ? 'cursor-default bg-gray-100 text-gray-600 shadow-none'
-                     : 'bg-[#8A2BE2] text-white hover:bg-[#7b26c9] shadow-lg shadow-purple-200'
+                     : 'bg-[#7C3AED] text-white hover:bg-[#6D28D9] shadow-lg shadow-purple-200'
                  }`}
                >
                  <Ticket className="w-5 h-5 shrink-0" />

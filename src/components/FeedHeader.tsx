@@ -150,7 +150,7 @@ export function FeedHeader({
             >
               <MessageSquare className="h-[18px] w-[18px] text-gray-700" />
               {unreadMessagesCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-[#8A2BE2] text-white text-2xs font-bold rounded-full flex items-center justify-center px-1">
+                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-[#7C3AED] text-white text-2xs font-bold rounded-full flex items-center justify-center px-1">
                   {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
                 </span>
               )}

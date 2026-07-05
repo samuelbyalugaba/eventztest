@@ -694,9 +694,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 onClick={() => setShowFilters(true)}
                 className="icon-circle-button relative rounded-full border border-gray-100 bg-white shadow-sm transition-all hover:bg-gray-50 group"
               >
-                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#8A2BE2]" />
+                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#7C3AED]" />
                 {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#8A2BE2] text-white text-2xs rounded-full flex items-center justify-center shadow-md">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#7C3AED] text-white text-2xs rounded-full flex items-center justify-center shadow-md">
                     {activeFiltersCount}
                   </span>
                 )}
@@ -1146,7 +1146,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                             className="w-12 h-12 rounded-full object-cover"
                           />
                           {conv.unreadCount > 0 && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#8A2BE2] rounded-full flex items-center justify-center">
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#7C3AED] rounded-full flex items-center justify-center">
                               <span className="text-white text-xs font-bold">{conv.unreadCount}</span>
                             </div>
                           )}
@@ -1156,7 +1156,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                             <div className="flex items-center gap-1">
                               <span className="text-gray-900 text-sm font-medium">{conv.user.name}</span>
                               {conv.user.verified && (
-                                <CheckCircle2 className="w-4 h-4 text-white fill-[#8A2BE2]" />
+                                <CheckCircle2 className="w-4 h-4 text-white fill-[#7C3AED]" />
                               )}
                             </div>
                             <span className="text-gray-400 text-xs">{conv.lastMessage.timestamp}</span>
@@ -1172,7 +1172,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </>
             ) : (
               <>
-                <div className="bg-[#8A2BE2] px-5 py-4">
+                <div className="bg-[#7C3AED] px-5 py-4">
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setActiveConversation(null)}
@@ -1188,7 +1188,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                         className="w-10 h-10 rounded-full object-cover ring-2 ring-white/50"
                       />
                       {activeConversation.user.isOrganizer && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#8A2BE2] rounded-full flex items-center justify-center ring-2 ring-white">
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#7C3AED] rounded-full flex items-center justify-center ring-2 ring-white">
                           <Star className="w-2 h-2 text-white fill-white" />
                         </div>
                       )}
@@ -1241,7 +1241,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                               <div
                                 className={`rounded-2xl px-4 py-2.5 ${
                                   isMe
-                                    ? 'bg-[#8A2BE2] text-white'
+                                    ? 'bg-[#7C3AED] text-white'
                                     : 'bg-white text-gray-900 shadow-sm'
                                 }`}
                               >
@@ -1279,7 +1279,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     <button
                       onClick={handleSendMessage}
                       disabled={!messageText.trim()}
-                      className="w-10 h-10 bg-[#8A2BE2] text-white rounded-full flex items-center justify-center hover:bg-[#7526c7] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-10 bg-[#7C3AED] text-white rounded-full flex items-center justify-center hover:bg-[#6D28D9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send className="w-5 h-5" />
                     </button>

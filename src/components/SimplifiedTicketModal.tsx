@@ -278,12 +278,12 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                       <div 
                         key={tier.name}
                         className={`border-2 rounded-xl p-4 transition-all ${
-                          isSelected ? 'border-[#8A2BE2] bg-purple-50/50' : 'border-gray-100 hover:border-purple-200'
+                          isSelected ? 'border-[#7C3AED] bg-purple-50/50' : 'border-gray-100 hover:border-purple-200'
                         }`}
                       >
                         <div className="flex justify-between items-center mb-2">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${isSelected ? 'bg-[#8A2BE2] text-white' : 'bg-gray-100 text-gray-600'}`}>
+                            <div className={`p-2 rounded-lg ${isSelected ? 'bg-[#7C3AED] text-white' : 'bg-gray-100 text-gray-600'}`}>
                               {getTierIcon(tier.name)}
                             </div>
                             <div>
@@ -305,7 +305,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                             <button 
                               onClick={() => updateQuantity(tier.name, 1)}
                               disabled={quantity >= tier.available}
-                              className="w-8 h-8 rounded-md bg-[#8A2BE2] text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
+                              className="w-8 h-8 rounded-md bg-[#7C3AED] text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
@@ -374,7 +374,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                   <PaymentMethodSelector
                     value={selectedPaymentMethod}
                     onChange={setSelectedPaymentMethod}
-                    activeClassName="border-[#8A2BE2] bg-purple-50 text-purple-700"
+                    activeClassName="border-[#7C3AED] bg-purple-50 text-purple-700"
                   />
                   {selectedPaymentMethod === 'Wallet' && (
                     <div className={`p-4 rounded-xl border ${walletBalance >= totalPrice ? 'bg-purple-50 border-purple-200' : 'bg-red-50 border-red-200'}`}>
@@ -437,7 +437,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
               disabled={totalTickets === 0}
               className={`flex w-full min-w-0 items-center justify-center gap-2 rounded-xl py-3.5 text-center font-bold leading-tight text-white shadow-lg transition-all ${
                 totalTickets > 0 
-                  ? 'bg-[#8A2BE2] shadow-purple-200 hover:bg-purple-700 hover:shadow-xl hover:scale-[1.02]' 
+                  ? 'bg-[#7C3AED] shadow-purple-200 hover:bg-purple-700 hover:shadow-xl hover:scale-[1.02]' 
                   : 'bg-gray-300 shadow-none cursor-not-allowed'
               }`}
             >
@@ -469,7 +469,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
               <button
                 onClick={handlePurchase}
                 disabled={isProcessing}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A2BE2] to-purple-600 py-3.5 text-center font-bold leading-tight text-white shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl ${
+                className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C3AED] to-purple-600 py-3.5 text-center font-bold leading-tight text-white shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl ${
                   isProcessing ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >

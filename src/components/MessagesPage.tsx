@@ -166,7 +166,7 @@ function ConversationNotFound({ onBack }: { onBack: () => void }) {
         </p>
         <button
           onClick={() => onBack()}
-          className="mt-6 rounded-xl bg-[#8A2BE2] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#7a26c9]"
+          className="mt-6 rounded-xl bg-[#7C3AED] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#6D28D9]"
         >
           Back to messages
         </button>

@@ -10,13 +10,13 @@ const ICON_OUTPUT = path.join(RES_DIR, 'drawable/splash_icon.png');
 const PALETTES = {
   light: {
     background: '#FAFAFA',
-    accent: '#8A2BE2',
-    line: '#8A2BE2',
+    accent: '#7C3AED',
+    line: '#7C3AED',
     shadow: 'rgba(21, 16, 32, 0.18)',
   },
   dark: {
     background: '#101014',
-    accent: '#8A2BE2',
+    accent: '#7C3AED',
     line: '#FFFFFF',
     shadow: 'rgba(0, 0, 0, 0.34)',
   },
@@ -90,7 +90,7 @@ const makeTile = async (tileSize, logoScale = 0.72) => {
 
   const tile = await sharp(svg(`
       <svg width="${tileSize}" height="${tileSize}" viewBox="0 0 ${tileSize} ${tileSize}" xmlns="http://www.w3.org/2000/svg">
-        <rect x="0" y="0" width="${tileSize}" height="${tileSize}" rx="${radius}" fill="#8A2BE2"/>
+        <rect x="0" y="0" width="${tileSize}" height="${tileSize}" rx="${radius}" fill="#7C3AED"/>
         <rect x="1" y="1" width="${tileSize - 2}" height="${tileSize - 2}" rx="${Math.max(radius - 1, 1)}" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="2"/>
       </svg>
     `))

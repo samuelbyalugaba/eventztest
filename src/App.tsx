@@ -344,13 +344,13 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-[#8A2BE2]/30 border-t-[#8A2BE2] rounded-full animate-spin mx-auto" />
+          <div className="w-16 h-16 border-4 border-[#7C3AED]/30 border-t-[#7C3AED] rounded-full animate-spin mx-auto" />
           {authTimedOut ? (
             <div className="space-y-3">
               <p className="text-red-500 font-medium">Taking longer than expected</p>
               <button
                 onClick={() => { setAuthTimedOut(false); window.location.reload(); }}
-                className="rounded-full bg-[#8A2BE2] px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7C3AED]"
+                className="rounded-full bg-[#7C3AED] px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7C3AED]"
               >
                 Retry
               </button>

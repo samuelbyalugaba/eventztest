@@ -81,7 +81,7 @@ function PostErrorState({ onRetry }: { onRetry: () => void }) {
       <p className="text-gray-500 mb-6 max-w-sm">The post may have been deleted or is temporarily unavailable.</p>
       <button
         onClick={onRetry}
-        className="rounded-full bg-[#8A2BE2] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7C3AED]"
+        className="rounded-full bg-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7C3AED]"
       >
         Try again
       </button>

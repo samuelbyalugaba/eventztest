@@ -4,7 +4,7 @@
   "description": "The Hub of Live Events",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#8A2BE2",
+  "background_color": "#7C3AED",
   "orientation": "portrait-primary",
   "categories": [
     "entertainment",

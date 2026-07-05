@@ -146,7 +146,7 @@ const baseLayout = ({
 }) => {
   const safeTitle = escapeHtml(title);
   const cta = ctaLabel && ctaUrl
-    ? `<p style="margin:28px 0 4px"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#8A2BE2;color:#fff;text-decoration:none;font-weight:700;border-radius:999px;padding:12px 20px">${escapeHtml(ctaLabel)}</a></p>`
+    ? `<p style="margin:28px 0 4px"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#7C3AED;color:#fff;text-decoration:none;font-weight:700;border-radius:999px;padding:12px 20px">${escapeHtml(ctaLabel)}</a></p>`
     : "";
 
   return `<!doctype html>

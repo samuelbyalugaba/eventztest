@@ -144,10 +144,10 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
             {events && onEventChange ? (
               <button 
                 onClick={() => setShowEventSelector(!showEventSelector)}
-                className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#8A2BE2] transition-colors mt-0.5 group"
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#7C3AED] transition-colors mt-0.5 group"
               >
                 <span className="line-clamp-1 max-w-[200px] text-left">{eventTitle}</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${showEventSelector ? 'rotate-180 text-[#8A2BE2]' : ''}`} />
+                <ChevronDown className={`w-3 h-3 transition-transform ${showEventSelector ? 'rotate-180 text-[#7C3AED]' : ''}`} />
               </button>
             ) : (
               <p className="text-xs text-gray-500 line-clamp-1">{eventTitle}</p>
@@ -169,7 +169,7 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
                       }}
                       className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-3 ${
                         event.id === eventId 
-                          ? 'bg-purple-50 text-[#8A2BE2] font-medium' 
+                          ? 'bg-purple-50 text-[#7C3AED] font-medium' 
                           : 'text-gray-700 hover:bg-gray-50'
                       }`}
                     >
@@ -184,7 +184,7 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
                           {new Date(event.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         </p>
                       </div>
-                      {event.id === eventId && <CheckCircle2 className="w-4 h-4 text-[#8A2BE2]" />}
+                      {event.id === eventId && <CheckCircle2 className="w-4 h-4 text-[#7C3AED]" />}
                     </button>
                   ))}
                 </div>
@@ -207,10 +207,10 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
               {/* Overlay Guide */}
               <div className="absolute inset-0 border-[40px] border-black/50 pointer-events-none flex items-center justify-center">
                 <div className="w-full h-full border-2 border-white/50 rounded-lg relative">
-                  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-[#8A2BE2] -mt-1 -ml-1 rounded-tl-lg"></div>
-                  <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-[#8A2BE2] -mt-1 -mr-1 rounded-tr-lg"></div>
-                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-[#8A2BE2] -mb-1 -ml-1 rounded-bl-lg"></div>
-                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-[#8A2BE2] -mb-1 -mr-1 rounded-br-lg"></div>
+                  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-[#7C3AED] -mt-1 -ml-1 rounded-tl-lg"></div>
+                  <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-[#7C3AED] -mt-1 -mr-1 rounded-tr-lg"></div>
+                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-[#7C3AED] -mb-1 -ml-1 rounded-bl-lg"></div>
+                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-[#7C3AED] -mb-1 -mr-1 rounded-br-lg"></div>
                 </div>
               </div>
               <div className="absolute bottom-6 left-0 right-0 text-center">

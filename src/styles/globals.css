@@ -367,7 +367,7 @@ html {
   position: absolute;
   inset: 0;
   border: 1.5px solid transparent;
-  border-top-color: #8A2BE2;
+  border-top-color: #7C3AED;
   border-right-color: rgba(138, 43, 226, 0.3);
   border-radius: 9999px;
   animation: bottom-search-spin 3s linear infinite;
@@ -393,7 +393,7 @@ html {
 .bottom-search-orb svg {
   position: relative;
   z-index: 1;
-  color: #8A2BE2;
+  color: #7C3AED;
   transition: transform 0.2s ease;
 }
 
@@ -402,7 +402,7 @@ html {
 }
 
 .bottom-search-label {
-  color: #8A2BE2;
+  color: #7C3AED;
   font-size: 0.5625rem !important;
   font-weight: 600;
   letter-spacing: 0.04em;

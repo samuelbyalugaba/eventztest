@@ -397,7 +397,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
         <div className="max-w-lg mx-auto">
           <button
             onClick={onSubmit}
-            className="w-full bg-[#8A2BE2] text-white py-3.5 rounded-xl font-semibold text-base shadow-lg shadow-purple-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="w-full bg-[#7C3AED] text-white py-3.5 rounded-xl font-semibold text-base shadow-lg shadow-purple-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <span>Complete Setup</span>
             <Check className="w-4 h-4" />

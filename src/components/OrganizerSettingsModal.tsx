@@ -333,7 +333,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                     isActive
-                      ? 'bg-[#8A2BE2] text-white'
+                      ? 'bg-[#7C3AED] text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -362,7 +362,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                         className="w-full h-full" 
                       />
                     </div>
-                    <div className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-[#8A2BE2] text-white flex items-center justify-center shadow-lg border-4 border-white transform transition-transform group-hover:scale-110">
+                    <div className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-[#7C3AED] text-white flex items-center justify-center shadow-lg border-4 border-white transform transition-transform group-hover:scale-110">
                       <Camera className="w-4 h-4" />
                     </div>
                     <input
@@ -425,7 +425,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                                   setCategorySearch(c);
                                   setShowCategoryDropdown(false);
                                 }}
-                                className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.organizerType === c ? 'text-[#8A2BE2] font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
+                                className={`w-full text-left px-5 py-3.5 text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${profileData.organizerType === c ? 'text-[#7C3AED] font-bold bg-purple-50/50' : 'text-gray-600 font-medium'}`}
                               >
                                 {c}
                                 {profileData.organizerType === c && <Check className="w-4 h-4" />}
@@ -603,7 +603,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                         onClick={() => setStreamingSettings({ ...streamingSettings, defaultQuality: quality })}
                         className={`px-4 py-3 rounded-lg border-2 text-sm font-medium ${
                           streamingSettings.defaultQuality === quality
-                            ? 'border-[#8A2BE2] bg-purple-50 text-[#8A2BE2]'
+                            ? 'border-[#7C3AED] bg-purple-50 text-[#7C3AED]'
                             : 'border-gray-200 text-gray-700 hover:border-gray-300'
                         }`}
                       >
@@ -630,7 +630,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                         </div>
                         <button
                           onClick={() => setStreamingSettings({ ...streamingSettings, [item.key]: !isEnabled })}
-                          className={`relative w-11 h-6 rounded-full ${isEnabled ? 'bg-[#8A2BE2]' : 'bg-gray-300'}`}
+                          className={`relative w-11 h-6 rounded-full ${isEnabled ? 'bg-[#7C3AED]' : 'bg-gray-300'}`}
                         >
                           <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isEnabled ? 'right-0.5' : 'left-0.5'}`} />
                         </button>
@@ -643,7 +643,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   <button onClick={onClose} className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
                     Cancel
                   </button>
-                  <button onClick={handleSaveStreaming} className="px-5 py-2.5 bg-[#8A2BE2] text-white text-sm rounded-lg hover:bg-[#7825d4]">
+                  <button onClick={handleSaveStreaming} className="px-5 py-2.5 bg-[#7C3AED] text-white text-sm rounded-lg hover:bg-[#6D28D9]">
                     Save Settings
                   </button>
                 </div>
@@ -660,7 +660,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                       onClick={() => setPaymentData({ ...paymentData, paymentMethod: 'bank' })}
                       className={`px-4 py-4 rounded-lg border-2 text-sm font-medium ${
                         paymentData.paymentMethod === 'bank'
-                          ? 'border-[#8A2BE2] bg-purple-50 text-[#8A2BE2]'
+                          ? 'border-[#7C3AED] bg-purple-50 text-[#7C3AED]'
                           : 'border-gray-200 text-gray-700 hover:border-gray-300'
                       }`}
                     >
@@ -671,7 +671,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                       onClick={() => setPaymentData({ ...paymentData, paymentMethod: 'mobile' })}
                       className={`px-4 py-4 rounded-lg border-2 text-sm font-medium ${
                         paymentData.paymentMethod === 'mobile'
-                          ? 'border-[#8A2BE2] bg-purple-50 text-[#8A2BE2]'
+                          ? 'border-[#7C3AED] bg-purple-50 text-[#7C3AED]'
                           : 'border-gray-200 text-gray-700 hover:border-gray-300'
                       }`}
                     >
@@ -733,7 +733,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
 
                 <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
                   <div className="flex gap-3">
-                    <Shield className="w-5 h-5 text-[#8A2BE2] flex-shrink-0" />
+                    <Shield className="w-5 h-5 text-[#7C3AED] flex-shrink-0" />
                     <div>
                       <h5 className="text-gray-900 font-medium text-sm mb-1">Secure Payment Processing</h5>
                       <p className="text-gray-600 text-sm">Your information is encrypted and stored securely.</p>
@@ -745,7 +745,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   <button onClick={onClose} className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
                     Cancel
                   </button>
-                  <button onClick={handleSavePayment} className="px-5 py-2.5 bg-[#8A2BE2] text-white text-sm rounded-lg hover:bg-[#7825d4]">
+                  <button onClick={handleSavePayment} className="px-5 py-2.5 bg-[#7C3AED] text-white text-sm rounded-lg hover:bg-[#6D28D9]">
                     Save Payment Info
                   </button>
                 </div>
@@ -762,7 +762,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                       onClick={() => setPrivacySettings({ ...privacySettings, profileVisibility: 'public' })}
                       className={`px-4 py-4 rounded-lg border-2 text-sm font-medium ${
                         privacySettings.profileVisibility === 'public'
-                          ? 'border-[#8A2BE2] bg-purple-50 text-[#8A2BE2]'
+                          ? 'border-[#7C3AED] bg-purple-50 text-[#7C3AED]'
                           : 'border-gray-200 text-gray-700 hover:border-gray-300'
                       }`}
                     >
@@ -773,7 +773,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                       onClick={() => setPrivacySettings({ ...privacySettings, profileVisibility: 'private' })}
                       className={`px-4 py-4 rounded-lg border-2 text-sm font-medium ${
                         privacySettings.profileVisibility === 'private'
-                          ? 'border-[#8A2BE2] bg-purple-50 text-[#8A2BE2]'
+                          ? 'border-[#7C3AED] bg-purple-50 text-[#7C3AED]'
                           : 'border-gray-200 text-gray-700 hover:border-gray-300'
                       }`}
                     >
@@ -800,7 +800,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                         </div>
                         <button
                           onClick={() => setPrivacySettings({ ...privacySettings, [item.key]: !isEnabled })}
-                          className={`relative w-11 h-6 rounded-full ${isEnabled ? 'bg-[#8A2BE2]' : 'bg-gray-300'}`}
+                          className={`relative w-11 h-6 rounded-full ${isEnabled ? 'bg-[#7C3AED]' : 'bg-gray-300'}`}
                         >
                           <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isEnabled ? 'right-0.5' : 'left-0.5'}`} />
                         </button>
@@ -813,7 +813,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   <button onClick={onClose} className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
                     Cancel
                   </button>
-                  <button onClick={handleSavePrivacy} className="px-5 py-2.5 bg-[#8A2BE2] text-white text-sm rounded-lg hover:bg-[#7825d4]">
+                  <button onClick={handleSavePrivacy} className="px-5 py-2.5 bg-[#7C3AED] text-white text-sm rounded-lg hover:bg-[#6D28D9]">
                     Save Privacy Settings
                   </button>
                 </div>
@@ -838,7 +838,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                     <h5 className="text-gray-900 font-medium text-sm">Two-Factor Authentication</h5>
                     <p className="text-gray-500 text-sm mt-0.5">Add extra security</p>
                   </div>
-                  <button className="px-4 py-2 bg-[#8A2BE2] text-white text-sm rounded-lg hover:bg-[#7825d4]">
+                  <button className="px-4 py-2 bg-[#7C3AED] text-white text-sm rounded-lg hover:bg-[#6D28D9]">
                     Enable
                   </button>
                 </div>
