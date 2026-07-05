@@ -106,7 +106,7 @@ export function WalletCard({ eventCount, balance, onWithdraw }: { eventCount: nu
       </div>
       <div className="relative z-[1] text-[30px] font-bold tracking-[-1.4px] leading-[1] mb-1">{formatMoney(balance)}</div>
       <div className="relative z-[1] text-2xs font-medium text-white/55 mb-[14px]">
-        {eventCount ? `${eventCount} organizer event${eventCount === 1 ? '' : 's'} connected` : 'No organizer events yet'}
+        {eventCount ? `${eventCount} event${eventCount === 1 ? '' : 's'} connected` : 'No events yet'}
       </div>
       <button type="button" className="relative z-[1] inline-flex items-center justify-center gap-[7px] rounded-full border border-white/35 bg-white/18 text-white px-4 py-2 text-xs font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,.18)]" onClick={onWithdraw}>
         <WalletCards className="h-3.5 w-3.5" />
