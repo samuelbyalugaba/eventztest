@@ -3,6 +3,14 @@ import { persist } from 'zustand/middleware';
 
 const PROFILE_STORE_KEY = 'eventz-profile-store-v1';
 
+export interface DashboardCache {
+  events: any[];
+  tickets: any[];
+  transactions: any[];
+  scans: any[];
+  updatedAt: number;
+}
+
 interface ProfileState {
   profile: any | null;
   isOrganizer: boolean;
@@ -11,18 +19,20 @@ interface ProfileState {
   hostedCount: number;
   attendedCount: number;
   walletBalance: number | null;
+  dashboardCache: DashboardCache | null;
   setProfile: (profile: any) => void;
   setFollowStats: (stats: { followers: number; following: number }) => void;
   setOrganizerStats: (stats: any) => void;
   setHostedCount: (count: number) => void;
   setAttendedCount: (count: number) => void;
   setWalletBalance: (value: number) => void;
+  setDashboardCache: (cache: Partial<DashboardCache>) => void;
   clear: () => void;
 }
 
 export const useProfileStore = create<ProfileState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       profile: null,
       isOrganizer: false,
       followStats: null,
@@ -30,6 +40,7 @@ export const useProfileStore = create<ProfileState>()(
       hostedCount: 0,
       attendedCount: 0,
       walletBalance: null,
+      dashboardCache: null,
       setProfile: (profile) => set({
         profile,
         isOrganizer: profile?.is_organizer || false,
@@ -39,7 +50,28 @@ export const useProfileStore = create<ProfileState>()(
       setHostedCount: (count) => set({ hostedCount: count }),
       setAttendedCount: (count) => set({ attendedCount: count }),
       setWalletBalance: (value) => set({ walletBalance: value }),
-      clear: () => set({ profile: null, isOrganizer: false, followStats: null, organizerStats: null, hostedCount: 0, attendedCount: 0, walletBalance: null }),
+      setDashboardCache: (patch) => {
+        const prev = get().dashboardCache;
+        set({
+          dashboardCache: {
+            events: patch.events ?? prev?.events ?? [],
+            tickets: patch.tickets ?? prev?.tickets ?? [],
+            transactions: patch.transactions ?? prev?.transactions ?? [],
+            scans: patch.scans ?? prev?.scans ?? [],
+            updatedAt: Date.now(),
+          },
+        });
+      },
+      clear: () => set({
+        profile: null,
+        isOrganizer: false,
+        followStats: null,
+        organizerStats: null,
+        hostedCount: 0,
+        attendedCount: 0,
+        walletBalance: null,
+        dashboardCache: null,
+      }),
     }),
     {
       name: PROFILE_STORE_KEY,
@@ -50,6 +82,7 @@ export const useProfileStore = create<ProfileState>()(
         hostedCount: state.hostedCount,
         attendedCount: state.attendedCount,
         walletBalance: state.walletBalance,
+        dashboardCache: state.dashboardCache,
       }),
     },
   ),
