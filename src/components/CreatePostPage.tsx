@@ -5,6 +5,7 @@ import { X, RotateCw, ImagePlus, MapPin, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createPost, uploadImage } from '../utils/supabase/api';
+import { consumePreloadedStream } from '../utils/cameraPreloader';
 
 type MediaItem = {
   file: File;
@@ -51,19 +52,6 @@ function GlassButton({ icon, size = 44, onClick, label }: {
     >
       {icon}
     </button>
-  );
-}
-
-function Viewfinder() {
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-      <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, opacity: 0.12 }}>
-        <line x1="33.3%" y1="0" x2="33.3%" y2="100%" stroke="white" strokeWidth="1" />
-        <line x1="66.6%" y1="0" x2="66.6%" y2="100%" stroke="white" strokeWidth="1" />
-        <line x1="0" y1="33.3%" x2="100%" y2="33.3%" stroke="white" strokeWidth="1" />
-        <line x1="0" y1="66.6%" x2="100%" y2="66.6%" stroke="white" strokeWidth="1" />
-      </svg>
-    </div>
   );
 }
 
@@ -191,18 +179,24 @@ export default function CreatePostPage() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: facing,
-          width: { ideal: 960 },
-          height: { ideal: 720 },
-        },
-        audio: true,
-      });
-      streamRef.current = stream;
+
+      // Try to consume a preloaded stream first
+      streamRef.current = await consumePreloadedStream(facing);
+
+      if (!streamRef.current) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facing,
+            width: { ideal: 960 },
+            height: { ideal: 720 },
+          },
+          audio: true,
+        });
+        streamRef.current = stream;
+      }
+
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().then(() => setCameraReady(true)).catch(() => setCameraReady(true));
+        videoRef.current.srcObject = streamRef.current;
       } else {
         setCameraReady(true);
       }
@@ -442,7 +436,7 @@ export default function CreatePostPage() {
           <video
             ref={videoRef}
             autoPlay playsInline muted
-            onLoadedData={() => setCameraReady(true)}
+            onPlaying={() => setCameraReady(true)}
             style={{
               position: 'absolute', inset: 0,
               width: '100%', height: '100%', objectFit: 'cover',
@@ -478,7 +472,6 @@ export default function CreatePostPage() {
               )}
             </div>
           )}
-          <Viewfinder />
 
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '18px 16px', zIndex: 2 }}>
             <GlassButton icon={<X size={18} />} size={38} onClick={goBack} label="Close" />

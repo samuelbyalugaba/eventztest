@@ -12,6 +12,7 @@ import { useProfileData } from '../hooks/useProfileData';
 import { useProfileStore } from '../store/profileStore';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
+import { preloadCamera } from '../utils/cameraPreloader';
 
 // Lazy-load heavy modals
 const SettingsModal = lazy(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
@@ -138,6 +139,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       window.scrollTo(0, 0);
     }
   }, [userId]);
+
+  // Preload camera so it opens instantly when navigating to /compose/post
+  useEffect(() => { preloadCamera(); }, []);
 
   const profileImage = userProfile?.avatar_url;
   const displayName = userProfile?.full_name || 'User';
@@ -449,6 +453,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {isOwnProfile && (
         <button
           onClick={() => navigate('/compose/post')}
+          onMouseEnter={() => preloadCamera()}
           className="fixed bottom-[calc(6.25rem+var(--eventz-safe-area-bottom))] right-5 w-12 h-12 rounded-full bg-[#8A2BE2] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
           title="Share a post"
         >
