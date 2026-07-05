@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Bell,
   Calendar,
   Check,
@@ -15,6 +14,7 @@ import {
   Home,
   Info,
   Lock,
+  Menu,
   MessageCircle,
   Mic,
   Music,
@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Users,
   WalletCards,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
@@ -35,6 +36,7 @@ import { type Event as ApiEvent } from '../utils/supabase/api';
 import { prefetchUserStats } from '../utils/statsPrefetch';
 import { useProfileStore } from '../store/profileStore';
 import { Skeleton } from './ui/skeleton';
+import { BackButton } from './ui/BackButton';
 import '../styles/dashboard.css';
 
 const TicketScannerModal = lazy(() => import('./TicketScannerModal').then((module) => ({ default: module.TicketScannerModal })));
@@ -294,9 +296,7 @@ function TopBar({
     <header className="dash-topbar">
       <div className="dash-top-id">
         {onBackToProfile ? (
-          <button type="button" className="dash-top-back" onClick={onBackToProfile} aria-label="Back to profile">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+          <BackButton className="dash-top-back" onClick={onBackToProfile} />
         ) : (
           <div className="dash-avatar">{initials}</div>
         )}
@@ -313,9 +313,7 @@ function TopBar({
 function BackTopBar({ title, onBack, right }: { title: string; onBack: () => void; right?: ReactNode }) {
   return (
     <header className="dash-backbar">
-      <button type="button" className="dash-back-btn" onClick={onBack} aria-label="Back">
-        <ArrowLeft className="h-5 w-5" />
-      </button>
+      <BackButton className="dash-back-btn" onClick={onBack} />
       <div className="dash-page-title">{title}</div>
       {right ? <div className="ml-auto">{right}</div> : null}
     </header>
@@ -609,6 +607,35 @@ function BottomNav({ active, onGo }: { active: ScreenId; onGo: (screen: ScreenId
   );
 }
 
+function DashboardMenu({ onClose, onNav }: { onClose: () => void; onNav: (screen: ScreenId) => void }) {
+  const items: Array<[ScreenId, string, IconType]> = [
+    ['dash', 'Dashboard', Home],
+    ['events', 'Events', Calendar],
+    ['stream', 'Live', PlayCircle],
+    ['notify', 'Notify', Bell],
+    ['payouts', 'Payouts', CreditCard],
+  ];
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose} />
+      <div className="fixed right-3 top-[70px] z-50 w-56 rounded-2xl bg-white py-2 shadow-[0_8px_30px_rgba(0,0,0,0.18)] border border-[#EDE9FE]">
+        {items.map(([screenId, label, Icon]) => (
+          <button
+            key={screenId}
+            type="button"
+            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#1A0533] hover:bg-[#F4F1FF] transition-colors"
+            onClick={() => { onClose(); onNav(screenId); }}
+          >
+            <Icon className="h-[18px] w-[18px] text-[#7C3AED]" />
+            {label}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
 function DashboardHome({
   selected,
   eventCount,
@@ -698,23 +725,34 @@ function StatBox({ label, value, note, muted = false }: { label: string; value: 
   );
 }
 
-function EventsScreen({ scopes, onGo, onNew }: { scopes: DashboardScope[]; onGo: (screen: ScreenId, detail?: DashboardScope) => void; onNew: () => void }) {
+function EventsScreen({ scopes, onGo, onNew, onScan, onBack }: { scopes: DashboardScope[]; onGo: (screen: ScreenId, detail?: DashboardScope) => void; onNew: () => void; onScan: () => void; onBack: () => void }) {
   const active = scopes.filter((scope) => scope.status !== 'completed');
   const completed = scopes.filter((scope) => scope.status === 'completed');
+  const [eventsMenuOpen, setEventsMenuOpen] = useState(false);
 
   return (
     <>
-      <TopBar
+      <BackTopBar
         title="My Events"
-        subtitle={`${scopes.length} total - ${scopes.filter((scope) => scope.status === 'live').length} live now`}
-        initials="JM"
-        action={
-          <button type="button" className="dash-header-action" onClick={onNew}>
-            <Plus className="h-3.5 w-3.5" />
-            New event
-          </button>
+        onBack={onBack}
+        right={
+          <div className="flex items-center gap-2">
+            <button type="button" className="dash-header-action" onClick={onNew}>
+              <Plus className="h-3.5 w-3.5" />
+              New event
+            </button>
+            <button type="button" className="dash-header-action dash-header-icon-only" onClick={onScan} aria-label="Scan ticket">
+              <QrCode className="h-4 w-4" />
+            </button>
+            <button type="button" className="dash-header-action dash-header-icon-only" onClick={() => setEventsMenuOpen(true)} aria-label="Menu">
+              <Menu className="h-4 w-4" />
+            </button>
+          </div>
         }
       />
+      {eventsMenuOpen && (
+        <DashboardMenu onClose={() => setEventsMenuOpen(false)} onNav={(screen) => { setEventsMenuOpen(false); onGo(screen); }} />
+      )}
       <div className="dash-scroll">
         <div className="dash-pad">
           <SectionTitle>Active & upcoming</SectionTitle>
@@ -723,7 +761,6 @@ function EventsScreen({ scopes, onGo, onNew }: { scopes: DashboardScope[]; onGo:
           {completed.length ? completed.map((scope) => <EventRow key={scope.id} scope={scope} onClick={() => onGo('event-detail', scope)} />) : <EmptyCard>No completed events yet</EmptyCard>}
         </div>
       </div>
-      <BottomNav active="events" onGo={(screen) => onGo(screen)} />
     </>
   );
 }
@@ -750,21 +787,35 @@ function EventRow({ scope, onClick }: { scope: DashboardScope; onClick: () => vo
   );
 }
 
-function StreamScreen({ scope, giftTransactions, onBack, onNotify }: { scope: DashboardScope; giftTransactions: DashboardTransaction[]; onBack: () => void; onNotify: () => void }) {
+function StreamScreen({ scope, giftTransactions, onBack, onGo, onScan }: { scope: DashboardScope; giftTransactions: DashboardTransaction[]; onBack: () => void; onGo: (screen: ScreenId) => void; onScan: () => void }) {
   const isLiveNow = scope.status === 'live';
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
       <BackTopBar
         title="Live stream"
         onBack={onBack}
-        right={isLiveNow ? (
-          <span className="dash-live-chip text-white">
-            <i />
-            LIVE
-          </span>
-        ) : null}
+        right={
+          <div className="flex items-center gap-2">
+            {isLiveNow ? (
+              <span className="dash-live-chip text-white">
+                <i />
+                LIVE
+              </span>
+            ) : null}
+            <button type="button" className="dash-header-action dash-header-icon-only" onClick={onScan} aria-label="Scan ticket">
+              <QrCode className="h-4 w-4" />
+            </button>
+            <button type="button" className="dash-header-action dash-header-icon-only" onClick={() => setMenuOpen(true)} aria-label="Menu">
+              <Menu className="h-4 w-4" />
+            </button>
+          </div>
+        }
       />
+      {menuOpen && (
+        <DashboardMenu onClose={() => setMenuOpen(false)} onNav={(screen) => { setMenuOpen(false); onGo(screen); }} />
+      )}
       <div className="dash-scroll">
         <div className="dash-pad">
           <div className="dash-card mt-1">
@@ -786,7 +837,7 @@ function StreamScreen({ scope, giftTransactions, onBack, onNotify }: { scope: Da
           <SectionTitle>Live gifts</SectionTitle>
           <GiftList gifts={giftTransactions} />
 
-          <button type="button" className="dash-primary-btn" onClick={onNotify} disabled={!isLiveNow}>
+          <button type="button" className="dash-primary-btn" onClick={() => onGo('notify')} disabled={!isLiveNow}>
             <Bell className="h-4 w-4" />
             {isLiveNow ? 'Message viewers now' : 'No live viewers right now'}
           </button>
@@ -852,7 +903,8 @@ function GiftList({ gifts }: { gifts: DashboardTransaction[] }) {
   );
 }
 
-function NotifyScreen({ scope, onBack }: { scope: DashboardScope; onBack: () => void }) {
+function NotifyScreen({ scope, onBack, onGo, onScan }: { scope: DashboardScope; onBack: () => void; onGo: (screen: ScreenId) => void; onScan: () => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const audienceOptions = useMemo(() => {
     const options: Array<[string, number]> = [];
     if (scope.tickets > 0) options.push(['All attendees', scope.tickets]);
@@ -879,7 +931,23 @@ function NotifyScreen({ scope, onBack }: { scope: DashboardScope; onBack: () => 
 
   return (
     <>
-      <BackTopBar title="Send notification" onBack={onBack} />
+      <BackTopBar
+        title="Send notification"
+        onBack={onBack}
+        right={
+          <div className="flex items-center gap-2">
+            <button type="button" className="dash-header-action dash-header-icon-only" onClick={onScan} aria-label="Scan ticket">
+              <QrCode className="h-4 w-4" />
+            </button>
+            <button type="button" className="dash-header-action dash-header-icon-only" onClick={() => setMenuOpen(true)} aria-label="Menu">
+              <Menu className="h-4 w-4" />
+            </button>
+          </div>
+        }
+      />
+      {menuOpen && (
+        <DashboardMenu onClose={() => setMenuOpen(false)} onNav={(screen) => { setMenuOpen(false); onGo(screen); }} />
+      )}
       <div className="dash-scroll">
         <div className="dash-pad">
           <div className="dash-card mt-1">
@@ -949,18 +1017,39 @@ function PayoutsScreen({
   transactions,
   onBack,
   onWithdraw,
+  onGo,
+  onScan,
 }: {
   eventCount: number;
   walletBalance: number;
   transactions: DashboardTransaction[];
   onBack: () => void;
   onWithdraw: () => void;
+  onGo: (screen: ScreenId) => void;
+  onScan: () => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const withdrawals = transactions.filter(isWithdrawalTransaction);
 
   return (
     <>
-      <BackTopBar title="Payouts" onBack={onBack} />
+      <BackTopBar
+        title="Payouts"
+        onBack={onBack}
+        right={
+          <div className="flex items-center gap-2">
+            <button type="button" className="dash-header-action dash-header-icon-only" onClick={onScan} aria-label="Scan ticket">
+              <QrCode className="h-4 w-4" />
+            </button>
+            <button type="button" className="dash-header-action dash-header-icon-only" onClick={() => setMenuOpen(true)} aria-label="Menu">
+              <Menu className="h-4 w-4" />
+            </button>
+          </div>
+        }
+      />
+      {menuOpen && (
+        <DashboardMenu onClose={() => setMenuOpen(false)} onNav={(screen) => { setMenuOpen(false); onGo(screen); }} />
+      )}
       <div className="dash-scroll">
         <div className="dash-pad">
           <div className="dash-info-banner">
@@ -1165,20 +1254,30 @@ function DashboardModalFallback() {
 
 export function DashboardPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const cachedProfile = useProfileStore((s) => s.profile);
   const cachedStats = useProfileStore((s) => s.organizerStats);
   const cachedWalletBalance = useProfileStore((s) => s.walletBalance);
   const dashboardCache = useProfileStore((s) => s.dashboardCache);
 
+  const subPath = location.pathname.replace(/^\/dashboard\/?/, '');
+  const screenFromPath: ScreenId =
+    subPath === 'events' ? 'events' :
+    subPath === 'live' ? 'stream' :
+    subPath === 'notify' ? 'notify' :
+    subPath === 'payouts' ? 'payouts' :
+    'dash';
+  const tabScreens = new Set<ScreenId>(['dash', 'events', 'stream', 'notify', 'payouts']);
+
   const [profile, setProfile] = useState<any>(cachedProfile);
   const [stats, setStats] = useState<DashboardStats>({ ...defaultStats, ...(cachedStats || {}) });
-  const [screen, setScreen] = useState<ScreenId>('dash');
-  const [, setHistory] = useState<ScreenId[]>(['dash']);
+  const [screen, setScreen] = useState<ScreenId>(screenFromPath);
   const [selectedId, setSelectedId] = useState('all');
   const [detailScope, setDetailScope] = useState<DashboardScope | null>(null);
   const [range, setRange] = useState('30d');
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [scannerEventId, setScannerEventId] = useState<number | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(cachedWalletBalance ?? 0);
   const hasCache = !!dashboardCache && (dashboardCache.tickets.length > 0 || dashboardCache.transactions.length > 0 || dashboardCache.events.length > 0);
@@ -1304,7 +1403,16 @@ export function DashboardPage() {
     else setFetchError('partial');
   };
 
-
+  // Sync screen state from URL for tab screens
+  useEffect(() => {
+    const newScreen: ScreenId =
+      subPath === 'events' ? 'events' :
+      subPath === 'live' ? 'stream' :
+      subPath === 'notify' ? 'notify' :
+      subPath === 'payouts' ? 'payouts' :
+      'dash';
+    setScreen(newScreen);
+  }, [location.pathname]);
 
   const organizerName = profile?.full_name || profile?.display_name || profile?.name || profile?.username || 'Dashboard';
   const organizerLocation = profile?.location || 'Location not set';
@@ -1445,24 +1553,39 @@ export function DashboardPage() {
   const go = (next: ScreenId, nextDetail?: DashboardScope) => {
     if (nextDetail) setDetailScope(nextDetail);
     setSelectorOpen(false);
-    setScreen(next);
-    setHistory((current) => (current[current.length - 1] === next ? current : [...current, next]));
+    if (tabScreens.has(next)) {
+      navTo(next);
+    } else {
+      setScreen(next);
+    }
   };
 
   const navTo = (next: ScreenId) => {
     setSelectorOpen(false);
-    setScreen(next);
-    setHistory(next === 'dash' ? ['dash'] : ['dash', next]);
+    const pathMap: Record<string, string> = {
+      'dash': '/dashboard',
+      'events': '/dashboard/events',
+      'stream': '/dashboard/live',
+      'notify': '/dashboard/notify',
+      'payouts': '/dashboard/payouts',
+    };
+    navigate(pathMap[next] || '/dashboard');
   };
 
   const back = () => {
     setSelectorOpen(false);
-    setHistory((current) => {
-      const nextHistory = current.slice(0, -1);
-      const previous = nextHistory[nextHistory.length - 1] || 'dash';
-      setScreen(previous);
-      return nextHistory.length ? nextHistory : ['dash'];
-    });
+    if (tabScreens.has(screen)) {
+      navigate(-1);
+    } else {
+      const subPath = location.pathname.replace(/^\/dashboard\/?/, '');
+      const parentScreen: ScreenId =
+        subPath === 'events' ? 'events' :
+        subPath === 'live' ? 'stream' :
+        subPath === 'notify' ? 'notify' :
+        subPath === 'payouts' ? 'payouts' :
+        'dash';
+      setScreen(parentScreen);
+    }
   };
 
   const pickScope = (scope: DashboardScope) => {
@@ -1472,10 +1595,10 @@ export function DashboardPage() {
   };
 
   const currentScreen = () => {
-    if (screen === 'events') return <EventsScreen scopes={scopes} onGo={go} onNew={() => navigate('/create')} />;
-    if (screen === 'stream') return <StreamScreen scope={detail} giftTransactions={detailGiftTransactions} onBack={back} onNotify={() => go('notify')} />;
-    if (screen === 'notify') return <NotifyScreen scope={selectedScope} onBack={back} />;
-    if (screen === 'payouts') return <PayoutsScreen eventCount={connectedEventCount} walletBalance={walletBalance} transactions={transactions} onBack={back} onWithdraw={openWithdraw} />;
+    if (screen === 'events') return <EventsScreen scopes={scopes} onGo={go} onNew={() => navigate('/create')} onScan={openScanner} onBack={back} />;
+    if (screen === 'stream') return <StreamScreen scope={detail} giftTransactions={detailGiftTransactions} onBack={back} onGo={go} onScan={openScanner} />;
+    if (screen === 'notify') return <NotifyScreen scope={selectedScope} onBack={back} onGo={go} onScan={openScanner} />;
+    if (screen === 'payouts') return <PayoutsScreen eventCount={connectedEventCount} walletBalance={walletBalance} transactions={transactions} onBack={back} onWithdraw={openWithdraw} onGo={go} onScan={openScanner} />;
     if (screen === 'tickets') return <DetailScreen type="tickets" scope={selectedScope} giftTransactions={selectedGiftTransactions} eventCount={selectedScope.id === 'all' ? eventCount : 1} onBack={back} onGo={go} />;
     if (screen === 'revenue') return <DetailScreen type="revenue" scope={selectedScope} giftTransactions={selectedGiftTransactions} eventCount={selectedScope.id === 'all' ? eventCount : 1} onBack={back} onGo={go} />;
     if (screen === 'gifts') return <DetailScreen type="gifts" scope={selectedScope} giftTransactions={selectedGiftTransactions} eventCount={selectedScope.id === 'all' ? eventCount : 1} onBack={back} onGo={go} />;
@@ -1485,15 +1608,23 @@ export function DashboardPage() {
       <>
         <TopBar
           title={organizerName}
-          subtitle={`${organizerLocation} - ${activeEventCount} active event${activeEventCount === 1 ? '' : 's'}`}
+          subtitle={`${activeEventCount} active event${activeEventCount === 1 ? '' : 's'}`}
           initials={initials}
           onBackToProfile={() => navigate('/profile')}
           action={
-            <button type="button" className="dash-header-action dash-header-icon-only" onClick={openScanner} aria-label="QR Code Scanner">
-              <QrCode className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" className="dash-header-action dash-header-icon-only" onClick={openScanner} aria-label="Scan ticket">
+                <QrCode className="h-4 w-4" />
+              </button>
+              <button type="button" className="dash-header-action dash-header-icon-only" onClick={() => setMenuOpen(true)} aria-label="Menu">
+                <Menu className="h-4 w-4" />
+              </button>
+            </div>
           }
         />
+        {menuOpen && (
+          <DashboardMenu onClose={() => setMenuOpen(false)} onNav={(screen) => { setMenuOpen(false); navTo(screen); }} />
+        )}
         <EventSelector
           selected={selectedScope}
           allScope={allScope}
@@ -1504,7 +1635,6 @@ export function DashboardPage() {
           onPick={pickScope}
         />
         <DashboardHome selected={selectedScope} eventCount={connectedEventCount} walletBalance={walletBalance} scans={rangedScans} range={range} onRange={setRange} onGo={go} onWithdraw={openWithdraw} fetchError={fetchError} onRetry={retryFetch} />
-        <BottomNav active="dash" onGo={navTo} />
       </>
     );
   };

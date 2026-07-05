@@ -263,7 +263,7 @@ export default function App() {
     (location.pathname.startsWith('/event/') && !isEventModal) ||
     location.pathname.startsWith('/live/') ||
     location.pathname.startsWith('/messages') ||
-    location.pathname === '/dashboard' ||
+    location.pathname.startsWith('/dashboard') ||
     location.pathname === '/wallet' ||
     location.pathname === '/privacy' ||
     location.pathname === '/terms' ||
@@ -577,6 +577,18 @@ export default function App() {
               </RouteErrorBoundary>
             } />
             <Route path="/dashboard" element={
+              <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+            } />
+            <Route path="/dashboard/events" element={
+              <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+            } />
+            <Route path="/dashboard/live" element={
+              <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+            } />
+            <Route path="/dashboard/notify" element={
+              <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+            } />
+            <Route path="/dashboard/payouts" element={
               <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
             } />
             <Route path="/wallet" element={

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { BackButton } from '../ui/BackButton';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Skeleton } from '../ui/skeleton';
@@ -159,14 +160,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
       <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 pt-[var(--eventz-safe-area-top)]">
         <div className="px-4 py-3">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="h-9 w-9 rounded-full bg-gray-50 flex items-center justify-center active:scale-95 transition"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-4 w-4 text-gray-900" />
-            </button>
+            <BackButton className="h-9 w-9 rounded-full bg-gray-50 flex items-center justify-center active:scale-95 transition" iconClassName="h-4 w-4 text-gray-900" />
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-gray-950 leading-tight">
                 {profile?.full_name || 'Profile'}

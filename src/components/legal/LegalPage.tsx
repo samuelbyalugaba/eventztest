@@ -1,5 +1,6 @@
-import { ArrowLeft, Mail } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Mail } from 'lucide-react';
+import { BackButton } from '../ui/BackButton';
+import { Link } from 'react-router-dom';
 import { ACCOUNT_DELETION_URL, SUPPORT_EMAIL } from '../../utils/legal';
 
 const TERMS_SECTIONS = [
@@ -41,8 +42,6 @@ const PRIVACY_SECTIONS = [
 ];
 
 export function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
-  const navigate = useNavigate();
-  const location = useLocation();
   const isPrivacy = type === 'privacy';
   const sections = isPrivacy ? PRIVACY_SECTIONS : TERMS_SECTIONS;
   const title = isPrivacy ? 'Privacy Policy' : 'Terms of Service';
@@ -53,17 +52,7 @@ export function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
     <div className="min-h-[100dvh] bg-gray-50 text-gray-900">
       <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 pt-[var(--eventz-safe-area-top)] backdrop-blur">
         <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
-          <button
-            type="button"
-            onClick={() => {
-              if (location.key === 'default') navigate('/events', { replace: true });
-              else navigate(-1);
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-900"
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+          <BackButton fallbackPath="/events" />
           <div className="min-w-0">
             <h1 className="truncate text-lg font-semibold">{title}</h1>
             <p className="text-xs text-gray-500">Eventz community and account policy</p>

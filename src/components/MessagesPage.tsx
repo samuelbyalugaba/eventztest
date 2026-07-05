@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MessageSquare } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
+import { BackButton } from './ui/BackButton';
 import { toast } from 'sonner';
 import { Skeleton } from './ui/skeleton';
 import { ChatList } from './ChatList';
@@ -153,9 +154,7 @@ function ConversationNotFound({ onBack }: { onBack: () => void }) {
   return (
     <div className="fixed inset-0 z-[70] flex h-[100dvh] flex-col bg-white">
       <div className="flex min-h-[calc(4rem+var(--eventz-safe-area-top))] items-center border-b border-gray-100 px-5 pt-[var(--eventz-safe-area-top)]">
-        <button onClick={onBack} aria-label="Back" className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
-          <ArrowLeft className="h-6 w-6 text-gray-900" />
-        </button>
+        <BackButton className="p-2 -ml-2 hover:bg-gray-100 rounded-full" iconClassName="h-6 w-6 text-gray-900" onClick={onBack} />
       </div>
       <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">

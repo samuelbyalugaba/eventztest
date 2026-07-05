@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
-  ArrowLeft, Share2, Bookmark, MoreHorizontal, Trash2, 
+  Share2, Bookmark, MoreHorizontal, Trash2, 
   MessageCircle, Calendar, MapPin, X, Heart, Volume2, VolumeX, Maximize, Play, Send
 } from 'lucide-react';
+import { BackButton } from './ui/BackButton';
 import { UserAvatar } from './UserAvatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import verifiedBadge from '../assets/verified-badge.png';
@@ -291,13 +292,11 @@ export function PostDetailPage({
       >
         <div className="px-4 h-16 flex items-center">
           <div className="flex items-center justify-between w-full">
-            <button
-              onClick={onBack}
+            <BackButton
               className="-ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full p-0 transition-colors hover:bg-gray-100"
-              aria-label="Back"
-            >
-              <ArrowLeft className="w-6 h-6 text-gray-900" />
-            </button>
+              iconClassName="w-6 h-6 text-gray-900"
+              onClick={onBack}
+            />
             <div className="flex items-center gap-2">
               <button
                 onClick={(e) => onShare(post, e)}

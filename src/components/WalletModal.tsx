@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  ArrowLeft, Plus, ArrowUpRight, History,
+  Plus, ArrowUpRight, History,
   ShieldCheck, Info, ArrowDownLeft, Ticket, Clock, Smartphone,
 } from 'lucide-react';
+import { BackButton } from './ui/BackButton';
 import { supabase } from '../utils/supabase/client';
 import { toast } from 'sonner';
 import { ntzsApi, getLocalWalletBalance } from '../utils/ntzs-api';
@@ -400,9 +401,11 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
         {/* ── Topbar ── */}
         <div className="sticky top-0 z-10 bg-[#F4F1FF] px-5 pt-4 pb-3 flex items-center justify-between">
-          <button onClick={onClose} className="w-[38px] h-[38px] bg-white rounded-full flex items-center justify-center border border-[#DDD6FE]">
-            <ArrowLeft className="w-[18px] h-[18px] text-[#6B21E8]" />
-          </button>
+          <BackButton
+            onClick={onClose}
+            className="w-[38px] h-[38px] bg-white rounded-full flex items-center justify-center border border-[#DDD6FE]"
+            iconClassName="w-[18px] h-[18px] text-[#6B21E8]"
+          />
           <span className="text-lg font-medium text-[#1A0533]">My Wallet</span>
         </div>
 

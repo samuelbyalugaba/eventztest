@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X, ChevronLeft } from 'lucide-react';
+import { Camera, Check, MapPin, AtSign, User, Search, ChevronDown, Loader2, X } from 'lucide-react';
+import { BackButton } from './ui/BackButton';
 import { toast } from 'sonner';
 import { supabase, getProfile, uploadImage, checkUsernameUnique, becomeOrganizer } from '../utils/supabase/api';
 import { searchNominatim } from '../utils/nominatim';
@@ -177,12 +178,10 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-5 pb-2.5 pt-[calc(0.625rem+var(--eventz-safe-area-top))] flex items-center justify-between">
         <div className="flex items-center gap-3">
           {onBack && (
-            <button 
+            <BackButton
               onClick={onBack}
-              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-900" />
-            </button>
+              className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors text-gray-900"
+            />
           )}
           <div>
             <h1 className="text-base font-semibold text-gray-900">Set up your creator profile</h1>

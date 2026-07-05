@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, ArrowLeft, PlusCircle, Trash2, MessageSquare } from 'lucide-react';
+import { Search, PlusCircle, Trash2, MessageSquare } from 'lucide-react';
+import { BackButton } from './ui/BackButton';
 import { UserAvatar } from './UserAvatar';
 import { Conversation } from '../types';
 import { searchProfiles } from '../utils/supabase/api';
@@ -64,9 +65,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
       <div className="px-5 pt-[calc(1.5rem+var(--eventz-safe-area-top))] pb-2">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <button onClick={handleBack} aria-label="Back" className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
-              <ArrowLeft className="w-6 h-6 text-gray-900" />
-            </button>
+            <BackButton className="p-2 -ml-2 hover:bg-gray-100 rounded-full" iconClassName="w-6 h-6 text-gray-900" onClick={handleBack} />
             <h1 className="text-2xl font-bold text-gray-900">{isSearching ? 'New Chat' : 'Messages'}</h1>
           </div>
           

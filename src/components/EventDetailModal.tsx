@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { MapPin, Share2, Bookmark, Tv, Play, Eye, Bell, Ticket, ChevronLeft, Sparkles, Phone, ExternalLink } from 'lucide-react';
+import { BackButton } from './ui/BackButton';
+import { MapPin, Share2, Bookmark, Tv, Play, Eye, Bell, Ticket, Sparkles, Phone, ExternalLink } from 'lucide-react';
 import { formatDateWithWeekday } from '../utils/format';
 import { toast } from 'sonner';
 import { MediaViewer } from './MediaViewer';
@@ -512,12 +513,10 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           />
           
           {/* Back Button */}
-          <button
+          <BackButton
             onClick={onClose}
-            className="absolute left-4 top-[calc(1rem+var(--eventz-safe-area-top))] p-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all shadow-lg z-20"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-900" />
-          </button>
+            className="absolute left-4 top-[calc(1rem+var(--eventz-safe-area-top))] flex items-center justify-center p-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full transition-all shadow-lg z-20"
+          />
 
           {/* Share Button (moved to top right for better reachability) */}
           <button

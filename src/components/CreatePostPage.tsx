@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, RotateCw, ImagePlus, ArrowLeft, MapPin, Loader2, Camera } from 'lucide-react';
+import { BackButton } from './ui/BackButton';
+import { X, RotateCw, ImagePlus, MapPin, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createPost, uploadImage } from '../utils/supabase/api';
@@ -550,7 +551,7 @@ export default function CreatePostPage() {
               <img src={capturedMedia.url} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : null}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '18px 16px' }}>
-              <GlassButton icon={<ArrowLeft size={17} />} size={38} onClick={goBack} label="Back" />
+              <BackButton onClick={goBack} className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05] backdrop-blur-sm text-[#F3F1FC] hover:bg-white/[0.09] hover:scale-105 transition-all duration-150" iconClassName="h-[17px] w-[17px]" />
             </div>
           </div>
 

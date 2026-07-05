@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2, CheckCheck, Flag, X, ExternalLink, Download } from 'lucide-react';
+import { MoreHorizontal, Plus, Mic, Send, Image as ImageIcon, Trash2, CheckCheck, Flag, X, ExternalLink, Download } from 'lucide-react';
+import { BackButton } from './ui/BackButton';
 import { UserAvatar } from './UserAvatar';
 import { Message, Profile, blockUser, getMessages, reportContent, sendMessage, subscribeToMessages, markMessagesAsRead, uploadImage, deleteMessage } from '../utils/supabase/api';
 import { toast } from 'sonner';
@@ -287,9 +288,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
         }}
       >
         <div className="flex items-center gap-3">
-          <button onClick={onBack} aria-label="Back" className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
-            <ArrowLeft className="w-6 h-6 text-gray-900" />
-          </button>
+          <BackButton className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors" iconClassName="w-6 h-6 text-gray-900" onClick={onBack} />
           
           <button
             type="button"

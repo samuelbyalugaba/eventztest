@@ -8,8 +8,8 @@ import {
   Star,
   Calendar,
   Clock,
-  ArrowLeft,
 } from 'lucide-react';
+import { BackButton } from './ui/BackButton';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerStats, getOrganizerEvents, updateEventStreamingStatus, getUserTickets } from '../utils/supabase/api';
@@ -132,12 +132,11 @@ export function ProfessionalDashboardModal({
       {/* Header */}
       <div className="bg-white px-6 pb-4 pt-[calc(1rem+var(--eventz-safe-area-top))] flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
-          <button 
+          <BackButton
             onClick={onClose}
             className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6 text-gray-900" />
-          </button>
+            iconClassName="w-6 h-6 text-gray-900"
+          />
           <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
         </div>
         

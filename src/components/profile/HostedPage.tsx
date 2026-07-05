@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Calendar, PlaySquare, Search } from 'lucide-react';
+import { Calendar, PlaySquare, Search } from 'lucide-react';
+import { BackButton } from '../ui/BackButton';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Skeleton } from '../ui/skeleton';
@@ -156,14 +157,7 @@ export function HostedPage() {
       <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 pt-[var(--eventz-safe-area-top)]">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="h-9 w-9 rounded-full bg-gray-50 flex items-center justify-center active:scale-95 transition"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-4 w-4 text-gray-900" />
-            </button>
+            <BackButton className="h-9 w-9 rounded-full bg-gray-50 flex items-center justify-center active:scale-95 transition" iconClassName="h-4 w-4 text-gray-900" />
             <div className="min-w-0">
               <h1 className="text-xl font-bold leading-tight text-gray-950">Hosted</h1>
               {profile?.full_name && (

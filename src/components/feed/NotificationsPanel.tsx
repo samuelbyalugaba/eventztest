@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BackButton } from '../ui/BackButton';
 import {
-  ArrowLeft,
   Bell,
   BellOff,
   Calendar,
@@ -344,14 +344,11 @@ export function NotificationsPanel({
     <div className="fixed inset-0 z-[60] flex flex-col bg-white md:left-auto md:right-0 md:max-w-md md:border-l md:border-gray-100 shadow-2xl animate-in slide-in-from-right-full duration-300">
       <div className="sticky top-0 z-10 bg-white px-4 pb-3 pt-[calc(0.8rem+var(--eventz-safe-area-top))]">
         <div className="flex h-11 items-center gap-2">
-          <button
-            type="button"
+          <BackButton
             onClick={onClose}
             className="-ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-950 transition-colors hover:bg-gray-100"
-            aria-label="Close notifications"
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </button>
+            iconClassName="h-6 w-6"
+          />
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
             <h2 className="truncate text-xl font-semibold leading-none tracking-normal text-gray-950">{title}</h2>
             {unreadCount > 0 && <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />}

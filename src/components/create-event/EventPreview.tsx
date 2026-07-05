@@ -1,5 +1,6 @@
 import { EventCard } from '../EventCard';
-import { ArrowLeft, Eye, Calendar, Tag, BarChart3 } from 'lucide-react';
+import { Eye, Calendar, Tag, BarChart3 } from 'lucide-react';
+import { BackButton } from '../ui/BackButton';
 
 interface EventPreviewProps {
   formData: {
@@ -55,9 +56,11 @@ export function EventPreview({
     <div className="fixed inset-0 z-50 bg-gray-50 overflow-y-auto animate-in fade-in">
       <div className="sticky top-0 z-10 bg-white px-4 pb-4 pt-[calc(1rem+var(--eventz-safe-area-top))] border-b border-gray-100 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <ArrowLeft className="w-6 h-6 text-gray-900" />
-          </button>
+          <BackButton
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            iconClassName="w-6 h-6 text-gray-900"
+          />
           <h2 className="text-xl font-bold text-gray-900">Event Preview</h2>
         </div>
         <button

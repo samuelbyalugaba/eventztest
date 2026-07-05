@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ComponentType } from 'react';
 import {
-  ArrowLeft,
   BarChart3,
   Bolt,
   Briefcase,
@@ -42,6 +41,7 @@ import { createEvent, getEventAnalytics, getProfile, updateEvent, uploadImage } 
 import { eventsStore } from '../store/eventStore';
 import { EventPreview } from './create-event/EventPreview';
 import { EventSuccessScreen } from './create-event/EventSuccessScreen';
+import { BackButton } from './ui/BackButton';
 
 type IconType = ComponentType<{ className?: string }>;
 type TicketMode = 'tiers' | 'free';
@@ -804,13 +804,10 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       <div className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 pt-[var(--eventz-safe-area-top)] backdrop-blur">
         <div className="mx-auto flex max-w-[460px] items-center justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <button
+            <BackButton
               onClick={onBack}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-gray-900 hover:bg-gray-100"
-              aria-label="Back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
+            />
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold">{isEditing ? 'Edit Event' : 'Create Event'}</h1>
               <p className="truncate text-xs text-gray-500">{isAutoSaving ? 'Saving draft...' : 'Host. Go Live. Sell Tickets'}</p>
