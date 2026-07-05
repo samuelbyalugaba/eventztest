@@ -208,7 +208,6 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
   const selectPerson = (person: any) => {
     addToRecent(person.full_name || person.username || '');
     onPersonSelect?.(person);
-    onClose();
   };
 
   const selectVenue = (venue: VenueResult) => {

@@ -595,7 +595,7 @@ export default function App() {
               <Suspense fallback={<DashboardPageSkeleton />}><WalletPage /></Suspense>
             } />
             <Route path="/compose/post" element={
-              <Suspense fallback={<CreatePageSkeleton />}><CreatePostPage /></Suspense>
+              <Suspense fallback={null}><CreatePostPage /></Suspense>
             } />
             <Route path="/privacy" element={<LegalPage type="privacy" />} />
             <Route path="/terms" element={<LegalPage type="terms" />} />

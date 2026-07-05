@@ -1,4 +1,4 @@
-import { X, Download, Share2, MapPin, Calendar, Clock, Ticket, Sparkles } from 'lucide-react';
+import { X, Download, Share2, MapPin, Calendar, Clock, Ticket } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
 import { useEffect, useRef } from 'react';
@@ -138,7 +138,6 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
             {/* VIP Badge */}
             {ticket.ticketType === 'VIP' && (
               <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full">
-                <Sparkles className="w-4 h-4 text-white" />
                 <span className="text-white text-xs font-semibold">VIP ACCESS</span>
               </div>
             )}
@@ -270,7 +269,6 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
         <div className="text-center mt-6">
           <p className="text-white/60 text-sm flex items-center justify-center gap-2">
             Powered by <span className="font-bold text-white">EVENTZ</span>
-            <Sparkles className="w-4 h-4 text-cyan-400" />
           </p>
         </div>
       </div>

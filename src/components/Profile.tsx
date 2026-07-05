@@ -455,7 +455,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {/* FAB */}
       {isOwnProfile && (
         <button
-          onClick={() => { preloadCamera(); import('./CreatePostPage'); navigate('/compose/post'); }}
+          onClick={async () => { preloadCamera(); await import('./CreatePostPage'); navigate('/compose/post'); }}
           className="fixed bottom-[calc(6.25rem+var(--eventz-safe-area-bottom))] right-5 w-12 h-12 rounded-full bg-[#7C3AED] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
           title="Share a post"
         >
