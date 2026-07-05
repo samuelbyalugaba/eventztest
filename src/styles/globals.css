@@ -667,3 +667,13 @@ select:focus {
 [class*="shadow-"] {
   box-shadow: none !important;
 }
+
+/* Remove focus outlines on click for buttons and interactive elements */
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+[tabindex]:not([tabindex='-1']):focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
