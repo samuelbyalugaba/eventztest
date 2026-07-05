@@ -3,9 +3,9 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
 import { useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
-import { toPng } from 'html-to-image';
 import { formatPrice } from '../utils/currencies';
 import { formatDateDMY } from '../utils/format';
+import { renderTicketToCanvas } from '../utils/ticketCanvasRenderer';
 
 interface TicketEvent {
   id: number;
@@ -42,16 +42,16 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
   }, [onClose]);
 
   const handleDownload = async () => {
-    if (!ticketRef.current) return;
-    
     const toastId = toast.loading('Generating ticket image...');
     
     try {
-      const dataUrl = await toPng(ticketRef.current, { cacheBust: true });
+      const blob = await renderTicketToCanvas(ticket);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = `Eventz-Ticket-${ticket.id}.png`;
-      link.href = dataUrl;
+      link.href = url;
       link.click();
+      URL.revokeObjectURL(url);
       
       toast.dismiss(toastId);
       toast.success('Ticket downloaded', {
@@ -65,13 +65,10 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
   };
 
   const handleShare = async () => {
-    if (!ticketRef.current) return;
-
     try {
       if (navigator.share) {
         const toastId = toast.loading('Preparing to share...');
-        const dataUrl = await toPng(ticketRef.current, { cacheBust: true });
-        const blob = await (await fetch(dataUrl)).blob();
+        const blob = await renderTicketToCanvas(ticket);
         const file = new File([blob], `ticket-${ticket.id}.png`, { type: 'image/png' });
         
         toast.dismiss(toastId);
