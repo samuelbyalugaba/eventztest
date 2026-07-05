@@ -248,7 +248,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') navigate(`/profile/${person.id}`);
                   }}
-                  className="flex items-center gap-3 rounded-xl px-1 py-2.5 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  className="flex items-center gap-3 rounded-xl px-1 py-2.5 cursor-pointer hover:bg-gray-50 focus:outline-none"
                 >
                   <UserAvatar
                     src={person.avatar_url}

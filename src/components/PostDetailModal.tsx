@@ -724,7 +724,7 @@ export function PostDetailModal({
                       <button
                         type="button"
                         onClick={(e) => handleCommentProfileClick(comment, e)}
-                        className="mt-1 h-8 w-8 flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                        className="mt-1 h-8 w-8 flex-shrink-0 rounded-full focus:outline-none"
                         aria-label={`Open ${comment.user.name}'s profile`}
                       >
                         <UserAvatar
@@ -738,7 +738,7 @@ export function PostDetailModal({
                           <button
                             type="button"
                             onClick={(e) => handleCommentProfileClick(comment, e)}
-                            className="flex items-center gap-1 text-xs font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                            className="flex items-center gap-1 text-xs font-bold text-gray-900 hover:text-purple-700 focus:outline-none"
                           >
                             {comment.user.name}
                             {comment.user.is_organizer && (
@@ -779,7 +779,7 @@ export function PostDetailModal({
                         <button
                           type="button"
                           onClick={(e) => handleCommentProfileClick(reply, e)}
-                          className="mt-1 h-6 w-6 flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                          className="mt-1 h-6 w-6 flex-shrink-0 rounded-full focus:outline-none"
                           aria-label={`Open ${reply.user.name}'s profile`}
                         >
                           <UserAvatar
@@ -793,7 +793,7 @@ export function PostDetailModal({
                             <button
                               type="button"
                               onClick={(e) => handleCommentProfileClick(reply, e)}
-                              className="flex items-center gap-1 text-xs font-bold text-gray-900 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                              className="flex items-center gap-1 text-xs font-bold text-gray-900 hover:text-purple-700 focus:outline-none"
                             >
                               {reply.user.name}
                               {reply.user.is_organizer && (

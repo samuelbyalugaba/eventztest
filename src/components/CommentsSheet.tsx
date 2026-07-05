@@ -130,7 +130,7 @@ export function CommentsSheet({
                   <button
                     type="button"
                     onClick={() => handleOpenCommentUser(comment)}
-                    className="h-9 w-9 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                    className="h-9 w-9 flex-shrink-0 rounded-full text-left focus:outline-none"
                     aria-label={`Open ${comment.user.name}'s profile`}
                   >
                     <UserAvatar
@@ -144,7 +144,7 @@ export function CommentsSheet({
                       <button
                         type="button"
                         onClick={() => handleOpenCommentUser(comment)}
-                        className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                        className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none"
                       >
                         {comment.user.name}
                         {comment.user.is_organizer && (
@@ -185,7 +185,7 @@ export function CommentsSheet({
                     <button
                       type="button"
                       onClick={() => handleOpenCommentUser(reply)}
-                      className="mt-0.5 h-7 w-7 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                      className="mt-0.5 h-7 w-7 flex-shrink-0 rounded-full text-left focus:outline-none"
                       aria-label={`Open ${reply.user.name}'s profile`}
                     >
                       <UserAvatar
@@ -199,7 +199,7 @@ export function CommentsSheet({
                         <button
                           type="button"
                           onClick={() => handleOpenCommentUser(reply)}
-                          className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                          className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none"
                         >
                           {reply.user.name}
                           {reply.user.is_organizer && (

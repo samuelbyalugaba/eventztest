@@ -648,7 +648,7 @@ export default function App() {
               <Link
                 to="/events"
                 className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
-                  (location.pathname === '/events' || location.pathname === '/') && !isSearchTab ? 'text-purple-600' : 'text-gray-500'
+                  (location.pathname === '/events' || location.pathname === '/') && !isSearchTab ? 'text-[#7C3AED]' : 'text-gray-500'
                 }`}
               >
                 <Calendar className="w-[1.375rem] h-[1.375rem]" />
@@ -657,7 +657,7 @@ export default function App() {
               <Link
                 to="/live"
                 className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
-                  location.pathname === '/live' ? 'text-purple-600' : 'text-gray-500'
+                  location.pathname === '/live' ? 'text-[#7C3AED]' : 'text-gray-500'
                 }`}
               >
                 <Radio className="w-[1.375rem] h-[1.375rem]" />
@@ -670,7 +670,7 @@ export default function App() {
                 to="/search"
                 aria-label="Search"
                 className={`bottom-search-link relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 px-1 py-1 transition-colors ${
-                  location.pathname === '/search' ? 'text-purple-600' : 'text-gray-500'
+                  location.pathname === '/search' ? 'text-[#7C3AED]' : 'text-gray-500'
                 }`}
               >
                 <span className="bottom-search-orb">
@@ -681,7 +681,7 @@ export default function App() {
               <Link
                 to="/feed"
                 className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
-                  location.pathname === '/feed' ? 'text-purple-600' : 'text-gray-500'
+                  location.pathname === '/feed' ? 'text-[#7C3AED]' : 'text-gray-500'
                 }`}
               >
                 <Menu className="w-[1.375rem] h-[1.375rem]" />
@@ -690,7 +690,7 @@ export default function App() {
               <Link
                 to="/profile"
                 className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
-                  location.pathname === '/profile' ? 'text-purple-600' : 'text-gray-500'
+                  location.pathname === '/profile' ? 'text-[#7C3AED]' : 'text-gray-500'
                 }`}
               >
                 <User className="w-[1.375rem] h-[1.375rem]" />

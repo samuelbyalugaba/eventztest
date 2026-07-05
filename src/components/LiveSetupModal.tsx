@@ -321,7 +321,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                           key={ev.id}
                           type="button"
                           onClick={() => setSelectedEvent(ev)}
-                          className="relative w-full aspect-video h-48 bg-gray-100 rounded-xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 hover:shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-gray-500/20"
+                          className="relative w-full aspect-video h-48 bg-gray-100 rounded-xl border border-gray-200 overflow-hidden text-left hover:border-gray-300 hover:shadow-sm transition-all focus:outline-none"
                         >
                           {ev.image_url ? (
                             <img src={ev.image_url} alt={ev.title} className="w-full h-full object-cover" />

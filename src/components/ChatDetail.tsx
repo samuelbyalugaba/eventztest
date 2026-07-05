@@ -294,7 +294,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
             type="button"
             onClick={onViewProfile}
             aria-label="View profile"
-            className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+            className="relative shrink-0 rounded-full focus:outline-none"
           >
             <UserAvatar
               src={recipient.avatar_url}
@@ -410,7 +410,7 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
                           type="button"
                           onClick={() => setSelectedMediaUrl(msg.image_url || null)}
                           aria-label={mediaIsVideo ? 'Open shared video' : 'Open shared image'}
-                          className="block overflow-hidden rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                          className="block overflow-hidden rounded-xl focus:outline-none"
                         >
                           {mediaIsVideo ? (
                             <video
