@@ -1482,7 +1482,7 @@ export function DashboardPage() {
           onToggle={() => setSelectorOpen((value) => !value)}
           onPick={pickScope}
         />
-        <DashboardHome selected={selectedScope} eventCount={connectedEventCount} walletBalance={walletBalance} scans={rangedScans} range={range} onRange={setRange} onGo={go} onWithdraw={openWithdraw} />
+        <DashboardHome selected={selectedScope} eventCount={connectedEventCount} walletBalance={walletBalance} scans={rangedScans} range={range} onRange={setRange} onGo={go} onWithdraw={openWithdraw} fetchError={fetchError} onRetry={retryFetch} />
         <BottomNav active="dash" onGo={navTo} />
       </>
     );
