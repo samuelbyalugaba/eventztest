@@ -31,7 +31,8 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerEvents, getOrganizerStats, type Event as ApiEvent } from '../utils/supabase/api';
-import { getLocalWalletBalance } from '../utils/ntzs-api';
+import { getLocalWalletBalance, ntzsApi } from '../utils/ntzs-api';
+import { useProfileStore } from '../store/profileStore';
 import { Skeleton } from './ui/skeleton';
 import '../styles/dashboard.css';
 
@@ -1143,8 +1144,14 @@ function DashboardModalFallback() {
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<any>(null);
-  const [stats, setStats] = useState<DashboardStats>(defaultStats);
+  const cachedProfile = useProfileStore((s) => s.profile);
+  const cachedStats = useProfileStore((s) => s.organizerStats);
+  const cachedWalletBalance = useProfileStore((s) => s.walletBalance);
+  const setCachedStats = useProfileStore((s) => s.setOrganizerStats);
+  const setCachedWalletBalance = useProfileStore((s) => s.setWalletBalance);
+
+  const [profile, setProfile] = useState<any>(cachedProfile);
+  const [stats, setStats] = useState<DashboardStats>({ ...defaultStats, ...(cachedStats || {}) });
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [screen, setScreen] = useState<ScreenId>('dash');
   const [, setHistory] = useState<ScreenId[]>(['dash']);
@@ -1154,14 +1161,27 @@ export function DashboardPage() {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannerEventId, setScannerEventId] = useState<number | null>(null);
-  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletBalance, setWalletBalance] = useState<number>(cachedWalletBalance ?? 0);
   const [tickets, setTickets] = useState<DashboardTicket[]>([]);
   const [transactions, setTransactions] = useState<DashboardTransaction[]>([]);
   const [scans, setScans] = useState<DashboardScan[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(cachedWalletBalance == null || !cachedStats);
 
   useEffect(() => {
     let alive = true;
+
+    const fetchWalletBalance = async (userId: string, email: string) => {
+      try {
+        const nUser = await ntzsApi.getUser(userId, email);
+        if (nUser?.id) {
+          const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
+          return balanceTzs || 0;
+        }
+      } catch {
+        // fall through to local
+      }
+      return getLocalWalletBalance(userId);
+    };
 
     const loadDashboard = async () => {
       try {
@@ -1175,7 +1195,7 @@ export function DashboardPage() {
           supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
           getOrganizerStats(user.id),
           getOrganizerEvents(user.id, { includeInstant: true }),
-          getLocalWalletBalance(user.id),
+          fetchWalletBalance(user.id, user.email || ''),
           supabase
             .from('transactions')
             .select('id,event_id,amount,currency,provider,status,created_at,metadata')
@@ -1186,10 +1206,18 @@ export function DashboardPage() {
 
         if (!alive) return;
         if (profileResult.status === 'fulfilled') setProfile(profileResult.value.data);
-        if (statsResult.status === 'fulfilled') setStats({ ...defaultStats, ...statsResult.value });
+        if (statsResult.status === 'fulfilled') {
+          const nextStats = { ...defaultStats, ...statsResult.value };
+          setStats(nextStats);
+          setCachedStats(nextStats);
+        }
         const eventsData = eventsResult.status === 'fulfilled' ? ((eventsResult.value || []) as ApiEvent[]) : [];
         setEvents(eventsData);
-        if (walletResult.status === 'fulfilled') setWalletBalance(walletResult.value || 0);
+        if (walletResult.status === 'fulfilled') {
+          const nextBalance = walletResult.value || 0;
+          setWalletBalance(nextBalance);
+          setCachedWalletBalance(nextBalance);
+        }
         if (transactionsResult.status === 'fulfilled' && !transactionsResult.value.error) {
           setTransactions(((transactionsResult.value.data || []) as any[]).map((transaction) => ({
             ...transaction,

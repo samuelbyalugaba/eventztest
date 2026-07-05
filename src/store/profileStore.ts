@@ -10,11 +10,13 @@ interface ProfileState {
   organizerStats: any | null;
   hostedCount: number;
   attendedCount: number;
+  walletBalance: number | null;
   setProfile: (profile: any) => void;
   setFollowStats: (stats: { followers: number; following: number }) => void;
   setOrganizerStats: (stats: any) => void;
   setHostedCount: (count: number) => void;
   setAttendedCount: (count: number) => void;
+  setWalletBalance: (value: number) => void;
   clear: () => void;
 }
 
@@ -27,6 +29,7 @@ export const useProfileStore = create<ProfileState>()(
       organizerStats: null,
       hostedCount: 0,
       attendedCount: 0,
+      walletBalance: null,
       setProfile: (profile) => set({
         profile,
         isOrganizer: profile?.is_organizer || false,
@@ -35,7 +38,8 @@ export const useProfileStore = create<ProfileState>()(
       setOrganizerStats: (stats) => set({ organizerStats: stats }),
       setHostedCount: (count) => set({ hostedCount: count }),
       setAttendedCount: (count) => set({ attendedCount: count }),
-      clear: () => set({ profile: null, isOrganizer: false, followStats: null, organizerStats: null, hostedCount: 0, attendedCount: 0 }),
+      setWalletBalance: (value) => set({ walletBalance: value }),
+      clear: () => set({ profile: null, isOrganizer: false, followStats: null, organizerStats: null, hostedCount: 0, attendedCount: 0, walletBalance: null }),
     }),
     {
       name: PROFILE_STORE_KEY,
@@ -45,6 +49,7 @@ export const useProfileStore = create<ProfileState>()(
         organizerStats: state.organizerStats,
         hostedCount: state.hostedCount,
         attendedCount: state.attendedCount,
+        walletBalance: state.walletBalance,
       }),
     },
   ),

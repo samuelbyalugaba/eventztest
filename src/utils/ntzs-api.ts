@@ -139,17 +139,10 @@ export async function getLocalWalletBalance(userId: string): Promise<number> {
   let balance = 0;
   for (const tx of data) {
     const type = tx.metadata?.type;
-    if (type === 'deposit' || type === 'top-up') {
+    if (type === 'deposit' || type === 'top-up' || type === 'gift-received' || type === 'ticket-sale') {
       balance += tx.amount || 0;
-    } else if (type === 'withdrawal') {
+    } else if (type === 'withdrawal' || type === 'payment' || type === 'gift') {
       balance -= tx.amount || 0;
-    } else if (type === 'payment') {
-      balance -= tx.amount || 0;
-    }
-    else if (type === 'gift') {
-      balance -= tx.amount || 0;
-    } else if (type === 'gift-received') {
-      balance += tx.amount || 0;
     }
   }
   return Math.max(0, balance);
