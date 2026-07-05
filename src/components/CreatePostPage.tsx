@@ -460,9 +460,7 @@ export default function CreatePostPage() {
                     Pick from gallery
                   </button>
                 </>
-              ) : (
-                <Loader2 size={24} style={{ animation: 'camSpin 1s linear infinite' }} />
-              )}
+              ) : null}
             </div>
           )}
 
