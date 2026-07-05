@@ -1204,6 +1204,7 @@ export function DashboardPage() {
     let ticketsChannel: ReturnType<typeof supabase.channel> | null = null;
     let transactionsChannel: ReturnType<typeof supabase.channel> | null = null;
     let currentUserId: string | null = null;
+    const mountId = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
 
     const runPrefetch = async (userId: string, email: string) => {
       const result = await prefetchUserStats(userId, email);
@@ -1242,7 +1243,7 @@ export function DashboardPage() {
 
         // Realtime: refresh on ticket sales & wallet transactions
         transactionsChannel = supabase
-          .channel(`dashboard-tx-${user.id}`)
+          .channel(`dashboard-tx-${user.id}-${mountId}`)
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
@@ -1253,7 +1254,7 @@ export function DashboardPage() {
           .subscribe();
 
         ticketsChannel = supabase
-          .channel(`dashboard-tickets-${user.id}`)
+          .channel(`dashboard-tickets-${user.id}-${mountId}`)
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'tickets' },

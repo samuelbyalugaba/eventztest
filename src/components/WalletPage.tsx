@@ -63,9 +63,10 @@ export function WalletPage() {
 
   useEffect(() => {
     if (!currentUserId) return;
+    const mountId = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
 
     const channel = supabase
-      .channel(`wallet-txs-${currentUserId}`)
+      .channel(`wallet-txs-${currentUserId}-${mountId}`)
       .on(
         'postgres_changes',
         {
