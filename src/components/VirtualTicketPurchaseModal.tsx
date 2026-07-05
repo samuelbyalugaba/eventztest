@@ -3,6 +3,8 @@ import { X, Tv, CheckCircle2, User, Mail, ArrowRight, Wallet, Smartphone, Credit
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createTicket, createTransaction } from '../utils/supabase/api';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 import { extractCurrencyFromPrice, formatPrice } from '../utils/currencies';
 import type { Event as ApiEvent } from '../utils/supabase/api';
 import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, type WalletPaymentMethod } from '../utils/walletCheckout';
@@ -146,6 +148,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
         transaction_id: transactionId
       });
 
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.tickets(userId) });
       window.dispatchEvent(new CustomEvent('virtualAccessPurchased', { detail: { eventId: event.id } }));
       setPaymentStep('success');
       toast.success('Virtual Access Granted');

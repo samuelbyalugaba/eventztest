@@ -721,16 +721,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       className={`event-category-chip flex h-[1.65rem] flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 text-xs font-semibold transition-all ${
                         isSelected
                           ? 'border-gray-950 bg-gray-950 text-white shadow-sm'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
                       }`}
                     >
                       {Icon && <Icon className="h-[0.8rem] w-[0.8rem]" />}
                       <span>{category.chipName || category.name}</span>
                     </button>
-                  );
-                })}
-              </div>
-            </div>
+                  ))}
+                </div>
 
             {selectedCategory !== 'all' && (
               <div className="mb-4">
@@ -747,8 +745,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                         onClick={() => setSelectedSubcategory(selectedSubcategory === subcategory ? '' : subcategory)}
                         className={`event-subcategory-chip flex h-[1.65rem] flex-shrink-0 items-center rounded-full border px-2.5 text-xs font-semibold transition-all ${
                           selectedSubcategory === subcategory
-                            ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'
+                            ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
                         }`}
                       >
                         {subcategory}
@@ -785,10 +783,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   type="button"
                   aria-expanded={showWhenMenu}
                   onClick={() => setShowWhenMenu((open) => !open)}
-                  className={`flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold shadow-sm transition-all ${
+                  className={`flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition-all ${
                     selectedTimeFilter !== 'all'
-                      ? 'border-purple-200 bg-purple-50 text-purple-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-purple-200 hover:bg-purple-50'
+                      ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
                   }`}
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
@@ -814,7 +812,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                             }}
                             className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
                               isSelected
-                                ? 'bg-purple-50 text-purple-700'
+                                ? 'bg-[#7C3AED] text-white'
                                 : 'text-gray-700 hover:bg-gray-50'
                             }`}
                           >
@@ -888,15 +886,15 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               <div className="mb-6">
                 <div className="mb-3 text-2xs font-bold uppercase tracking-[0.09em] text-gray-400">Location</div>
 
-                <div className="mb-3 rounded-xl border border-purple-100 bg-purple-50 px-3.5 py-3">
+                <div className="mb-3 rounded-xl border border-[#7C3AED] bg-[#7C3AED] px-3.5 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-purple-700 shadow-sm">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-[#7C3AED]">
                         {selectedCountry.code}
                       </div>
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-bold text-gray-950">{locationBannerTitle}</div>
-                        <div className="text-xs font-medium text-purple-600">
+                        <div className="truncate text-sm font-bold text-white">{locationBannerTitle}</div>
+                        <div className="text-xs font-medium text-white/80">
                           {locationBannerSub}
                         </div>
                       </div>
@@ -904,7 +902,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     <button
                       type="button"
                       onClick={() => setShowCountryPicker((open) => !open)}
-                      className="shrink-0 text-xs font-bold text-purple-700 transition-colors hover:text-purple-900"
+                      className="shrink-0 text-xs font-bold text-white transition-colors hover:text-white/60"
                     >
                       {showCountryPicker ? 'Done' : 'Change'}
                     </button>
@@ -921,8 +919,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                             onClick={() => handleCountryChange(country.code)}
                             className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-all ${
                               active
-                                ? 'border-purple-500 bg-white text-purple-700'
-                                : 'border-purple-100 bg-white/70 text-gray-700 hover:border-purple-200'
+                                ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
+                                : 'border-gray-200 bg-white/70 text-gray-700 hover:border-[#7C3AED]'
                             }`}
                           >
                             <span className="w-6 text-xs font-bold">{country.code}</span>
@@ -952,9 +950,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 <button
                   type="button"
                   onClick={handleUseCurrentLocation}
-                  className="mb-3 flex w-full items-center gap-2.5 rounded-[10px] border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-left transition-all hover:border-purple-200 hover:bg-purple-50"
+                  className="mb-3 flex w-full items-center gap-2.5 rounded-[10px] border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-left transition-all hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white"
                 >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white">
                     <LocateFixed className="h-3.5 w-3.5" />
                   </span>
                   <span className="min-w-0 flex-1 text-sm font-semibold text-gray-700">Use my current location</span>
@@ -973,8 +971,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       onClick={() => handleLocationSelect(location.id)}
                       className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
                         selectedLocation === location.id
-                          ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
-                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-200 hover:bg-purple-50 hover:text-purple-700'
+                          ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
                       }`}
                     >
                       {location.name}
@@ -1003,8 +1001,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       onClick={() => handleCategorySelect(category.id)}
                       className={`whitespace-nowrap rounded-lg border px-3.5 py-2 text-xs font-semibold transition-all ${
                         selectedCategory === category.id
-                          ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
-                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-200 hover:bg-purple-50 hover:text-purple-700'
+                          ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
                       }`}
                     >
                       <span>{category.name}</span>
@@ -1018,14 +1016,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               <button 
                 type="button"
                 onClick={clearFilters}
-                className="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-gray-500 transition-colors hover:border-purple-200 hover:text-purple-700"
+                className="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-gray-500 transition-colors hover:border-[#7C3AED] hover:text-[#7C3AED]"
               >
                 Clear all
               </button>
               <button 
                 type="button"
                 onClick={() => setShowFilters(false)}
-                className="flex-[2] rounded-xl bg-purple-600 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(124,58,237,0.28)] transition-colors hover:bg-purple-700"
+                className="flex-[2] rounded-xl bg-[#7C3AED] py-3 text-sm font-bold text-white transition-colors hover:bg-[#6D28D9]"
               >
                 {isInitialEventsLoading ? 'Loading events' : `Show ${upcomingEventCountText}`}
               </button>

@@ -487,6 +487,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               id: ticket.id, name: ticket.event?.title || 'Event', date: ticket.event?.date || '', time: ticket.event?.time || '',
               location: ticket.event?.location || '', image: ticket.event?.image_url || '', category: (ticket.event as any)?.category || '',
               ticketType: ticket.ticket_type || '', price: ticket.price || '', qrCode: ticket.qr_code || ticket.barcode || ticket.ticket_number || String(ticket.id),
+              ticketNumber: ticket.ticket_number,
             });
             setShowTicketViewer(true);
           }}

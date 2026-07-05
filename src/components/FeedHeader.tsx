@@ -116,13 +116,13 @@ export function FeedHeader({
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2.5">
             <h1 className="text-gray-900 text-xl font-bold transition-all duration-300">
-              <span className='text-purple-600'>Community</span> Explore
+              <span className='text-[#7C3AED]'>Community</span> Explore
             </h1>
           </div>
           <div className="flex items-center gap-2">
             <button
               aria-label="Notifications"
-              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showNotifications ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showNotifications ? 'bg-[#7C3AED] text-white' : 'hover:bg-gray-100 text-gray-700'}`}
               onClick={() => {
                 if (!currentUser) {
                   toast.error('Sign in to view notifications');
@@ -131,7 +131,7 @@ export function FeedHeader({
                 onToggleNotifications();
               }}
             >
-              <Bell className={`h-[18px] w-[18px] ${showNotifications ? 'text-purple-600' : 'text-gray-700'}`} />
+              <Bell className={`h-[18px] w-[18px] ${showNotifications ? 'text-white' : 'text-gray-700'}`} />
               {/* Notification Badge */}
               {(notifications ?? []).filter(n => !n.read).length > 0 && (
                 <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
@@ -139,7 +139,7 @@ export function FeedHeader({
             </button>
             <button
               aria-label="Messages"
-              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showMessages ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-700'}`}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showMessages ? 'bg-[#7C3AED] text-white' : 'hover:bg-gray-100 text-gray-700'}`}
               onClick={() => {
                 if (!currentUser) {
                   toast.error('Sign in to view messages');

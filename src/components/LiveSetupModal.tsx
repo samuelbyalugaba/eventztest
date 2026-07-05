@@ -8,7 +8,7 @@ import type { Event as ApiEvent } from '../utils/supabase/api';
 
 const StreamManagerFallback = () => (
   <div className="flex items-center justify-center h-[60vh]">
-    <div className="w-10 h-10 border-3 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+    <div className="w-10 h-10 border-3 border-gray-200 border-t-[#7C3AED] rounded-full animate-spin" />
   </div>
 );
 
@@ -141,7 +141,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
       <div className="bg-white w-full h-[75vh] sm:h-auto sm:max-w-lg sm:rounded-2xl sm:shadow-xl sm:border sm:border-gray-200 sm:max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <Radio className="w-5 h-5 text-purple-600" />
+            <Radio className="w-5 h-5 text-[#7C3AED]" />
             <h3 className="text-gray-900 font-semibold">Go Live</h3>
           </div>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100">
@@ -178,7 +178,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                     </div>
                     <button
                       onClick={() => setSelectedEvent(activeLiveEvent)}
-                      className="w-full mt-4 py-3 rounded-xl text-white font-semibold bg-purple-600 hover:bg-purple-700 transition-all"
+                      className="w-full mt-4 py-3 rounded-xl text-white font-semibold bg-[#7C3AED] hover:bg-[#6D28D9] transition-all"
                     >
                       Continue Live
                     </button>
@@ -198,7 +198,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                     <button
                       onClick={() => setTab('instant')}
                       className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-                        tab === 'instant' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600'
+                        tab === 'instant' ? 'bg-white text-[#7C3AED] shadow-sm' : 'text-gray-600'
                       }`}
                     >
                       Go Live Now
@@ -206,7 +206,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                     <button
                       onClick={() => setTab('from_event')}
                       className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-                        tab === 'from_event' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600'
+                        tab === 'from_event' ? 'bg-white text-[#7C3AED] shadow-sm' : 'text-gray-600'
                       }`}
                     >
                       From Event
@@ -295,7 +295,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                   <button
                     onClick={createInstantEvent}
                     disabled={isCreating}
-                    className={`w-full py-3 rounded-xl text-white font-semibold transition-all ${isCreating ? 'bg-purple-400' : 'bg-purple-600 hover:bg-purple-700'}`}
+                    className={`w-full py-3 rounded-xl text-white font-semibold transition-all ${isCreating ? 'bg-[#7C3AED]/60' : 'bg-[#7C3AED] hover:bg-[#6D28D9]'}`}
                   >
                     {isCreating ? 'Creating…' : 'Go Live'}
                   </button>

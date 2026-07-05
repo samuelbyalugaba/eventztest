@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { extractCurrencyFromPrice, currencies, formatPrice } from '../utils/currencies';
 import { createTransaction, createTicket } from '../utils/supabase/api';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 import { formatDateDMY } from '../utils/format';
 import { ensureWalletBalanceForPurchase, loadNtzsWalletBalance, type WalletPaymentMethod } from '../utils/walletCheckout';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
@@ -234,6 +236,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
         }
       }
 
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.tickets(userId) });
       toast.success('Tickets Purchased Successfully!');
       onSuccess();
       onClose();

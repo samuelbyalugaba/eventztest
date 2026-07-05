@@ -18,6 +18,7 @@ interface TicketEvent {
   ticketType: string;
   price: string;
   qrCode: string;
+  ticketNumber?: string;
 }
 
 interface TicketViewerProps {
@@ -105,8 +106,8 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
     }
   };
 
-  // Generate ticket number
-  const ticketNumber = `EVTZ-${ticket.id.toString().padStart(6, '0')}-${Date.now().toString().slice(-4)}`;
+  // Use stored ticket number, fall back to stable format
+  const ticketNumber = ticket.ticketNumber || `EVTZ-${ticket.id.toString().padStart(6, '0')}`;
 
   return (
     <div className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
@@ -213,7 +214,7 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
               {/* QR Code */}
               <div className="flex-shrink-0">
                 <div className="w-32 h-32 bg-white rounded-2xl p-2 shadow-lg">
-                  <div className="w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center p-2">
+                  <div className="w-full h-full bg-gradient-to-br from-gray-100 to-pink-100 rounded-xl flex items-center justify-center p-2">
                     <QRCode
                       value={ticket.qrCode || `TICKET-${ticket.id}`}
                       style={{ height: "auto", maxWidth: "100%", width: "100%" }}

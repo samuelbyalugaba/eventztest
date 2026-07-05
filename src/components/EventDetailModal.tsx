@@ -541,7 +541,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                     onClick={handleOrganizerProfileClick}
                     className="mt-2 text-sm text-gray-600 hover:text-[#7C3AED] transition-colors text-left"
                   >
-                    by <span className="font-semibold text-purple-600">{organizerDisplayName}</span>
+                    by <span className="font-semibold text-[#7C3AED]">{organizerDisplayName}</span>
                   </button>
                 )}
               </div>
@@ -550,12 +550,12 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   onClick={handleToggleSave}
                   className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border p-0 transition-all ${
                     isSaved 
-                      ? 'bg-purple-50 border-purple-600 text-purple-600' 
+                      ? 'bg-[#7C3AED] border-[#7C3AED] text-white' 
                       : 'border-gray-200 text-gray-700 hover:bg-gray-50'
                   }`}
                   title={isSaved ? 'Unsave event' : 'Save event'}
                 >
-                  <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-purple-600' : ''}`} />
+                  <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-white' : ''}`} />
                 </button>
               </div>
             </div>
@@ -584,17 +584,17 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   href={locationMapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="-m-1 min-w-0 flex-1 rounded-xl border border-purple-100 bg-purple-50/70 p-2 pr-2.5 transition-colors hover:bg-purple-50 active:bg-purple-100"
+                  className="-m-1 min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50/70 p-2 pr-2.5 transition-colors hover:bg-gray-100 active:bg-gray-200"
                   aria-label={`Open ${event.location} in maps`}
                 >
                   <div className="mb-0.5 flex items-center justify-between gap-2">
                     <p className="text-sm text-gray-600">Location</p>
-                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 text-2xs font-semibold leading-none text-purple-700 shadow-sm">
+                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 text-2xs font-semibold leading-none text-[#7C3AED]">
                       Maps
                       <ExternalLink className="h-2.5 w-2.5" />
                     </span>
                   </div>
-                  <p className="break-words font-medium text-purple-700 underline decoration-purple-300 underline-offset-4">{event.location}</p>
+                  <p className="break-words font-medium text-[#7C3AED] underline decoration-[#7C3AED]/40 underline-offset-4">{event.location}</p>
                   <p className="text-gray-700 text-sm">{locations.find(l => l.id === event.city)?.name}</p>
                 </a>
               ) : (
@@ -678,13 +678,13 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
           )}
 
           {/* Price & Attendees Info */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
+          <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-gray-600 text-sm mb-1">Ticket Price</p>
                 <p className="text-gray-900">{formatEventPrice(event.price_range)}</p>
               </div>
-              <div className="mt-0.5 flex shrink-0 items-center gap-2 text-purple-600">
+              <div className="mt-0.5 flex shrink-0 items-center gap-2 text-[#7C3AED]">
                 <Eye className="w-5 h-5" />
                 <span className="text-sm">
                   {displayViews.toLocaleString()} {displayViews === 1 ? 'view' : 'views'}
@@ -710,7 +710,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                       className={`flex items-start justify-between gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100 transition-colors ${externalTicketing ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100'}`}
                     >
                       <div className="flex min-w-0 items-start gap-3">
-                         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white">
                             <Ticket className="w-4 h-4" />
                          </div>
                          <div className="min-w-0">
@@ -754,8 +754,8 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             <div className="mb-6 bg-gray-50 rounded-2xl p-4 border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Tv className="w-5 h-5 text-purple-600" />
+                  <div className="w-10 h-10 bg-[#7C3AED] rounded-xl flex items-center justify-center">
+                    <Tv className="w-5 h-5 text-white" />
                   </div>
                   <h3 className="text-gray-900 font-semibold text-sm">HD Live Stream</h3>
                 </div>
@@ -818,39 +818,39 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   <button
                     onClick={() => !isEventPast && handleExternalTicketing()}
                     disabled={isEventPast}
-                    className={`w-full bg-white border-2 border-purple-100 rounded-xl p-4 flex items-center justify-between transition-all shadow-sm group ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:border-purple-600 hover:shadow-md'}`}
+                    className={`w-full bg-white border-2 border-[#7C3AED] rounded-xl p-4 flex items-center justify-between transition-all group ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#7C3AED]'}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
-                        <Phone className="w-5 h-5 text-purple-600 group-hover:text-white" />
+                      <div className="w-10 h-10 bg-[#7C3AED] rounded-full flex items-center justify-center group-hover:bg-[#6D28D9] transition-colors">
+                        <Phone className="w-5 h-5 text-white" />
                       </div>
                       <div className="text-left">
-                        <p className="text-gray-900 font-medium">Contact for ticketing</p>
-                        <p className="text-gray-500 text-xs">{externalTicketingPhone || 'Contact organizer'}</p>
+                        <p className="text-gray-900 font-medium group-hover:text-white">Contact for ticketing</p>
+                        <p className="text-gray-500 text-xs group-hover:text-white/70">{externalTicketingPhone || 'Contact organizer'}</p>
                       </div>
                     </div>
-                    <span className="text-purple-600 font-bold">{formatEventPrice(event.price_range)}</span>
+                    <span className="text-[#7C3AED] font-bold group-hover:text-white">{formatEventPrice(event.price_range)}</span>
                   </button>
                 ) : (
                   <button
                     onClick={() => !isEventPast && !isFreeEvent && onPurchaseNormalTicket(event)}
                     disabled={isEventPast || isFreeEvent}
-                    className={`w-full rounded-xl border-2 p-4 flex items-center justify-between transition-all shadow-sm group ${
+                    className={`w-full rounded-xl border-2 p-4 flex items-center justify-between transition-all group ${
                       isEventPast || isFreeEvent
                         ? 'cursor-default border-gray-100 bg-gray-50 text-gray-500'
-                        : 'border-purple-100 bg-white hover:border-purple-600 hover:shadow-md'
+                        : 'border-[#7C3AED] bg-white hover:bg-[#7C3AED]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isFreeEvent ? 'bg-gray-100' : 'bg-purple-100 group-hover:bg-purple-600'}`}>
-                        <Ticket className={`w-5 h-5 ${isFreeEvent ? 'text-gray-500' : 'text-purple-600 group-hover:text-white'}`} />
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isFreeEvent ? 'bg-gray-100' : 'bg-[#7C3AED] group-hover:bg-[#6D28D9]'}`}>
+                        <Ticket className={`w-5 h-5 ${isFreeEvent ? 'text-gray-500' : 'text-white'}`} />
                       </div>
                       <div className="text-left">
-                        <p className="text-gray-900 font-medium">{isFreeEvent ? 'Free Event' : 'Standard Entry'}</p>
-                        <p className="text-gray-500 text-xs">{isFreeEvent ? 'No ticket purchase required' : 'General admission access'}</p>
+                        <p className="text-gray-900 font-medium group-hover:text-white">{isFreeEvent ? 'Free Event' : 'Standard Entry'}</p>
+                        <p className="text-gray-500 text-xs group-hover:text-white/70">{isFreeEvent ? 'No ticket purchase required' : 'General admission access'}</p>
                       </div>
                     </div>
-                    <span className="text-purple-600 font-bold">{formatEventPrice(event.price_range)}</span>
+                    <span className="text-[#7C3AED] font-bold group-hover:text-white">{formatEventPrice(event.price_range)}</span>
                   </button>
                 )}
                 
@@ -898,7 +898,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
              externalTicketing ? (
                 <button
                   onClick={handleExternalTicketing}
-                 className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#7C3AED] py-3 text-center font-medium leading-tight text-white shadow-lg shadow-purple-200 transition-colors hover:bg-[#6D28D9]"
+                 className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#7C3AED] py-3 text-center font-medium leading-tight text-white transition-colors hover:bg-[#6D28D9]"
                >
                  <Phone className="w-5 h-5 shrink-0" />
                  <span className="min-w-0">Contact for ticketing</span>
@@ -910,7 +910,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                  className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl py-3 text-center font-medium leading-tight transition-colors ${
                    isFreeEvent
                      ? 'cursor-default bg-gray-100 text-gray-600 shadow-none'
-                     : 'bg-[#7C3AED] text-white hover:bg-[#6D28D9] shadow-lg shadow-purple-200'
+                      : 'bg-[#7C3AED] text-white hover:bg-[#6D28D9]'
                  }`}
                >
                  <Ticket className="w-5 h-5 shrink-0" />

@@ -22,7 +22,7 @@ export const UpcomingStreamCard = memo(function UpcomingStreamCard({ stream, isR
   return (
     <div
       onClick={() => onClick(stream)}
-      className="group flex items-center gap-4 p-2.5 bg-white rounded-2xl border border-gray-50 hover:border-purple-100 hover:bg-purple-50/30 transition-all duration-300 cursor-pointer"
+      className="group flex items-center gap-4 p-2.5 bg-white rounded-2xl border border-gray-50 hover:border-gray-200 hover:bg-gray-50/30 transition-all duration-300 cursor-pointer"
     >
       <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 shadow-sm ring-1 ring-black/5">
         <ImageWithFallback
@@ -37,13 +37,13 @@ export const UpcomingStreamCard = memo(function UpcomingStreamCard({ stream, isR
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-        <h3 className="text-gray-900 text-xs font-semibold mb-0.5 line-clamp-1 group-hover:text-purple-700 transition-colors">
+        <h3 className="text-gray-900 text-xs font-semibold mb-0.5 line-clamp-1 group-hover:text-[#7C3AED] transition-colors">
           {stream.title}
         </h3>
         
-        <div className="flex items-center gap-1.5 text-purple-600/90 text-xs font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-purple-400/30 flex items-center justify-center">
-            <span className="w-0.5 h-0.5 rounded-full bg-purple-500"></span>
+        <div className="flex items-center gap-1.5 text-[#7C3AED]/90 text-xs font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#7C3AED]/30 flex items-center justify-center">
+            <span className="w-0.5 h-0.5 rounded-full bg-[#7C3AED]"></span>
           </span>
           <span>{stream.scheduledTime?.split(' at ')[1] || stream.scheduledTime}</span>
         </div>
@@ -63,8 +63,8 @@ export const UpcomingStreamCard = memo(function UpcomingStreamCard({ stream, isR
         }}
         className={`p-2 rounded-xl transition-all active:scale-95 ${
           isReminderSet 
-            ? 'bg-purple-100 text-purple-600' 
-            : 'bg-gray-50 text-gray-400 hover:bg-purple-50 hover:text-purple-600'
+            ? 'bg-[#7C3AED] text-white' 
+            : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-[#7C3AED]'
         }`}
       >
         <Bell className={`w-4.5 h-4.5 ${isReminderSet ? 'fill-current' : ''}`} />

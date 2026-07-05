@@ -57,7 +57,7 @@ const getNotificationIcon = (type: Notification['type']) => {
   return Calendar;
 };
 
-const notificationAccent = 'bg-gradient-to-br from-purple-600 to-blue-600 text-white shadow-sm shadow-purple-200';
+const notificationAccent = 'bg-gradient-to-br from-[#7C3AED] to-blue-600 text-white';
 
 const getNotificationTarget = (notification: Notification) => {
   if ((notification.type === 'like' || notification.type === 'comment') && notification.postId) {
@@ -258,7 +258,7 @@ export function NotificationsPanel({
 
     return (
       <div className="flex items-center gap-3 py-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-purple-50 text-purple-700">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white">
           <PushIcon className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
@@ -271,7 +271,7 @@ export function NotificationsPanel({
           type="button"
           onClick={pushPrompt.onClick}
           disabled={pushPrompt.disabled}
-          className="h-9 shrink-0 rounded-xl bg-purple-600 px-4 text-sm font-semibold text-white transition-opacity disabled:bg-gray-100 disabled:text-gray-500"
+          className="h-9 shrink-0 rounded-xl bg-[#7C3AED] px-4 text-sm font-semibold text-white transition-opacity disabled:bg-gray-100 disabled:text-gray-500"
         >
           {isChangingPush ? 'Saving' : pushPrompt.action}
         </button>
@@ -296,7 +296,7 @@ export function NotificationsPanel({
             src={notification.user.avatar}
             name={notification.user.name}
             className={`h-11 w-11 rounded-full object-cover ${
-              !notification.read ? 'ring-2 ring-purple-500/80 ring-offset-2' : ''
+              !notification.read ? 'ring-2 ring-[#7C3AED]/80 ring-offset-2' : ''
             }`}
           />
           <span
@@ -324,7 +324,7 @@ export function NotificationsPanel({
         </div>
 
         {notification.type === 'follow' ? (
-          <span className="h-9 shrink-0 rounded-xl bg-purple-600 px-4 pt-2 text-sm font-semibold text-white">
+          <span className="h-9 shrink-0 rounded-xl bg-[#7C3AED] px-4 pt-2 text-sm font-semibold text-white">
             View
           </span>
         ) : notification.type === 'event' && notification.user.avatar ? (
@@ -350,7 +350,7 @@ export function NotificationsPanel({
             iconClassName="h-6 w-6"
           />
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <h2 className="truncate text-xl font-semibold leading-none tracking-normal text-gray-950">{title}</h2>
+            <h2 className="truncate text-xl font-semibold leading-tight tracking-normal text-gray-950">{title}</h2>
             {unreadCount > 0 && <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />}
           </div>
           <button
@@ -373,7 +373,7 @@ export function NotificationsPanel({
                 onClick={() => setActiveTab(tab.id)}
                 className={`h-10 rounded-xl px-4 text-sm font-semibold transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-purple-50 text-purple-700'
+                    ? 'bg-[#7C3AED] text-white'
                     : 'bg-gray-100 text-gray-950 hover:bg-gray-200'
                 }`}
               >
@@ -390,7 +390,7 @@ export function NotificationsPanel({
       <div className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[calc(1.25rem+var(--eventz-safe-area-bottom))] pt-1">
         {notificationsLoading ? (
           <div className="flex justify-center py-14">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#7C3AED] border-t-transparent" />
           </div>
         ) : groupedItems.length === 0 ? (
           <div className="flex min-h-[45vh] flex-col items-center justify-center text-center text-gray-500">

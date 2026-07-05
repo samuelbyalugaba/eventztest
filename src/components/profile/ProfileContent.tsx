@@ -471,7 +471,7 @@ function TicketsTab({ isLoading, groups, onGroupClick }: { isLoading: boolean; g
             </div>
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
-                <TicketIcon className="w-5 h-5 text-purple-600 fill-purple-600 ml-0.5" />
+                <TicketIcon className="w-5 h-5 text-[#7C3AED] fill-[#7C3AED] ml-0.5" />
               </div>
             </div>
           </div>
