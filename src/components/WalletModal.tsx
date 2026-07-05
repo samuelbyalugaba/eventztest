@@ -7,6 +7,7 @@ import { supabase } from '../utils/supabase/client';
 import { toast } from 'sonner';
 import { ntzsApi, getLocalWalletBalance } from '../utils/ntzs-api';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
+import { useProfileStore } from '../store/profileStore';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -32,21 +33,33 @@ function getFullPhone(p: string) {
   return '255' + digits;
 }
 
+const WALLET_TYPES = ['deposit', 'top-up', 'withdrawal', 'transfer', 'gift'];
+
 export function WalletModal({ isOpen, onClose }: WalletModalProps) {
-  const [txs, setTxs] = useState<Tx[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedBalance = useProfileStore((s) => s.walletBalance);
+  const cachedTransactions = useProfileStore((s) => s.dashboardCache?.transactions);
+
+  const [txs, setTxs] = useState<Tx[]>(() => {
+    if (!cachedTransactions?.length) return [];
+    return (cachedTransactions as any[]).filter(t => {
+      const metaType = t.metadata?.type;
+      return typeof metaType === 'string' && WALLET_TYPES.includes(metaType.trim());
+    }) as Tx[];
+  });
+  const [loading, setLoading] = useState(() => cachedBalance === null && (!cachedTransactions?.length));
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw' | 'history'>('deposit');
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState('');
   const [provider, setProvider] = useState('M-Pesa (Vodacom)');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [balance, setBalance] = useState(0);
+  const [balance, setBalance] = useState<number | null>(cachedBalance);
   const [ntzsAvailable, setNtzsAvailable] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      loadWalletData();
+      const noCache = cachedBalance === null && !cachedTransactions?.length;
+      loadWalletData(noCache);
     }
   }, [isOpen]);
 
@@ -74,9 +87,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     };
   }, [isOpen, currentUserId]);
 
-  const loadWalletData = useCallback(async () => {
+  const loadWalletData = useCallback(async (forceLoading = false) => {
     try {
-      setLoading(true);
+      if (forceLoading) setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setCurrentUserId(user.id);
@@ -94,7 +107,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       }
 
       const localBalance = await getLocalWalletBalance(user.id);
-      setBalance(ntzsBalance !== null ? ntzsBalance : localBalance);
+      const resolvedBalance = ntzsBalance !== null ? ntzsBalance : localBalance;
+      setBalance(resolvedBalance);
+      useProfileStore.getState().setWalletBalance(resolvedBalance);
 
       const transactionSelect = `
           id, amount, currency, provider, provider_transaction_id, status, created_at, metadata,
@@ -109,10 +124,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         .limit(50);
 
       if (transactions) {
-        const walletTypes = ['deposit', 'top-up', 'withdrawal', 'transfer', 'gift'];
         const walletTxs = (transactions as unknown as Tx[]).filter(t => {
           const metaType = t.metadata?.type;
-          return typeof metaType === 'string' && walletTypes.includes(metaType.trim());
+          return typeof metaType === 'string' && WALLET_TYPES.includes(metaType.trim());
         });
 
         const hasPendingDeposits = walletTxs.some(
@@ -133,7 +147,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
               if (refreshedTransactions) {
                 const refreshedWalletTxs = (refreshedTransactions as unknown as Tx[]).filter(t => {
                   const metaType = t.metadata?.type;
-                  return typeof metaType === 'string' && walletTypes.includes(metaType.trim());
+                  return typeof metaType === 'string' && WALLET_TYPES.includes(metaType.trim());
                 });
                 setTxs(refreshedWalletTxs);
                 return;
@@ -151,7 +165,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         toast.error(`Failed to load wallet data: ${error.message || 'Unknown error'}`);
       }
     } finally {
-      setLoading(false);
+      if (forceLoading) setLoading(false);
     }
   }, []);
 
@@ -275,7 +289,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       toast.error('Minimum withdrawal amount is TSh 5,000');
       return;
     }
-    if (Number(amount) > balance) {
+    if (balance !== null && Number(amount) > balance) {
       toast.error(`Insufficient balance. Available: TSh ${balance.toLocaleString()}`);
       return;
     }
@@ -406,7 +420,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
           </p>
           <div className="text-[42px] font-medium text-white relative z-[1] tracking-[-1px] mb-1.5 flex items-baseline gap-1.5">
             <span className="text-[22px] font-normal opacity-75">TSh</span>
-            <span>{balance.toLocaleString()}</span>
+            <span>{balance !== null ? balance.toLocaleString() : '—'}</span>
           </div>
           <div className="text-xs text-white/50 relative z-[1] flex items-center gap-1.5">
             <div className="w-[6px] h-[6px] rounded-full bg-[#4ADE80] shrink-0" />
@@ -442,7 +456,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
             <div>
               <div className="flex gap-2.5 mb-[18px]">
                 <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                  <div className="text-sm font-medium text-[#059669]">TSh {totalDeposited.toLocaleString()}</div>
+                  <div className="text-sm font-medium text-[#059669]">{loading ? '—' : `TSh ${totalDeposited.toLocaleString()}`}</div>
                   <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Deposited</div>
                 </div>
                 <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
@@ -531,11 +545,11 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
             <div>
               <div className="flex gap-2.5 mb-[18px]">
                 <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                  <div className="text-sm font-medium text-[#DC2626]">TSh {totalWithdrawn.toLocaleString()}</div>
+                  <div className="text-sm font-medium text-[#DC2626]">{loading ? '—' : `TSh ${totalWithdrawn.toLocaleString()}`}</div>
                   <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Withdrawn</div>
                 </div>
                 <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                  <div className="text-sm font-medium text-[#7C3AED]">TSh {balance.toLocaleString()}</div>
+                  <div className="text-sm font-medium text-[#7C3AED]">{balance !== null ? `TSh ${balance.toLocaleString()}` : '—'}</div>
                   <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Max Withdrawable</div>
                 </div>
               </div>
@@ -573,7 +587,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                 </div>
                 <div className="flex items-center gap-1 mt-1.5 text-xs text-[#D97706]">
                   <Info className="w-[14px] h-[14px]" />
-                  Maximum withdrawable: TSh {balance.toLocaleString()}
+                  Maximum withdrawable: {balance !== null ? `TSh ${balance.toLocaleString()}` : '—'}
                 </div>
                 <div className="flex items-center gap-1 text-xs text-[#6B7280]">
                   <Info className="w-[14px] h-[14px]" />

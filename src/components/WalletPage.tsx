@@ -9,6 +9,7 @@ import { supabase } from '../utils/supabase/client';
 import { toast } from 'sonner';
 import { ntzsApi, getLocalWalletBalance } from '../utils/ntzs-api';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
+import { useProfileStore } from '../store/profileStore';
 import '../styles/dashboard.css';
 
 type Tx = {
@@ -30,21 +31,34 @@ function getFullPhone(p: string) {
   return '255' + digits;
 }
 
+const WALLET_TYPES = ['deposit', 'top-up', 'withdrawal', 'transfer', 'gift'];
+
 export function WalletPage() {
   const navigate = useNavigate();
-  const [txs, setTxs] = useState<Tx[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const cachedBalance = useProfileStore((s) => s.walletBalance);
+  const cachedTransactions = useProfileStore((s) => s.dashboardCache?.transactions);
+
+  const [txs, setTxs] = useState<Tx[]>(() => {
+    if (!cachedTransactions?.length) return [];
+    return (cachedTransactions as any[]).filter(t => {
+      const metaType = t.metadata?.type;
+      return typeof metaType === 'string' && WALLET_TYPES.includes(metaType.trim());
+    }) as Tx[];
+  });
+  const [loading, setLoading] = useState(() => cachedBalance === null && (!cachedTransactions?.length));
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw' | 'history'>('deposit');
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState('');
   const [provider, setProvider] = useState('M-Pesa (Vodacom)');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [balance, setBalance] = useState(0);
+  const [balance, setBalance] = useState<number | null>(cachedBalance);
   const [ntzsAvailable, setNtzsAvailable] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadWalletData();
+    const noCache = cachedBalance === null && !cachedTransactions?.length;
+    loadWalletData(noCache);
   }, []);
 
   useEffect(() => {
@@ -71,9 +85,9 @@ export function WalletPage() {
     };
   }, [currentUserId]);
 
-  const loadWalletData = useCallback(async () => {
+  const loadWalletData = useCallback(async (forceLoading = false) => {
     try {
-      setLoading(true);
+      if (forceLoading) setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setCurrentUserId(user.id);
@@ -91,7 +105,9 @@ export function WalletPage() {
       }
 
       const localBalance = await getLocalWalletBalance(user.id);
-      setBalance(ntzsBalance !== null ? ntzsBalance : localBalance);
+      const resolvedBalance = ntzsBalance !== null ? ntzsBalance : localBalance;
+      setBalance(resolvedBalance);
+      useProfileStore.getState().setWalletBalance(resolvedBalance);
 
       const transactionSelect = `
           id, amount, currency, provider, provider_transaction_id, status, created_at, metadata,
@@ -106,10 +122,9 @@ export function WalletPage() {
         .limit(50);
 
       if (transactions) {
-        const walletTypes = ['deposit', 'top-up', 'withdrawal', 'transfer', 'gift'];
         const walletTxs = (transactions as unknown as Tx[]).filter(t => {
           const metaType = t.metadata?.type;
-          return typeof metaType === 'string' && walletTypes.includes(metaType.trim());
+          return typeof metaType === 'string' && WALLET_TYPES.includes(metaType.trim());
         });
 
         const hasPendingDeposits = walletTxs.some(
@@ -130,7 +145,7 @@ export function WalletPage() {
               if (refreshedTransactions) {
                 const refreshedWalletTxs = (refreshedTransactions as unknown as Tx[]).filter(t => {
                   const metaType = t.metadata?.type;
-                  return typeof metaType === 'string' && walletTypes.includes(metaType.trim());
+                  return typeof metaType === 'string' && WALLET_TYPES.includes(metaType.trim());
                 });
                 setTxs(refreshedWalletTxs);
                 return;
@@ -148,7 +163,7 @@ export function WalletPage() {
         toast.error(`Failed to load wallet data: ${error.message || 'Unknown error'}`);
       }
     } finally {
-      setLoading(false);
+      if (forceLoading) setLoading(false);
     }
   }, []);
 
@@ -272,7 +287,7 @@ export function WalletPage() {
       toast.error('Minimum withdrawal amount is TSh 5,000');
       return;
     }
-    if (Number(amount) > balance) {
+    if (balance !== null && Number(amount) > balance) {
       toast.error(`Insufficient balance. Available: TSh ${balance.toLocaleString()}`);
       return;
     }
@@ -390,7 +405,7 @@ export function WalletPage() {
           <CreditCard className="h-3.5 w-3.5" />
           Total wallet balance
         </div>
-        <div className="dash-wallet-amount">TSh {balance.toLocaleString()}</div>
+        <div className="dash-wallet-amount">{balance !== null ? `TSh ${balance.toLocaleString()}` : '—'}</div>
         <div className="dash-wallet-scope">Live · Updated just now</div>
       </section>
 
@@ -423,7 +438,7 @@ export function WalletPage() {
           <div>
             <div className="flex gap-2.5 mb-[18px]">
               <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                <div className="text-sm font-medium text-[#059669]">TSh {totalDeposited.toLocaleString()}</div>
+                <div className="text-sm font-medium text-[#059669]">{loading ? '—' : `TSh ${totalDeposited.toLocaleString()}`}</div>
                 <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Deposited</div>
               </div>
               <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
@@ -512,11 +527,11 @@ export function WalletPage() {
           <div>
             <div className="flex gap-2.5 mb-[18px]">
               <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                <div className="text-sm font-medium text-[#DC2626]">TSh {totalWithdrawn.toLocaleString()}</div>
+                <div className="text-sm font-medium text-[#DC2626]">{loading ? '—' : `TSh ${totalWithdrawn.toLocaleString()}`}</div>
                 <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Withdrawn</div>
               </div>
               <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
-                <div className="text-sm font-medium text-[#7C3AED]">TSh {balance.toLocaleString()}</div>
+                <div className="text-sm font-medium text-[#7C3AED]">{balance !== null ? `TSh ${balance.toLocaleString()}` : '—'}</div>
                 <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Max Withdrawable</div>
               </div>
             </div>
@@ -554,7 +569,7 @@ export function WalletPage() {
               </div>
                 <div className="flex items-center gap-1 mt-1.5 text-xs text-[#D97706]">
                   <Info className="w-[14px] h-[14px]" />
-                  Maximum withdrawable: TSh {balance.toLocaleString()}
+                  Maximum withdrawable: {balance !== null ? `TSh ${balance.toLocaleString()}` : '—'}
                 </div>
                 <div className="flex items-center gap-1 text-xs text-[#6B7280]">
                   <Info className="w-[14px] h-[14px]" />
