@@ -1148,12 +1148,10 @@ export function DashboardPage() {
   const cachedProfile = useProfileStore((s) => s.profile);
   const cachedStats = useProfileStore((s) => s.organizerStats);
   const cachedWalletBalance = useProfileStore((s) => s.walletBalance);
-  const setCachedStats = useProfileStore((s) => s.setOrganizerStats);
-  const setCachedWalletBalance = useProfileStore((s) => s.setWalletBalance);
+  const dashboardCache = useProfileStore((s) => s.dashboardCache);
 
   const [profile, setProfile] = useState<any>(cachedProfile);
   const [stats, setStats] = useState<DashboardStats>({ ...defaultStats, ...(cachedStats || {}) });
-  const [events, setEvents] = useState<ApiEvent[]>([]);
   const [screen, setScreen] = useState<ScreenId>('dash');
   const [, setHistory] = useState<ScreenId[]>(['dash']);
   const [selectedId, setSelectedId] = useState('all');
@@ -1163,25 +1161,37 @@ export function DashboardPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [scannerEventId, setScannerEventId] = useState<number | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(cachedWalletBalance ?? 0);
-  const [tickets, setTickets] = useState<DashboardTicket[]>([]);
-  const [transactions, setTransactions] = useState<DashboardTransaction[]>([]);
-  const [scans, setScans] = useState<DashboardScan[]>([]);
-  const [isLoading, setIsLoading] = useState(cachedWalletBalance == null || !cachedStats);
+  const hasCache = !!dashboardCache && (dashboardCache.tickets.length > 0 || dashboardCache.transactions.length > 0 || dashboardCache.events.length > 0);
+  const [isLoading, setIsLoading] = useState<boolean>(!hasCache);
+  const [fetchError, setFetchError] = useState<null | 'partial' | 'full'>(null);
+
+  const events = (dashboardCache?.events ?? []) as ApiEvent[];
+  const tickets = (dashboardCache?.tickets ?? []) as DashboardTicket[];
+  const transactions = (dashboardCache?.transactions ?? []) as DashboardTransaction[];
+  const scans = (dashboardCache?.scans ?? []) as DashboardScan[];
+
+  // Sync cached stats/balance -> local state so the UI reacts to background updates
+  useEffect(() => {
+    if (cachedStats) setStats((prev) => ({ ...prev, ...cachedStats }));
+  }, [cachedStats]);
+  useEffect(() => {
+    if (typeof cachedWalletBalance === 'number') setWalletBalance(cachedWalletBalance);
+  }, [cachedWalletBalance]);
 
   useEffect(() => {
     let alive = true;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let ticketsChannel: ReturnType<typeof supabase.channel> | null = null;
+    let transactionsChannel: ReturnType<typeof supabase.channel> | null = null;
+    let currentUserId: string | null = null;
 
-    const fetchWalletBalance = async (userId: string, email: string) => {
-      try {
-        const nUser = await ntzsApi.getUser(userId, email);
-        if (nUser?.id) {
-          const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
-          return balanceTzs || 0;
-        }
-      } catch {
-        // fall through to local
-      }
-      return getLocalWalletBalance(userId);
+    const runPrefetch = async (userId: string, email: string) => {
+      const result = await prefetchUserStats(userId, email);
+      if (!alive) return;
+      const errCount = Object.keys(result.errors).length;
+      if (errCount === 0) setFetchError(null);
+      else if (errCount >= 4) setFetchError('full');
+      else setFetchError('partial');
     };
 
     const loadDashboard = async () => {
@@ -1191,79 +1201,61 @@ export function DashboardPage() {
           navigate('/events', { replace: true });
           return;
         }
+        currentUserId = user.id;
 
-        const [profileResult, statsResult, eventsResult, walletResult, transactionsResult] = await Promise.allSettled([
-          supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-          getOrganizerStats(user.id),
-          getOrganizerEvents(user.id, { includeInstant: true }),
-          fetchWalletBalance(user.id, user.email || ''),
-          supabase
-            .from('transactions')
-            .select('id,event_id,amount,currency,provider,status,created_at,metadata')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(50),
-        ]);
-
+        const { data: profileRow } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
         if (!alive) return;
-        if (profileResult.status === 'fulfilled') setProfile(profileResult.value.data);
-        if (statsResult.status === 'fulfilled') {
-          const nextStats = { ...defaultStats, ...statsResult.value };
-          setStats(nextStats);
-          setCachedStats(nextStats);
-        }
-        const eventsData = eventsResult.status === 'fulfilled' ? ((eventsResult.value || []) as ApiEvent[]) : [];
-        setEvents(eventsData);
-        if (walletResult.status === 'fulfilled') {
-          const nextBalance = walletResult.value || 0;
-          setWalletBalance(nextBalance);
-          setCachedWalletBalance(nextBalance);
-        }
-        if (transactionsResult.status === 'fulfilled' && !transactionsResult.value.error) {
-          setTransactions(((transactionsResult.value.data || []) as any[]).map((transaction) => ({
-            ...transaction,
-            amount: parseMoneyValue(transaction.amount),
-            event_id: transaction.event_id == null ? null : Number(transaction.event_id),
-          })));
-        } else {
-          setTransactions([]);
-        }
+        if (profileRow) setProfile(profileRow);
 
-        const eventIds = eventsData.map((event) => event.id).filter(Boolean);
-        if (eventIds.length) {
-          const { data: ticketRows, error: ticketsError } = await supabase
-            .from('tickets')
-            .select('id,event_id,price,purchase_date,ticket_type,status,customer_name,scanned_at')
-            .in('event_id', eventIds)
-            .order('purchase_date', { ascending: false })
-            .limit(1000);
+        await runPrefetch(user.id, user.email || '');
 
-          if (alive && !ticketsError) {
-            const mappedTickets = ((ticketRows || []) as any[]).map((ticket) => ({
-              ...ticket,
-              event_id: Number(ticket.event_id),
-            }));
-            setTickets(mappedTickets);
-            setScans(mappedTickets
-              .filter((ticket) => ticket.scanned_at)
-              .sort((a, b) => new Date(b.scanned_at || 0).getTime() - new Date(a.scanned_at || 0).getTime())
-              .map((ticket) => ({
-                id: ticket.id,
-                event_id: ticket.event_id,
-                customer_name: ticket.customer_name,
-                ticket_type: ticket.ticket_type,
-                scanned_at: ticket.scanned_at,
-              })));
-          } else if (alive) {
-            setTickets([]);
-            setScans([]);
+        // Background polling every 30s to keep balance/tickets/transactions fresh
+        pollTimer = setInterval(() => {
+          if (!currentUserId) return;
+          if (typeof document !== 'undefined' && document.hidden) return;
+          void runPrefetch(currentUserId, user.email || '');
+        }, 30_000);
+
+        // Realtime: refresh on ticket sales & wallet transactions
+        transactionsChannel = supabase
+          .channel(`dashboard-tx-${user.id}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+            () => {
+              if (currentUserId) void runPrefetch(currentUserId, user.email || '');
+            }
+          )
+          .subscribe();
+
+        ticketsChannel = supabase
+          .channel(`dashboard-tickets-${user.id}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'tickets' },
+            () => {
+              if (currentUserId) void runPrefetch(currentUserId, user.email || '');
+            }
+          )
+          .subscribe();
+
+        // Refresh when the tab regains focus
+        const handleVisibility = () => {
+          if (!document.hidden && currentUserId) {
+            void runPrefetch(currentUserId, user.email || '');
           }
-        } else {
-          setTickets([]);
-          setScans([]);
-        }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        (window as any).__dashCleanupVis = () => document.removeEventListener('visibilitychange', handleVisibility);
       } catch (error: any) {
-        toast.error(error?.message || 'Failed to load dashboard');
+        if (alive) {
+          setFetchError('full');
+          toast.error(error?.message || 'Failed to load dashboard');
+        }
       } finally {
         if (alive) setIsLoading(false);
       }
@@ -1272,8 +1264,26 @@ export function DashboardPage() {
     void loadDashboard();
     return () => {
       alive = false;
+      if (pollTimer) clearInterval(pollTimer);
+      if (ticketsChannel) supabase.removeChannel(ticketsChannel);
+      if (transactionsChannel) supabase.removeChannel(transactionsChannel);
+      const cleanupVis = (window as any).__dashCleanupVis;
+      if (typeof cleanupVis === 'function') cleanupVis();
     };
   }, [navigate]);
+
+  const retryFetch = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setFetchError(null);
+    const result = await prefetchUserStats(user.id, user.email || '');
+    const errCount = Object.keys(result.errors).length;
+    if (errCount === 0) setFetchError(null);
+    else if (errCount >= 4) setFetchError('full');
+    else setFetchError('partial');
+  };
+
+
 
   const organizerName = profile?.full_name || profile?.display_name || profile?.name || profile?.username || 'Dashboard';
   const organizerLocation = profile?.location || 'Location not set';
