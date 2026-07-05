@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabase/client';
-import { getProfile, getOrganizerStats, getFollowersCount, getFollowingCount } from '../utils/supabase/api';
+import { getProfile } from '../utils/supabase/api';
 import { useProfileStore } from '../store/profileStore';
-import { ntzsApi, getLocalWalletBalance } from '../utils/ntzs-api';
+import { prefetchUserStats } from '../utils/statsPrefetch';
 import { syncExistingPushSubscription, unsubscribeFromPushNotifications } from '../utils/pushNotifications';
 
 interface AuthContextType {
