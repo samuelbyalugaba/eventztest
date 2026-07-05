@@ -862,7 +862,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 value={formData.title}
                 onChange={(e) => updateForm('title', e.target.value)}
                 placeholder="e.g. Nairobi Jazz Night"
-                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
               />
             </div>
 
@@ -880,7 +880,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     }}
                     onPaste={(e) => e.preventDefault()}
                     onDrop={(e) => e.preventDefault()}
-                    className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}
+                    className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100 ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}
                     aria-label="Event date"
                   />
                   <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -899,7 +899,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     }}
                     onPaste={(e) => e.preventDefault()}
                     onDrop={(e) => e.preventDefault()}
-                    className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100 ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}
+                    className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100 ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}
                     aria-label="Event time"
                   />
                   <Clock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -916,7 +916,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                   value={formData.location}
                   onChange={(e) => updateForm('location', e.target.value)}
                   placeholder="e.g. Mlimani City Hall, Dar es Salaam"
-                  className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                  className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
                 />
               </div>
             </div>
@@ -1015,7 +1015,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
               <select
                 value={formData.currency}
                 onChange={(e) => handleCurrencyChange(e.target.value)}
-                className="create-currency-select h-7 max-w-[88px] rounded-full border border-gray-200 bg-gray-100 px-2.5 text-xs font-semibold text-gray-700 outline-none focus:border-purple-500"
+                className="create-currency-select h-7 max-w-[88px] rounded-full border border-gray-200 bg-gray-100 px-2.5 text-xs font-semibold text-gray-700 outline-none focus:border-gray-400"
                 aria-label="Currency"
               >
                 {createCurrencies.map((currency) => (
@@ -1076,12 +1076,12 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                           value={tier.priceNumeric > 0 ? tier.priceNumeric : ''}
                           onChange={(e) => handleUpdateTier(index, 'priceNumeric', e.target.value)}
                           placeholder="0"
-                          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-purple-500"
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-gray-400"
                         />
                       </div>
                       <div>
                         <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-gray-500">Capacity</label>
-                        <div className="flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-1.5 focus-within:border-purple-500">
+                        <div className="flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-1.5 focus-within:border-gray-400">
                           <button
                             type="button"
                             onClick={() => handleAdjustTierCapacity(index, -10)}
@@ -1119,7 +1119,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                           type="date"
                           value={tier.saleEnds || ''}
                           onChange={(e) => handleUpdateTier(index, 'saleEnds', e.target.value)}
-                          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-purple-500"
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-gray-400"
                         />
                       </div>
                     )}
@@ -1173,7 +1173,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                             }
                           }}
                           placeholder="Custom perk"
-                          className="h-10 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-purple-400"
+                          className="h-10 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-gray-400"
                         />
                         <button
                           type="button"
@@ -1244,7 +1244,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                     value={formData.expectedGuests > 0 ? formData.expectedGuests : ''}
                     onChange={(e) => updateForm('expectedGuests', Math.max(0, Number(e.target.value) || 0))}
                     placeholder="0"
-                    className="h-10 w-24 rounded-lg border border-gray-200 bg-gray-50 px-3 text-center text-sm outline-none focus:border-purple-500"
+                    className="h-10 w-24 rounded-lg border border-gray-200 bg-gray-50 px-3 text-center text-sm outline-none focus:border-gray-400"
                   />
                 </div>
 
@@ -1296,7 +1296,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                         }
                       }}
                       placeholder="Custom inclusion"
-                      className="h-9 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-purple-400"
+                      className="h-9 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-gray-400"
                     />
                     <button
                       type="button"
@@ -1382,7 +1382,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                         },
                       }));
                     }}
-                    className="h-10 w-full rounded-xl border border-purple-100 bg-white px-3 text-sm outline-none focus:border-purple-500"
+                    className="h-10 w-full rounded-xl border border-purple-100 bg-white px-3 text-sm outline-none focus:border-gray-400"
                   />
                 </div>
               )}
@@ -1397,7 +1397,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                       value={formData.externalTicketingPhone}
                       onChange={(e) => updateForm('externalTicketingPhone', e.target.value)}
                       placeholder="+255 7XX XXX XXX"
-                      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm outline-none focus:border-purple-500 focus:bg-white"
+                      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm outline-none focus:border-gray-400 focus:bg-white"
                     />
                   </div>
                 </div>
@@ -1411,7 +1411,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                 onChange={(e) => updateForm('description', e.target.value)}
                 placeholder="Tell guests what to expect..."
                 rows={4}
-                className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
               />
             </div>
 

@@ -212,7 +212,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search..."
-            className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-4 focus:ring-purple-100"
+            className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-4 focus:ring-gray-100"
           />
         </div>
 
@@ -249,7 +249,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') navigate(`/profile/${person.id}`);
                   }}
-                  className="flex items-center gap-3 rounded-xl px-1 py-2.5 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="flex items-center gap-3 rounded-xl px-1 py-2.5 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
                 >
                   <UserAvatar
                     src={person.avatar_url}

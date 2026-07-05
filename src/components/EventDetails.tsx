@@ -942,7 +942,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     placeholder="Search city..."
                     value={locationSearch}
                     onChange={(e) => setLocationSearch(e.target.value)}
-                    className="w-full rounded-[10px] border border-gray-200 bg-gray-100 px-3.5 py-2.5 pr-10 text-sm font-medium text-gray-950 placeholder:text-gray-400 transition-all focus:border-purple-600 focus:bg-white focus:outline-none"
+                    className="w-full rounded-[10px] border border-gray-200 bg-gray-100 px-3.5 py-2.5 pr-10 text-sm font-medium text-gray-950 placeholder:text-gray-400 transition-all focus:border-gray-500 focus:bg-white focus:outline-none"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     <Search className="h-4 w-4 text-gray-400" />
@@ -1274,7 +1274,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                         }
                       }}
                       placeholder="Type a message..."
-                      className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
+                      className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400"
                     />
                     <button
                       onClick={handleSendMessage}

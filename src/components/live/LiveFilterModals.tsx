@@ -149,7 +149,7 @@ export function LiveFilterModals({
                   value={locationSearch}
                   onChange={(e) => onLocationSearchChange(e.target.value)}
                   placeholder="Search location..."
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-purple-600 transition-all"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-gray-500 transition-all"
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>

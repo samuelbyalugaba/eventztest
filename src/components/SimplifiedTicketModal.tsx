@@ -356,14 +356,14 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                   placeholder="Full Name"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 outline-none transition-all"
                 />
                 <input
                   type="email"
                   placeholder="Email Address"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 outline-none transition-all"
                 />
               </div>
 
@@ -401,7 +401,7 @@ export function SimplifiedTicketModal({ event, onClose, onSuccess }: SimplifiedT
                           placeholder="255 7XX XXX XXX"
                           value={paymentPhone}
                           onChange={(e) => setPaymentPhone(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-[#8A2BE2] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 outline-none transition-all"
                         />
                       </div>
                     </div>

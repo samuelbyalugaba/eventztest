@@ -553,7 +553,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                       type="text"
                       value={profileData.username}
                       onChange={(e) => setProfileData({ ...profileData, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') })}
-                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
+                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 transition"
                       placeholder="username"
                     />
                   </div>
@@ -567,7 +567,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                       type="text"
                       value={profileData.name}
                       onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
+                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 transition"
                       placeholder="Your name"
                     />
                   </div>
@@ -591,7 +591,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                           }}
                           onFocus={() => setShowCategoryDropdown(true)}
                           placeholder="Select category"
-                          className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
+                          className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 transition"
                         />
                         <ChevronDown className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
 
@@ -633,7 +633,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                           }}
                           onFocus={() => profileData.location.length >= 3 && setShowLocationDropdown(true)}
                           placeholder="City, Country"
-                          className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
+                          className="w-full h-11 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 transition"
                         />
                         {loadingLocations && (
                           <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 animate-spin" />
@@ -672,7 +672,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                       type="email"
                       value={profileData.email}
                       onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
+                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 transition"
                       placeholder="your.email@example.com"
                     />
                   </div>
@@ -686,7 +686,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                       type="tel"
                       value={profileData.phone}
                       onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition"
+                      className="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 transition"
                       placeholder="+255 712 345 678"
                     />
                   </div>
@@ -694,7 +694,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Date of Birth</label>
-                  <div className="flex items-center gap-3 w-full h-11 px-4 bg-white border border-gray-200 rounded-xl text-gray-900 transition focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-200">
+                  <div className="flex items-center gap-3 w-full h-11 px-4 bg-white border border-gray-200 rounded-xl text-gray-900 transition focus-within:border-gray-400 focus-within:ring-2 focus-within:ring-gray-200">
                     <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
                     <input
                       type="date"
@@ -712,7 +712,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                     onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                     placeholder="Tell your story..."
                     rows={4}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition resize-none"
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 transition resize-none"
                   />
                 </div>
               </div>

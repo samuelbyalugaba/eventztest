@@ -12,7 +12,7 @@ interface ProfileStatsProps {
 
 function StatValue({ value, label }: { value: string; label: string }) {
   return (
-    <div className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 rounded-lg py-1">
+    <div className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 rounded-lg py-1">
       <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
         {value}
       </div>
@@ -54,7 +54,7 @@ export function ProfileStats({
     <div className="flex items-center justify-between px-3.5 mb-3.5">
       <button
         type="button"
-        className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 rounded-lg py-1"
+        className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 rounded-lg py-1"
         onClick={onHostedClick}
       >
         <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
@@ -66,7 +66,7 @@ export function ProfileStats({
       </button>
       <button
         type="button"
-        className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform border-l border-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 rounded-lg py-1"
+        className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform border-l border-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 rounded-lg py-1"
         onClick={onFollowersClick}
       >
         <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
@@ -78,7 +78,7 @@ export function ProfileStats({
       </button>
       <button
         type="button"
-        className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform border-l border-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 rounded-lg py-1"
+        className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform border-l border-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 rounded-lg py-1"
         onClick={onFollowingClick}
       >
         <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">

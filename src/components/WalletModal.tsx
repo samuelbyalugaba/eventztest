@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  ArrowLeft, MoreVertical, Plus, ArrowUpRight, History,
+  ArrowLeft, Plus, ArrowUpRight, History,
   ShieldCheck, Info, ArrowDownLeft, Ticket, Clock, Smartphone,
 } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
@@ -389,9 +389,6 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
             <ArrowLeft className="w-[18px] h-[18px] text-[#6B21E8]" />
           </button>
           <span className="text-lg font-medium text-[#1A0533]">My Wallet</span>
-          <button className="w-[38px] h-[38px] bg-white rounded-full flex items-center justify-center border border-[#DDD6FE]">
-            <MoreVertical className="w-[18px] h-[18px] text-[#6B21E8]" />
-          </button>
         </div>
 
         {/* ── Balance Card ── */}
@@ -460,7 +457,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                   <select
                     value={provider}
                     onChange={e => setProvider(e.target.value)}
-                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-sm text-[#1A0533] outline-none appearance-none transition-colors focus:border-[#7C3AED] focus:bg-white pr-10"
+                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-sm text-[#1A0533] outline-none appearance-none transition-colors focus:border-gray-400 focus:bg-white pr-10"
                   >
                     <option>M-Pesa (Vodacom)</option>
                     <option>Airtel Money</option>
@@ -482,7 +479,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
                     placeholder="Enter amount"
-                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
+                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-gray-400 focus:bg-white"
                   />
                 </div>
                 <div className="flex gap-2 flex-wrap mt-2">
@@ -513,7 +510,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                     placeholder="7XX XXX XXX"
-                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
+                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-gray-400 focus:bg-white"
                   />
                 </div>
               </div>
@@ -549,7 +546,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                   <select
                     value={provider}
                     onChange={e => setProvider(e.target.value)}
-                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-sm text-[#1A0533] outline-none appearance-none transition-colors focus:border-[#7C3AED] focus:bg-white pr-10"
+                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-sm text-[#1A0533] outline-none appearance-none transition-colors focus:border-gray-400 focus:bg-white pr-10"
                   >
                     <option>M-Pesa (Vodacom)</option>
                     <option>Airtel Money</option>
@@ -571,7 +568,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
                     placeholder="Enter amount"
-                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
+                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-gray-400 focus:bg-white"
                   />
                 </div>
                 <div className="flex items-center gap-1 mt-1.5 text-xs text-[#D97706]">
@@ -595,7 +592,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                     placeholder="7XX XXX XXX"
-                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-[#7C3AED] focus:bg-white"
+                    className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-gray-400 focus:bg-white"
                   />
                 </div>
               </div>

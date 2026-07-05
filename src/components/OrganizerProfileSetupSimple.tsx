@@ -213,7 +213,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
               }}
               onFocus={() => setShowCategoryDropdown(true)}
               placeholder="e.g. Event Organizer, DJ, Artist, Promoter"
-              className="w-full pl-11 pr-10 py-3.5 bg-gray-50 border border-gray-100 focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
+              className="w-full pl-11 pr-10 py-3.5 bg-gray-50 border border-gray-100 focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
             />
             <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
 
@@ -300,7 +300,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
                 value={organizerName}
                 onChange={(e) => setOrganizerName(e.target.value)}
                 placeholder="e.g. The Night Club"
-                className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
               />
             </div>
           </div>
@@ -319,7 +319,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
                 }}
                 onBlur={checkHandle}
                 placeholder="username"
-                className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
+                className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
                 {checking ? (
@@ -350,7 +350,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
                 }}
                 onFocus={() => location.length >= 3 && setShowLocationDropdown(true)}
                 placeholder="City, Country"
-                className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
+                className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
               />
               {loadingLocations && (
                 <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 animate-spin" />
@@ -387,7 +387,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell your story..."
               rows={4}
-              className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-purple-300 focus:bg-white focus:ring-4 focus:ring-purple-500/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
+              className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
             />
           </div>
         </section>

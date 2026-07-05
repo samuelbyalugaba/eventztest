@@ -213,7 +213,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                             placeholder="Full Name"
                             value={ticketFormData.name}
                             onChange={(e) => setTicketFormData({ ...ticketFormData, name: e.target.value })}
-                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 outline-none text-sm"
                         />
                     </div>
                     <div className="relative">
@@ -223,7 +223,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                             placeholder="Email"
                             value={ticketFormData.email}
                             onChange={(e) => setTicketFormData({ ...ticketFormData, email: e.target.value })}
-                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+                            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 outline-none text-sm"
                         />
                     </div>
                 </div>
@@ -260,7 +260,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
                                 placeholder="255 7XX XXX XXX"
                                 value={paymentPhone}
                                 onChange={(e) => setPaymentPhone(e.target.value)}
-                                className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+                                className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 outline-none text-sm"
                             />
                         </div>
                     )}

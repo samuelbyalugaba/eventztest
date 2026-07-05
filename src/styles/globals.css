@@ -21,7 +21,7 @@
   --border: #EDE9FE;
   --input: transparent;
   --input-background: #FAFAFA;
-  --ring: #7C3AED;
+  --ring: #9CA3AF;
   --switch-background: #D1D5DB;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
@@ -144,7 +144,7 @@ html.capacitor-android {
   }
 
   :where(input, textarea, select):focus-visible {
-    box-shadow: 0 0 0 3px rgb(138 43 226 / 0.16);
+    box-shadow: 0 0 0 3px rgb(156 163 175 / 0.16);
   }
 }
 

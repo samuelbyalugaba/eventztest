@@ -387,7 +387,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                         type="text"
                         value={profileData.organizerName}
                         onChange={(e) => setProfileData({ ...profileData, organizerName: e.target.value })}
-                        className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                        className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-gray-400/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
                         placeholder="Your name"
                       />
                     </div>
@@ -410,7 +410,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                         }}
                         onFocus={() => setShowCategoryDropdown(true)}
                         placeholder="Select category"
-                        className="w-full pl-12 pr-12 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                        className="w-full pl-12 pr-12 py-4 bg-white border-2 border-gray-100 focus:border-gray-400/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
                       />
                       <ChevronDown className={`absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180' : ''}`} />
                       
@@ -479,7 +479,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           type="email"
                           value={profileData.email}
                           onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-gray-400/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
                           placeholder="email@example.com"
                         />
                       </div>
@@ -492,7 +492,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           type="tel"
                           value={profileData.phone}
                           onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
+                          className="w-full pl-12 pr-5 py-4 bg-white border-2 border-gray-100 focus:border-gray-400/20 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm"
                           placeholder="+255 XXX XXX XXX"
                         />
                       </div>
@@ -502,7 +502,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                   {/* Date of Birth Input */}
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-900 ml-1">Date of Birth</label>
-                    <div className="flex items-center gap-3 w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm focus-within:border-purple-500/20 focus-within:bg-white">
+                    <div className="flex items-center gap-3 w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-gray-900 font-medium outline-none transition-all shadow-sm focus-within:border-gray-400/20 focus-within:bg-white">
                       <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
                       <input
                         type="date"
@@ -522,7 +522,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                       placeholder="Tell your story..."
                       rows={4}
                       maxLength={500}
-                      className="w-full px-5 py-4 bg-white border-2 border-gray-100 focus:border-purple-500/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none shadow-sm"
+                      className="w-full px-5 py-4 bg-white border-2 border-gray-100 focus:border-gray-400/20 focus:bg-white rounded-2xl text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none shadow-sm"
                     />
                     <p className="text-gray-500 text-xs mt-2 text-right">{profileData.bio.length}/500</p>
                   </div>
@@ -691,7 +691,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           type="text"
                           value={paymentData.bankName}
                           onChange={(e) => setPaymentData({ ...paymentData, bankName: e.target.value })}
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
+                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
                           placeholder="e.g., CRDB Bank"
                         />
                       </div>
@@ -701,7 +701,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           type="text"
                           value={paymentData.accountNumber}
                           onChange={(e) => setPaymentData({ ...paymentData, accountNumber: e.target.value })}
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
+                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
                           placeholder="Your account number"
                         />
                       </div>
@@ -711,7 +711,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                           type="text"
                           value={paymentData.accountName}
                           onChange={(e) => setPaymentData({ ...paymentData, accountName: e.target.value })}
-                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
+                          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
                           placeholder="Account holder name"
                         />
                       </div>
@@ -723,7 +723,7 @@ export function OrganizerSettingsModal({ onClose }: OrganizerSettingsModalProps)
                         type="tel"
                         value={paymentData.mobileMoney}
                         onChange={(e) => setPaymentData({ ...paymentData, mobileMoney: e.target.value })}
-                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8A2BE2]"
+                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
                         placeholder="+255 XXX XXX XXX"
                       />
                       <p className="text-gray-500 text-xs mt-2">M-Pesa, Tigo Pesa, Airtel Money</p>

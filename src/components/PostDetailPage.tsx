@@ -378,7 +378,7 @@ export function PostDetailPage({
               <textarea
                 value={captionDraft}
                 onChange={(e) => setCaptionDraft(e.target.value)}
-                className="w-full min-h-[140px] p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                className="w-full min-h-[140px] p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400/20"
                 disabled={isSavingCaption}
               />
               <div className="mt-4 flex items-center justify-end gap-2">
@@ -806,7 +806,7 @@ export function PostDetailPage({
                       <button
                         type="button"
                         onClick={(e) => handleCommentProfileClick(comment, e)}
-                        className="h-9 w-9 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        className="h-9 w-9 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
                         aria-label={`Open ${comment.user.name}'s profile`}
                       >
                         <UserAvatar
@@ -820,7 +820,7 @@ export function PostDetailPage({
                           <button
                             type="button"
                             onClick={(e) => handleCommentProfileClick(comment, e)}
-                            className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
                           >
                             {comment.user.name}
                             {(comment.user.is_organizer || comment.user.isOrganizer || comment.user.verified) && (
@@ -862,7 +862,7 @@ export function PostDetailPage({
                         <button
                           type="button"
                           onClick={(e) => handleCommentProfileClick(reply, e)}
-                          className="mt-0.5 h-7 w-7 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                          className="mt-0.5 h-7 w-7 flex-shrink-0 rounded-full text-left focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
                           aria-label={`Open ${reply.user.name}'s profile`}
                         >
                           <UserAvatar
@@ -876,7 +876,7 @@ export function PostDetailPage({
                             <button
                               type="button"
                               onClick={(e) => handleCommentProfileClick(reply, e)}
-                              className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                              className="comment-inline-button mr-1 inline-flex items-center gap-1 align-baseline font-bold text-gray-950 hover:text-purple-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
                             >
                               {reply.user.name}
                               {(reply.user.is_organizer || reply.user.isOrganizer || reply.user.verified) && (
