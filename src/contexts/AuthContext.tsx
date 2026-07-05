@@ -132,39 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const prefetchDashboardData = async (sessionUser: SupabaseUser) => {
-    const store = useProfileStore.getState();
-    try {
-      const [statsRes, followersRes, followingRes] = await Promise.allSettled([
-        getOrganizerStats(sessionUser.id),
-        getFollowersCount(sessionUser.id),
-        getFollowingCount(sessionUser.id),
-      ]);
-      if (statsRes.status === 'fulfilled' && statsRes.value) {
-        store.setOrganizerStats(statsRes.value);
-      }
-      const followers = followersRes.status === 'fulfilled' ? followersRes.value : (store.followStats?.followers ?? 0);
-      const following = followingRes.status === 'fulfilled' ? followingRes.value : (store.followStats?.following ?? 0);
-      store.setFollowStats({ followers, following });
-    } catch {
-      // best-effort
-    }
-    try {
-      let balance: number | null = null;
-      try {
-        const nUser = await ntzsApi.getUser(sessionUser.id, sessionUser.email || '');
-        if (nUser?.id) {
-          const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
-          balance = balanceTzs || 0;
-        }
-      } catch {
-        balance = await getLocalWalletBalance(sessionUser.id);
-      }
-      if (typeof balance === 'number') {
-        useProfileStore.getState().setWalletBalance(balance);
-      }
-    } catch {
-      // best-effort
-    }
+    await prefetchUserStats(sessionUser.id, sessionUser.email || '');
   };
 
   const startProfileBootstrap = (sessionUser: SupabaseUser) => {
