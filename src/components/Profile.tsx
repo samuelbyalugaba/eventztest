@@ -222,7 +222,11 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const uniqueTicketGroups = Object.values(groupedTickets) as Ticket[][];
   const pastHostedEvents = publishedEvents.filter(e => new Date(e.date) < new Date());
   const pastHostedEventIds = new Set(pastHostedEvents.map((event) => event.id));
-  const additionalHostedStreams = streamedVideos.filter((stream) => !stream.event_id || !pastHostedEventIds.has(stream.event_id));
+  const additionalHostedStreams = streamedVideos.filter(
+    (stream) =>
+      (stream.has_recording || stream.playback_url) &&
+      (!stream.event_id || !pastHostedEventIds.has(stream.event_id))
+  );
   const computedHostedCount = pastHostedEvents.length + additionalHostedStreams.length;
 
   // Persist hosted/attended counts to the store so they survive page reloads

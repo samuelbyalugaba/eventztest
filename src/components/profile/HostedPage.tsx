@@ -125,6 +125,11 @@ export function HostedPage() {
 
   const pastEvents = useMemo(() => events.filter(isPastEvent), [events]);
 
+  const playableStreams = useMemo(
+    () => streams.filter((s) => s.has_recording || s.playback_url),
+    [streams],
+  );
+
   const filteredEvents = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return pastEvents;
@@ -139,14 +144,14 @@ export function HostedPage() {
 
   const filteredStreams = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return streams;
-    return streams.filter((stream) => {
+    if (!query) return playableStreams;
+    return playableStreams.filter((stream) => {
       return (
         String(stream.title || stream.event?.title || '').toLowerCase().includes(query) ||
         String(stream.event?.location || '').toLowerCase().includes(query)
       );
     });
-  }, [streams, searchQuery]);
+  }, [playableStreams, searchQuery]);
 
   const openEvent = (event: AppEvent) => {
     navigate(`/event/${event.id}`, { state: { backgroundLocation: location } });
@@ -193,7 +198,7 @@ export function HostedPage() {
                 : 'bg-white/70 text-gray-500'
             }`}
           >
-            {streams.length} <span className="text-gray-500">Streams</span>
+            {playableStreams.length} <span className="text-gray-500">Streams</span>
           </button>
         </div>
 

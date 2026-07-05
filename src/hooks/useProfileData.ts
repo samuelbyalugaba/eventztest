@@ -134,7 +134,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
           ? events.map((e: any) => ({ ...e, coverImage: e.image_url || e.coverImage, price: e.price_range || e.price }))
           : [],
       ),
-    enabled: !!targetUserId && isOrganizer && activeTab === 'upcoming',
+    enabled: !!targetUserId && isOrganizer,
     staleTime: PROFILE_CACHE_TTL_MS,
   });
 
@@ -162,7 +162,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const streamedVideosQuery = useQuery({
     queryKey: queryKeys.profile.streamedVideos(targetUserId || ''),
     queryFn: () => getProfileStreamedVideos(targetUserId!),
-    enabled: !!targetUserId && activeTab === 'streamed',
+    enabled: !!targetUserId,
     staleTime: PROFILE_CACHE_TTL_MS,
   });
 
