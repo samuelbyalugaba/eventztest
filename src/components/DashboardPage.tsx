@@ -7,7 +7,7 @@ import { type Event as ApiEvent } from '../utils/supabase/api';
 
 import { prefetchUserStats } from '../utils/statsPrefetch';
 import { useProfileStore } from '../store/profileStore';
-import '../styles/dashboard.css';
+
 
 import {
   type ScreenId,
@@ -400,10 +400,10 @@ export function DashboardPage() {
           onBackToProfile={() => navigate('/profile')}
           action={
             <div className="flex items-center gap-2">
-              <button type="button" className="dash-header-action dash-header-icon-only" onClick={openScanner} aria-label="Scan ticket">
+              <button type="button" className="h-[34px] w-[38px] p-0 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center flex-shrink-0" onClick={openScanner} aria-label="Scan ticket">
                 <QrCode className="h-4 w-4" />
               </button>
-              <button type="button" className="dash-header-action dash-header-icon-only" onClick={() => setMenuOpen(true)} aria-label="Menu">
+              <button type="button" className="h-[34px] w-[38px] p-0 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center flex-shrink-0" onClick={() => setMenuOpen(true)} aria-label="Menu">
                 <Menu className="h-4 w-4" />
               </button>
             </div>
@@ -427,8 +427,8 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="eventz-dashboard">
-      <div className="dash-shell">{isLoading ? <DashboardLoading /> : currentScreen()}</div>
+    <div className="fixed inset-0 z-70 bg-[#F0F2F5] text-[#111827] antialiased">
+      <div className="h-full w-full max-w-[520px] mx-auto bg-[#F0F2F5] overflow-hidden flex flex-col relative">{isLoading ? <DashboardLoading /> : currentScreen()}</div>
       {showScanner && scannerEvent ? (
         <Suspense fallback={<DashboardModalFallback />}>
           <TicketScannerModal

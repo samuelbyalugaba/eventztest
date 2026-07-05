@@ -5,7 +5,7 @@ import { X, RotateCw, ImagePlus, MapPin, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createPost, uploadImage } from '../utils/supabase/api';
-import { consumePreloadedStream } from '../utils/cameraPreloader';
+import { takePreloaded } from '../utils/cameraPreloader';
 
 type MediaItem = {
   file: File;
@@ -180,23 +180,16 @@ export default function CreatePostPage() {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
 
-      // Try to consume a preloaded stream first
-      streamRef.current = await consumePreloadedStream(facing);
-
-      if (!streamRef.current) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: facing,
-            width: { ideal: 960 },
-            height: { ideal: 720 },
-          },
-          audio: true,
-        });
-        streamRef.current = stream;
-      }
-
+      const preloaded = await takePreloaded();
+      const stream = preloaded && facing === 'environment'
+        ? preloaded
+        : await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facing, width: { ideal: 960 }, height: { ideal: 720 } },
+            audio: true,
+          });
+      streamRef.current = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.srcObject = stream;
       } else {
         setCameraReady(true);
       }

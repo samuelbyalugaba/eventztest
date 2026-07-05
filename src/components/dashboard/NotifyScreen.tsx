@@ -38,10 +38,10 @@ export function NotifyScreen({ scope, onBack, onGo, onScan }: { scope: Dashboard
         onBack={onBack}
         right={
           <div className="flex items-center gap-2">
-            <button type="button" className="dash-header-action dash-header-icon-only" onClick={onScan} aria-label="Scan ticket">
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={onScan} aria-label="Scan ticket">
               <QrCode className="h-4 w-4" />
             </button>
-            <button type="button" className="dash-header-action dash-header-icon-only" onClick={() => setMenuOpen(true)} aria-label="Menu">
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={() => setMenuOpen(true)} aria-label="Menu">
               <Menu className="h-4 w-4" />
             </button>
           </div>
@@ -50,54 +50,62 @@ export function NotifyScreen({ scope, onBack, onGo, onScan }: { scope: Dashboard
       {menuOpen && (
         <DashboardMenu onClose={() => setMenuOpen(false)} onNav={(screen) => { setMenuOpen(false); onGo(screen); }} />
       )}
-      <div className="dash-scroll">
-        <div className="dash-pad">
-          <div className="dash-card mt-1">
-            <div className="dash-card-title">
+      <div className="flex-1 overflow-y-auto [scrollbar-width:none]">
+        <div className="px-4 pt-[14px] pb-[calc(86px+var(--eventz-safe-area-bottom))]">
+          <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px] mt-1">
+            <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
               <span>
                 <Users className="h-4 w-4 text-gray-500" />
                 Choose audience
               </span>
             </div>
             {audienceOptions.length ? (
-              <div className="dash-audience-grid">
+              <div className="grid grid-cols-2 gap-[9px]">
                 {audienceOptions.map(([name, count]) => (
-                  <button key={name} type="button" className={`dash-audience ${audience === name ? 'on' : ''}`} onClick={() => setAudience(name)}>
-                    <span />
-                    <b>{name}</b>
-                    <small>{formatNumber(count)} people</small>
+                  <button key={name} type="button" className={`relative text-left p-3 pl-[38px] rounded-xl ${
+                    audience === name 
+                      ? 'bg-[#F5F3FF] border-[1.5px] border-[#7C3AED]' 
+                      : 'bg-[#FAFAFA] border-[1.5px] border-[#E9EBF0]'
+                  }`} onClick={() => setAudience(name)}>
+                    <span className={`w-[17px] h-[17px] border-2 rounded-full absolute left-3 top-[13px] ${
+                      audience === name
+                        ? 'bg-[#7C3AED] border-[#7C3AED] shadow-[inset_0_0_0_4px_#fff]'
+                        : 'border-[#D1D5DB]'
+                    }`} />
+                    <b className="block text-[11px] font-bold text-[#111827]">{name}</b>
+                    <small className="block mt-0.5 text-[10px] text-[#6B7280]">{formatNumber(count)} people</small>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="dash-empty-inline">Audiences will appear after tickets, viewers, or followers are recorded.</div>
+              <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-[12px] font-semibold">Audiences will appear after tickets, viewers, or followers are recorded.</div>
             )}
           </div>
-          <div className="dash-card">
-            <div className="dash-card-title">
+          <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px]">
+            <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
               <span>
                 <MessageCircle className="h-4 w-4 text-gray-500" />
                 Write message
               </span>
             </div>
             <textarea
-              className="dash-message-box"
+              className="w-full min-h-[82px] resize-none border-[1.5px] border-[#E9EBF0] bg-[#FAFAFA] rounded-xl p-[13px] font-inherit text-[12px] text-[#111827] leading-[1.6] outline-none focus:bg-white focus:border-[#A78BFA]"
               placeholder="Write a short update for the selected audience."
               maxLength={160}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
             />
-            <div className="dash-message-foot">
-              <span>{160 - message.length} characters left</span>
-              <span className="dash-toggle"><i />Push notification</span>
+            <div className="flex items-center justify-between mt-[9px] gap-[10px]">
+              <span className="text-[10px] text-[#9CA3AF] font-semibold">{160 - message.length} characters left</span>
+              <span className="flex items-center gap-[7px] text-[#6B7280] text-[11px]"><i className="w-[34px] h-[19px] rounded-full bg-[#7C3AED] relative inline-block after:content-[''] after:absolute after:right-[2px] after:top-[2px] after:w-[15px] after:h-[15px] after:rounded-full after:bg-white" />Push notification</span>
             </div>
-            <div className="dash-preview">
+            <div className="mt-[11px] rounded-xl bg-[#EDE9FE] border border-[#DDD6FE] px-[14px] py-3 flex items-start gap-[10px] text-[#5B21B6] text-[11px] font-bold leading-[1.6]">
               <Info className="h-4 w-4" />
               <span>{message.trim() || 'Your message preview will appear here as you type.'}</span>
             </div>
             <button
               type="button"
-              className="dash-primary-btn"
+              className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-[13px] font-bold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed"
               disabled={!audience || !message.trim()}
               onClick={() => toast.success(`Notification queued for ${audience}`)}
             >

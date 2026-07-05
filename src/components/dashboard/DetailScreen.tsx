@@ -24,13 +24,13 @@ export function DetailScreen({
     return (
       <>
         <BackTopBar title="Gifts received" onBack={onBack} />
-        <div className="dash-scroll">
-          <div className="dash-pad">
-            <div className="dash-stat-grid mt-1">
-              <StatBox label="Total gifts" value={formatMoneyShort(totalGifts)} note={giftTransactions.length ? 'From gift transactions' : 'No gifts yet'} />
-              <StatBox label="Gift count" value={formatNumber(giftTransactions.length)} note="Completed gift rows" />
-              <StatBox label="Avg. gift" value={formatMoneyShort(averageGift)} note="Total divided by gifts" />
-              <StatBox label="Top gift" value={formatMoneyShort(Math.max(0, ...giftTransactions.map(transactionAmount)))} note="Highest gift row" muted />
+        <div className="flex-1 overflow-y-auto [scrollbar-width:none]">
+          <div className="px-4 pt-[14px] pb-[calc(86px+var(--eventz-safe-area-bottom))]">
+            <div className="grid grid-cols-2 gap-[10px] mb-4 mt-1">
+              <StatBox label="Total sold" value={formatNumber(scope.tickets)} note="From ticket rows" />
+              <StatBox label="Physical" value={formatNumber(Math.max(0, scope.tickets - scope.virtualTickets))} note="Total minus virtual" />
+              <StatBox label="Virtual" value={formatNumber(scope.virtualTickets)} note="From stream settings" />
+              <StatBox label="Avg. per event" value={formatNumber(eventCount ? Math.round(scope.tickets / eventCount) : 0)} note={`${eventCount} event${eventCount === 1 ? '' : 's'}`} muted />
             </div>
             <SectionTitle>Gift transactions</SectionTitle>
             <GiftList gifts={giftTransactions} />
@@ -44,9 +44,9 @@ export function DetailScreen({
     return (
       <>
         <BackTopBar title="Revenue breakdown" onBack={onBack} />
-        <div className="dash-scroll">
-          <div className="dash-pad">
-            <div className="dash-stat-grid mt-1">
+        <div className="flex-1 overflow-y-auto [scrollbar-width:none]">
+          <div className="px-4 pt-[14px] pb-[calc(86px+var(--eventz-safe-area-bottom))]">
+            <div className="grid grid-cols-2 gap-[10px] mb-4 mt-1">
               <StatBox label="Total revenue" value={formatMoneyShort(scope.revenue)} note="From tickets table" />
               <StatBox label="Gifts income" value={formatMoneyShort(scope.gifts)} note="From gift transactions" />
               <StatBox label="Available now" value={formatMoneyShort(scope.available)} note="Ready to withdraw" />
@@ -54,7 +54,7 @@ export function DetailScreen({
             </div>
             <SectionTitle>Revenue by event</SectionTitle>
             <TierRows scope={scope} />
-            <button type="button" className="dash-primary-btn" onClick={() => onGo('payouts')}>
+            <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-[13px] font-bold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed" onClick={() => onGo('payouts')}>
               <CreditCard className="h-4 w-4" />
               Go to payouts
             </button>
@@ -67,9 +67,9 @@ export function DetailScreen({
   return (
     <>
       <BackTopBar title="Tickets sold" onBack={onBack} />
-      <div className="dash-scroll">
-        <div className="dash-pad">
-          <div className="dash-stat-grid mt-1">
+        <div className="flex-1 overflow-y-auto [scrollbar-width:none]">
+          <div className="px-4 pt-[14px] pb-[calc(86px+var(--eventz-safe-area-bottom))]">
+            <div className="grid grid-cols-2 gap-[10px] mb-4 mt-1">
             <StatBox label="Total sold" value={formatNumber(scope.tickets)} note="From ticket rows" />
             <StatBox label="Physical" value={formatNumber(Math.max(0, scope.tickets - scope.virtualTickets))} note="Total minus virtual" />
             <StatBox label="Virtual" value={formatNumber(scope.virtualTickets)} note="From stream settings" />

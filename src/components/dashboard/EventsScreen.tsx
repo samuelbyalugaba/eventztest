@@ -15,14 +15,14 @@ export function EventsScreen({ scopes, onGo, onNew, onScan, onBack }: { scopes: 
         onBack={onBack}
         right={
           <div className="flex items-center gap-2">
-            <button type="button" className="dash-header-action" onClick={onNew}>
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0" onClick={onNew}>
               <Plus className="h-3.5 w-3.5" />
               New event
             </button>
-            <button type="button" className="dash-header-action dash-header-icon-only" onClick={onScan} aria-label="Scan ticket">
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={onScan} aria-label="Scan ticket">
               <QrCode className="h-4 w-4" />
             </button>
-            <button type="button" className="dash-header-action dash-header-icon-only" onClick={() => setEventsMenuOpen(true)} aria-label="Menu">
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={() => setEventsMenuOpen(true)} aria-label="Menu">
               <Menu className="h-4 w-4" />
             </button>
           </div>
@@ -31,8 +31,8 @@ export function EventsScreen({ scopes, onGo, onNew, onScan, onBack }: { scopes: 
       {eventsMenuOpen && (
         <DashboardMenu onClose={() => setEventsMenuOpen(false)} onNav={(screen) => { setEventsMenuOpen(false); onGo(screen); }} />
       )}
-      <div className="dash-scroll">
-        <div className="dash-pad">
+      <div className="flex-1 overflow-y-auto [scrollbar-width:none]">
+        <div className="px-4 pt-[14px] pb-[calc(86px+var(--eventz-safe-area-bottom))]">
           <SectionTitle>Active & upcoming</SectionTitle>
           {active.map((scope) => <EventRow key={scope.id} scope={scope} onClick={() => onGo('event-detail', scope)} />)}
           <SectionTitle>Completed</SectionTitle>
