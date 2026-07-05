@@ -54,7 +54,7 @@ export function DetailScreen({
             </div>
             <SectionTitle>Revenue by event</SectionTitle>
             <TierRows scope={scope} />
-            <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-[13px] font-bold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed" onClick={() => onGo('payouts')}>
+            <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed" onClick={() => onGo('payouts')}>
               <CreditCard className="h-4 w-4" />
               Go to payouts
             </button>

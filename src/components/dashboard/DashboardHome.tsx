@@ -33,14 +33,14 @@ export function DashboardHome({
         <RangeTabs value={range} onChange={onRange} />
 
         {fetchError ? (
-          <div className="flex items-center justify-between gap-3 my-2 mb-3 px-[14px] py-[10px] rounded-xl bg-[#FEF3C7] text-[#92400E] text-[0.8125rem] font-medium" role="alert">
+          <div className="flex items-center justify-between gap-3 my-2 mb-3 px-[14px] py-[10px] rounded-xl bg-[#FEF3C7] text-[#92400E] text-xs font-medium" role="alert">
             <span>
               {fetchError === 'full'
                 ? 'Could not refresh dashboard data.'
                 : 'Some numbers may be out of date.'}
             </span>
             {onRetry ? (
-              <button type="button" className="px-3 py-[6px] rounded-lg bg-[#7C3AED] text-white text-[0.75rem] font-semibold hover:bg-[#6D28D9]" onClick={onRetry}>
+              <button type="button" className="px-3 py-[6px] rounded-lg bg-[#7C3AED] text-white text-2xs font-medium hover:bg-[#6D28D9]" onClick={onRetry}>
                 Retry
               </button>
             ) : null}

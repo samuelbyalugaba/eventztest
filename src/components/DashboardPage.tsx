@@ -400,10 +400,10 @@ export function DashboardPage() {
           onBackToProfile={() => navigate('/profile')}
           action={
             <div className="flex items-center gap-2">
-              <button type="button" className="h-[34px] w-[38px] p-0 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center flex-shrink-0" onClick={openScanner} aria-label="Scan ticket">
+              <button type="button" className="h-[34px] w-[38px] p-0 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center flex-shrink-0" onClick={openScanner} aria-label="Scan ticket">
                 <QrCode className="h-4 w-4" />
               </button>
-              <button type="button" className="h-[34px] w-[38px] p-0 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center flex-shrink-0" onClick={() => setMenuOpen(true)} aria-label="Menu">
+              <button type="button" className="h-[34px] w-[38px] p-0 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center flex-shrink-0" onClick={() => setMenuOpen(true)} aria-label="Menu">
                 <Menu className="h-4 w-4" />
               </button>
             </div>

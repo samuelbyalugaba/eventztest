@@ -401,12 +401,12 @@ export function WalletPage() {
 
       {/* ── Balance Card ── */}
       <section className="bg-gradient-to-br from-[#7C3AED] to-[#9333EA] rounded-[18px] p-5 relative overflow-hidden text-white mx-4 mb-5">
-        <div className="relative z-[1] text-[10px] font-semibold text-white/72 flex items-center gap-[6px] mb-[7px] uppercase tracking-[.06em]">
+        <div className="relative z-[1] text-2xs font-medium text-white/72 flex items-center gap-[6px] mb-[7px] uppercase tracking-[.06em]">
           <CreditCard className="h-3.5 w-3.5" />
           Total wallet balance
         </div>
         <div className="relative z-[1] text-[30px] font-bold tracking-[-1.4px] leading-[1] mb-1">{balance !== null ? `TSh ${balance.toLocaleString()}` : '—'}</div>
-        <div className="relative z-[1] text-[10px] font-semibold text-white/55 mb-[14px]">Live · Updated just now</div>
+        <div className="relative z-[1] text-2xs font-medium text-white/55 mb-[14px]">Live · Updated just now</div>
       </section>
 
 

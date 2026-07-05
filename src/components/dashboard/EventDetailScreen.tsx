@@ -16,18 +16,18 @@ export function EventDetailScreen({ scope, onBack, onGo }: { scope: DashboardSco
             <StatBox label="Gifts earned" value={formatMoneyShort(scope.gifts)} note="From gift transactions" />
           </div>
           {scope.locked > 0 ? (
-            <div className="flex gap-[10px] items-start my-1 mb-[14px] rounded-xl bg-[#F5F3FF] border border-[#DDD6FE] px-[14px] py-3 text-[#5B21B6] text-[11px] font-bold leading-[1.55]">
+            <div className="flex gap-[10px] items-start my-1 mb-[14px] rounded-xl bg-[#F5F3FF] border border-[#DDD6FE] px-[14px] py-3 text-[#5B21B6] text-xs font-medium leading-[1.55]">
               <Lock className="h-4 w-4" />
               <span>Revenue is locked until the event settles. You can withdraw available funds from other settled events now.</span>
             </div>
           ) : null}
           <SectionTitle>Ticket tiers</SectionTitle>
           <TierRows scope={scope} />
-          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-[13px] font-bold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed" onClick={() => onGo('stream')}>
+          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed" onClick={() => onGo('stream')}>
             <PlayCircle className="h-4 w-4" />
             View live stream
           </button>
-          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-[13px] font-bold tracking-[.02em] bg-white text-[#7C3AED] border-2 border-[#7C3AED]" onClick={() => onGo('notify')}>
+          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-white text-[#7C3AED] border-2 border-[#7C3AED]" onClick={() => onGo('notify')}>
             <Bell className="h-4 w-4" />
             Message attendees
           </button>

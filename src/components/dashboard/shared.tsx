@@ -74,8 +74,8 @@ export function TopBar({
           <div className="w-[38px] h-[38px] rounded-full bg-white/22 border-2 border-white/35 flex items-center justify-center text-[13px] font-semibold text-white overflow-hidden flex-shrink-0">{initials}</div>
         )}
         <div className="min-w-0">
-          <div className="text-[15px] font-semibold text-white leading-[1.1] truncate">{title}</div>
-          <div className="mt-0.5 text-[10px] font-semibold text-white/68 truncate">{subtitle}</div>
+          <div className="text-sm font-semibold text-white leading-[1.1] truncate">{title}</div>
+          <div className="mt-0.5 text-2xs font-medium text-white/68 truncate">{subtitle}</div>
         </div>
       </div>
       {action}
@@ -87,28 +87,28 @@ export function BackTopBar({ title, onBack, right }: { title: string; onBack: ()
   return (
     <header className="bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] pt-[calc(14px+var(--eventz-safe-area-top))] px-4 pb-[18px] flex items-center gap-3 flex-shrink-0 text-white">
       <BackButton className="w-9 h-9 rounded-full border border-white/25 bg-white/18 inline-flex items-center justify-center text-white flex-shrink-0" onClick={onBack} />
-      <div className="text-[16px] font-semibold text-white truncate">{title}</div>
+      <div className="text-base font-semibold text-white truncate">{title}</div>
       {right ? <div className="ml-auto">{right}</div> : null}
     </header>
   );
 }
 
 export function SectionTitle({ children }: { children: ReactNode }) {
-  return <div className="text-[10px] font-bold text-[#9CA3AF] tracking-[.1em] uppercase my-[18px] mb-[11px]">{children}</div>;
+  return <div className="text-2xs font-semibold text-[#9CA3AF] tracking-[.1em] uppercase my-[18px] mb-[11px]">{children}</div>;
 }
 
 export function WalletCard({ eventCount, balance, onWithdraw }: { eventCount: number; balance: number; onWithdraw: () => void }) {
   return (
     <section className="bg-gradient-to-br from-[#7C3AED] to-[#9333EA] rounded-[18px] p-5 mb-[14px] relative overflow-hidden text-white">
-      <div className="relative z-[1] text-[10px] font-semibold text-white/72 flex items-center gap-[6px] mb-[7px] uppercase tracking-[.06em]">
+      <div className="relative z-[1] text-2xs font-medium text-white/72 flex items-center gap-[6px] mb-[7px] uppercase tracking-[.06em]">
         <CreditCard className="h-3.5 w-3.5" />
         Total wallet balance
       </div>
       <div className="relative z-[1] text-[30px] font-bold tracking-[-1.4px] leading-[1] mb-1">{formatMoney(balance)}</div>
-      <div className="relative z-[1] text-[10px] font-semibold text-white/55 mb-[14px]">
+      <div className="relative z-[1] text-2xs font-medium text-white/55 mb-[14px]">
         {eventCount ? `${eventCount} organizer event${eventCount === 1 ? '' : 's'} connected` : 'No organizer events yet'}
       </div>
-      <button type="button" className="relative z-[1] inline-flex items-center justify-center gap-[7px] rounded-full border border-white/35 bg-white/18 text-white px-4 py-2 text-[11px] font-bold shadow-[inset_0_1px_0_rgba(255,255,255,.18)]" onClick={onWithdraw}>
+      <button type="button" className="relative z-[1] inline-flex items-center justify-center gap-[7px] rounded-full border border-white/35 bg-white/18 text-white px-4 py-2 text-xs font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,.18)]" onClick={onWithdraw}>
         <WalletCards className="h-3.5 w-3.5" />
         Withdraw
       </button>
@@ -136,7 +136,7 @@ export function EventSelector({
   const options = [allScope, ...scopes];
   return (
     <section className={`relative z-20 bg-white border-b border-[#E5E7EB] px-4 py-3 flex-shrink-0 ${isOpen ? 'border-b-transparent' : ''}`}>
-      <div className="text-[9px] font-semibold text-[#9CA3AF] tracking-[.1em] uppercase mb-[9px] flex items-center gap-[5px]">
+      <div className="text-2xs font-medium text-[#9CA3AF] tracking-[.1em] uppercase mb-[9px] flex items-center gap-[5px]">
         <Filter className="h-3 w-3" />
         Viewing analytics for
       </div>
@@ -144,12 +144,12 @@ export function EventSelector({
         <span className="flex items-center gap-[11px] min-w-0">
           <span className="w-[10px] h-[10px] rounded-full shadow-[0_0_0_2.5px_#fff,0_0_0_4px_currentColor] flex-shrink-0" style={{ background: selected.color, color: selected.color }} />
           <span className="min-w-0 text-left">
-            <span className="block text-[13px] font-semibold text-[#111827] truncate">{selected.name}</span>
-            <span className="block mt-0.5 text-[10px] font-medium text-[#6B7280] truncate">{selected.subtitle}</span>
+            <span className="block text-sm font-medium text-[#111827] truncate">{selected.name}</span>
+            <span className="block mt-0.5 text-2xs text-[#6B7280] truncate">{selected.subtitle}</span>
           </span>
         </span>
         <span className="flex items-center gap-[9px] flex-shrink-0">
-          <span className="text-[9px] font-semibold px-[10px] py-1 rounded-full whitespace-nowrap" style={{ color: selected.color, background: selected.softColor }}>
+          <span className="text-2xs font-medium px-[10px] py-1 rounded-full whitespace-nowrap" style={{ color: selected.color, background: selected.softColor }}>
             {selected.id === 'all' ? `${eventCount} events` : selected.statusLabel}
           </span>
           <span className={`w-[26px] h-[26px] rounded-full bg-[#F3F4F6] text-[#6B7280] flex items-center justify-center transition-transform duration-200 ${isOpen ? 'rotate-180 bg-[#EDE9FE] text-[#7C3AED]' : ''}`}>
@@ -169,11 +169,11 @@ export function EventSelector({
               {scope.id === 'all' ? <Home className="h-4 w-4" /> : scope.status === 'live' ? <PlayCircle className="h-4 w-4" /> : <Music className="h-4 w-4" />}
             </IconBubble>
             <span className="min-w-0 flex-1 text-left">
-              <span className="block text-[13px] font-semibold text-[#111827] truncate">{scope.name}</span>
-              <span className="block mt-0.5 text-[10px] font-medium text-[#6B7280] truncate">{scope.id === 'all' ? `Combined totals - ${eventCount} events` : scope.subtitle}</span>
+              <span className="block text-sm font-medium text-[#111827] truncate">{scope.name}</span>
+              <span className="block mt-0.5 text-2xs text-[#6B7280] truncate">{scope.id === 'all' ? `Combined totals - ${eventCount} events` : scope.subtitle}</span>
             </span>
             <span className="flex flex-col items-end gap-1 pl-1 flex-shrink-0">
-              <span className="text-[11px] font-semibold text-[#111827]">{formatMoneyShort(scope.revenue)}</span>
+              <span className="text-xs font-medium text-[#111827]">{formatMoneyShort(scope.revenue)}</span>
               <span className={statusClass(scope.status)}>{scope.id === 'all' ? 'All' : scope.statusLabel}</span>
             </span>
             {selected.id === scope.id ? <Check className="h-4 w-4 text-[#7C3AED]" /> : null}
@@ -201,12 +201,12 @@ export function MetricCard({
 }) {
   return (
     <button type="button" className="relative min-h-[104px] text-left bg-white border-[1.5px] border-[#E9EBF0] rounded-[16px] p-[15px] transition-transform duration-100" onClick={onClick}>
-      <div className="text-[10px] text-[#6B7280] font-bold flex items-center gap-[6px] mb-2">
+      <div className="text-2xs font-semibold text-[#6B7280] flex items-center gap-[6px] mb-2">
         <Icon className="h-3.5 w-3.5" style={{ color: iconColor }} />
         {label}
       </div>
-      <div className="text-[21px] font-bold text-[#111827] tracking-[-.5px] leading-[1] mb-[6px]">{value}</div>
-      <div className="text-[10px] font-semibold text-[#059669] flex items-center gap-1">
+      <div className="text-xl font-semibold text-[#111827] tracking-[-.5px] leading-[1] mb-[6px]">{value}</div>
+      <div className="text-2xs font-medium text-[#059669] flex items-center gap-1">
         <TrendingUp className="h-3 w-3" />
         {delta}
       </div>
@@ -220,7 +220,7 @@ export function RangeTabs({ value, onChange }: { value: string; onChange: (value
   return (
     <div className="flex bg-[#E5E7EB] rounded-full p-[3px] gap-0.5 mb-4">
       {ranges.map((range) => (
-        <button key={range} type="button" className={`flex-1 rounded-full py-[7px] text-[11px] font-semibold text-[#6B7280] text-center ${value === range ? 'bg-white text-[#7C3AED] shadow-[0_2px_8px_rgba(0,0,0,.1)]' : ''}`} onClick={() => onChange(range)}>
+        <button key={range} type="button" className={`flex-1 rounded-full py-[7px] text-xs font-medium text-[#6B7280] text-center ${value === range ? 'bg-white text-[#7C3AED] shadow-[0_2px_8px_rgba(0,0,0,.1)]' : ''}`} onClick={() => onChange(range)}>
           {range}
         </button>
       ))}
@@ -238,7 +238,7 @@ export function RevenueChart({ scope }: { scope: DashboardScope }) {
   const max = Math.max(...visibleRows.map(([, value]) => value), 1);
   return (
     <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px]">
-      <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
+      <div className="text-sm font-medium text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
         <span className="flex items-center gap-2 min-w-0">
           <TrendingUp className="h-4 w-4 text-gray-500" />
           Revenue summary
@@ -247,15 +247,15 @@ export function RevenueChart({ scope }: { scope: DashboardScope }) {
       {visibleRows.length ? (
         visibleRows.map(([label, value, color]) => (
           <div className="grid grid-cols-[minmax(92px,1fr)_minmax(84px,1.2fr)_auto] items-center gap-[10px] mb-[11px] last:mb-0" key={label}>
-            <span className="text-[11px] text-[#6B7280] font-semibold min-w-0">{label}</span>
+            <span className="text-xs font-medium text-[#6B7280] min-w-0">{label}</span>
             <b className="h-[7px] bg-[#F3F4F6] rounded-full overflow-hidden">
               <i style={{ width: `${Math.round((value / max) * 100)}%`, background: color }} className="block h-full rounded-full" />
             </b>
-            <strong className="text-[11px] font-bold text-[#111827] whitespace-nowrap">{formatMoney(value)}</strong>
+            <strong className="text-xs font-semibold text-[#111827] whitespace-nowrap">{formatMoney(value)}</strong>
           </div>
         ))
       ) : (
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-[12px] font-semibold">Revenue history will appear after ticket payments are recorded.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Revenue history will appear after ticket payments are recorded.</div>
       )}
     </div>
   );
@@ -264,12 +264,12 @@ export function RevenueChart({ scope }: { scope: DashboardScope }) {
 export function TierRows({ scope }: { scope: DashboardScope }) {
   return (
     <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px]">
-      <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
+      <div className="text-sm font-medium text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
         <span className="flex items-center gap-2 min-w-0">
           <Ticket className="h-4 w-4 text-gray-500" />
           Sales by tier
         </span>
-        <small className="text-[10px] font-semibold text-[#6B7280]">{formatNumber(scope.tickets)} total</small>
+        <small className="text-2xs font-medium text-[#6B7280]">{formatNumber(scope.tickets)} total</small>
       </div>
       {scope.tiers.length ? (
         scope.tiers.map((tier) => {
@@ -277,17 +277,17 @@ export function TierRows({ scope }: { scope: DashboardScope }) {
           return (
             <div className="flex items-center gap-[10px] mb-[11px] last:mb-0" key={tier.name}>
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: tier.color }} />
-              <span className="text-[11px] text-[#111827] font-semibold flex-1 min-w-0 truncate">{tier.name}</span>
+              <span className="text-xs font-medium text-[#111827] flex-1 min-w-0 truncate">{tier.name}</span>
               <span className="w-16 h-[5px] bg-[#F3F4F6] rounded-full overflow-hidden flex-shrink-0">
                 <span style={{ width: `${percent}%`, background: tier.color }} className="block h-full rounded-full" />
               </span>
-              <strong className="text-[11px] font-bold text-[#111827] min-w-[30px] text-right">{formatNumber(tier.tickets)}</strong>
-              <em className="text-[10px] text-[#6B7280] min-w-[28px] text-right not-italic">{percent}%</em>
+              <strong className="text-xs font-semibold text-[#111827] min-w-[30px] text-right">{formatNumber(tier.tickets)}</strong>
+              <em className="text-2xs text-[#6B7280] min-w-[28px] text-right not-italic">{percent}%</em>
             </div>
           );
         })
       ) : (
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-[12px] font-semibold">Ticket tier sales will appear after tickets are sold.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Ticket tier sales will appear after tickets are sold.</div>
       )}
     </div>
   );
@@ -303,7 +303,7 @@ export function FunnelCard({ scope }: { scope: DashboardScope }) {
   const max = Math.max(...visibleRows.map(([, value]) => value), 1);
   return (
     <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px]">
-      <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
+      <div className="text-sm font-medium text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
         <span className="flex items-center gap-2 min-w-0">
           <Filter className="h-4 w-4 text-gray-500" />
           Conversion funnel
@@ -312,15 +312,15 @@ export function FunnelCard({ scope }: { scope: DashboardScope }) {
       {visibleRows.length ? (
         visibleRows.map(([label, value]) => (
           <div className="flex items-center gap-[10px] mb-[10px] last:mb-0" key={label}>
-            <span className="text-[10px] text-[#6B7280] font-semibold min-w-[98px]">{label}</span>
+            <span className="text-2xs font-medium text-[#6B7280] min-w-[98px]">{label}</span>
             <b className="h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden flex-1">
               <i style={{ width: `${Math.round((value / max) * 100)}%` }} className="block h-full rounded-full bg-[#7C3AED]" />
             </b>
-            <strong className="text-[10px] font-bold text-[#111827] min-w-[38px] text-right">{formatNumber(value)}</strong>
+            <strong className="text-2xs font-semibold text-[#111827] min-w-[38px] text-right">{formatNumber(value)}</strong>
           </div>
         ))
       ) : (
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-[12px] font-semibold">Conversion data is not available yet.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Conversion data is not available yet.</div>
       )}
     </div>
   );
@@ -330,7 +330,7 @@ export function CheckInFeed({ scans }: { scans: DashboardScan[] }) {
   const visibleScans = scans.slice(0, 8);
   return (
     <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px]">
-      <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
+      <div className="text-sm font-medium text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
         <span className="flex items-center gap-2 min-w-0">
           <Radio className="h-4 w-4 text-gray-500" />
           Recent scan feed
@@ -341,15 +341,15 @@ export function CheckInFeed({ scans }: { scans: DashboardScan[] }) {
           <div className="flex items-center gap-[10px] py-[10px] border-b border-[#F4F5F7] last:border-b-0 last:pb-0" key={scan.id}>
             <span className="w-[34px] h-[34px] rounded-full bg-[#F3F4F6] flex items-center justify-center text-[10px] font-bold text-[#374151] flex-shrink-0">{getInitials(scan.customer_name || 'Guest')}</span>
             <div className="flex-1 min-w-0">
-              <strong className="block text-[12px] font-bold text-[#111827]">{scan.customer_name || 'Guest'}</strong>
-              <small className="block mt-0.5 text-[9px] text-[#9CA3AF]">{scan.ticket_type || 'Ticket'}</small>
+              <strong className="block text-xs font-semibold text-[#111827]">{scan.customer_name || 'Guest'}</strong>
+              <small className="block mt-0.5 text-2xs text-[#9CA3AF]">{scan.ticket_type || 'Ticket'}</small>
             </div>
-            <em className="text-[9px] text-[#9CA3AF] not-italic ml-auto">{scan.scanned_at ? new Date(scan.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</em>
+            <em className="text-2xs text-[#9CA3AF] not-italic ml-auto">{scan.scanned_at ? new Date(scan.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</em>
             <Check className="h-4 w-4 text-emerald-600" />
           </div>
         ))
       ) : (
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-[12px] font-semibold">Recent scans will appear after QR check-ins.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Recent scans will appear after QR check-ins.</div>
       )}
     </div>
   );
@@ -366,7 +366,7 @@ export function BottomNav({ active, onGo }: { active: ScreenId; onGo: (screen: S
   return (
     <nav className="bg-white border-t border-[#E5E7EB] flex pt-[10px] pb-[calc(15px+var(--eventz-safe-area-bottom))] flex-shrink-0">
       {items.map(([screen, label, Icon]) => (
-        <button key={screen} type="button" className={`flex-1 flex flex-col items-center gap-[0.125rem] text-[#6B7280] text-[0.8125rem] font-medium ${active === screen ? 'text-[#7C3AED]' : ''}`} onClick={() => onGo(screen)}>
+        <button key={screen} type="button" className={`flex-1 flex flex-col items-center gap-[0.125rem] text-[#6B7280] text-xs font-medium ${active === screen ? 'text-[#7C3AED]' : ''}`} onClick={() => onGo(screen)}>
           <Icon className="h-[22px] w-[22px]" />
           <i className={`w-1 h-1 rounded-full bg-[#7C3AED] ${active === screen ? '' : 'opacity-0'}`} />
           <span>{label}</span>
@@ -407,9 +407,9 @@ export function DashboardMenu({ onClose, onNav }: { onClose: () => void; onNav: 
 export function StatBox({ label, value, note, muted = false }: { label: string; value: string; note: string; muted?: boolean }) {
   return (
     <div className="bg-[#FAFAFA] border border-[#E9EBF0] rounded-[14px] p-[14px]">
-      <span className="block text-[10px] text-[#6B7280] font-semibold mb-[6px]">{label}</span>
-      <strong className="block text-[20px] font-bold text-[#111827] tracking-[-.3px] leading-[1.1]">{value}</strong>
-      <em className={`block mt-[5px] text-[10px] font-semibold text-[#059669] not-italic ${muted ? 'text-[#9CA3AF]' : ''}`}>{note}</em>
+      <span className="block text-2xs font-medium text-[#6B7280] mb-[6px]">{label}</span>
+      <strong className="block text-xl font-semibold text-[#111827] tracking-[-.3px] leading-[1.1]">{value}</strong>
+      <em className={`block mt-[5px] text-2xs font-medium text-[#059669] not-italic ${muted ? 'text-[#9CA3AF]' : ''}`}>{note}</em>
     </div>
   );
 }
@@ -417,11 +417,11 @@ export function StatBox({ label, value, note, muted = false }: { label: string; 
 export function InfoRow({ icon: Icon, label, value }: { icon: IconType; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-[10px] py-[10px] border-b border-[#F4F5F7] last:border-b-0 last:pb-0">
-      <span className="flex items-center gap-[7px] text-[11px] text-[#6B7280] font-semibold min-w-0">
+      <span className="flex items-center gap-[7px] text-xs font-medium text-[#6B7280] min-w-0">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </span>
-      <strong className="text-[12px] font-bold text-[#111827] whitespace-nowrap">{value}</strong>
+      <strong className="text-xs font-semibold text-[#111827] whitespace-nowrap">{value}</strong>
     </div>
   );
 }
@@ -431,25 +431,25 @@ export function GiftList({ gifts }: { gifts: DashboardTransaction[] }) {
   if (!gifts.length) {
     return (
       <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px]">
-        <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
+        <div className="text-sm font-medium text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
           <span className="flex items-center gap-2 min-w-0">
             <Gift className="h-4 w-4 text-amber-600" />
             Fan gifts
           </span>
-          <span className="text-[10px] font-bold text-[#059669] bg-[#D1FAE5] px-[10px] py-1 rounded-full">TZS 0 total</span>
+          <span className="text-2xs font-semibold text-[#059669] bg-[#D1FAE5] px-[10px] py-1 rounded-full">TZS 0 total</span>
         </div>
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-[12px] font-semibold">No gifts received yet.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">No gifts received yet.</div>
       </div>
     );
   }
   return (
     <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px]">
-      <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
+      <div className="text-sm font-medium text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
         <span className="flex items-center gap-2 min-w-0">
           <Gift className="h-4 w-4 text-amber-600" />
           Fan gifts
         </span>
-        <span className="text-[10px] font-bold text-[#059669] bg-[#D1FAE5] px-[10px] py-1 rounded-full">{formatMoney(total)} total</span>
+        <span className="text-2xs font-semibold text-[#059669] bg-[#D1FAE5] px-[10px] py-1 rounded-full">{formatMoney(total)} total</span>
       </div>
       {gifts.map((gift) => {
         const senderName = gift.metadata?.senderName || gift.metadata?.sender_name || gift.metadata?.senderUsername || 'Fan';
@@ -457,10 +457,10 @@ export function GiftList({ gifts }: { gifts: DashboardTransaction[] }) {
         <div className="flex items-center gap-[10px] py-[10px] border-b border-[#F4F5F7] last:border-b-0 last:pb-0" key={gift.id}>
           <span className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#EDE9FE] to-[#DDD6FE] flex items-center justify-center text-[10px] font-bold text-[#6D28D9] flex-shrink-0">{getInitials(senderName)}</span>
           <div className="flex-1 min-w-0">
-            <strong className="block text-[12px] font-bold text-[#111827]">{senderName}</strong>
-            <small className="block mt-0.5 text-[9px] text-[#9CA3AF]">{formatTransactionTime(gift.created_at) || 'Gift received'}</small>
+            <strong className="block text-xs font-semibold text-[#111827]">{senderName}</strong>
+            <small className="block mt-0.5 text-2xs text-[#9CA3AF]">{formatTransactionTime(gift.created_at) || 'Gift received'}</small>
           </div>
-          <em className="text-[13px] font-bold text-[#059669] not-italic">{formatMoney(transactionAmount(gift))}</em>
+          <em className="text-sm font-semibold text-[#059669] not-italic">{formatMoney(transactionAmount(gift))}</em>
         </div>
         );
       })}
@@ -476,13 +476,13 @@ export function EventRow({ scope, onClick }: { scope: DashboardScope; onClick: (
         <Icon className="h-4 w-4" />
       </IconBubble>
       <span className="min-w-0 flex-1 text-left">
-        <span className="block text-[13px] font-bold text-[#111827] truncate">{scope.name}</span>
-        <span className="block mt-[3px] text-[10px] text-[#6B7280] truncate">
+        <span className="block text-sm font-semibold text-[#111827] truncate">{scope.name}</span>
+        <span className="block mt-[3px] text-2xs text-[#6B7280] truncate">
           {scope.subtitle} - {formatNumber(scope.tickets)} tickets
         </span>
       </span>
       <span className="flex flex-col items-end gap-1 flex-shrink-0">
-        <strong className="text-[13px] font-bold text-[#111827]">{formatMoneyShort(scope.revenue)}</strong>
+        <strong className="text-sm font-semibold text-[#111827]">{formatMoneyShort(scope.revenue)}</strong>
         <span className={statusClass(scope.status)}>{scope.statusLabel}</span>
       </span>
     </button>
@@ -490,7 +490,7 @@ export function EventRow({ scope, onClick }: { scope: DashboardScope; onClick: (
 }
 
 export function EmptyCard({ children }: { children: ReactNode }) {
-  return <div className="border border-dashed border-[#D1D5DB] bg-white rounded-[16px] p-7 text-center text-[#6B7280] text-[13px] font-bold">{children}</div>;
+  return <div className="border border-dashed border-[#D1D5DB] bg-white rounded-[16px] p-7 text-center text-sm font-medium text-[#6B7280]">{children}</div>;
 }
 
 export function DashboardLoading() {

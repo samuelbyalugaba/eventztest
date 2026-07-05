@@ -38,10 +38,10 @@ export function NotifyScreen({ scope, onBack, onGo, onScan }: { scope: Dashboard
         onBack={onBack}
         right={
           <div className="flex items-center gap-2">
-            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={onScan} aria-label="Scan ticket">
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={onScan} aria-label="Scan ticket">
               <QrCode className="h-4 w-4" />
             </button>
-            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={() => setMenuOpen(true)} aria-label="Menu">
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={() => setMenuOpen(true)} aria-label="Menu">
               <Menu className="h-4 w-4" />
             </button>
           </div>
@@ -53,7 +53,7 @@ export function NotifyScreen({ scope, onBack, onGo, onScan }: { scope: Dashboard
       <div className="flex-1 overflow-y-auto [scrollbar-width:none]">
         <div className="px-4 pt-[14px] pb-[calc(86px+var(--eventz-safe-area-bottom))]">
           <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px] mt-1">
-            <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
+            <div className="text-sm font-medium text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
               <span>
                 <Users className="h-4 w-4 text-gray-500" />
                 Choose audience
@@ -72,40 +72,40 @@ export function NotifyScreen({ scope, onBack, onGo, onScan }: { scope: Dashboard
                         ? 'bg-[#7C3AED] border-[#7C3AED] shadow-[inset_0_0_0_4px_#fff]'
                         : 'border-[#D1D5DB]'
                     }`} />
-                    <b className="block text-[11px] font-bold text-[#111827]">{name}</b>
-                    <small className="block mt-0.5 text-[10px] text-[#6B7280]">{formatNumber(count)} people</small>
+                    <b className="block text-xs font-medium text-[#111827]">{name}</b>
+                    <small className="block mt-0.5 text-2xs text-[#6B7280]">{formatNumber(count)} people</small>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-[12px] font-semibold">Audiences will appear after tickets, viewers, or followers are recorded.</div>
+              <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Audiences will appear after tickets, viewers, or followers are recorded.</div>
             )}
           </div>
           <div className="bg-white border border-[#E9EBF0] rounded-[18px] p-[17px] mb-[13px]">
-            <div className="text-[13px] font-semibold text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
+            <div className="text-sm font-medium text-[#111827] flex items-center justify-between gap-[10px] mb-[15px]">
               <span>
                 <MessageCircle className="h-4 w-4 text-gray-500" />
                 Write message
               </span>
             </div>
             <textarea
-              className="w-full min-h-[82px] resize-none border-[1.5px] border-[#E9EBF0] bg-[#FAFAFA] rounded-xl p-[13px] font-inherit text-[12px] text-[#111827] leading-[1.6] outline-none focus:bg-white focus:border-[#A78BFA]"
+              className="w-full min-h-[82px] resize-none border-[1.5px] border-[#E9EBF0] bg-[#FAFAFA] rounded-xl p-[13px] font-inherit text-xs text-[#111827] leading-[1.6] outline-none focus:bg-white focus:border-[#A78BFA]"
               placeholder="Write a short update for the selected audience."
               maxLength={160}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
             />
             <div className="flex items-center justify-between mt-[9px] gap-[10px]">
-              <span className="text-[10px] text-[#9CA3AF] font-semibold">{160 - message.length} characters left</span>
-              <span className="flex items-center gap-[7px] text-[#6B7280] text-[11px]"><i className="w-[34px] h-[19px] rounded-full bg-[#7C3AED] relative inline-block after:content-[''] after:absolute after:right-[2px] after:top-[2px] after:w-[15px] after:h-[15px] after:rounded-full after:bg-white" />Push notification</span>
+              <span className="text-2xs text-[#9CA3AF] font-medium">{160 - message.length} characters left</span>
+              <span className="flex items-center gap-[7px] text-[#6B7280] text-xs"><i className="w-[34px] h-[19px] rounded-full bg-[#7C3AED] relative inline-block after:content-[''] after:absolute after:right-[2px] after:top-[2px] after:w-[15px] after:h-[15px] after:rounded-full after:bg-white" />Push notification</span>
             </div>
-            <div className="mt-[11px] rounded-xl bg-[#EDE9FE] border border-[#DDD6FE] px-[14px] py-3 flex items-start gap-[10px] text-[#5B21B6] text-[11px] font-bold leading-[1.6]">
+            <div className="mt-[11px] rounded-xl bg-[#EDE9FE] border border-[#DDD6FE] px-[14px] py-3 flex items-start gap-[10px] text-[#5B21B6] text-xs font-medium leading-[1.6]">
               <Info className="h-4 w-4" />
               <span>{message.trim() || 'Your message preview will appear here as you type.'}</span>
             </div>
             <button
               type="button"
-              className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-[13px] font-bold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed"
+              className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed"
               disabled={!audience || !message.trim()}
               onClick={() => toast.success(`Notification queued for ${audience}`)}
             >

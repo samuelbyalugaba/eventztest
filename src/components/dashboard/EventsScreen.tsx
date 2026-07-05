@@ -15,14 +15,14 @@ export function EventsScreen({ scopes, onGo, onNew, onScan, onBack }: { scopes: 
         onBack={onBack}
         right={
           <div className="flex items-center gap-2">
-            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0" onClick={onNew}>
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0" onClick={onNew}>
               <Plus className="h-3.5 w-3.5" />
               New event
             </button>
-            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={onScan} aria-label="Scan ticket">
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={onScan} aria-label="Scan ticket">
               <QrCode className="h-4 w-4" />
             </button>
-            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-[10.5px] font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={() => setEventsMenuOpen(true)} aria-label="Menu">
+            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={() => setEventsMenuOpen(true)} aria-label="Menu">
               <Menu className="h-4 w-4" />
             </button>
           </div>
