@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
 import { formatPrice } from '../utils/currencies';
 import { formatDateDMY } from '../utils/format';
-import { renderTicketToCanvas } from '../utils/ticketCanvasRenderer';
+import { toBlob } from 'html-to-image';
 
 interface TicketEvent {
   id: number;
@@ -42,10 +42,12 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
   }, [onClose]);
 
   const handleDownload = async () => {
-    const toastId = toast.loading('Generating ticket image...');
+    if (!ticketRef.current) return;
+    const toastId = toast.loading('Taking screenshot...');
     
     try {
-      const blob = await renderTicketToCanvas(ticket);
+      const blob = await toBlob(ticketRef.current, { quality: 1, pixelRatio: 2, skipFonts: true });
+      if (!blob) throw new Error('Failed to capture');
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = `Eventz-Ticket-${ticket.id}.png`;
@@ -54,28 +56,28 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
       URL.revokeObjectURL(url);
       
       toast.dismiss(toastId);
-      toast.success('Ticket downloaded', {
-        description: 'Your ticket has been saved to your device',
+      toast.success('Ticket saved', {
+        description: 'Screenshot saved to your device',
         duration: 2000,
       });
-    } catch (err) {
+    } catch {
       toast.dismiss(toastId);
-      toast.error('Failed to download ticket');
+      toast.error('Failed to take screenshot');
     }
   };
 
   const handleShare = async () => {
+    if (!ticketRef.current) return;
     try {
       if (navigator.share) {
         const toastId = toast.loading('Preparing to share...');
-        const blob = await renderTicketToCanvas(ticket);
-        const file = new File([blob], `ticket-${ticket.id}.png`, { type: 'image/png' });
+        const blob = await toBlob(ticketRef.current, { quality: 1, pixelRatio: 2, skipFonts: true });
         
         toast.dismiss(toastId);
         
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], `ticket-${ticket.id}.png`, { type: 'image/png' })] })) {
           await navigator.share({
-            files: [file],
+            files: [new File([blob], `ticket-${ticket.id}.png`, { type: 'image/png' })],
             title: `Ticket: ${ticket.name}`,
             text: `Here is my ticket for ${ticket.name}!`,
           });
@@ -89,7 +91,6 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
           toast.success('Shared successfully');
         }
       } else {
-        // Fallback to clipboard
         await navigator.clipboard.writeText(`${window.location.origin}`);
         toast.success('Link copied to clipboard', {
           description: 'Share your ticket link with friends',
@@ -250,7 +251,7 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white text-purple-900 rounded-xl font-semibold hover:bg-white/90 transition-all"
             >
               <Download className="w-5 h-5" />
-              Download
+              Screenshot
             </button>
             <button
               onClick={handleShare}

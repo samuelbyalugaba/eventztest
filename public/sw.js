@@ -9,10 +9,12 @@ const STATIC_CACHE_URLS = [
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
+  '/icons/icon-192x192.webp',
+  '/icons/icon-512x512.webp',
 ];
 
 const isCacheableResponse = (response) => {
-  return !!response && (response.ok || response.type === 'opaque');
+  return !!response && response.ok;
 };
 
 const isSameOriginRequest = (url) => url.origin === self.location.origin;
@@ -78,6 +80,9 @@ self.addEventListener('fetch', (event) => {
     self.location.hostname === '::1';
 
   if (isLocalDevelopment) return;
+
+  // Bypass SW for Supabase storage — browser handles CORS natively
+  if (isSupabaseStorageRequest(url)) return;
 
   const isSameOrigin = isSameOriginRequest(url);
   const isRemoteImage = isSupabaseStorageRequest(url) || isWsrvRequest(url);
