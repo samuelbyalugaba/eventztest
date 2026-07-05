@@ -618,6 +618,8 @@ function DashboardHome({
   onRange,
   onGo,
   onWithdraw,
+  fetchError,
+  onRetry,
 }: {
   selected: DashboardScope;
   eventCount: number;
@@ -627,12 +629,29 @@ function DashboardHome({
   onRange: (value: string) => void;
   onGo: (screen: ScreenId) => void;
   onWithdraw: () => void;
+  fetchError?: null | 'partial' | 'full';
+  onRetry?: () => void;
 }) {
   return (
     <div className="dash-scroll">
       <div className="dash-pad">
         <WalletCard eventCount={eventCount} balance={walletBalance} onWithdraw={onWithdraw} />
         <RangeTabs value={range} onChange={onRange} />
+
+        {fetchError ? (
+          <div className="dash-error-banner" role="alert">
+            <span>
+              {fetchError === 'full'
+                ? 'Could not refresh dashboard data.'
+                : 'Some numbers may be out of date.'}
+            </span>
+            {onRetry ? (
+              <button type="button" className="dash-retry-btn" onClick={onRetry}>
+                Retry
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         <SectionTitle>Overview - {selected.id === 'all' ? 'all events' : selected.name}</SectionTitle>
         <div className="dash-kgrid">
@@ -643,6 +662,7 @@ function DashboardHome({
           <MetricCard icon={Users} iconColor="#7C3AED" label="Followers" value={formatNumber(selected.followers)} delta="From followers table" />
           <MetricCard icon={Globe2} iconColor="#0891B2" label="Virtual tickets" value={formatNumber(selected.virtualTickets)} delta="From event stream settings" />
         </div>
+
 
         <SectionTitle>Revenue chart</SectionTitle>
         <RevenueChart scope={selected} />
