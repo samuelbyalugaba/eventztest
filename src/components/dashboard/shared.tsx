@@ -1,4 +1,4 @@
-import { type ReactNode, type CSSProperties, type ComponentType } from 'react';
+import { type ReactNode } from 'react';
 import {
   Bell,
   Calendar,
@@ -6,22 +6,15 @@ import {
   ChevronDown,
   ChevronRight,
   CreditCard,
-  Eye,
   Filter,
   Gift,
-  Globe2,
   Home,
-  Info,
-  Lock,
-  Menu,
-  MessageCircle,
   Mic,
   Music,
   PlayCircle,
   Radio,
   Ticket,
   TrendingUp,
-  Users,
   WalletCards,
 } from 'lucide-react';
 import { BackButton } from '../ui/BackButton';
@@ -37,7 +30,6 @@ import {
   formatNumber,
   formatMoney,
   formatMoneyShort,
-  formatShort,
   formatTransactionTime,
   getInitials,
   statusClass,
