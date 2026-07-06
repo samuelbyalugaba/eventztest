@@ -166,19 +166,21 @@ export function useProfileData(userId?: string, activeTab?: string) {
     staleTime: PROFILE_CACHE_TTL_MS,
   });
 
+  // A disabled react-query stays `isPending: true` forever; treat `fetchStatus === 'idle'`
+  // (i.e. not actually fetching) as "ready" so gated stats don't get stuck on placeholders.
   const publishedEvents = organizerEventsQuery.data ?? [];
-  const isLoadingOrganizerEvents = organizerEventsQuery.isPending;
+  const isLoadingOrganizerEvents = organizerEventsQuery.isPending && organizerEventsQuery.fetchStatus !== 'idle';
 
   const savedEvents = savedEventsQuery.data ?? [];
-  const isLoadingSavedEvents = savedEventsQuery.isPending;
+  const isLoadingSavedEvents = savedEventsQuery.isPending && savedEventsQuery.fetchStatus !== 'idle';
 
   const savedPosts = savedPostsQuery.data ?? [];
 
   const ticketEvents = ticketsQuery.data ?? [];
-  const isLoadingTickets = ticketsQuery.isPending;
+  const isLoadingTickets = ticketsQuery.isPending && ticketsQuery.fetchStatus !== 'idle';
 
   const streamedVideos = streamedVideosQuery.data ?? [];
-  const isLoadingStreamedVideos = streamedVideosQuery.isPending;
+  const isLoadingStreamedVideos = streamedVideosQuery.isPending && streamedVideosQuery.fetchStatus !== 'idle';
 
   const attendedEvents = useMemo(() => {
     if (!ticketEvents.length) return [];
