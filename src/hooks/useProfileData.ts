@@ -39,7 +39,6 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const targetUserId = userId || currentUser?.id;
   const viewerId = authUser?.id || null;
   const isOwnProfile = !userId || (userId === authUser?.id);
-  const isOrganizer = cachedProfile?.is_organizer || false;
 
   useEffect(() => {
     setCurrentUser(authUser ?? null);
