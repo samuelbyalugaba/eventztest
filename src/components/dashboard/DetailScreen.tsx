@@ -1,6 +1,6 @@
 import { CreditCard } from 'lucide-react';
 import { type DashboardScope, type DashboardTransaction, type ScreenId } from './types';
-import { formatMoneyShort, formatNumber, transactionAmount } from './utils';
+import { formatMoneyShort, formatNumber } from './utils';
 import { BackTopBar, SectionTitle, StatBox, GiftList, TierRows } from './shared';
 
 export function DetailScreen({
@@ -19,8 +19,6 @@ export function DetailScreen({
   onGo: (screen: ScreenId) => void;
 }) {
   if (type === 'gifts') {
-    const totalGifts = giftTransactions.reduce((sum, transaction) => sum + transactionAmount(transaction), 0);
-    const averageGift = giftTransactions.length ? Math.round(totalGifts / giftTransactions.length) : 0;
     return (
       <>
         <BackTopBar title="Gifts received" onBack={onBack} />
