@@ -230,31 +230,48 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   );
   const computedHostedCount = pastHostedEvents.length + additionalHostedStreams.length;
 
-  // Persist hosted/attended counts only for the OWN profile so we don't leak
-  // one user's counts into another user's view on the next visit.
+  // Per-user persistent cache — hydrates any profile instantly with the last-seen numbers.
   const cachedHostedCount = useProfileStore((s) => s.hostedCount);
   const cachedAttendedCount = useProfileStore((s) => s.attendedCount);
+  const perUserSnapshot = useProfileStore((s) => (userId ? s.userStatsCache[userId] : null));
   const hostedDataReady = !isLoadingOrganizerEvents && !isLoadingStreamedVideos;
   const attendedDataReady = !isLoadingTickets;
-  // For other users, never fall back to the persisted counts of the previous profile.
+  const followsReady = !isLoading;
+
+  // Always render numbers — never "-". Prefer live data, then per-user cache, then own-profile cache, then 0.
   const hostedCount = hostedDataReady
     ? computedHostedCount
-    : (isOwnProfile ? cachedHostedCount : 0);
+    : (isOwnProfile ? cachedHostedCount : (perUserSnapshot?.hosted ?? 0));
   const attendedCount = attendedDataReady
     ? attendedEvents.length
-    : (isOwnProfile ? cachedAttendedCount : 0);
+    : (isOwnProfile ? cachedAttendedCount : (perUserSnapshot?.attended ?? 0));
+  const displayFollowers = followsReady ? followStats.followers : (perUserSnapshot?.followers ?? followStats.followers);
+  const displayFollowing = followsReady ? followStats.following : (perUserSnapshot?.following ?? followStats.following);
 
-  // Unified readiness for the stats row — wait for every stat source so numbers
-  // don't pop in one-by-one and look like a bug.
-  const statsReady = !isLoading && hostedDataReady && attendedDataReady;
+  // Stats row is always ready — instant hydration from cache, live values update in place.
+  const statsReady = true;
 
-  // Save computed counts to persisted store for next visit — own profile only.
+  // Persist own-profile counts for legacy consumers.
   useEffect(() => {
     if (isOwnProfile && hostedDataReady) useProfileStore.getState().setHostedCount(computedHostedCount);
   }, [computedHostedCount, hostedDataReady, isOwnProfile]);
   useEffect(() => {
     if (isOwnProfile && attendedDataReady) useProfileStore.getState().setAttendedCount(attendedEvents.length);
   }, [attendedEvents.length, attendedDataReady, isOwnProfile]);
+
+  // Write per-user snapshot whenever fresh data arrives, so next visit is instant.
+  useEffect(() => {
+    if (!userId) return;
+    const patch: any = {};
+    if (hostedDataReady) patch.hosted = computedHostedCount;
+    if (attendedDataReady) patch.attended = attendedEvents.length;
+    if (followsReady) {
+      patch.followers = followStats.followers;
+      patch.following = followStats.following;
+    }
+    if (Object.keys(patch).length) useProfileStore.getState().setUserStats(userId, patch);
+  }, [userId, hostedDataReady, attendedDataReady, followsReady, computedHostedCount, attendedEvents.length, followStats.followers, followStats.following]);
+
   const profileSubpagePath = (section: 'hosted' | 'followers' | 'following') => (
     userId ? `/profile/${userId}/${section}` : `/${section}`
   );
