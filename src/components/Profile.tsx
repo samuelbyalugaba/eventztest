@@ -230,20 +230,31 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   );
   const computedHostedCount = pastHostedEvents.length + additionalHostedStreams.length;
 
-  // Persist hosted/attended counts to the store so they survive page reloads
+  // Persist hosted/attended counts only for the OWN profile so we don't leak
+  // one user's counts into another user's view on the next visit.
   const cachedHostedCount = useProfileStore((s) => s.hostedCount);
   const cachedAttendedCount = useProfileStore((s) => s.attendedCount);
   const hostedDataReady = !isLoadingOrganizerEvents && !isLoadingStreamedVideos;
-  const hostedCount = hostedDataReady ? computedHostedCount : cachedHostedCount;
-  const attendedCount = !isLoadingTickets ? attendedEvents.length : cachedAttendedCount;
+  const attendedDataReady = !isLoadingTickets;
+  // For other users, never fall back to the persisted counts of the previous profile.
+  const hostedCount = hostedDataReady
+    ? computedHostedCount
+    : (isOwnProfile ? cachedHostedCount : 0);
+  const attendedCount = attendedDataReady
+    ? attendedEvents.length
+    : (isOwnProfile ? cachedAttendedCount : 0);
 
-  // Save computed counts to persisted store for next visit
+  // Unified readiness for the stats row — wait for every stat source so numbers
+  // don't pop in one-by-one and look like a bug.
+  const statsReady = !isLoading && hostedDataReady && attendedDataReady;
+
+  // Save computed counts to persisted store for next visit — own profile only.
   useEffect(() => {
-    if (hostedDataReady) useProfileStore.getState().setHostedCount(computedHostedCount);
-  }, [computedHostedCount, hostedDataReady]);
+    if (isOwnProfile && hostedDataReady) useProfileStore.getState().setHostedCount(computedHostedCount);
+  }, [computedHostedCount, hostedDataReady, isOwnProfile]);
   useEffect(() => {
-    if (!isLoadingTickets) useProfileStore.getState().setAttendedCount(attendedEvents.length);
-  }, [attendedEvents.length, isLoadingTickets]);
+    if (isOwnProfile && attendedDataReady) useProfileStore.getState().setAttendedCount(attendedEvents.length);
+  }, [attendedEvents.length, attendedDataReady, isOwnProfile]);
   const profileSubpagePath = (section: 'hosted' | 'followers' | 'following') => (
     userId ? `/profile/${userId}/${section}` : `/${section}`
   );
@@ -381,7 +392,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         attendedCount={attendedCount}
         followers={followStats.followers}
         following={followStats.following}
-        dataReady={!isLoading}
+        dataReady={statsReady}
         onHostedClick={() => {
           if (isOrganizer) {
             navigate(profileSubpagePath('hosted'), { state: hostedRouteState });

@@ -39,7 +39,6 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const targetUserId = userId || currentUser?.id;
   const viewerId = authUser?.id || null;
   const isOwnProfile = !userId || (userId === authUser?.id);
-  const isOrganizer = cachedProfile?.is_organizer || false;
 
   useEffect(() => {
     setCurrentUser(authUser ?? null);
@@ -91,6 +90,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const followStats = profileQuery.data?.followStats ?? { followers: 0, following: 0 };
   const isFollowing = profileQuery.data?.isFollowing ?? false;
   const organizerStats = profileQuery.data?.organizerStats ?? null;
+  const isOrganizer = !!userProfile?.is_organizer;
 
   /* Posts grid — infinite query */
   const postsQuery = useInfiniteQuery({
