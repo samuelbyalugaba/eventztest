@@ -407,8 +407,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         isOrganizer={isOrganizer}
         hostedCount={hostedCount}
         attendedCount={attendedCount}
-        followers={followStats.followers}
-        following={followStats.following}
+        followers={displayFollowers}
+        following={displayFollowing}
         dataReady={statsReady}
         onHostedClick={() => {
           if (isOrganizer) {
