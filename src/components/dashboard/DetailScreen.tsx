@@ -20,7 +20,7 @@ export function DetailScreen({
 }) {
   if (type === 'gifts') {
     const totalGifts = giftTransactions.reduce((sum, transaction) => sum + transactionAmount(transaction), 0);
-    const averageGift = giftTransactions.length ? Math.round(totalGifts / giftTransactions.length) : 0;
+    void totalGifts;
     return (
       <>
         <BackTopBar title="Gifts received" onBack={onBack} />
