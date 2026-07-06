@@ -90,6 +90,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const followStats = profileQuery.data?.followStats ?? { followers: 0, following: 0 };
   const isFollowing = profileQuery.data?.isFollowing ?? false;
   const organizerStats = profileQuery.data?.organizerStats ?? null;
+  const isOrganizer = !!userProfile?.is_organizer;
 
   /* Posts grid — infinite query */
   const postsQuery = useInfiniteQuery({
