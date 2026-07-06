@@ -1,6 +1,6 @@
 import { CreditCard } from 'lucide-react';
 import { type DashboardScope, type DashboardTransaction, type ScreenId } from './types';
-import { formatMoneyShort, formatNumber, transactionAmount } from './utils';
+import { formatMoneyShort, formatNumber } from './utils';
 import { BackTopBar, SectionTitle, StatBox, GiftList, TierRows } from './shared';
 
 export function DetailScreen({
