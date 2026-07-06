@@ -392,7 +392,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         attendedCount={attendedCount}
         followers={followStats.followers}
         following={followStats.following}
-        dataReady={!isLoading}
+        dataReady={statsReady}
         onHostedClick={() => {
           if (isOrganizer) {
             navigate(profileSubpagePath('hosted'), { state: hostedRouteState });
