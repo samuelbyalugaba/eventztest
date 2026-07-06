@@ -99,11 +99,18 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: PROFILE_STORE_KEY,
+      version: 1,
+      migrate: (persisted, version) => {
+        if (version < 1) {
+          const { hostedCount: _, ...rest } = persisted as any;
+          return rest;
+        }
+        return persisted;
+      },
       partialize: (state) => ({
         profile: state.profile,
         followStats: state.followStats,
         organizerStats: state.organizerStats,
-        hostedCount: state.hostedCount,
         attendedCount: state.attendedCount,
         walletBalance: state.walletBalance,
         dashboardCache: state.dashboardCache,

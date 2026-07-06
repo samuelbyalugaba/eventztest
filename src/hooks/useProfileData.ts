@@ -166,10 +166,8 @@ export function useProfileData(userId?: string, activeTab?: string) {
     staleTime: PROFILE_CACHE_TTL_MS,
   });
 
-  // A disabled react-query stays `isPending: true` forever; treat `fetchStatus === 'idle'`
-  // (i.e. not actually fetching) as "ready" so gated stats don't get stuck on placeholders.
   const publishedEvents = organizerEventsQuery.data ?? [];
-  const isLoadingOrganizerEvents = organizerEventsQuery.isPending && organizerEventsQuery.fetchStatus !== 'idle';
+  const isLoadingOrganizerEvents = organizerEventsQuery.isFetching;
 
   const savedEvents = savedEventsQuery.data ?? [];
   const isLoadingSavedEvents = savedEventsQuery.isPending && savedEventsQuery.fetchStatus !== 'idle';
