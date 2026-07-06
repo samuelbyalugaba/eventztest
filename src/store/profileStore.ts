@@ -11,6 +11,14 @@ export interface DashboardCache {
   updatedAt: number;
 }
 
+export interface UserStatsSnapshot {
+  hosted: number;
+  attended: number;
+  followers: number;
+  following: number;
+  updatedAt: number;
+}
+
 interface ProfileState {
   profile: any | null;
   isOrganizer: boolean;
@@ -20,6 +28,7 @@ interface ProfileState {
   attendedCount: number;
   walletBalance: number | null;
   dashboardCache: DashboardCache | null;
+  userStatsCache: Record<string, UserStatsSnapshot>;
   setProfile: (profile: any) => void;
   setFollowStats: (stats: { followers: number; following: number }) => void;
   setOrganizerStats: (stats: any) => void;
@@ -27,6 +36,8 @@ interface ProfileState {
   setAttendedCount: (count: number) => void;
   setWalletBalance: (value: number) => void;
   setDashboardCache: (cache: Partial<DashboardCache>) => void;
+  setUserStats: (userId: string, patch: Partial<Omit<UserStatsSnapshot, 'updatedAt'>>) => void;
+  getUserStats: (userId: string) => UserStatsSnapshot | null;
   clear: () => void;
 }
 
@@ -41,6 +52,7 @@ export const useProfileStore = create<ProfileState>()(
       attendedCount: 0,
       walletBalance: null,
       dashboardCache: null,
+      userStatsCache: {},
       setProfile: (profile) => set({
         profile,
         isOrganizer: profile?.is_organizer || false,
@@ -62,6 +74,17 @@ export const useProfileStore = create<ProfileState>()(
           },
         });
       },
+      setUserStats: (userId, patch) => {
+        if (!userId) return;
+        const prev = get().userStatsCache[userId] || { hosted: 0, attended: 0, followers: 0, following: 0, updatedAt: 0 };
+        set({
+          userStatsCache: {
+            ...get().userStatsCache,
+            [userId]: { ...prev, ...patch, updatedAt: Date.now() },
+          },
+        });
+      },
+      getUserStats: (userId) => get().userStatsCache[userId] || null,
       clear: () => set({
         profile: null,
         isOrganizer: false,
@@ -71,6 +94,7 @@ export const useProfileStore = create<ProfileState>()(
         attendedCount: 0,
         walletBalance: null,
         dashboardCache: null,
+        // keep userStatsCache so other-user visits stay instant across sign-outs
       }),
     }),
     {
@@ -83,6 +107,7 @@ export const useProfileStore = create<ProfileState>()(
         attendedCount: state.attendedCount,
         walletBalance: state.walletBalance,
         dashboardCache: state.dashboardCache,
+        userStatsCache: state.userStatsCache,
       }),
     },
   ),
