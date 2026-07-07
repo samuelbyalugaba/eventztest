@@ -49,6 +49,9 @@ export interface Comment {
   };
   text: string;
   timestamp: string;
+  likes_count?: number;
+  is_liked?: boolean;
+  parent_id?: number;
 }
 
 export interface HighlightClip {

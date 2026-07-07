@@ -452,7 +452,7 @@ export default function App() {
                 <Feed
                   conversations={conversations}
                   onStartConversation={handleStartConversation}
-                  currentUser={currentUser}
+                  currentUser={currentUser ?? undefined}
                   onViewPost={handleViewPost}
                   isPaused={!isFeedTab || !!backgroundLocation}
                 />

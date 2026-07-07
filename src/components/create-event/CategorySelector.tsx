@@ -1,5 +1,5 @@
 import { ChevronDown, Tag } from 'lucide-react';
-import { eventCategories, type IconType } from './createEventHelpers';
+import { eventCategories } from './createEventHelpers';
 
 interface CategorySelectorProps {
   category: string;

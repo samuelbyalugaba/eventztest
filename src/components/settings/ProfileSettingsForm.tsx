@@ -126,7 +126,7 @@ export function ProfileSettingsForm({
 
         {isCreatorProfile && (
           <>
-            <div className="space-y-2" ref={categoryRef}>
+            <div className="space-y-2" ref={categoryRef as React.RefObject<HTMLDivElement>}>
               <label className="text-sm font-medium text-gray-700">Category</label>
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -171,7 +171,7 @@ export function ProfileSettingsForm({
               </div>
             </div>
 
-            <div className="space-y-2" ref={locationRef}>
+            <div className="space-y-2" ref={locationRef as React.RefObject<HTMLDivElement>}>
               <label className="text-sm font-medium text-gray-700">Location</label>
               <div className="relative">
                 <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
