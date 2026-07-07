@@ -111,8 +111,9 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           client.current = await createStreamClient();
         }
         if (mounted) setIsClientReady(true);
-      } catch {
+      } catch (error) {
         if (mounted) toast.error('Could not initialize livestream');
+        console.warn('Failed to create stream client', error);
       }
     };
 
@@ -185,8 +186,9 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
         playLocalPreview(videoTrack, initialCamera, 'local-player');
-      } catch {
+      } catch (error) {
         toast.error('Could not access camera/microphone');
+        console.warn('Failed to initialize local tracks', error);
       }
     };
     init();
@@ -212,7 +214,9 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         ]);
         setMessages((msgs || []).slice(-200));
         setLikes(initialLikes);
-      } catch {}
+      } catch (error) {
+        console.warn('Failed to load stream chat', error);
+      }
     };
     loadChat();
 
@@ -258,7 +262,9 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       try {
         const data = await getEventAnalytics(event.id);
         if (!cancelled) setAnalytics(data);
-      } catch {} finally { if (!cancelled) setIsLoadingAnalytics(false); }
+      } catch (error) {
+        console.warn('Failed to load analytics', error);
+      } finally { if (!cancelled) setIsLoadingAnalytics(false); }
     };
     load();
     return () => { cancelled = true; };
@@ -311,7 +317,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
 
   const stopStream = async (opts?: { showToast?: boolean; deleteInstant?: boolean }) => {
     clearStartTimers();
-    if (client.current) { try { await client.current.leave(); } catch {} }
+    if (client.current) { try { await client.current.leave(); } catch (error) { console.warn('Failed to leave stream channel', error); } }
     if (isLive) {
       // Use refs for accurate final values
       setEndStats({
@@ -396,9 +402,10 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     try {
       const savedMessage = await sendStreamMessage(event.id, text);
       setMessages((prev) => appendStreamMessage(prev, savedMessage));
-    } catch {
+    } catch (error) {
       setChatMessage(text);
       toast.error('Failed to send message');
+      console.warn('Failed to send message', error);
     }
   };
 

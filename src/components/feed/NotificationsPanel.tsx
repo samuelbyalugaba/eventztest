@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { EmptyState } from '../ui/EmptyState';
 import { BackButton } from '../ui/BackButton';
 import {
   Bell,
@@ -57,7 +58,7 @@ const getNotificationIcon = (type: Notification['type']) => {
   return Calendar;
 };
 
-const notificationAccent = 'bg-gradient-to-br from-[#7C3AED] to-blue-600 text-white';
+const notificationAccent = 'bg-gradient-to-br from-primary to-blue-600 text-white';
 
 const getNotificationTarget = (notification: Notification) => {
   if ((notification.type === 'like' || notification.type === 'comment') && notification.postId) {
@@ -131,7 +132,8 @@ export function NotificationsPanel({
     setIsCheckingPush(true);
     try {
       setPushState(await getPushSubscriptionState());
-    } catch {
+    } catch (error) {
+      console.error('Failed to check push state:', error);
       setPushState({
         supported: false,
         configured: false,
@@ -157,7 +159,8 @@ export function NotificationsPanel({
     if (currentUser?.id) {
       try {
         await markNotificationsAsRead(currentUser.id);
-      } catch {
+      } catch (error) {
+        console.error('Failed to mark notifications as read:', error);
         toast.error('Could not save read status');
       }
     }
@@ -258,7 +261,7 @@ export function NotificationsPanel({
 
     return (
       <div className="flex items-center gap-3 py-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white">
           <PushIcon className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
@@ -271,7 +274,7 @@ export function NotificationsPanel({
           type="button"
           onClick={pushPrompt.onClick}
           disabled={pushPrompt.disabled}
-          className="h-9 shrink-0 rounded-xl bg-[#7C3AED] px-4 text-sm font-semibold text-white transition-opacity disabled:bg-gray-100 disabled:text-gray-500"
+          className="h-9 shrink-0 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-opacity disabled:bg-gray-100 disabled:text-gray-500"
         >
           {isChangingPush ? 'Saving' : pushPrompt.action}
         </button>
@@ -296,7 +299,7 @@ export function NotificationsPanel({
             src={notification.user.avatar}
             name={notification.user.name}
             className={`h-11 w-11 rounded-full object-cover ${
-              !notification.read ? 'ring-2 ring-[#7C3AED]/80 ring-offset-2' : ''
+              !notification.read ? 'ring-2 ring-primary/80 ring-offset-2' : ''
             }`}
           />
           <span
@@ -324,7 +327,7 @@ export function NotificationsPanel({
         </div>
 
         {notification.type === 'follow' ? (
-          <span className="h-9 shrink-0 rounded-xl bg-[#7C3AED] px-4 pt-2 text-sm font-semibold text-white">
+          <span className="h-9 shrink-0 rounded-xl bg-primary px-4 pt-2 text-sm font-semibold text-white">
             View
           </span>
         ) : notification.type === 'event' && notification.user.avatar ? (
@@ -373,7 +376,7 @@ export function NotificationsPanel({
                 onClick={() => setActiveTab(tab.id)}
                 className={`h-10 rounded-xl px-4 text-sm font-semibold transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-[#7C3AED] text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-gray-100 text-gray-950 hover:bg-gray-200'
                 }`}
               >
@@ -390,17 +393,15 @@ export function NotificationsPanel({
       <div className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[calc(1.25rem+var(--eventz-safe-area-bottom))] pt-1">
         {notificationsLoading ? (
           <div className="flex justify-center py-14">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#7C3AED] border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : groupedItems.length === 0 ? (
-          <div className="flex min-h-[45vh] flex-col items-center justify-center text-center text-gray-500">
-            <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-              <Inbox className="h-6 w-6" />
-            </span>
-            <p className="text-sm font-bold text-gray-900">No notifications here</p>
-            <p className="mt-1 max-w-[15rem] text-xs leading-5">
-              {activeTab === 'unread' ? 'Unread activity will appear here.' : 'New Eventz activity will appear here.'}
-            </p>
+          <div className="min-h-[45vh] flex items-center justify-center">
+            <EmptyState
+              icon={Inbox}
+              title="No notifications here"
+              description={activeTab === 'unread' ? 'Unread activity will appear here.' : 'New Eventz activity will appear here.'}
+            />
           </div>
         ) : (
           <div className="space-y-4">

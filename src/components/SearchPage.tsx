@@ -1,27 +1,16 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { getEvents } from '../utils/supabase/api';
+import { queryKeys } from '../queryKeys';
 import { PremiumSearchModal } from './PremiumSearchModal';
-import { eventsStore } from '../store/eventStore';
 
 export function SearchPage() {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<any[]>(() => eventsStore.getEvents());
-
-  useEffect(() => {
-    const cached = eventsStore.getEvents();
-    if (cached.length > 0) return;
-
-    const load = async () => {
-      try {
-        const data = await getEvents();
-        setEvents((data || []).map((e: any) => ({ ...e, isSaved: false })));
-      } catch {
-        /* events stay empty — modal still works */
-      }
-    };
-    void load();
-  }, []);
+  const { data: events = [] } = useQuery({
+    queryKey: queryKeys.events.publicList,
+    queryFn: () => getEvents(),
+    staleTime: 15 * 60 * 1000,
+  });
 
   const handleClose = () => {
     navigate('/events');

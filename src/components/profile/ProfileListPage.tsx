@@ -95,7 +95,8 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
         setFollowingCount(followingTotal);
         setUsers((list || []).filter(Boolean));
         setFollowingIds(new Set(currentFollowingIds));
-      } catch {
+      } catch (error) {
+        console.error('Failed to load profile list:', error);
         if (alive) toast.error(`Failed to load ${type}`);
       } finally {
         if (alive) setIsLoading(false);

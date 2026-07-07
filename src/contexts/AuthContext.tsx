@@ -34,7 +34,8 @@ const readCachedAuthProfile = (userId: string) => {
     if (!raw) return null;
     const cached = JSON.parse(raw);
     return cached?.profile?.id === userId ? cached.profile : null;
-  } catch {
+  } catch (error) {
+    console.warn('Failed to read cached auth profile:', error);
     return null;
   }
 };
@@ -46,8 +47,8 @@ const writeCachedAuthProfile = (profile: any | null) => {
     } else {
       window.localStorage.removeItem(AUTH_PROFILE_CACHE_KEY);
     }
-  } catch {
-    // Cache writes are best-effort only.
+  } catch (error) {
+    console.warn('Failed to write cached auth profile:', error);
   }
 };
 const buildUsernameCandidates = (seed: string) => {

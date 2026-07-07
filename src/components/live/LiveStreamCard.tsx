@@ -102,7 +102,7 @@ export const LiveStreamCard = memo(function LiveStreamCard({ stream, variant, on
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-0.5 group-hover:translate-y-0 transition-transform">
-        <h3 className="text-white text-xs font-bold mb-1 line-clamp-2 drop-shadow-sm group-hover:text-[#7C3AED] transition-colors">{stream.title}</h3>
+        <h3 className="text-white text-xs font-bold mb-1 line-clamp-2 drop-shadow-sm group-hover:text-primary transition-colors">{stream.title}</h3>
         <div className="flex items-center gap-1.5 text-white/70 text-2xs font-medium">
           <div className="w-4 h-4 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-2xs border border-white/10">
             {stream.host.charAt(0)}

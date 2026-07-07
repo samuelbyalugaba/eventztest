@@ -1,4 +1,5 @@
 import { Play, Image as ImageIcon, GalleryHorizontal, Bookmark, Calendar, Ticket as TicketIcon, PlaySquare, Radio } from 'lucide-react';
+import { EmptyState } from '../ui/EmptyState';
 import { Skeleton } from '../ui/skeleton';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { EventCard } from '../EventCard';
@@ -153,13 +154,11 @@ function StreamedTab({ isLoading, streams }: { isLoading: boolean; streams: Clou
 
   if (streams.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-          <PlaySquare className="w-6 h-6 text-gray-300" />
-        </div>
-        <p className="text-gray-900 font-medium mb-1">Stream Recordings</p>
-        <p className="text-gray-500 text-xs max-w-xs mx-auto">Recordings saved to this profile will appear here for playback.</p>
-      </div>
+      <EmptyState
+        icon={PlaySquare}
+        title="Stream Recordings"
+        description="Recordings saved to this profile will appear here for playback."
+      />
     );
   }
 
@@ -244,13 +243,11 @@ function MediaTab({ isLoading, posts, hasMore, isLoadingMore, onLoadMore, onOpen
 
   if (mediaPosts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-14 text-center">
-        <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-          <ImageIcon className="w-7 h-7 text-gray-300" />
-        </div>
-        <p className="text-gray-900 text-base font-semibold mb-1">No posts yet</p>
-        {isOwnProfile && <p className="text-gray-500 text-sm max-w-xs mx-auto">Share event photos and videos</p>}
-      </div>
+      <EmptyState
+        icon={ImageIcon}
+        title="No posts yet"
+        description={isOwnProfile ? 'Share event photos and videos' : undefined}
+      />
     );
   }
 
@@ -324,15 +321,11 @@ function SavedTab({ isLoading, events, posts, onEventClick, onOpenPost, currentU
 
   if (events.length === 0 && posts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-5">
-        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-          <Bookmark className="w-6 h-6 text-gray-300" />
-        </div>
-        <h3 className="text-gray-900 mb-2">No Saved Items Yet</h3>
-        <p className="text-gray-600 text-center text-xs max-w-xs leading-relaxed">
-          Save posts and events to find them here later
-        </p>
-      </div>
+      <EmptyState
+        icon={Bookmark}
+        title="No Saved Items Yet"
+        description="Save posts and events to find them here later"
+      />
     );
   }
 
@@ -393,19 +386,12 @@ function UpcomingTab({ isLoading, events, onEventClick, currentUserId, onEditEve
 
   if (upcoming.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-          <Calendar className="w-6 h-6 text-gray-300" />
-        </div>
-        <p className="text-gray-900 font-medium mb-1">No upcoming events</p>
-        <p className="text-gray-500 text-xs max-w-xs mx-auto">Create an event to see it here</p>
-        <button
-          onClick={onCreateEvent}
-          className="mt-3 px-3 py-1.5 bg-purple-600 text-white rounded-full text-xs font-medium hover:bg-purple-700 transition-colors"
-        >
-          Create Event
-        </button>
-      </div>
+      <EmptyState
+        icon={Calendar}
+        title="No upcoming events"
+        description="Create an event to see it here"
+        action={onCreateEvent ? { label: 'Create Event', onClick: onCreateEvent } : undefined}
+      />
     );
   }
 
@@ -438,13 +424,11 @@ function TicketsTab({ isLoading, groups, onGroupClick }: { isLoading: boolean; g
 
   if (groups.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-          <TicketIcon className="w-6 h-6 text-gray-300" />
-        </div>
-        <p className="text-gray-900 font-medium mb-1">No tickets yet</p>
-        <p className="text-gray-500 text-xs max-w-xs mx-auto mb-3">You haven't purchased any tickets yet. Explore events to get started!</p>
-      </div>
+      <EmptyState
+        icon={TicketIcon}
+        title="No tickets yet"
+        description="You haven't purchased any tickets yet. Explore events to get started!"
+      />
     );
   }
 
@@ -471,7 +455,7 @@ function TicketsTab({ isLoading, groups, onGroupClick }: { isLoading: boolean; g
             </div>
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
-                <TicketIcon className="w-5 h-5 text-[#7C3AED] fill-[#7C3AED] ml-0.5" />
+                <TicketIcon className="w-5 h-5 text-primary fill-primary ml-0.5" />
               </div>
             </div>
           </div>

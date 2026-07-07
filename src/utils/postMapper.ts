@@ -1,12 +1,7 @@
 import { ApiPost } from './supabase/api';
 import { formatTimeAgo } from './format';
 import { Post } from '../types';
-
-const isVideo = (url?: string) => {
-  if (!url) return false;
-  const cleaned = url.split('#')[0].split('?')[0];
-  return /\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(cleaned);
-};
+import { isVideoMedia } from './media';
 
 export const mapPostToViewModel = (p: ApiPost): Post => {
   const isOrganizerPage = !!p.posted_as_organizer;
@@ -50,7 +45,7 @@ export const mapPostToViewModel = (p: ApiPost): Post => {
     isHighlight: !!p.video_url,
     highlights: p.video_url ? [{
       id: p.id,
-      thumbnail: (p.image_urls?.find(url => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
+      thumbnail: (p.image_urls?.find(url => !isVideoMedia(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
       duration: p.duration || '',
       title: p.content || 'Video Highlight',
       videoUrl: p.video_url,

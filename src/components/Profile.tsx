@@ -350,7 +350,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         <p className="text-gray-500 mb-6 max-w-sm">This profile may not exist or is temporarily unavailable.</p>
         <button
           onClick={() => refetchProfile()}
-          className="rounded-full bg-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7C3AED]"
+          className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary"
         >
           Try again
         </button>
@@ -484,7 +484,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       {isOwnProfile && (
         <button
           onClick={async () => { preloadCamera(); await import('./CreatePostPage'); navigate('/compose/post'); }}
-          className="fixed bottom-[calc(6.25rem+var(--eventz-safe-area-bottom))] right-5 w-12 h-12 rounded-full bg-[#7C3AED] shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
+          className="fixed bottom-[calc(6.25rem+var(--eventz-safe-area-bottom))] right-5 w-12 h-12 rounded-full bg-primary shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
           title="Share a post"
         >
           <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />

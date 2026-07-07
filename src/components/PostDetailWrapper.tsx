@@ -9,16 +9,11 @@ import { formatTimeAgo } from '../utils/format';
 import { supabase } from '../utils/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
 import { DetailPageSkeleton } from './skeletons/PageSkeletons';
+import { isVideoMedia } from '../utils/media';
 
 const POST_DETAIL_KEY = (id: number, userId?: string) => ['post', 'detail', id, userId || 'anon'] as const;
 
 function formatFetchedPost(fetchedPost: any) {
-  const isVideo = (url?: string) => {
-    if (!url) return false;
-    const cleaned = url.split('#')[0].split('?')[0];
-    return /\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(cleaned);
-  };
-
   const isOrganizerPage = !!fetchedPost.posted_as_organizer;
   const displayName = fetchedPost.user?.full_name || fetchedPost.user?.username || 'Unknown User';
   const avatarUrl = fetchedPost.user?.avatar_url;
@@ -61,7 +56,7 @@ function formatFetchedPost(fetchedPost: any) {
     isHighlight: !!fetchedPost.video_url,
     highlights: fetchedPost.video_url ? [{
       id: fetchedPost.id,
-      thumbnail: (fetchedPost.image_urls?.find((url: string) => !isVideo(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
+      thumbnail: (fetchedPost.image_urls?.find((url: string) => !isVideoMedia(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
       duration: fetchedPost.duration || '',
       title: fetchedPost.content || 'Video Highlight',
       videoUrl: fetchedPost.video_url,
@@ -81,7 +76,7 @@ function PostErrorState({ onRetry }: { onRetry: () => void }) {
       <p className="text-gray-500 mb-6 max-w-sm">The post may have been deleted or is temporarily unavailable.</p>
       <button
         onClick={onRetry}
-        className="rounded-full bg-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7C3AED]"
+        className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary"
       >
         Try again
       </button>
@@ -148,7 +143,8 @@ export function PostDetailWrapper() {
           }));
           setPost((prev: any) => prev ? { ...prev, comments, comments_count: comments.length } : prev);
         }
-      } catch {
+      } catch (error) {
+        console.warn('Failed to fetch comments for post wrapper:', error);
       }
     })();
   }, [post?.id]);

@@ -54,8 +54,8 @@ export const toggleFollow = async (followerId: string, followingId: string) => {
       ]);
       void sendSocialPushNotification('follow', { targetUserId: followingId });
       void sendSocialEmailNotification('follow', { targetUserId: followingId });
-    } catch {
-      // Notification delivery is best-effort
+    } catch (error) {
+      console.warn('Failed to send follow notification:', error);
     }
     return true;
   }

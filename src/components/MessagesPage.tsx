@@ -166,7 +166,7 @@ function ConversationNotFound({ onBack }: { onBack: () => void }) {
         </p>
         <button
           onClick={() => onBack()}
-          className="mt-6 rounded-xl bg-[#7C3AED] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#6D28D9]"
+          className="mt-6 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
         >
           Back to messages
         </button>
@@ -249,8 +249,9 @@ export default function MessagesPage() {
 
         toast.error('Could not start conversation');
         navigate('/messages', { replace: true, state: returnTo ? { returnTo } : undefined });
-      } catch {
+      } catch (error) {
         if (cancelled) return;
+        console.error('Failed to start conversation:', error);
         toast.error('Failed to start conversation');
         navigate('/messages', { replace: true, state: returnTo ? { returnTo } : undefined });
       }

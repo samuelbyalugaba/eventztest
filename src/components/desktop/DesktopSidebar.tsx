@@ -19,7 +19,7 @@ export function DesktopSidebar() {
   const { hasLiveEvents } = useMessaging();
 
   const handleLogout = async () => {
-    try { await supabase.auth.signOut(); navigate('/events'); } catch { /* silent */ }
+    try { await supabase.auth.signOut(); navigate('/events'); } catch (error) { console.warn('Failed to sign out:', error); }
   };
 
   return (
@@ -48,7 +48,7 @@ export function DesktopSidebar() {
               }`}
             >
               {active && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-[#7C3AED]" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-primary" />
               )}
               <Icon className={`w-5 h-5 ${active ? 'text-[#1A1A1A]' : 'text-gray-500 group-hover:text-[#1A1A1A]'}`} />
               <span className="text-sm font-medium">{item.label}</span>

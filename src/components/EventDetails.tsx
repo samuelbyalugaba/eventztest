@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { EventCardsSkeleton, EventsPageSkeleton } from './skeletons/PageSkeletons';
 import { Skeleton } from './ui/skeleton';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -17,8 +17,8 @@ import { supabase } from '../utils/supabase/client';
 import { deleteEvent, getEvents, getSavedEvents, type Event as ApiEvent } from '../utils/supabase/api';
 import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
 import { ConfirmDialog } from './ui/confirm-dialog';
+import { EmptyState } from './ui/EmptyState';
 
-import { eventsStore } from '../store/eventStore';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
 import { rememberRecentEvent } from '../utils/recentEvents';
@@ -190,9 +190,6 @@ interface EventDetailsProps {
 }
 
 const getInitialEvents = (): ApiEvent[] => {
-  const storedEvents = eventsStore.getEvents();
-  if (storedEvents.length > 0) return storedEvents;
-
   const cachedEvents = queryClient.getQueryData<ApiEvent[]>(queryKeys.events.publicList);
   return Array.isArray(cachedEvents) ? cachedEvents : [];
 };
@@ -207,26 +204,15 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFetching, setIsFetching] = useState(initialEvents.length === 0);
   const [hasLoadedEvents, setHasLoadedEvents] = useState(initialEvents.length > 0);
-
-  // Sync with store updates
-  useEffect(() => {
-    const unsubscribe = eventsStore.subscribe(() => {
-      setEvents(eventsStore.getEvents());
-    });
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+  const hasEventsRef = useRef(initialEvents.length > 0);
+  const lastFetchTimeRef = useRef(0);
+  const CACHE_DURATION_MS = 15 * 60 * 1000;
 
   // Fetch data logic
   useEffect(() => {
     const fetchEvents = async (force = false) => {
-      const currentEvents = eventsStore.getEvents();
-      const hasData = currentEvents.length > 0;
-      const shouldFetch = eventsStore.shouldFetch();
-
-      // If we have data and it's fresh enough, and not forced, skip
-      if (!force && hasData && !shouldFetch) {
+      const now = Date.now();
+      if (!force && hasEventsRef.current && (now - lastFetchTimeRef.current) < CACHE_DURATION_MS) {
         setHasLoadedEvents(true);
         setIsFetching(false);
         return;
@@ -242,7 +228,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           staleTime: 15 * 60 * 1000,
           queryFn: () => getEvents(),
         });
-        eventsStore.setEvents((allEvents as any[]).map(e => ({ ...e, isSaved: false })) as ApiEvent[]);
+        const publicEvents = (allEvents as any[]).map(e => ({ ...e, isSaved: false })) as ApiEvent[];
+        setEvents(publicEvents);
+        queryClient.setQueryData(queryKeys.events.publicList, publicEvents);
+        lastFetchTimeRef.current = Date.now();
+        hasEventsRef.current = true;
         setHasLoadedEvents(true);
 
         try {
@@ -261,7 +251,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
           }));
 
           queryClient.setQueryData(queryKeys.events.list(user.id), eventsWithSaved);
-          eventsStore.setEvents(eventsWithSaved as ApiEvent[]);
+          queryClient.setQueryData(queryKeys.events.publicList, eventsWithSaved as ApiEvent[]);
+          setEvents(eventsWithSaved as ApiEvent[]);
+          lastFetchTimeRef.current = Date.now();
         } catch (_savedEventsError) {
           // Saved-event hydration is best-effort; keep the public events list visible.
         }
@@ -291,7 +283,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       window.removeEventListener('savedEventsUpdated', handleSavedUpdate);
       supabase.removeChannel(eventsChannel);
     };
-  }, []);
+  }, [events.length]);
 
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -635,8 +627,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     setEventPendingDelete(null);
     try {
       await deleteEvent(event.id);
-      const next = eventsStore.getEvents().filter(e => e.id !== event.id);
-      eventsStore.setEvents(next);
+      const next = events.filter(e => e.id !== event.id);
+      setEvents(next);
+      hasEventsRef.current = next.length > 0;
+      queryClient.setQueryData(queryKeys.events.publicList, next);
       toast.success('Event deleted');
     } catch (error: any) {
       toast.error(error?.message || 'Failed to delete event');
@@ -694,9 +688,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 onClick={() => setShowFilters(true)}
                 className="icon-circle-button relative rounded-full border border-gray-100 bg-white shadow-sm transition-all hover:bg-gray-50 group"
               >
-                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#7C3AED]" />
+                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-primary" />
                 {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#7C3AED] text-white text-2xs rounded-full flex items-center justify-center shadow-md">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-2xs rounded-full flex items-center justify-center shadow-md">
                     {activeFiltersCount}
                   </span>
                 )}
@@ -721,7 +715,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       className={`event-category-chip flex h-[1.65rem] flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 text-xs font-semibold transition-all ${
                         isSelected
                           ? 'border-gray-950 bg-gray-950 text-white shadow-sm'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-primary hover:bg-primary hover:text-white'
                       }`}
                     >
                       {Icon && <Icon className="h-[0.8rem] w-[0.8rem]" />}
@@ -746,8 +740,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                         onClick={() => setSelectedSubcategory(selectedSubcategory === subcategory ? '' : subcategory)}
                         className={`event-subcategory-chip flex h-[1.65rem] flex-shrink-0 items-center rounded-full border px-2.5 text-xs font-semibold transition-all ${
                           selectedSubcategory === subcategory
-                            ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-primary hover:bg-primary hover:text-white'
                         }`}
                       >
                         {subcategory}
@@ -787,8 +781,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                   onClick={() => setShowWhenMenu((open) => !open)}
                   className={`flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold transition-all ${
                     selectedTimeFilter !== 'all'
-                      ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
+                      ? 'border-primary bg-primary text-white'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-primary hover:bg-primary hover:text-white'
                   }`}
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
@@ -814,7 +808,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                             }}
                             className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
                               isSelected
-                                ? 'bg-[#7C3AED] text-white'
+                                ? 'bg-primary text-white'
                                 : 'text-gray-700 hover:bg-gray-50'
                             }`}
                           >
@@ -844,13 +838,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             </div>
 
             {upcomingEvents.length === 0 && hasLoadedEvents && !isFetching && (
-              <div className="flex flex-col items-center justify-center py-10 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                  <Calendar className="w-6 h-6 text-gray-400" />
-                </div>
-                <h3 className="text-gray-900 font-medium mb-1">No upcoming events</h3>
-                <p className="text-gray-500 text-xs max-w-[200px]">Check back later or try adjusting your filters</p>
-              </div>
+              <EmptyState
+                icon={Calendar}
+                title="No upcoming events"
+                description="Check back later or try adjusting your filters"
+              />
             )}
 
             {events.length === 0 && (!hasLoadedEvents || isFetching) && (
@@ -888,10 +880,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               <div className="mb-6">
                 <div className="mb-3 text-2xs font-bold uppercase tracking-[0.09em] text-gray-400">Location</div>
 
-                <div className="mb-3 rounded-xl border border-[#7C3AED] bg-[#7C3AED] px-3.5 py-3">
+                <div className="mb-3 rounded-xl border border-primary bg-primary px-3.5 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-[#7C3AED]">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-primary">
                         {selectedCountry.code}
                       </div>
                       <div className="min-w-0">
@@ -921,8 +913,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                             onClick={() => handleCountryChange(country.code)}
                             className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-all ${
                               active
-                                ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
-                                : 'border-gray-200 bg-white/70 text-gray-700 hover:border-[#7C3AED]'
+                                ? 'border-primary bg-primary text-white'
+                                : 'border-gray-200 bg-white/70 text-gray-700 hover:border-primary'
                             }`}
                           >
                             <span className="w-6 text-xs font-bold">{country.code}</span>
@@ -952,9 +944,9 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                 <button
                   type="button"
                   onClick={handleUseCurrentLocation}
-                  className="mb-3 flex w-full items-center gap-2.5 rounded-[10px] border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-left transition-all hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white"
+                  className="mb-3 flex w-full items-center gap-2.5 rounded-[10px] border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-left transition-all hover:border-primary hover:bg-primary hover:text-white"
                 >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-white">
                     <LocateFixed className="h-3.5 w-3.5" />
                   </span>
                   <span className="min-w-0 flex-1 text-sm font-semibold text-gray-700">Use my current location</span>
@@ -973,8 +965,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       onClick={() => handleLocationSelect(location.id)}
                       className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
                         selectedLocation === location.id
-                          ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
-                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
+                          ? 'border-primary bg-primary text-white'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-primary hover:bg-primary hover:text-white'
                       }`}
                     >
                       {location.name}
@@ -1003,8 +995,8 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                       onClick={() => handleCategorySelect(category.id)}
                       className={`whitespace-nowrap rounded-lg border px-3.5 py-2 text-xs font-semibold transition-all ${
                         selectedCategory === category.id
-                          ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
-                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-[#7C3AED] hover:bg-[#7C3AED] hover:text-white'
+                          ? 'border-primary bg-primary text-white'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-primary hover:bg-primary hover:text-white'
                       }`}
                     >
                       <span>{category.name}</span>
@@ -1018,14 +1010,14 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               <button 
                 type="button"
                 onClick={clearFilters}
-                className="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-gray-500 transition-colors hover:border-[#7C3AED] hover:text-[#7C3AED]"
+                className="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-gray-500 transition-colors hover:border-primary hover:text-primary"
               >
                 Clear all
               </button>
               <button 
                 type="button"
                 onClick={() => setShowFilters(false)}
-                className="flex-[2] rounded-xl bg-[#7C3AED] py-3 text-sm font-bold text-white transition-colors hover:bg-[#6D28D9]"
+                className="flex-[2] rounded-xl bg-primary py-3 text-sm font-bold text-white transition-colors hover:bg-primary-dark"
               >
                 {isInitialEventsLoading ? 'Loading events' : `Show ${upcomingEventCountText}`}
               </button>
@@ -1127,11 +1119,11 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
                 <div className="flex-1 overflow-y-auto">
                   {globalConversations.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                      <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
-                      <h3 className="text-gray-900 mb-2">No messages yet</h3>
-                      <p className="text-gray-500 text-sm">Start a conversation with organizers or other users!</p>
-                    </div>
+                    <EmptyState
+                      icon={MessageCircle}
+                      title="No messages yet"
+                      description="Start a conversation with organizers or other users!"
+                    />
                   ) : (
                     globalConversations.map((conv) => (
                       <button
@@ -1146,7 +1138,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                             className="w-12 h-12 rounded-full object-cover"
                           />
                           {conv.unreadCount > 0 && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#7C3AED] rounded-full flex items-center justify-center">
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                               <span className="text-white text-xs font-bold">{conv.unreadCount}</span>
                             </div>
                           )}
@@ -1156,7 +1148,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                             <div className="flex items-center gap-1">
                               <span className="text-gray-900 text-sm font-medium">{conv.user.name}</span>
                               {conv.user.verified && (
-                                <CheckCircle2 className="w-4 h-4 text-white fill-[#7C3AED]" />
+                                <CheckCircle2 className="w-4 h-4 text-white fill-primary" />
                               )}
                             </div>
                             <span className="text-gray-400 text-xs">{conv.lastMessage.timestamp}</span>
@@ -1172,7 +1164,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
               </>
             ) : (
               <>
-                <div className="bg-[#7C3AED] px-5 py-4">
+                <div className="bg-primary px-5 py-4">
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setActiveConversation(null)}
@@ -1188,7 +1180,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                         className="w-10 h-10 rounded-full object-cover ring-2 ring-white/50"
                       />
                       {activeConversation.user.isOrganizer && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#7C3AED] rounded-full flex items-center justify-center ring-2 ring-white">
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full flex items-center justify-center ring-2 ring-white">
                           <Star className="w-2 h-2 text-white fill-white" />
                         </div>
                       )}
@@ -1224,10 +1216,10 @@ export function EventDetails({ conversations: globalConversations, onStartConver
 
                 <div className="flex-1 overflow-y-auto bg-gray-50 px-5 py-4">
                   {activeConversation.messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <MessageCircle className="w-12 h-12 text-gray-300 mb-3" />
-                      <p className="text-gray-500 text-sm">Send a message to start the conversation</p>
-                    </div>
+                    <EmptyState
+                      icon={MessageCircle}
+                      title="Send a message to start the conversation"
+                    />
                   ) : (
                     <div className="space-y-4">
                       {activeConversation.messages.map((msg) => {
@@ -1241,7 +1233,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                               <div
                                 className={`rounded-2xl px-4 py-2.5 ${
                                   isMe
-                                    ? 'bg-[#7C3AED] text-white'
+                                    ? 'bg-primary text-white'
                                     : 'bg-white text-gray-900 shadow-sm'
                                 }`}
                               >
@@ -1279,7 +1271,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
                     <button
                       onClick={handleSendMessage}
                       disabled={!messageText.trim()}
-                      className="w-10 h-10 bg-[#7C3AED] text-white rounded-full flex items-center justify-center hover:bg-[#6D28D9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send className="w-5 h-5" />
                     </button>

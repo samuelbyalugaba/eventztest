@@ -10,8 +10,8 @@ const configureStatusBar = async () => {
   try {
     await StatusBar.setStyle({ style: Style.Dark });
     await StatusBar.setBackgroundColor({ color: '#7C3AED' });
-  } catch {
-    // Silently fail if StatusBar plugin is unavailable
+  } catch (error) {
+    console.warn('Failed to configure status bar:', error);
   }
 };
 

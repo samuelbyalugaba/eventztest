@@ -14,6 +14,12 @@ import { ShareModal } from './ShareModal';
 import { FeedHeader } from './FeedHeader';
 import { CommentsSheet } from './CommentsSheet';
 
+type MappedComment = {
+  id: number;
+  user: { id: string; name: string; username: string; avatar: string; verified: boolean; is_organizer: boolean };
+  text: string; timestamp: string; parent_id?: number; likes_count: number; is_liked: boolean;
+};
+
 // Sub-components
 import { NotificationsPanel } from './feed/NotificationsPanel';
 import { VideoPlayerOverlay } from './feed/VideoPlayerOverlay';
@@ -32,8 +38,8 @@ type RouteTarget = {
 interface FeedProps {
   conversations: Conversation[];
   onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
-  currentUser?: any;
-  onViewPost?: (post: any) => void;
+  currentUser?: { id: string; user_metadata?: Record<string, unknown> };
+  onViewPost?: (post: Post) => void;
   isPaused?: boolean;
 }
 
@@ -188,7 +194,7 @@ export function Feed({
       const fetchComments = async () => {
         try {
           const comments = await getPostComments(selectedPost.id);
-          const mappedComments = (comments || []).map((c: any) => ({
+          const mappedComments = (comments || []).map((c) => ({
             id: c.id,
             user: {
               id: c.user?.id || c.user_id,
@@ -225,7 +231,7 @@ export function Feed({
             .eq('post_id', selectedPost.id)
             .order('created_at', { ascending: true });
           if (commentsData) {
-            const mappedComments = commentsData.map((c: any) => ({
+            const mappedComments = commentsData.map((c) => ({
               id: c.id,
               user: {
                 id: c.user?.id || c.user_id,
@@ -362,7 +368,7 @@ export function Feed({
     if (!currentUser) { toast.error('Please sign in to comment'); return; }
     try {
       const newCommentData = await createPostComment(postId, currentUser.id, text.trim(), parentId);
-      const newComment: any = {
+      const newComment: MappedComment = {
         id: newCommentData.id,
         user: {
           id: newCommentData.user?.id || currentUser.id,
@@ -386,7 +392,7 @@ export function Feed({
       const isLiked = await toggleLikeComment(commentId, currentUser.id);
       setSelectedPost(prev => {
         if (!prev) return null;
-        return { ...prev, comments: (prev.comments || []).map((c: any) => c.id === commentId ? { ...c, is_liked: isLiked, likes_count: isLiked ? (c.likes_count || 0) + 1 : Math.max(0, (c.likes_count || 0) - 1) } : c) };
+        return { ...prev, comments: (prev.comments || []).map((c) => c.id === commentId ? { ...c, is_liked: isLiked, likes_count: isLiked ? (c.likes_count || 0) + 1 : Math.max(0, (c.likes_count || 0) - 1) } : c) };
       });
     } catch (e) { console.error('Error liking comment:', e); toast.error('Failed to update like'); }
   }, [currentUser]);
@@ -395,8 +401,8 @@ export function Feed({
     if (!currentUser) { toast.error('Please sign in'); return; }
     try {
       const updated = await updatePostCaption(postId, currentUser.id, caption);
-      setPosts(prev => prev.map(p => p.id !== postId ? p : { ...p, content: { ...(p.content || {}), text: updated.content } } as any));
-      setSelectedPost(prev => { if (!prev || prev.id !== postId) return prev; return { ...prev, content: { ...(prev.content || {}), text: updated.content } } as any; });
+      setPosts(prev => prev.map(p => p.id !== postId ? p : { ...p, content: { ...(p.content || {}), text: updated.content } } as Post));
+      setSelectedPost(prev => { if (!prev || prev.id !== postId) return prev; return { ...prev, content: { ...(prev.content || {}), text: updated.content } } as Post; });
       window.dispatchEvent(new Event('postsUpdated'));
     } catch (e) { console.error(e); toast.error('Failed to update caption'); throw e; }
   }, [currentUser, setPosts]);
@@ -434,7 +440,7 @@ export function Feed({
     const scrollPos = feedScrollRef.current?.scrollTop ?? window.scrollY;
     sessionStorage.setItem('feedScrollPos', String(scrollPos));
     sessionStorage.setItem('feedLastPostId', post.id.toString());
-    if (onViewPost) onViewPost({ ...post, startTime, isMuted });
+    if (onViewPost) onViewPost({ ...post, startTime, isMuted } as Post);
   }, [onViewPost]);
 
   const handleViewComments = useCallback(async (post: Post) => {
@@ -443,7 +449,7 @@ export function Feed({
     try {
       const comments = await getPostComments(post.id);
       if (comments) {
-        const mapped = comments.map((c: any) => ({
+        const mapped = comments.map((c) => ({
           id: c.id,
           user: {
             id: c.user?.id || c.user_id,
@@ -455,8 +461,8 @@ export function Feed({
           },
           text: c.text, timestamp: formatTimeAgo(c.created_at), parent_id: c.parent_id, likes_count: c.likes_count || 0, is_liked: c.is_liked || false
         }));
-        setPosts(prev => prev.map(p => p.id !== post.id ? p : { ...p, comments: mapped, comments_count: comments.length } as any));
-        setSelectedPostForComments(prev => { if (!prev || prev.id !== post.id) return prev; return { ...prev, comments: mapped, comments_count: comments.length } as any; });
+        setPosts(prev => prev.map(p => p.id !== post.id ? p : { ...p, comments: mapped, comments_count: comments.length } as Post));
+        setSelectedPostForComments(prev => { if (!prev || prev.id !== post.id) return prev; return { ...prev, comments: mapped, comments_count: comments.length } as Post; });
       }
     } catch (err) { console.error('Error fetching comments:', err); }
   }, [setPosts]);
@@ -465,7 +471,7 @@ export function Feed({
   const onLikeId = useCallback((id: number) => toggleLike(id), [toggleLike]);
   const onSaveId = useCallback((id: number) => toggleSave(id), [toggleSave]);
   const onShareP = useCallback((p: Post) => sharePost(p), [sharePost]);
-  const onMessageU = useCallback((user: any) => handleStartConversationLocal(user), [handleStartConversationLocal]);
+  const onMessageU = useCallback((user: Post['user']) => handleStartConversationLocal(user), [handleStartConversationLocal]);
 
   // Stable header callbacks
   const handleToggleNotifications = useCallback(() => {

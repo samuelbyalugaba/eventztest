@@ -54,7 +54,7 @@ export function StreamScreen({ scope, giftTransactions, onBack, onGo, onScan }: 
           <SectionTitle>Live gifts</SectionTitle>
           <GiftList gifts={giftTransactions} />
 
-          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed" onClick={() => onGo('notify')} disabled={!isLiveNow}>
+          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-gradient-to-br from-primary to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed" onClick={() => onGo('notify')} disabled={!isLiveNow}>
             <Bell className="h-4 w-4" />
             {isLiveNow ? 'Message viewers now' : 'No live viewers right now'}
           </button>

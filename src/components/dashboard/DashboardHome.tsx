@@ -40,7 +40,7 @@ export function DashboardHome({
                 : 'Some numbers may be out of date.'}
             </span>
             {onRetry ? (
-              <button type="button" className="px-3 py-[6px] rounded-lg bg-[#7C3AED] text-white text-2xs font-medium hover:bg-[#6D28D9]" onClick={onRetry}>
+              <button type="button" className="px-3 py-[6px] rounded-lg bg-primary text-white text-2xs font-medium hover:bg-primary-dark" onClick={onRetry}>
                 Retry
               </button>
             ) : null}

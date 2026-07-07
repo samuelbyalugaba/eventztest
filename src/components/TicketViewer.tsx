@@ -60,7 +60,8 @@ export function TicketViewer({ ticket, onClose }: TicketViewerProps) {
         description: 'Screenshot saved to your device',
         duration: 2000,
       });
-    } catch {
+    } catch (error) {
+      console.error('Failed to take screenshot:', error);
       toast.dismiss(toastId);
       toast.error('Failed to take screenshot');
     }

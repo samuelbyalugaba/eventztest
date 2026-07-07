@@ -28,6 +28,7 @@ import { DeleteAccountPage } from './components/legal/DeleteAccountPage';
 import { SupportPage } from './components/support/SupportPage';
 import { HostedPage } from './components/profile/HostedPage';
 import { AuthCallbackPage } from './components/AuthCallbackPage';
+import { isVideoMedia } from './utils/media';
 
 // Lazy-loaded heavy pages and route wrappers
 const EventDetails = lazy(() => import('./components/EventDetails').then(m => ({ default: m.EventDetails })));
@@ -48,12 +49,6 @@ const WalletPage = lazy(() => import('./components/WalletPage').then(m => ({ def
 
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
-const isVideoAsset = (url?: string) => {
-  if (!url) return false;
-  const cleaned = url.split('#')[0].split('?')[0];
-  return /\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(cleaned);
-};
-
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -138,7 +133,7 @@ export default function App() {
             isHighlight: !!p.video_url,
             highlights: p.video_url ? [{
               id: p.id,
-              thumbnail: (p.image_urls?.find((url: string) => !isVideoAsset(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
+              thumbnail: (p.image_urls?.find((url: string) => !isVideoMedia(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
               duration: p.duration || '',
               title: p.content || 'Video Highlight',
               videoUrl: p.video_url,
@@ -152,7 +147,9 @@ export default function App() {
           pages: [{ posts: mapped, count: mapped.length }],
           pageParams: [0],
         });
-      } catch {/* silent */}
+      } catch (error) {
+        console.warn('Feed prefetch failed', error);
+      }
     };
 
     const w = window as Window & {
@@ -220,7 +217,9 @@ export default function App() {
     try {
       await signOut();
       navigate('/events');
-    } catch {/* silent */}
+    } catch (error) {
+      console.warn('Sign out failed', error);
+    }
   };
 
   const handleCreateEvent = () => navigate('/create');
@@ -344,13 +343,13 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-[#7C3AED]/30 border-t-[#7C3AED] rounded-full animate-spin mx-auto" />
+          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
           {authTimedOut ? (
             <div className="space-y-3">
               <p className="text-red-500 font-medium">Taking longer than expected</p>
               <button
                 onClick={() => { setAuthTimedOut(false); window.location.reload(); }}
-                className="rounded-full bg-[#7C3AED] px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#7C3AED]"
+                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary"
               >
                 Retry
               </button>
@@ -648,7 +647,7 @@ export default function App() {
               <Link
                 to="/events"
                 className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
-                  (location.pathname === '/events' || location.pathname === '/') && !isSearchTab ? 'text-[#7C3AED]' : 'text-gray-500'
+                  (location.pathname === '/events' || location.pathname === '/') && !isSearchTab ? 'text-primary' : 'text-gray-500'
                 }`}
               >
                 <Calendar className="w-[1.375rem] h-[1.375rem]" />
@@ -657,7 +656,7 @@ export default function App() {
               <Link
                 to="/live"
                 className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
-                  location.pathname === '/live' ? 'text-[#7C3AED]' : 'text-gray-500'
+                  location.pathname === '/live' ? 'text-primary' : 'text-gray-500'
                 }`}
               >
                 <Radio className="w-[1.375rem] h-[1.375rem]" />
@@ -670,7 +669,7 @@ export default function App() {
                 to="/search"
                 aria-label="Search"
                 className={`bottom-search-link relative flex min-h-11 flex-1 flex-col items-center justify-center gap-1 px-1 py-1 transition-colors ${
-                  location.pathname === '/search' ? 'text-[#7C3AED]' : 'text-gray-500'
+                  location.pathname === '/search' ? 'text-primary' : 'text-gray-500'
                 }`}
               >
                 <span className="bottom-search-orb">
@@ -681,7 +680,7 @@ export default function App() {
               <Link
                 to="/feed"
                 className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
-                  location.pathname === '/feed' ? 'text-[#7C3AED]' : 'text-gray-500'
+                  location.pathname === '/feed' ? 'text-primary' : 'text-gray-500'
                 }`}
               >
                 <Menu className="w-[1.375rem] h-[1.375rem]" />
@@ -690,7 +689,7 @@ export default function App() {
               <Link
                 to="/profile"
                 className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
-                  location.pathname === '/profile' ? 'text-[#7C3AED]' : 'text-gray-500'
+                  location.pathname === '/profile' ? 'text-primary' : 'text-gray-500'
                 }`}
               >
                 <User className="w-[1.375rem] h-[1.375rem]" />

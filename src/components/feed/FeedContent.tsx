@@ -1,4 +1,5 @@
 import { MessageCircle } from 'lucide-react';
+import { EmptyState } from '../ui/EmptyState';
 import { PostCard } from '../PostCard';
 import { PostSkeleton } from '../skeletons/PageSkeletons';
 import { Post } from '../../types';
@@ -96,15 +97,12 @@ export function FeedContent({
       )}
 
       {!isLoading && filteredPosts.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 px-6">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-            <MessageCircle className="w-8 h-8 text-gray-300" />
-          </div>
-          <h3 className="text-gray-900 text-lg font-semibold mb-2">Nothing here yet</h3>
-          <p className="text-gray-600 text-center text-sm max-w-xs">
-            Follow creators and explore events to see updates
-          </p>
-        </div>
+        <EmptyState
+          icon={MessageCircle}
+          title="Nothing here yet"
+          description="Follow creators and explore events to see updates"
+          className="py-20"
+        />
       )}
     </>
   );

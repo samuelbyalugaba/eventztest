@@ -13,6 +13,11 @@ import {
 import { toast } from 'sonner';
 import { reportContent, blockUser } from '../utils/supabase/api';
 import { askForReportReason, confirmBlockUser } from '../utils/moderation';
+import { isVideoMedia } from '../utils/media';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useHaptic } from '../hooks/useHaptic';
+import { useFullscreen } from '../hooks/useFullscreen';
+import { EditCaptionModal } from './EditCaptionModal';
 import {
   Carousel,
   CarouselContent,
@@ -43,12 +48,6 @@ interface PostCardProps {
   onViewComments?: () => void;
   isPaused?: boolean;
 }
-
-const isVideo = (url?: string) => {
-  if (!url) return false;
-  const cleaned = url.split('#')[0].split('?')[0];
-  return /\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i.test(cleaned);
-};
 
 const mediaControlButtonClass =
   'inline-flex h-8 w-8 min-h-8 min-w-8 items-center justify-center rounded-full bg-black/50 p-0 text-white leading-none backdrop-blur-md transition-colors hover:bg-black/70';
@@ -85,23 +84,15 @@ export const PostCard = React.memo(function PostCard({
   const [videoError, setVideoError] = useState<string | null>(null);
   const [mediaAspectRatios, setMediaAspectRatios] = useState<Record<string, number>>({});
   const [carouselHeight, setCarouselHeight] = useState<number | null>(null);
-  const [isLowInternet, setIsLowInternet] = useState(false);
+  const [isEditCaptionOpen, setIsEditCaptionOpen] = useState(false);
+  const [isSavingCaption, setIsSavingCaption] = useState(false);
+  const { isLowInternet } = useNetworkStatus();
+  const triggerHaptic = useHaptic();
+  const enterFullscreen = useFullscreen();
 
   useEffect(() => {
     setIsSaved(post.isSaved);
   }, [post.isSaved]);
-
-  useEffect(() => {
-    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-    if (connection) {
-      const updateConnection = () => {
-        setIsLowInternet(connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g' || connection.saveData);
-      };
-      connection.addEventListener('change', updateConnection);
-      updateConnection();
-      return () => connection.removeEventListener('change', updateConnection);
-    }
-  }, []);
 
   const updateCarouselHeight = useCallback(() => {
     if (!api) return;
@@ -125,19 +116,8 @@ export const PostCard = React.memo(function PostCard({
     videoEl.controls = false;
     videoEl.addEventListener('webkitendfullscreen', disableControls, { once: true } as any);
 
-    try {
-      if (videoEl.requestFullscreen) {
-        await videoEl.requestFullscreen();
-      } else if ((videoEl as any).webkitEnterFullscreen) {
-        (videoEl as any).webkitEnterFullscreen();
-      } else if ((videoEl as any).webkitRequestFullscreen) {
-        (videoEl as any).webkitRequestFullscreen();
-      } else if ((videoEl as any).msRequestFullscreen) {
-        (videoEl as any).msRequestFullscreen();
-      }
-    } catch {
-      return;
-    }
+    const didEnter = await enterFullscreen(videoEl);
+    if (!didEnter) return;
 
     if (isFullscreen() || (videoEl as any).webkitDisplayingFullscreen) {
       videoEl.controls = true;
@@ -169,13 +149,6 @@ export const PostCard = React.memo(function PostCard({
       }
     }
   }, [isMuted]);
-
-  // Haptic feedback helper
-  const triggerHaptic = () => {
-    if (navigator.vibrate) {
-      navigator.vibrate(10);
-    }
-  };
 
   useEffect(() => {
     if (!api) return;
@@ -346,10 +319,10 @@ export const PostCard = React.memo(function PostCard({
   const isCarousel = !videoUrl && mediaItems.length > 1;
   const firstCarouselMedia = mediaItems[0];
   const currentMedia = videoUrl || mediaItems[carouselIndex] || mediaItems[0];
-  const isCurrentMediaVideo = !!videoUrl || isVideo(currentMedia);
+  const isCurrentMediaVideo = !!videoUrl || isVideoMedia(currentMedia);
   const videoPoster = post.isHighlight 
-    ? (post.highlights?.[0]?.thumbnail || mediaItems.find((u) => !!u && !isVideo(u)))
-    : mediaItems.find((u) => !!u && !isVideo(u));
+    ? (post.highlights?.[0]?.thumbnail || mediaItems.find((u) => !!u && !isVideoMedia(u)))
+    : mediaItems.find((u) => !!u && !isVideoMedia(u));
   const currentVideoSrc = currentMedia ? `${currentMedia}${currentMedia.includes('#') ? '' : '#t=0.1'}` : undefined;
   const getMediaFrameStyle = useCallback((media?: string): React.CSSProperties => {
     const referenceMedia = isCarousel ? firstCarouselMedia : media;
@@ -408,14 +381,25 @@ export const PostCard = React.memo(function PostCard({
       return;
     }
 
-    const nextCaption = window.prompt('Edit caption', post.content.text || '');
-    if (nextCaption === null || nextCaption === post.content.text) return;
+    setIsEditCaptionOpen(true);
+  };
+
+  const handleSaveCaption = async (nextCaption: string) => {
+    if (!onEditCaption || nextCaption === post.content.text) {
+      setIsEditCaptionOpen(false);
+      return;
+    }
 
     try {
+      setIsSavingCaption(true);
       await onEditCaption(post.id, nextCaption);
+      setIsEditCaptionOpen(false);
       toast.success('Post updated');
-    } catch {
+    } catch (error) {
+      console.error('Failed to update post caption:', error);
       toast.error('Failed to update post');
+    } finally {
+      setIsSavingCaption(false);
     }
   };
 
@@ -453,6 +437,7 @@ export const PostCard = React.memo(function PostCard({
   };
 
   return (
+    <>
     <article className="feed-post-card overflow-hidden">
       
       {/* 1. HEADER */}
@@ -575,7 +560,7 @@ export const PostCard = React.memo(function PostCard({
                 style={carouselHeight ? { height: `${carouselHeight}px` } : undefined}
               >
                 {mediaItems.map((media, index) => {
-                  const isMediaVideo = isVideo(media);
+                  const isMediaVideo = isVideoMedia(media);
                   // Only attach ref if this is the ACTIVE slide to ensure IntersectionObserver works correctly
                   const isActive = index === carouselIndex;
                   const shouldRenderMedia = index === 0 || Math.abs(index - carouselIndex) <= 1;
@@ -892,5 +877,13 @@ export const PostCard = React.memo(function PostCard({
         </button>
       </div>
     </article>
+    <EditCaptionModal
+      isOpen={isEditCaptionOpen}
+      initialCaption={post.content.text || ''}
+      isSaving={isSavingCaption}
+      onClose={() => setIsEditCaptionOpen(false)}
+      onSave={(caption) => void handleSaveCaption(caption)}
+    />
+    </>
   );
 });

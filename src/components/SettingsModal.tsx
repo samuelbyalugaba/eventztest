@@ -195,7 +195,9 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
             try {
               const prefs = await getEmailPreferences(user.id);
               setEmailPreferences({ ...DEFAULT_EMAIL_PREFERENCES, ...prefs });
-            } catch {
+            } catch (error) {
+              console.error('Failed to load email preferences:', error);
+              toast.error('Failed to load settings');
               setEmailPreferences(DEFAULT_EMAIL_PREFERENCES);
             }
 
@@ -374,7 +376,9 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
           try {
             const body = await response.json();
             message = body?.error || message;
-          } catch {}
+          } catch (error) {
+            console.error('Failed to parse error response:', error);
+          }
         }
         throw new Error(message);
       }
@@ -778,7 +782,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                         type="button"
                         onClick={() => toggleEmailPreference(item.key)}
                         className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
-                          emailPreferences[item.key] ? 'bg-[#7C3AED]' : 'bg-gray-300'
+                          emailPreferences[item.key] ? 'bg-primary' : 'bg-gray-300'
                         }`}
                         aria-pressed={emailPreferences[item.key]}
                         aria-label={`Toggle ${item.title}`}
@@ -808,7 +812,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200">
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-[#7C3AED] mt-0.5" />
+                  <Shield className="w-5 h-5 text-primary mt-0.5" />
                   <div>
                     <p className="text-gray-900 font-medium mb-1">Privacy Controls</p>
                     <p className="text-gray-600 text-sm">Manage who can see your information and how you interact with others</p>
@@ -827,14 +831,14 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                         onClick={() => setPrivacy({ ...privacy, profileVisibility: option })}
                         className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
                           privacy.profileVisibility === option
-                            ? 'border-[#7C3AED] bg-purple-50'
+                            ? 'border-primary bg-purple-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-gray-900 text-sm font-medium capitalize">{option}</span>
                           {privacy.profileVisibility === option && (
-                            <Check className="w-5 h-5 text-[#7C3AED]" />
+                            <Check className="w-5 h-5 text-primary" />
                           )}
                         </div>
                       </button>
@@ -852,7 +856,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                     <button
                       onClick={() => setPrivacy({ ...privacy, showEmail: !privacy.showEmail })}
                       className={`relative w-12 h-7 rounded-full transition-colors ${
-                        privacy.showEmail ? 'bg-[#7C3AED]' : 'bg-gray-300'
+                        privacy.showEmail ? 'bg-primary' : 'bg-gray-300'
                       }`}
                     >
                       <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
@@ -872,7 +876,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                     <button
                       onClick={() => setPrivacy({ ...privacy, showPhone: !privacy.showPhone })}
                       className={`relative w-12 h-7 rounded-full transition-colors ${
-                        privacy.showPhone ? 'bg-[#7C3AED]' : 'bg-gray-300'
+                        privacy.showPhone ? 'bg-primary' : 'bg-gray-300'
                       }`}
                     >
                       <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
@@ -892,7 +896,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                     <button
                       onClick={() => setPrivacy({ ...privacy, allowMessages: !privacy.allowMessages })}
                       className={`relative w-12 h-7 rounded-full transition-colors ${
-                        privacy.allowMessages ? 'bg-[#7C3AED]' : 'bg-gray-300'
+                        privacy.allowMessages ? 'bg-primary' : 'bg-gray-300'
                       }`}
                     >
                       <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
@@ -912,7 +916,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
                     <button
                       onClick={() => setPrivacy({ ...privacy, showActivity: !privacy.showActivity })}
                       className={`relative w-12 h-7 rounded-full transition-colors ${
-                        privacy.showActivity ? 'bg-[#7C3AED]' : 'bg-gray-300'
+                        privacy.showActivity ? 'bg-primary' : 'bg-gray-300'
                       }`}
                     >
                       <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
@@ -957,7 +961,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
               {/* Save Button */}
               <button
                 onClick={handleSavePrivacy}
-                className="w-full bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] text-white py-3.5 rounded-xl hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2 font-medium"
+                className="w-full bg-gradient-to-r from-primary to-[#5B21B6] text-white py-3.5 rounded-xl hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2 font-medium"
               >
                 <Save className="w-5 h-5" />
                 Save Settings
@@ -970,7 +974,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
             <div className="space-y-4">
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200 mb-6">
                 <div className="flex items-start gap-3">
-                  <HelpCircle className="w-5 h-5 text-[#7C3AED] mt-0.5" />
+                  <HelpCircle className="w-5 h-5 text-primary mt-0.5" />
                   <div>
                     <p className="text-gray-900 font-medium mb-1">We're Here to Help</p>
                     <p className="text-gray-600 text-sm">Get assistance with your EVENTZ account and find answers to common questions</p>
@@ -985,7 +989,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
               >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                    <MessageCircle className="w-5 h-5 text-[#7C3AED]" />
+                    <MessageCircle className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1">
                     <p className="text-gray-900 font-medium text-sm mb-1">Contact Support</p>

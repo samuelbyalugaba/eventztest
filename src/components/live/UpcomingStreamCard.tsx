@@ -37,13 +37,13 @@ export const UpcomingStreamCard = memo(function UpcomingStreamCard({ stream, isR
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-        <h3 className="text-gray-900 text-xs font-semibold mb-0.5 line-clamp-1 group-hover:text-[#7C3AED] transition-colors">
+        <h3 className="text-gray-900 text-xs font-semibold mb-0.5 line-clamp-1 group-hover:text-primary transition-colors">
           {stream.title}
         </h3>
         
-        <div className="flex items-center gap-1.5 text-[#7C3AED]/90 text-xs font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#7C3AED]/30 flex items-center justify-center">
-            <span className="w-0.5 h-0.5 rounded-full bg-[#7C3AED]"></span>
+        <div className="flex items-center gap-1.5 text-primary/90 text-xs font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary/30 flex items-center justify-center">
+            <span className="w-0.5 h-0.5 rounded-full bg-primary"></span>
           </span>
           <span>{stream.scheduledTime?.split(' at ')[1] || stream.scheduledTime}</span>
         </div>
@@ -63,8 +63,8 @@ export const UpcomingStreamCard = memo(function UpcomingStreamCard({ stream, isR
         }}
         className={`p-2 rounded-xl transition-all active:scale-95 ${
           isReminderSet 
-            ? 'bg-[#7C3AED] text-white' 
-            : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-[#7C3AED]'
+            ? 'bg-primary text-white' 
+            : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-primary'
         }`}
       >
         <Bell className={`w-4.5 h-4.5 ${isReminderSet ? 'fill-current' : ''}`} />

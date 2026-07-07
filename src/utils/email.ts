@@ -85,7 +85,7 @@ export const sendSocialEmailNotification = async (
       body: { kind, ...payload },
       headers: { Authorization: `Bearer ${token}` },
     });
-  } catch {
-    // Email delivery is best-effort and should not block the user action.
+  } catch (error) {
+    console.warn('Failed to send email notification:', error);
   }
 };

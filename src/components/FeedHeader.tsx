@@ -116,13 +116,13 @@ export function FeedHeader({
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2.5">
             <h1 className="text-gray-900 text-xl font-bold transition-all duration-300">
-              <span className='text-[#7C3AED]'>Community</span> Explore
+              <span className='text-primary'>Community</span> Explore
             </h1>
           </div>
           <div className="flex items-center gap-2">
             <button
               aria-label="Notifications"
-              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showNotifications ? 'bg-[#7C3AED] text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showNotifications ? 'bg-primary text-white' : 'hover:bg-gray-100 text-gray-700'}`}
               onClick={() => {
                 if (!currentUser) {
                   toast.error('Sign in to view notifications');
@@ -139,7 +139,7 @@ export function FeedHeader({
             </button>
             <button
               aria-label="Messages"
-              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showMessages ? 'bg-[#7C3AED] text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-lg p-0 transition-colors ${showMessages ? 'bg-primary text-white' : 'hover:bg-gray-100 text-gray-700'}`}
               onClick={() => {
                 if (!currentUser) {
                   toast.error('Sign in to view messages');
@@ -150,7 +150,7 @@ export function FeedHeader({
             >
               <MessageSquare className="h-[18px] w-[18px] text-gray-700" />
               {unreadMessagesCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-[#7C3AED] text-white text-2xs font-bold rounded-full flex items-center justify-center px-1">
+                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-primary text-white text-2xs font-bold rounded-full flex items-center justify-center px-1">
                   {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
                 </span>
               )}

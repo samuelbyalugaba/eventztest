@@ -193,7 +193,9 @@ export default function CreatePostPage() {
       } else {
         setCameraReady(true);
       }
-    } catch {
+    } catch (error) {
+      console.error('Failed to start camera:', error);
+      toast.error('Failed to start camera');
       setCameraReady(false);
       setCameraError(true);
     }
@@ -251,7 +253,8 @@ export default function CreatePostPage() {
         );
         const data = await res.json();
         setLocationSuggestions(data || []);
-      } catch {
+      } catch (error) {
+        console.error('Failed to fetch location suggestions:', error);
         setLocationSuggestions([]);
       } finally {
         setLocationSearching(false);
@@ -315,7 +318,8 @@ export default function CreatePostPage() {
       recordingTimerRef.current = setInterval(() => {
         setRecordingDuration(Math.floor((Date.now() - startTime) / 1000));
       }, 100);
-    } catch {
+    } catch (error) {
+      console.error('Failed to start recording:', error);
       toast.error('Failed to start recording');
     }
   }, [cameraReady, capturedMedia]);

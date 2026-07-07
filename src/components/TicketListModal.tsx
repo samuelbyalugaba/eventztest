@@ -70,10 +70,10 @@ export function TicketListModal({ isOpen, eventName, tickets, onClose, onSelectT
             <button
               key={ticket.id}
               onClick={() => onSelectTicket(ticket)}
-              className="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:border-[#7C3AED] transition-all group text-left"
+              className="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:border-primary transition-all group text-left"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#7C3AED] flex items-center justify-center flex-shrink-0 group-hover:bg-[#6D28D9] transition-colors">
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0 group-hover:bg-primary-dark transition-colors">
                   <TicketIcon className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -90,7 +90,7 @@ export function TicketListModal({ isOpen, eventName, tickets, onClose, onSelectT
                 <div className="text-right hidden sm:block">
                   <span className="block text-sm font-medium text-gray-900">{formatPrice(ticket.price)}</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#7C3AED] transition-colors" />
+                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
               </div>
             </button>
           ))}

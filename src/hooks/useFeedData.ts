@@ -80,7 +80,8 @@ export function useFeedData(initialCurrentUser?: any) {
           try {
             const profile = await getProfile(user.id);
             setCurrentUserProfile(profile || null);
-          } catch {
+          } catch (error) {
+            console.warn('Failed to load profile for feed:', error);
             setCurrentUserProfile(null);
           }
           try {

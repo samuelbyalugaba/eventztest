@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { X, MessageCircle, Heart, Send } from 'lucide-react';
+import { EmptyState } from './ui/EmptyState';
 import { UserAvatar } from './UserAvatar';
 import verifiedBadge from '../assets/verified-badge.png';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
@@ -115,13 +116,11 @@ export function CommentsSheet({
         {/* Scrollable List */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 scrollbar-hide">
           {comments.length === 0 ? (
-            <div className="py-20 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-50">
-                <MessageCircle className="h-7 w-7 text-gray-300" />
-              </div>
-              <p className="text-sm font-semibold text-gray-500">No comments yet</p>
-              <p className="mt-1 text-xs text-gray-400">Be the first to comment.</p>
-            </div>
+            <EmptyState
+              icon={MessageCircle}
+              title="No comments yet"
+              description="Be the first to comment."
+            />
           ) : (
             parentComments.map((comment: any) => (
               <div key={comment.id} className="mb-4 space-y-2.5">

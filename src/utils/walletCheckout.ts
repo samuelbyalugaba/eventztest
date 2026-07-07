@@ -57,11 +57,12 @@ async function waitForDepositTransaction(transactionId: number, depositId: strin
           .eq('id', transactionId);
         return providerStatus === 'success';
       }
-    } catch {
+    } catch (error) {
+      console.error('Failed to get deposit status:', error);
       try {
         await ntzsApi.reconcilePendingDeposits();
-      } catch {
-        // Keep polling; transient provider/API misses should not immediately fail checkout.
+      } catch (error2) {
+        console.error('Failed to reconcile pending deposits:', error2);
       }
     }
 

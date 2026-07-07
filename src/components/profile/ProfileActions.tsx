@@ -30,7 +30,7 @@ export function ProfileActions({
         <div className="flex gap-2 mb-3.5 px-1">
           <button
             onClick={onCreateEvent}
-            className="flex-1 min-h-8 py-1.5 bg-[#7C3AED] text-white rounded-lg font-medium text-[0.72rem] flex items-center justify-center gap-1 hover:bg-[#6D28D9] transition-all active:scale-95 shadow-sm"
+            className="flex-1 min-h-8 py-1.5 bg-primary text-white rounded-lg font-medium text-[0.72rem] flex items-center justify-center gap-1 hover:bg-primary-dark transition-all active:scale-95 shadow-sm"
           >
             <Plus className="w-3 h-3" />
             Create Event
@@ -83,7 +83,7 @@ export function ProfileActions({
         className={`flex-1 min-h-8 py-1.5 rounded-lg font-medium text-[0.72rem] transition-all active:scale-95 ${
           isFollowing
             ? 'bg-gray-100 text-gray-700 border border-gray-200'
-            : 'bg-[#7C3AED] text-white shadow-sm'
+            : 'bg-primary text-white shadow-sm'
         }`}
       >
         {isFollowing ? 'Following' : 'Follow'}

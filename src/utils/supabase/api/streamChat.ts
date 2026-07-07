@@ -17,7 +17,8 @@ export const getStreamMessages = async (eventId: number) => {
   if (user) {
     try {
       blockedUserIds = await getBlockedUserIds(user.id);
-    } catch {
+    } catch (error) {
+      console.warn('Failed to get blocked user IDs for stream:', error);
       blockedUserIds = new Set<string>();
     }
   }
@@ -79,7 +80,7 @@ export const subscribeToStreamMessages = (eventId: number, callback: (message: S
           try {
             const blockedUserIds = await getBlockedUserIds(currentUser.id);
             if (blockedUserIds.has(payload.new.user_id)) return;
-          } catch {}
+          } catch (error) { console.warn('Failed to check blocked users for stream message:', error); }
         }
 
         const { data: user } = await supabase

@@ -24,7 +24,7 @@ export function RightRail() {
       try {
         const events = await getEvents({ limit: 5 });
         if (!cancelled) setTrending((events || []).slice(0, 5));
-      } catch { /* silent */ }
+      } catch (error) { console.warn('Failed to load trending events:', error); }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -52,7 +52,7 @@ export function RightRail() {
 
         <section className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-sm">
           <header className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-[#7C3AED]" />
+            <TrendingUp className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-semibold text-[#1A1A1A]">{sectionTitle}</h3>
           </header>
           {trending.length === 0 ? (
@@ -85,7 +85,7 @@ export function RightRail() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-[#1A1A1A] truncate group-hover:text-[#7C3AED] transition-colors">
+                      <p className="text-sm font-medium text-[#1A1A1A] truncate group-hover:text-primary transition-colors">
                         {ev.title}
                       </p>
                       {ev.location && (
@@ -101,7 +101,7 @@ export function RightRail() {
 
         <section className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-sm">
           <header className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-4 h-4 text-[#7C3AED]" />
+            <Sparkles className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-semibold text-[#1A1A1A]">Tip</h3>
           </header>
           <p className="text-xs text-gray-500 leading-relaxed">

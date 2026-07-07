@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, PlusCircle, Trash2, MessageSquare } from 'lucide-react';
+import { EmptyState } from './ui/EmptyState';
 import { BackButton } from './ui/BackButton';
 import { UserAvatar } from './UserAvatar';
 import { Conversation } from '../types';
@@ -158,21 +159,15 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
             ) : (
               // Conversations List
               filteredConversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-                    <MessageSquare className="h-7 w-7 text-gray-400" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900">
-                    {searchTerm ? 'No matching chats' : 'No active chats'}
-                  </h3>
-                  <p className="mt-2 max-w-xs text-sm text-gray-500">
-                    {searchTerm
-                      ? 'Try searching for another person or message.'
-                      : hasOnlyEmptyConversations
-                        ? 'Chats will appear here after a message is sent.'
-                        : 'Start a conversation from a profile to begin messaging.'}
-                  </p>
-                </div>
+                <EmptyState
+                  icon={MessageSquare}
+                  title={searchTerm ? 'No matching chats' : 'No active chats'}
+                  description={searchTerm
+                    ? 'Try searching for another person or message.'
+                    : hasOnlyEmptyConversations
+                      ? 'Chats will appear here after a message is sent.'
+                      : 'Start a conversation from a profile to begin messaging.'}
+                />
               ) : filteredConversations.map((conv) => {
                 const isOnline = onlineUsers.some(u => u.id === conv.user.id);
                 const previewText = conv.lastMessage.text || 'Attachment';

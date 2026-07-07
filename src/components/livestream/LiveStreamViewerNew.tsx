@@ -58,7 +58,8 @@ function getCloudflareIframeUrl(url?: string) {
       parsed.searchParams.set('muted', 'true');
       parsed.searchParams.set('preload', 'auto');
       return parsed.toString();
-    } catch {
+    } catch (error) {
+      console.warn('Failed to parse player URL for autoplay params', error);
       const separator = playerUrl.includes('?') ? '&' : '?';
       return `${playerUrl}${separator}autoplay=true&muted=true&preload=auto`;
     }
@@ -81,7 +82,9 @@ function getCloudflareIframeUrl(url?: string) {
     if (/videodelivery\.net$/i.test(parsed.hostname)) {
       return withAutoplayParams(`https://iframe.videodelivery.net/${uid}`);
     }
-  } catch {}
+  } catch (error) {
+    console.warn('Failed to construct Cloudflare iframe URL', error);
+  }
 
   return withAutoplayParams(url);
 }
@@ -198,8 +201,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
           client.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
         }
         setAgoraReady(true);
-      } catch {
+      } catch (error) {
         if (!cancelled) setVideoError('Failed to load live player');
+        console.warn('Failed to load AgoraRTC', error);
       }
     };
 
@@ -230,7 +234,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         }
         const totalLikes = await getEventLikes(stream.id);
         setLikes(totalLikes);
-      } catch {}
+      } catch (error) {
+        console.warn('Failed to load initial stream state', error);
+      }
     };
     loadState();
   }, [stream.id, stream.organizer_id]);
@@ -273,7 +279,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         if (msgs) {
           setMessages(msgs.slice(-200).map(mapStreamMessageToViewerChat));
         }
-      } catch {}
+      } catch (error) {
+        console.warn('Failed to load chat messages', error);
+      }
     };
     loadChat();
 
@@ -481,10 +489,10 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         // Try to recover from transient network/media errors before failing
         switch (data.type) {
           case HlsConstructor.ErrorTypes.NETWORK_ERROR:
-            try { hls?.startLoad(); } catch {}
+            try { hls?.startLoad(); } catch (error) { console.warn('Failed to restart HLS load', error); }
             break;
           case HlsConstructor.ErrorTypes.MEDIA_ERROR:
-            try { hls?.recoverMediaError(); } catch {}
+            try { hls?.recoverMediaError(); } catch (error) { console.warn('Failed to recover HLS media error', error); }
             break;
           default:
             setVideoError(`Stream error: ${data.details}`);
@@ -500,8 +508,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     }
 
         tryPlay();
-      } catch {
+      } catch (error) {
         if (!cancelled) setUseIframePlayer(true);
+        console.warn('Failed to start HLS playback', error);
       }
     };
 
@@ -562,8 +571,8 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
           setIsMuted(true);
           await player.play();
         });
-      } catch {
-        // Cloudflare still shows its native play overlay when autoplay is blocked.
+      } catch (error) {
+        console.warn('Cloudflare player error (autoplay may be blocked)', error);
       }
     };
 
@@ -586,7 +595,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         player.muted = isMuted;
         if (!isMuted) player.volume = 1;
         player.play?.().catch?.(() => {});
-      } catch {}
+      } catch (error) {
+        console.warn('Failed to set Cloudflare player mute state', error);
+      }
       return;
     }
 
@@ -623,9 +634,10 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     try {
       const savedMessage = await sendStreamMessage(stream.id, text);
       setMessages((prev) => appendViewerChatMessage(prev, mapStreamMessageToViewerChat(savedMessage)));
-    } catch {
+    } catch (error) {
       setMessage(text);
       toast.error('Failed to send message');
+      console.warn('Failed to send message', error);
     }
   };
 
@@ -642,9 +654,10 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
     setLikes((p) => newIsLiked ? p + 1 : Math.max(0, p - 1));
     try {
       await toggleLikeEvent(stream.id, user.id);
-    } catch {
+    } catch (error) {
       setIsLiked(!newIsLiked);
       setLikes((p) => !newIsLiked ? p + 1 : Math.max(0, p - 1));
+      console.warn('Failed to toggle like', error);
     } finally {
       // Unblock after a short delay to let the realtime event pass
       setTimeout(() => { pendingLikeRef.current = false; }, 3000);
@@ -697,7 +710,9 @@ export function LiveStreamViewerNew({ stream, onClose }: LiveStreamViewerProps) 
         await navigator.clipboard.writeText(shareUrl);
         toast.success('Stream link copied!');
       }
-    } catch {}
+    } catch (error) {
+      console.warn('Failed to share stream link', error);
+    }
   };
 
   // ─── Video content (shared between layouts) ─────────────

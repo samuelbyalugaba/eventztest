@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useVisualViewport } from '../utils/useVisualViewport';
 import { askForReportReason, confirmBlockUser } from '../utils/moderation';
 import { ConfirmDialog } from './ui/confirm-dialog';
+import { isVideoMedia } from '../utils/media';
 
 interface ChatDetailProps {
   conversationId: number;
@@ -16,8 +17,6 @@ interface ChatDetailProps {
   isOnline?: boolean;
   onViewProfile?: () => void;
 }
-
-const isVideoMedia = (url?: string) => /\.(mp4|webm|ogg|ogv|mov|m4v|3gp|3gpp)(\?|#|$)/i.test(url || '');
 const isPlaceholderMediaText = (content?: string) => /^sent an? (image|video|media)$/i.test((content || '').trim());
 
 export function ChatDetail({ conversationId, recipient, currentUser, onBack, isOnline, onViewProfile }: ChatDetailProps) {
@@ -204,7 +203,8 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
       }).catch(() => {});
       scrollToBottom();
       inputRef.current?.focus();
-    } catch {
+    } catch (error) {
+      console.error('Failed to send message:', error);
       toast.error('Failed to send message');
       setMessageText(text);
     } finally {
@@ -225,7 +225,8 @@ export function ChatDetail({ conversationId, recipient, currentUser, onBack, isO
     try {
       await deleteMessage(messageId);
       toast.success('Message deleted');
-    } catch {
+    } catch (error) {
+      console.error('Failed to delete message:', error);
       toast.error('Failed to delete message');
       getMessages(conversationId).then(setMessages);
     }

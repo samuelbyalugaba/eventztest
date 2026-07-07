@@ -47,11 +47,11 @@ function DetailCalendarIcon() {
       />
       <path
         d="M9 13C9 9.7 11.7 7 15 7h18c3.3 0 6 2.7 6 6v7H9v-7Z"
-        fill="#7C3AED"
+        fill="var(--primary)"
       />
       <path d="M16 5v8M32 5v8" stroke="#111827" strokeWidth="3.5" strokeLinecap="round" />
       <path d="M15 27h5M24 27h5M33 27h2M15 34h5M30 35l-4-4 1.9-1.9 2.1 2.1 5.2-5.2 1.8 1.9L30 35Z" fill="#CBD5E1" />
-      <path d="M30 35l-4-4 1.9-1.9 2.1 2.1 5.2-5.2 1.8 1.9L30 35Z" fill="#7C3AED" />
+      <path d="M30 35l-4-4 1.9-1.9 2.1 2.1 5.2-5.2 1.8 1.9L30 35Z" fill="var(--primary)" />
     </svg>
   );
 }
@@ -310,7 +310,9 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
         }
         const ok = await hasActiveVirtualTicket(user.id, event.id);
         setHasVirtualAccess(ok);
-      } catch {
+      } catch (error) {
+        console.error('Failed to check virtual access:', error);
+        toast.error('Failed to load event details');
         setHasVirtualAccess(false);
       } finally {
         setIsCheckingVirtualAccess(false);
@@ -539,9 +541,9 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 {(event.organizer || event.organizer_id) && (
                   <button
                     onClick={handleOrganizerProfileClick}
-                    className="mt-2 text-sm text-gray-600 hover:text-[#7C3AED] transition-colors text-left"
+                    className="mt-2 text-sm text-gray-600 hover:text-primary transition-colors text-left"
                   >
-                    by <span className="font-semibold text-[#7C3AED]">{organizerDisplayName}</span>
+                    by <span className="font-semibold text-primary">{organizerDisplayName}</span>
                   </button>
                 )}
               </div>
@@ -550,7 +552,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   onClick={handleToggleSave}
                   className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border p-0 transition-all ${
                     isSaved 
-                      ? 'bg-[#7C3AED] border-[#7C3AED] text-white' 
+                      ? 'bg-primary border-primary text-white' 
                       : 'border-gray-200 text-gray-700 hover:bg-gray-50'
                   }`}
                   title={isSaved ? 'Unsave event' : 'Save event'}
@@ -577,7 +579,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             {/* Location */}
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-8 h-8 text-[#7C3AED]" strokeWidth={2.2} />
+                <MapPin className="w-8 h-8 text-primary" strokeWidth={2.2} />
               </div>
               {locationMapsUrl ? (
                 <a
@@ -589,12 +591,12 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 >
                   <div className="mb-0.5 flex items-center justify-between gap-2">
                     <p className="text-sm text-gray-600">Location</p>
-                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 text-2xs font-semibold leading-none text-[#7C3AED]">
+                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 text-2xs font-semibold leading-none text-primary">
                       Maps
                       <ExternalLink className="h-2.5 w-2.5" />
                     </span>
                   </div>
-                  <p className="break-words font-medium text-[#7C3AED] underline decoration-[#7C3AED]/40 underline-offset-4">{event.location}</p>
+                  <p className="break-words font-medium text-primary underline decoration-primary/40 underline-offset-4">{event.location}</p>
                   <p className="text-gray-700 text-sm">{locations.find(l => l.id === event.city)?.name}</p>
                 </a>
               ) : (
@@ -684,7 +686,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                 <p className="text-gray-600 text-sm mb-1">Ticket Price</p>
                 <p className="text-gray-900">{formatEventPrice(event.price_range)}</p>
               </div>
-              <div className="mt-0.5 flex shrink-0 items-center gap-2 text-[#7C3AED]">
+              <div className="mt-0.5 flex shrink-0 items-center gap-2 text-primary">
                 <Eye className="w-5 h-5" />
                 <span className="text-sm">
                   {displayViews.toLocaleString()} {displayViews === 1 ? 'view' : 'views'}
@@ -710,7 +712,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                       className={`flex items-start justify-between gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100 transition-colors ${externalTicketing ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100'}`}
                     >
                       <div className="flex min-w-0 items-start gap-3">
-                         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white">
+                         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white">
                             <Ticket className="w-4 h-4" />
                          </div>
                          <div className="min-w-0">
@@ -754,7 +756,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
             <div className="mb-6 bg-gray-50 rounded-2xl p-4 border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#7C3AED] rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                     <Tv className="w-5 h-5 text-white" />
                   </div>
                   <h3 className="text-gray-900 font-semibold text-sm">HD Live Stream</h3>
@@ -818,10 +820,10 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                   <button
                     onClick={() => !isEventPast && handleExternalTicketing()}
                     disabled={isEventPast}
-                    className={`w-full bg-white border-2 border-[#7C3AED] rounded-xl p-4 flex items-center justify-between transition-all group ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#7C3AED]'}`}
+                    className={`w-full bg-white border-2 border-primary rounded-xl p-4 flex items-center justify-between transition-all group ${isEventPast ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary'}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#7C3AED] rounded-full flex items-center justify-center group-hover:bg-[#6D28D9] transition-colors">
+                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center group-hover:bg-primary-dark transition-colors">
                         <Phone className="w-5 h-5 text-white" />
                       </div>
                       <div className="text-left">
@@ -829,7 +831,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                         <p className="text-gray-500 text-xs group-hover:text-white/70">{externalTicketingPhone || 'Contact organizer'}</p>
                       </div>
                     </div>
-                    <span className="text-[#7C3AED] font-bold group-hover:text-white">{formatEventPrice(event.price_range)}</span>
+                    <span className="text-primary font-bold group-hover:text-white">{formatEventPrice(event.price_range)}</span>
                   </button>
                 ) : (
                   <button
@@ -838,11 +840,11 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                     className={`w-full rounded-xl border-2 p-4 flex items-center justify-between transition-all group ${
                       isEventPast || isFreeEvent
                         ? 'cursor-default border-gray-100 bg-gray-50 text-gray-500'
-                        : 'border-[#7C3AED] bg-white hover:bg-[#7C3AED]'
+                        : 'border-primary bg-white hover:bg-primary'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isFreeEvent ? 'bg-gray-100' : 'bg-[#7C3AED] group-hover:bg-[#6D28D9]'}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isFreeEvent ? 'bg-gray-100' : 'bg-primary group-hover:bg-primary-dark'}`}>
                         <Ticket className={`w-5 h-5 ${isFreeEvent ? 'text-gray-500' : 'text-white'}`} />
                       </div>
                       <div className="text-left">
@@ -850,7 +852,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                         <p className="text-gray-500 text-xs group-hover:text-white/70">{isFreeEvent ? 'No ticket purchase required' : 'General admission access'}</p>
                       </div>
                     </div>
-                    <span className="text-[#7C3AED] font-bold group-hover:text-white">{formatEventPrice(event.price_range)}</span>
+                    <span className="text-primary font-bold group-hover:text-white">{formatEventPrice(event.price_range)}</span>
                   </button>
                 )}
                 
@@ -898,7 +900,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
              externalTicketing ? (
                 <button
                   onClick={handleExternalTicketing}
-                 className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#7C3AED] py-3 text-center font-medium leading-tight text-white transition-colors hover:bg-[#6D28D9]"
+                 className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 text-center font-medium leading-tight text-white transition-colors hover:bg-primary-dark"
                >
                  <Phone className="w-5 h-5 shrink-0" />
                  <span className="min-w-0">Contact for ticketing</span>
@@ -910,7 +912,7 @@ export function EventDetailModal({ event, onClose, onPurchaseTicket, onPurchaseN
                  className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl py-3 text-center font-medium leading-tight transition-colors ${
                    isFreeEvent
                      ? 'cursor-default bg-gray-100 text-gray-600 shadow-none'
-                      : 'bg-[#7C3AED] text-white hover:bg-[#6D28D9]'
+                      : 'bg-primary text-white hover:bg-primary-dark'
                  }`}
                >
                  <Ticket className="w-5 h-5 shrink-0" />

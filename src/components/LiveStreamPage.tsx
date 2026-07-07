@@ -47,7 +47,8 @@ export function LiveStreamPage() {
           toast.error('Event not found');
           navigate('/live');
         }
-      } catch {
+      } catch (error) {
+        console.error('Failed to load stream:', error);
         toast.error('Failed to load stream');
         navigate('/live');
       } finally {

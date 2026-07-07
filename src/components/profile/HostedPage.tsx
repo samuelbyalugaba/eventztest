@@ -110,7 +110,8 @@ export function HostedPage() {
         setProfile(profileData);
         setEvents(organizerEvents || []);
         setStreams(streamedVideos || []);
-      } catch {
+      } catch (error) {
+        console.error('Failed to load hosted activity:', error);
         if (alive) toast.error('Failed to load hosted activity');
       } finally {
         if (alive) setIsLoading(false);

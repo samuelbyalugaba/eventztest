@@ -60,7 +60,8 @@ export const getConversations = async (userId: string) => {
   let blockedUserIds = new Set<string>();
   try {
     blockedUserIds = await getBlockedUserIds(userId);
-  } catch {
+  } catch (error) {
+    console.warn('Failed to get blocked user IDs for conversations:', error);
     blockedUserIds = new Set<string>();
   }
 

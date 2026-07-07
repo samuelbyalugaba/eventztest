@@ -199,7 +199,9 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
               (profile?.username ? `@${String(profile.username).replace(/^@/, '')}` : null);
 
             if (displayFromProfile) userName = displayFromProfile;
-          } catch {}
+          } catch (error) {
+            console.error('Failed to load user profile:', error);
+          }
 
           toast.success('Welcome back!', { description: `Signed in as ${userName}` });
           onAuthSuccess(data.session.access_token, data.user);

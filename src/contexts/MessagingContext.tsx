@@ -94,7 +94,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       try {
         const streams = await getLiveStreams();
         setHasLiveEvents(streams.length > 0);
-      } catch {/* silent */}
+      } catch (error) { console.warn('Failed to check live events:', error); }
     };
     check();
     const id = setInterval(check, 60000);
@@ -150,7 +150,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
             id: f.id, name: f.full_name || '', username: f.username || '', avatar: f.avatar_url || '',
           })));
         });
-      } catch {/* silent */}
+      } catch (error) { console.warn('Failed to setup presence:', error); }
     })();
     return () => { if (channel) channel.unsubscribe(); };
   }, [isAuthenticated, currentUser]);
@@ -189,7 +189,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
           return [newConv, ...prev];
         });
         return newConv;
-      } catch {/* silent */}
+      } catch (error) { console.error('Failed to start conversation:', error); }
     }
     return null;
   }, [currentUser]);
@@ -231,7 +231,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
           } : conv);
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('Failed to send message:', error);
       queryClient.setQueryData<Conversation[]>(CONVERSATIONS_KEY(currentUser.id), (prev) => {
         if (!prev) return prev;
         return prev.map(conv => conv.id === conversationId ? {
@@ -256,7 +257,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
         lastMessage: { ...conv.lastMessage, isRead: true },
       } : conv);
     });
-    try { await markMessagesAsRead(conversationId, currentUser.id); } catch {/* silent */}
+    try { await markMessagesAsRead(conversationId, currentUser.id); } catch (error) { console.warn('Failed to mark messages as read:', error); }
   }, [currentUser]);
 
   const handleDeleteConversation = useCallback(async (conversationId: number) => {
@@ -269,7 +270,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
     try {
       await deleteConversation(conversationId);
       toast.success('Conversation deleted');
-    } catch {
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
       toast.error('Failed to delete conversation');
       queryClient.setQueryData(CONVERSATIONS_KEY(currentUser.id), prevAll);
       queryClient.invalidateQueries({ queryKey: CONVERSATIONS_KEY(currentUser.id) });

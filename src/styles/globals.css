@@ -96,6 +96,7 @@ html.capacitor-android {
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-dark: #6D28D9;
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -367,7 +368,7 @@ html {
   position: absolute;
   inset: 0;
   border: 1.5px solid transparent;
-  border-top-color: #7C3AED;
+  border-top-color: var(--primary);
   border-right-color: rgba(138, 43, 226, 0.3);
   border-radius: 9999px;
   animation: bottom-search-spin 3s linear infinite;
@@ -393,7 +394,7 @@ html {
 .bottom-search-orb svg {
   position: relative;
   z-index: 1;
-  color: #7C3AED;
+  color: var(--primary);
   transition: transform 0.2s ease;
 }
 
@@ -402,7 +403,7 @@ html {
 }
 
 .bottom-search-label {
-  color: #7C3AED;
+  color: var(--primary);
   font-size: 0.5625rem !important;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -582,16 +583,15 @@ select:focus,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-  --tw-ring-color: transparent !important;
-  --tw-ring-shadow: 0 0 #0000 !important;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.16);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: #D1D5DB !important;
+  border-color: var(--primary) !important;
 }
 
 .eventz-switch {
@@ -659,21 +659,11 @@ select:focus {
   opacity: 0;
 }
 
-/* Remove all drop shadows and box shadows */
-[class*="drop-shadow"] {
-  filter: none !important;
-}
-
-[class*="shadow-"] {
-  box-shadow: none !important;
-}
-
-/* Remove focus outlines on click for buttons and interactive elements */
 button:focus-visible,
 a:focus-visible,
 [role='button']:focus-visible,
 [tabindex]:not([tabindex='-1']):focus-visible {
-  outline: none !important;
-  outline-offset: 0 !important;
-  box-shadow: none !important;
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.16);
 }

@@ -23,11 +23,11 @@ export function EventDetailScreen({ scope, onBack, onGo }: { scope: DashboardSco
           ) : null}
           <SectionTitle>Ticket tiers</SectionTitle>
           <TierRows scope={scope} />
-          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed" onClick={() => onGo('stream')}>
+          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-gradient-to-br from-primary to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed" onClick={() => onGo('stream')}>
             <PlayCircle className="h-4 w-4" />
             View live stream
           </button>
-          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-white text-[#7C3AED] border-2 border-[#7C3AED]" onClick={() => onGo('notify')}>
+          <button type="button" className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-white text-primary border-2 border-primary" onClick={() => onGo('notify')}>
             <Bell className="h-4 w-4" />
             Message attendees
           </button>

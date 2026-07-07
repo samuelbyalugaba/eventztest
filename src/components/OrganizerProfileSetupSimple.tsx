@@ -114,7 +114,8 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
       const url = await uploadImage(e.target.files[0], 'avatars', `organizers/${user.id}`);
       setAvatarUrl(url);
       toast.success('Photo uploaded');
-    } catch {
+    } catch (error) {
+      console.error('Failed to upload photo:', error);
       toast.error('Upload failed');
     }
   };
@@ -397,7 +398,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
         <div className="max-w-lg mx-auto">
           <button
             onClick={onSubmit}
-            className="w-full bg-[#7C3AED] text-white py-3.5 rounded-xl font-semibold text-base shadow-lg shadow-purple-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="w-full bg-primary text-white py-3.5 rounded-xl font-semibold text-base shadow-lg shadow-purple-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <span>Complete Setup</span>
             <Check className="w-4 h-4" />

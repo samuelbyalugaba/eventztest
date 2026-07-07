@@ -64,12 +64,12 @@ export function NotifyScreen({ scope, onBack, onGo, onScan }: { scope: Dashboard
                 {audienceOptions.map(([name, count]) => (
                   <button key={name} type="button" className={`relative text-left p-3 pl-[38px] rounded-xl ${
                     audience === name 
-                      ? 'bg-[#F5F3FF] border-[1.5px] border-[#7C3AED]' 
+                      ? 'bg-[#F5F3FF] border-[1.5px] border-primary' 
                       : 'bg-[#FAFAFA] border-[1.5px] border-[#E9EBF0]'
                   }`} onClick={() => setAudience(name)}>
                     <span className={`w-[17px] h-[17px] border-2 rounded-full absolute left-3 top-[13px] ${
                       audience === name
-                        ? 'bg-[#7C3AED] border-[#7C3AED] shadow-[inset_0_0_0_4px_#fff]'
+                        ? 'bg-primary border-primary shadow-[inset_0_0_0_4px_#fff]'
                         : 'border-[#D1D5DB]'
                     }`} />
                     <b className="block text-xs font-medium text-[#111827]">{name}</b>
@@ -97,7 +97,7 @@ export function NotifyScreen({ scope, onBack, onGo, onScan }: { scope: Dashboard
             />
             <div className="flex items-center justify-between mt-[9px] gap-[10px]">
               <span className="text-2xs text-[#9CA3AF] font-medium">{160 - message.length} characters left</span>
-              <span className="flex items-center gap-[7px] text-[#6B7280] text-xs"><i className="w-[34px] h-[19px] rounded-full bg-[#7C3AED] relative inline-block after:content-[''] after:absolute after:right-[2px] after:top-[2px] after:w-[15px] after:h-[15px] after:rounded-full after:bg-white" />Push notification</span>
+              <span className="flex items-center gap-[7px] text-[#6B7280] text-xs"><i className="w-[34px] h-[19px] rounded-full bg-primary relative inline-block after:content-[''] after:absolute after:right-[2px] after:top-[2px] after:w-[15px] after:h-[15px] after:rounded-full after:bg-white" />Push notification</span>
             </div>
             <div className="mt-[11px] rounded-xl bg-[#EDE9FE] border border-[#DDD6FE] px-[14px] py-3 flex items-start gap-[10px] text-[#5B21B6] text-xs font-medium leading-[1.6]">
               <Info className="h-4 w-4" />
@@ -105,7 +105,7 @@ export function NotifyScreen({ scope, onBack, onGo, onScan }: { scope: Dashboard
             </div>
             <button
               type="button"
-              className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed"
+              className="w-full rounded-[14px] py-[14px] px-3 mt-[11px] flex items-center justify-center gap-[9px] text-sm font-semibold tracking-[.02em] bg-gradient-to-br from-primary to-[#5B21B6] text-white disabled:opacity-50 disabled:grayscale-[.25] disabled:cursor-not-allowed"
               disabled={!audience || !message.trim()}
               onClick={() => toast.success(`Notification queued for ${audience}`)}
             >

@@ -56,7 +56,7 @@ export function LiveFilterModals({
                     onClick={() => onCategorySelect(category.id)}
                     className={`min-h-10 rounded-xl px-3 text-left text-sm font-medium transition-all ${
                       selectedCategory === category.id
-                        ? 'bg-[#7C3AED] text-white shadow-lg shadow-purple-600/15'
+                        ? 'bg-primary text-white shadow-lg shadow-purple-600/15'
                         : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                   >
@@ -73,7 +73,7 @@ export function LiveFilterModals({
                     <button
                       type="button"
                       onClick={() => onLocationSelect('all')}
-                      className="text-xs font-semibold text-[#7C3AED]"
+                      className="text-xs font-semibold text-primary"
                     >
                       Clear
                     </button>
@@ -100,7 +100,7 @@ export function LiveFilterModals({
                           onClick={() => onLocationSelect(location.id)}
                           className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-all ${
                             isSelected
-                              ? 'bg-[#7C3AED] text-white shadow-lg shadow-purple-600/15'
+                              ? 'bg-primary text-white shadow-lg shadow-purple-600/15'
                               : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                           }`}
                         >

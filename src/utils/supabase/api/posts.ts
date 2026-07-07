@@ -213,7 +213,8 @@ export const deletePost = async (postId: number) => {
     localStorage.removeItem('eventz-feed-cache-v1');
     sessionStorage.removeItem('feedScrollPos');
     sessionStorage.removeItem('feedLastPostId');
-  } catch {
+  } catch (error) {
+    console.error('Failed to clear feed cache:', error);
   }
 
   if (typeof window !== 'undefined') {
@@ -309,7 +310,8 @@ export const getPostComments = async (postId: number) => {
   if (user) {
     try {
       blockedUserIds = await getBlockedUserIds(user.id);
-    } catch {
+    } catch (error) {
+      console.error('Failed to get blocked user IDs for comments:', error);
       blockedUserIds = new Set<string>();
     }
   }

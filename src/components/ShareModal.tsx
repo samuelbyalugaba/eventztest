@@ -88,7 +88,7 @@ export function ShareModal({ isOpen, onClose, title, text, url }: ShareModalProp
             onClick={handleCopyLink}
             className="w-full flex items-center gap-4 px-4 py-4 rounded-xl hover:bg-gray-50 transition-colors text-left"
           >
-            <div className="w-12 h-12 rounded-full bg-[#7C3AED] flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>

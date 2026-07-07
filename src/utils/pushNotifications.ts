@@ -212,8 +212,8 @@ export const sendSocialPushNotification = async (
       body: { kind, ...payload },
       headers: { Authorization: `Bearer ${token}` },
     });
-  } catch {
-    // Push delivery is best-effort and should not block the user action.
+  } catch (error) {
+    console.warn('Failed to send push notification:', error);
   }
 };
 

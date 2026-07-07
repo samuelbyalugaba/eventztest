@@ -30,8 +30,8 @@ const recoverFromBundleError = async () => {
     }
     const registrations = await navigator.serviceWorker?.getRegistrations?.();
     await Promise.all((registrations || []).map((registration) => registration.update()));
-  } catch {
-    // Reload below is the actual recovery; cache cleanup is best-effort.
+  } catch (error) {
+    console.warn('Failed to clean up caches for bundle reload:', error);
   }
 
   window.location.reload();

@@ -30,7 +30,8 @@ export const formatTimeAgo = (dateString: string): string => {
     
     const weeks = Math.floor(days / 7);
     return `${weeks}w`;
-  } catch {
+  } catch (error) {
+    console.warn('Failed to format time:', error);
     return '';
   }
 };

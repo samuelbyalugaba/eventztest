@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { EmptyState } from './ui/EmptyState';
 import { Filter, Video, Smartphone, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { normalizePlaceName } from '../utils/nominatim';
@@ -134,9 +135,9 @@ export function LiveFeed() {
                 className="icon-circle-button relative rounded-full border border-gray-100 bg-white shadow-sm transition-all hover:bg-gray-50 group"
                 aria-label="Filter live streams"
               >
-                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-[#7C3AED]" />
+                <Filter className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover:text-primary" />
                 {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#7C3AED] text-2xs text-white shadow-md">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-2xs text-white shadow-md">
                     {activeFiltersCount}
                   </span>
                 )}
@@ -169,9 +170,7 @@ export function LiveFeed() {
                   ))}
                 </div>
               ) : (
-                <div className="py-10 bg-white rounded-xl border border-gray-100 border-dashed">
-                  <p className="text-gray-500 text-sm text-center">No live events at the moment</p>
-                </div>
+                <EmptyState title="No live events at the moment" />
               )}
             </div>
 
