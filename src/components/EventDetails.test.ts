@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Event as ApiEvent } from '../utils/supabase/api';
-import { eventMatchesLocation, matchesTimeFilter } from './EventDetails';
+import { eventMatchesLocation, matchesTimeFilter } from '../hooks/useEventFilters';
 
 const event = (overrides: Partial<ApiEvent>): ApiEvent => ({
   id: 1,

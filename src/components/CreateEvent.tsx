@@ -1,87 +1,28 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
-import {
-  BarChart3,
-  Bolt,
-  Calendar,
-  Camera,
-  Check,
-  ChevronDown,
-  Clock,
-  Eye,
-  Info,
-  MapPin,
-  Minus,
-  Phone,
-  Plus,
-  Settings,
-  Tag,
-  Ticket,
-  Trash2,
-  Upload,
-  Users,
-  X,
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BarChart3, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { ImageWithFallback } from './figma/ImageWithFallback';
 import { supabase } from '../utils/supabase/client';
-import { createEvent, getEventAnalytics, getProfile, updateEvent, uploadImage, type Event } from '../utils/supabase/api';
+import { createEvent, getEventAnalytics, getProfile, updateEvent } from '../utils/supabase/api';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
 import { EventPreview } from './create-event/EventPreview';
 import { EventSuccessScreen } from './create-event/EventSuccessScreen';
-import { BackButton } from './ui/BackButton';
-import {
-  TIER_COLORS,
-  DEFAULT_FREE_PERKS,
-  DEFAULT_PERKS,
-  eventCategories,
-  createCurrencies,
-  formatMoney,
-  calculatePriceRange,
-  normalizeDateInput,
-  normalizeTimeInput,
-  parseMoney,
-  createTierClientId,
-  getInitialCurrency,
-  normalizeIncomingTiers,
-  isFreeEvent,
-  getExternalTicketingPhone,
-  type TicketTier,
-} from './create-event/createEventHelpers';
-
-type TicketMode = 'tiers' | 'free';
-
-interface EventSettings {
-  liveStream: boolean;
-  virtualTickets: boolean;
-  externalTicketing: boolean;
-  idVerification: boolean;
-}
-
-interface EventForm {
-  title: string;
-  category: string;
-  subcategory: string;
-  date: string;
-  time: string;
-  location: string;
-  price: string;
-  description: string;
-  coverImage: string | null;
-  ticketMode: TicketMode;
-  ticketTiers: TicketTier[];
-  currency: string;
-  expectedGuests: number;
-  requireRegistration: boolean;
-  freePerks: string[];
-  externalTicketingPhone: string;
-  settings: EventSettings;
-  streaming: {
-    virtualPrice: string;
-    virtualPriceNumeric: number;
-    quality: 'HD' | '4K' | 'SD';
-  };
-}
+import { TIER_COLORS, formatMoney } from './create-event/createEventHelpers';
+import { useEventForm } from '../hooks/useEventForm';
+import { useEventAutoSave } from '../hooks/useEventAutoSave';
+import { StickyHeader } from './create-event/StickyHeader';
+import { CoverImageSection } from './create-event/CoverImageSection';
+import { EventNameField } from './create-event/EventNameField';
+import { DateTimeFields } from './create-event/DateTimeFields';
+import { LocationField } from './create-event/LocationField';
+import { CategorySelector } from './create-event/CategorySelector';
+import { TicketModeBar } from './create-event/TicketModeBar';
+import { TicketTierCard } from './create-event/TicketTierCard';
+import { FreeEntrySection } from './create-event/FreeEntrySection';
+import { EventSettingsSection } from './create-event/EventSettingsSection';
+import { DescriptionField } from './create-event/DescriptionField';
+import { PublishButton } from './create-event/PublishButton';
+import type { Event } from '../utils/supabase/api';
 
 interface CreateEventProps {
   onBack?: () => void;
@@ -89,64 +30,55 @@ interface CreateEventProps {
 }
 
 export function CreateEvent({ onBack, event }: CreateEventProps) {
-  const [formData, setFormData] = useState<EventForm>(() => {
-    const initialCurrency = getInitialCurrency(event);
-    const incomingTiers = normalizeIncomingTiers(event, initialCurrency);
-    const freeMode = isFreeEvent(event);
-    const freeTier = incomingTiers.find((tier) => tier.priceNumeric === 0) || incomingTiers[0];
-    const streaming: any = event?.streaming || {};
-    const streamingFeatures = Array.isArray(streaming.features) ? streaming.features : [];
+  const {
+    formData,
+    setFormData,
+    tierFeatureDrafts,
+    setTierFeatureDrafts,
+    freePerkDraft,
+    setFreePerkDraft,
+    revenueTotal,
+    computedPrice,
+    updateForm,
+    handleCurrencyChange,
+    handleCategoryChange,
+    handleImageUpload,
+    handleUpdateTier,
+    handleAdjustTierCapacity,
+    handleAddTier,
+    handleRemoveTier,
+    toggleTierFeature,
+    addTierFeature,
+    toggleFreePerk,
+    addFreePerk,
+    handleSettingChange,
+    validateForPublish,
+    buildEventData,
+  } = useEventForm(event);
 
-    return {
-      title: event?.title || '',
-      category: event?.category || '',
-      subcategory: event?.subcategory || '',
-      date: event?.date || '',
-      time: event?.time || '',
-      location: event?.location || '',
-      price: event?.price_range || '',
-      description: event?.description || '',
-      coverImage: event?.image_url || null,
-      ticketMode: freeMode ? 'free' : 'tiers',
-      ticketTiers: incomingTiers,
-      currency: initialCurrency,
-      expectedGuests: Math.max(0, Number(freeTier?.available ?? event?.attendees ?? 0) || 0),
-      requireRegistration: typeof freeTier?.registrationRequired === 'boolean' ? freeTier.registrationRequired : true,
-      freePerks: freeTier?.features?.length ? freeTier.features : (event && freeMode ? DEFAULT_FREE_PERKS : []),
-      externalTicketingPhone: getExternalTicketingPhone(streaming),
-      settings: {
-        liveStream: streamingFeatures.includes('live_stream') || !!streaming.available,
-        virtualTickets: streamingFeatures.includes('virtual_tickets') || !!streaming.virtualPrice,
-        externalTicketing: streamingFeatures.includes('external_ticketing') || !!streaming.externalTicketing?.enabled,
-        idVerification: streamingFeatures.includes('id_verification'),
-      },
-      streaming: {
-        virtualPrice: streaming.virtualPrice || '',
-        virtualPriceNumeric: parseMoney(streaming.virtualPrice),
-        quality: streaming.quality || 'HD',
-      },
-    };
-  });
-  const [savedEventId, setSavedEventId] = useState<number | undefined>(event?.id);
-  const [currentStatus, setCurrentStatus] = useState<string>(event?.status || 'draft');
   const [showPreview, setShowPreview] = useState(false);
   const [showSuccessScreen, setShowSuccessScreen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [analytics, setAnalytics] = useState<any>(null);
   const [categoryOpen, setCategoryOpen] = useState(false);
-  const [tierFeatureDrafts, setTierFeatureDrafts] = useState<Record<number, string>>({});
-  const [freePerkDraft, setFreePerkDraft] = useState('');
+
+  const {
+    savedEventId,
+    setSavedEventId,
+    currentStatus,
+    setCurrentStatus,
+    isAutoSaving,
+  } = useEventAutoSave({
+    formData,
+    buildEventData,
+    isSubmitting,
+    showSuccessScreen,
+    initialSavedEventId: event?.id,
+    initialStatus: event?.status,
+  });
 
   const isEditing = !!savedEventId;
-  const selectedCategory = eventCategories.find((category) => category.name === formData.category);
-  const SelectedCategoryIcon = selectedCategory?.icon || Tag;
-  const revenueTotal = useMemo(
-    () => formData.ticketTiers.reduce((sum, tier) => sum + Math.max(0, Number(tier.priceNumeric) || 0) * Math.max(0, Number(tier.available) || 0), 0),
-    [formData.ticketTiers],
-  );
-  const computedPrice = formData.ticketMode === 'free' ? 'Free' : calculatePriceRange(formData.ticketTiers, formData.currency);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -174,314 +106,6 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
     fetchAnalytics();
   }, [showSuccessScreen, savedEventId]);
-
-  const updateForm = <K extends keyof EventForm>(field: K, value: EventForm[K]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const serializeTicketTiers = (data: EventForm) => {
-    if (data.ticketMode === 'free') {
-      return [
-        {
-          name: 'Free Entry',
-          price: 'Free',
-          priceNumeric: 0,
-          available: Math.max(1, Number(data.expectedGuests) || 1),
-          features: data.freePerks.filter(Boolean),
-          color: TIER_COLORS[2],
-          registrationRequired: data.requireRegistration,
-        },
-      ];
-    }
-
-    return data.ticketTiers.map((tier, index) => {
-      const priceNumeric = Math.max(0, Number(tier.priceNumeric) || 0);
-      return {
-        name: tier.name.trim() || `Ticket ${index + 1}`,
-        price: formatMoney(priceNumeric, data.currency),
-        priceNumeric,
-        available: Math.max(0, Number(tier.available) || 0),
-        features: tier.features.filter(Boolean),
-        color: tier.color || TIER_COLORS[index % TIER_COLORS.length],
-      };
-    });
-  };
-
-  const buildStreamingPayload = (data: EventForm) => {
-    const features: string[] = [];
-    if (data.settings.liveStream) features.push('live_stream');
-    if (data.settings.virtualTickets) features.push('virtual_tickets');
-    if (data.settings.externalTicketing) features.push('external_ticketing');
-    if (data.settings.idVerification) features.push('id_verification');
-
-    const virtualPrice = data.settings.virtualTickets
-      ? formatMoney(Math.max(0, Number(data.streaming.virtualPriceNumeric) || 0), data.currency)
-      : '';
-
-    return {
-      available: data.settings.liveStream || data.settings.virtualTickets,
-      quality: data.streaming.quality,
-      virtualPrice,
-      features,
-      externalTicketing: {
-        enabled: data.settings.externalTicketing,
-        phone: data.settings.externalTicketing ? data.externalTicketingPhone.trim() : '',
-      },
-    };
-  };
-
-  const buildEventData = (status: 'draft' | 'published', userId: string) => {
-    const ticketTiers = serializeTicketTiers(formData);
-    const priceRange = formData.ticketMode === 'free' ? 'Free' : calculatePriceRange(formData.ticketTiers, formData.currency);
-
-    return {
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      date: formData.date,
-      time: formData.time,
-      location: formData.location.trim(),
-      category: formData.category,
-      subcategory: formData.subcategory,
-      image_url: formData.coverImage || '',
-      price_range: priceRange,
-      organizer_id: userId,
-      status,
-      attendees: formData.ticketMode === 'free' ? Math.max(0, Number(formData.expectedGuests) || 0) : undefined,
-      ticket_tiers: ticketTiers,
-      streaming: buildStreamingPayload(formData),
-    };
-  };
-
-  useEffect(() => {
-    const autoSave = async () => {
-      if (!formData.title.trim() || !formData.date || !formData.category || isSubmitting || currentStatus === 'published' || showSuccessScreen) return;
-
-      setIsAutoSaving(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const eventData = buildEventData('draft', user.id);
-        if (savedEventId) {
-          await updateEvent(savedEventId, eventData);
-        } else {
-          const newEvent = await createEvent(eventData as any);
-          setSavedEventId(newEvent.id);
-        }
-      } catch (error) {
-        console.error('Failed to auto-save draft:', error);
-      } finally {
-        setIsAutoSaving(false);
-      }
-    };
-
-    const timeoutId = window.setTimeout(autoSave, 3000);
-    return () => window.clearTimeout(timeoutId);
-  }, [formData, savedEventId, isSubmitting, currentStatus, showSuccessScreen]);
-
-  const handleCurrencyChange = (currencyCode: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      currency: currencyCode,
-      ticketTiers: prev.ticketTiers.map((tier) => ({
-        ...tier,
-        price: formatMoney(tier.priceNumeric, currencyCode),
-      })),
-      streaming: {
-        ...prev.streaming,
-        virtualPrice: prev.streaming.virtualPriceNumeric > 0 ? formatMoney(prev.streaming.virtualPriceNumeric, currencyCode) : '',
-      },
-    }));
-  };
-
-  const handleCategoryChange = (categoryName: string) => {
-    setFormData((prev) => ({ ...prev, category: categoryName, subcategory: '' }));
-  };
-
-  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image size should be less than 10MB');
-      return;
-    }
-
-    const toastId = toast.loading('Uploading cover image...');
-    try {
-      const publicUrl = await uploadImage(file, 'events');
-      updateForm('coverImage', publicUrl);
-      toast.success('Cover image uploaded', { id: toastId });
-    } catch (error) {
-      console.error('Failed to upload image:', error);
-      toast.error('Failed to upload image', { id: toastId });
-    } finally {
-      e.target.value = '';
-    }
-  };
-
-  const handleUpdateTier = (index: number, field: keyof TicketTier, value: string | number | string[]) => {
-    setFormData((prev) => {
-      const ticketTiers = [...prev.ticketTiers];
-      const nextTier = { ...ticketTiers[index] };
-
-      if (field === 'priceNumeric') {
-        const priceNumeric = Math.max(0, Number(value) || 0);
-        nextTier.priceNumeric = priceNumeric;
-        nextTier.price = formatMoney(priceNumeric, prev.currency);
-      } else if (field === 'available') {
-        nextTier.available = Math.max(0, Number(value) || 0);
-      } else {
-        (nextTier as any)[field] = value;
-      }
-
-      ticketTiers[index] = nextTier;
-      return { ...prev, ticketTiers, price: calculatePriceRange(ticketTiers, prev.currency) };
-    });
-  };
-
-  const handleAdjustTierCapacity = (index: number, delta: number) => {
-    setFormData((prev) => {
-      const ticketTiers = [...prev.ticketTiers];
-      const nextTier = { ...ticketTiers[index] };
-      nextTier.available = Math.max(0, (Number(nextTier.available) || 0) + delta);
-      ticketTiers[index] = nextTier;
-      return { ...prev, ticketTiers };
-    });
-  };
-
-  const handleAddTier = () => {
-    setFormData((prev) => {
-      const index = prev.ticketTiers.length;
-      const newTier: TicketTier = {
-        clientId: createTierClientId(),
-        name: '',
-        price: formatMoney(0, prev.currency),
-        priceNumeric: 0,
-        available: 0,
-        features: [],
-        color: TIER_COLORS[index % TIER_COLORS.length],
-      };
-
-      return { ...prev, ticketTiers: [...prev.ticketTiers, newTier] };
-    });
-  };
-
-  const handleRemoveTier = (index: number) => {
-    setFormData((prev) => {
-      const ticketTiers = prev.ticketTiers.filter((_, tierIndex) => tierIndex !== index);
-      return { ...prev, ticketTiers };
-    });
-  };
-
-  const toggleTierFeature = (index: number, feature: string) => {
-    const tier = formData.ticketTiers[index];
-    if (!tier) return;
-
-    const features = tier.features.includes(feature)
-      ? tier.features.filter((item) => item !== feature)
-      : [...tier.features, feature];
-    handleUpdateTier(index, 'features', features);
-  };
-
-  const addTierFeature = (index: number) => {
-    const value = tierFeatureDrafts[index]?.trim();
-    if (!value) return;
-
-    const tier = formData.ticketTiers[index];
-    if (!tier) return;
-
-    const matchedDefaultPerk = DEFAULT_PERKS.find((perk) => perk.toLowerCase() === value.toLowerCase());
-    const feature = matchedDefaultPerk || value;
-    const alreadyAdded = tier.features.some((item) => item.toLowerCase() === feature.toLowerCase());
-    if (alreadyAdded) {
-      setTierFeatureDrafts((prev) => ({ ...prev, [index]: '' }));
-      return;
-    }
-
-    handleUpdateTier(index, 'features', [...tier.features, feature]);
-    setTierFeatureDrafts((prev) => ({ ...prev, [index]: '' }));
-  };
-
-  const toggleFreePerk = (perk: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      freePerks: prev.freePerks.includes(perk)
-        ? prev.freePerks.filter((item) => item !== perk)
-        : [...prev.freePerks, perk],
-    }));
-  };
-
-  const addFreePerk = () => {
-    const value = freePerkDraft.trim();
-    if (!value || formData.freePerks.includes(value)) return;
-
-    setFormData((prev) => ({ ...prev, freePerks: [...prev.freePerks, value] }));
-    setFreePerkDraft('');
-  };
-
-  const handleSettingChange = (field: keyof EventSettings, value: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        [field]: value,
-      },
-    }));
-  };
-
-  const validateForPublish = () => {
-    if (!formData.title.trim()) {
-      toast.error('Please add an event name');
-      return false;
-    }
-
-    if (!formData.date) {
-      toast.error('Please choose an event date');
-      return false;
-    }
-
-    if (!formData.location.trim()) {
-      toast.error('Please add a venue or location');
-      return false;
-    }
-
-    if (!formData.category) {
-      toast.error('Please select a category');
-      return false;
-    }
-
-    const selectedDate = new Date(formData.date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) {
-      toast.error('Event date cannot be in the past');
-      return false;
-    }
-
-    if (formData.ticketMode === 'tiers') {
-      const validTiers = formData.ticketTiers.filter((tier) => tier.name.trim() && tier.priceNumeric > 0 && tier.available > 0);
-      if (validTiers.length === 0) {
-        toast.error('Add at least one ticket tier with price and capacity');
-        return false;
-      }
-    } else if (!formData.expectedGuests || formData.expectedGuests < 1) {
-      toast.error('Set an expected guest count for free entry');
-      return false;
-    }
-
-    if (formData.settings.externalTicketing && !formData.externalTicketingPhone.trim()) {
-      toast.error('Add the phone number buyers should contact for ticketing');
-      return false;
-    }
-
-    return true;
-  };
 
   const handlePublish = async () => {
     if (!validateForPublish()) return;
@@ -539,410 +163,100 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
 
   return (
     <div className="min-h-screen bg-[#F2F2F7] pb-24 text-[#1C1C1E]">
-      <div className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 pt-[var(--eventz-safe-area-top)] backdrop-blur">
-        <div className="mx-auto flex max-w-[460px] items-center justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <BackButton
-              onClick={onBack}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-gray-900 hover:bg-gray-100"
-            />
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold">{isEditing ? 'Edit Event' : 'Create Event'}</h1>
-              <p className="truncate text-xs text-gray-500">{isAutoSaving ? 'Saving draft...' : 'Host. Go Live. Sell Tickets'}</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              onClick={() => setShowPreview(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-700 hover:bg-gray-100"
-              aria-label="Preview"
-            >
-              <Eye className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
+      <StickyHeader
+        onBack={onBack}
+        isEditing={isEditing}
+        isAutoSaving={isAutoSaving}
+        onPreview={() => setShowPreview(true)}
+      />
 
       <main className="mx-auto max-w-[460px] px-3 py-4">
-        <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
-          <div className="relative h-40 bg-gradient-to-br from-purple-600 to-violet-900">
-            {formData.coverImage && (
-              <>
-                <ImageWithFallback src={formData.coverImage} alt={formData.title || 'Event cover'} className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
-              </>
-            )}
-            <label className="absolute bottom-4 left-4 inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/35 bg-white/10 px-3 py-2 text-xs font-medium text-white backdrop-blur hover:bg-white/15">
-              {formData.coverImage ? <Upload className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-              {formData.coverImage ? 'Change cover' : 'Add cover image'}
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="sr-only" />
-            </label>
-            {formData.coverImage && (
-              <button
-                type="button"
-                onClick={() => updateForm('coverImage', null)}
-                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/55"
-                aria-label="Remove cover image"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+        <CoverImageSection
+          coverImage={formData.coverImage}
+          title={formData.title}
+          onImageUpload={handleImageUpload}
+          onRemoveImage={() => updateForm('coverImage', null)}
+        />
 
-          <div className="space-y-5 p-4">
-            <div>
-              <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Event name</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => updateForm('title', e.target.value)}
-                placeholder="e.g. Nairobi Jazz Night"
-                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
-              />
-            </div>
+        <div className="space-y-5 p-4">
+          <EventNameField value={formData.title} onChange={(value) => updateForm('title', value)} />
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="min-w-0">
-                <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Date</label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => updateForm('date', normalizeDateInput(e.target.value))}
-                    onBeforeInput={(e) => e.preventDefault()}
-                    onKeyDown={(e) => {
-                      if (!['Tab', 'Shift', 'Enter', 'Escape', ' '].includes(e.key)) e.preventDefault();
-                    }}
-                    onPaste={(e) => e.preventDefault()}
-                    onDrop={(e) => e.preventDefault()}
-                    className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100 ${formData.date ? 'text-gray-900' : 'text-gray-500'}`}
-                    aria-label="Event date"
-                  />
-                  <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                </div>
-              </div>
-              <div className="min-w-0">
-                <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Time</label>
-                <div className="relative">
-                  <input
-                    type="time"
-                    value={formData.time}
-                    onChange={(e) => updateForm('time', normalizeTimeInput(e.target.value))}
-                    onBeforeInput={(e) => e.preventDefault()}
-                    onKeyDown={(e) => {
-                      if (!['Tab', 'Shift', 'Enter', 'Escape', ' '].includes(e.key)) e.preventDefault();
-                    }}
-                    onPaste={(e) => e.preventDefault()}
-                    onDrop={(e) => e.preventDefault()}
-                    className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100 ${formData.time ? 'text-gray-900' : 'text-gray-500'}`}
-                    aria-label="Event time"
-                  />
-                  <Clock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                </div>
-              </div>
-            </div>
+          <DateTimeFields
+            date={formData.date}
+            time={formData.time}
+            onDateChange={(value) => updateForm('date', value)}
+            onTimeChange={(value) => updateForm('time', value)}
+          />
 
-            <div>
-              <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Venue / Location</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => updateForm('location', e.target.value)}
-                  placeholder="e.g. Mlimani City Hall, Dar es Salaam"
-                  className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
-                />
-              </div>
-            </div>
+          <LocationField value={formData.location} onChange={(value) => updateForm('location', value)} />
 
-            <div>
-              <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Category</label>
-              <button
-                type="button"
-                onClick={() => setCategoryOpen((open) => !open)}
-                className="flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 text-left text-sm outline-none transition hover:border-purple-200"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <SelectedCategoryIcon className="h-4 w-4 shrink-0 text-purple-600" />
-                  <span className={`truncate ${formData.category ? 'text-gray-900' : 'text-gray-500'}`}>
-                    {formData.category || 'Select a category'}
-                    {formData.subcategory ? ` > ${formData.subcategory}` : ''}
-                  </span>
-                </span>
-                <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition ${categoryOpen ? 'rotate-180' : ''}`} />
-              </button>
+          <CategorySelector
+            category={formData.category}
+            subcategory={formData.subcategory}
+            isOpen={categoryOpen}
+            onToggle={() => setCategoryOpen((open) => !open)}
+            onCategoryChange={handleCategoryChange}
+            onSubcategoryChange={(name) => {
+              updateForm('subcategory', name);
+              setCategoryOpen(false);
+            }}
+            onClose={() => setCategoryOpen(false)}
+          />
 
-              {categoryOpen && (
-                <div className="mt-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg shadow-black/5">
-                  <div className="grid grid-cols-3 gap-2">
-                    {eventCategories.map((category) => {
-                      const Icon = category.icon;
-                      const active = formData.category === category.name;
-                      return (
-                        <button
-                          key={category.name}
-                          type="button"
-                          onClick={() => handleCategoryChange(category.name)}
-                          className={`min-h-[76px] rounded-xl border p-2 text-center transition ${
-                            active ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-purple-200'
-                          }`}
-                        >
-                          <Icon className={`mx-auto mb-2 h-5 w-5 ${active ? 'text-purple-600' : 'text-gray-500'}`} />
-                          <span className="block text-xs font-medium leading-tight">{category.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+          <div className="h-px bg-gray-200" />
+
+          <TicketModeBar
+            ticketMode={formData.ticketMode}
+            currency={formData.currency}
+            onModeChange={(mode) => updateForm('ticketMode', mode)}
+            onCurrencyChange={handleCurrencyChange}
+          />
+
+          {formData.ticketMode === 'tiers' ? (
+            <div className="space-y-3">
+              {formData.ticketTiers.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center">
+                  <p className="text-sm font-semibold text-gray-800">No ticket tiers yet</p>
+                  <p className="mt-1 text-xs text-gray-500">Customize tiers, Pricing, and Capacity</p>
                 </div>
               )}
 
-              {selectedCategory && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {selectedCategory.subcategories.map((subcategory) => {
-                  const active = formData.subcategory === subcategory.name;
-                  return (
-                    <button
-                      key={subcategory.name}
-                      type="button"
-                      onClick={() => {
-                        updateForm('subcategory', subcategory.name);
-                        setCategoryOpen(false);
-                      }}
-                      className={`create-subcategory-chip inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-medium transition ${
-                        active ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-200'
-                      }`}
-                    >
-                      {subcategory.name}
-                    </button>
-                  );
-                })}
-                </div>
-              )}
-            </div>
+              {formData.ticketTiers.map((tier, index) => {
+                const tierFeatureDraft = tierFeatureDrafts[index] || '';
+                return (
+                  <TicketTierCard
+                    key={tier.clientId || `ticket-tier-${index}`}
+                    tier={tier}
+                    index={index}
+                    currency={formData.currency}
+                    tierFeatureDraft={tierFeatureDraft}
+                    onUpdate={handleUpdateTier}
+                    onAdjustCapacity={handleAdjustTierCapacity}
+                    onRemove={handleRemoveTier}
+                    onToggleFeature={toggleTierFeature}
+                    onAddFeature={addTierFeature}
+                    onFeatureDraftChange={(idx, value) => setTierFeatureDrafts((prev) => ({ ...prev, [idx]: value }))}
+                  />
+                );
+              })}
 
-            <div className="h-px bg-gray-200" />
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex rounded-full border border-gray-200 bg-gray-100 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => updateForm('ticketMode', 'tiers')}
-                  className={`create-ticket-mode-button inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition ${
-                    formData.ticketMode === 'tiers' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
-                  }`}
-                >
-                  <Ticket className="h-3 w-3" />
-                  Ticket tiers
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateForm('ticketMode', 'free')}
-                  className={`create-ticket-mode-button inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition ${
-                    formData.ticketMode === 'free' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
-                  }`}
-                >
-                  <Users className="h-3 w-3" />
-                  Free entry
-                </button>
-              </div>
-
-              <select
-                value={formData.currency}
-                onChange={(e) => handleCurrencyChange(e.target.value)}
-                className="create-currency-select h-7 max-w-[88px] rounded-full border border-gray-200 bg-gray-100 px-2.5 text-xs font-semibold text-gray-700 outline-none focus:border-gray-400"
-                aria-label="Currency"
+              <button
+                type="button"
+                onClick={handleAddTier}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-purple-300 bg-purple-50/50 text-sm font-semibold text-purple-700 hover:bg-purple-50"
               >
-                {createCurrencies.map((currency) => (
-                  <option key={currency.code} value={currency.code}>
-                    {currency.code}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <Plus className="h-4 w-4" />
+                Add tier
+              </button>
 
-            {formData.ticketMode === 'tiers' ? (
-              <div className="space-y-3">
-                {formData.ticketTiers.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center">
-                    <p className="text-sm font-semibold text-gray-800">No ticket tiers yet</p>
-                    <p className="mt-1 text-xs text-gray-500">Customize tiers, Pricing, and Capacity</p>
-                  </div>
-                )}
-
-                {formData.ticketTiers.map((tier, index) => {
-                  const customFeatures = tier.features.filter(
-                    (feature) => !DEFAULT_PERKS.some((perk) => perk.toLowerCase() === feature.toLowerCase()),
-                  );
-                  const tierFeatureDraft = tierFeatureDrafts[index] || '';
-
-                  return (
-                  <div key={tier.clientId || `ticket-tier-${index}`} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-                    <div className="mb-3 flex items-center gap-2">
-                      <div className="h-7 w-1 rounded-full" style={{ backgroundColor: tier.color || TIER_COLORS[index % TIER_COLORS.length] }} />
-                      <input
-                        type="text"
-                        value={tier.name}
-                        onChange={(e) => handleUpdateTier(index, 'name', e.target.value)}
-                        placeholder="Tier name"
-                        className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none"
-                        aria-label="Ticket tier name"
-                      />
-                      <span className="rounded-full bg-purple-50 px-2.5 py-1 text-2xs font-bold uppercase tracking-wide text-purple-700">
-                        {tier.badge || 'TIER'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTier(index)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100"
-                        aria-label={`Remove ${tier.name || 'ticket tier'}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-gray-500">Price ({formData.currency})</label>
-                        <input
-                          type="number"
-                          min="0"
-                          inputMode="decimal"
-                          value={tier.priceNumeric > 0 ? tier.priceNumeric : ''}
-                          onChange={(e) => handleUpdateTier(index, 'priceNumeric', e.target.value)}
-                          placeholder="0"
-                          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-gray-400"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-gray-500">Capacity</label>
-                        <div className="flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-1.5 focus-within:border-gray-400">
-                          <button
-                            type="button"
-                            onClick={() => handleAdjustTierCapacity(index, -10)}
-                            className="capacity-stepper-button rounded-md bg-white text-gray-600 shadow-sm"
-                            aria-label="Decrease capacity"
-                          >
-                            <Minus className="h-3.5 w-3.5" />
-                          </button>
-                          <input
-                            type="number"
-                            min="0"
-                            inputMode="numeric"
-                            value={tier.available > 0 ? tier.available : ''}
-                            onChange={(e) => handleUpdateTier(index, 'available', e.target.value)}
-                            placeholder="0"
-                            className="h-8 min-w-0 flex-1 bg-transparent text-center text-sm font-semibold outline-none"
-                            aria-label="Ticket capacity"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleAdjustTierCapacity(index, 10)}
-                            className="capacity-stepper-button rounded-md bg-white text-gray-600 shadow-sm"
-                            aria-label="Increase capacity"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {tier.name.toLowerCase().includes('early') && (
-                      <div className="mt-3">
-                        <label className="mb-1 block text-2xs font-bold uppercase tracking-wide text-gray-500">Sale ends</label>
-                        <input
-                          type="date"
-                          value={tier.saleEnds || ''}
-                          onChange={(e) => handleUpdateTier(index, 'saleEnds', e.target.value)}
-                          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm outline-none focus:border-gray-400"
-                        />
-                      </div>
-                    )}
-
-                    <div className="mt-3">
-                      <label className="mb-2 block text-2xs font-bold uppercase tracking-wide text-gray-500">Perks</label>
-                      {customFeatures.length > 0 && (
-                        <div className="mb-2 flex flex-wrap gap-2 rounded-xl border border-purple-100 bg-purple-50/60 p-2">
-                          {customFeatures.map((feature) => (
-                            <button
-                              key={feature}
-                              type="button"
-                              onClick={() => toggleTierFeature(index, feature)}
-                              className="inline-flex min-w-0 items-center gap-1 rounded-full bg-white px-2.5 py-1.5 text-xs font-semibold text-purple-700 shadow-sm"
-                              aria-label={`Remove ${feature}`}
-                            >
-                              <span className="truncate">{feature}</span>
-                              <X className="h-3 w-3 shrink-0" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-2">
-                        {DEFAULT_PERKS.map((feature) => {
-                          const active = tier.features.includes(feature);
-                          return (
-                            <button
-                              key={feature}
-                              type="button"
-                              onClick={() => toggleTierFeature(index, feature)}
-                              aria-pressed={active}
-                              className={`inline-flex h-9 min-w-0 items-center justify-start gap-1.5 rounded-lg border px-2.5 text-left text-xs font-medium transition ${
-                                active ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-600'
-                              }`}
-                            >
-                              {active && <Check className="h-3 w-3 shrink-0" />}
-                              <span className="truncate">{feature}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="mt-2 flex gap-2">
-                        <input
-                          type="text"
-                          value={tierFeatureDraft}
-                          onChange={(e) => setTierFeatureDrafts((prev) => ({ ...prev, [index]: e.target.value }))}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addTierFeature(index);
-                            }
-                          }}
-                          placeholder="Custom perk"
-                          className="h-10 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-gray-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => addTierFeature(index)}
-                          disabled={!tierFeatureDraft.trim()}
-                          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-dashed border-purple-300 px-3 text-xs font-semibold text-purple-700 transition enabled:bg-purple-50 enabled:hover:bg-purple-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-300"
-                          aria-label="Add custom perk"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  onClick={handleAddTier}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-purple-300 bg-purple-50/50 text-sm font-semibold text-purple-700 hover:bg-purple-50"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add tier
-                </button>
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-                  <div className="mb-3 flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">
-                    <BarChart3 className="h-4 w-4 text-purple-600" />
-                    Live revenue estimate
-                  </div>
-                  {formData.ticketTiers.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      {formData.ticketTiers.map((tier, index) => {
+              <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+                <div className="mb-3 flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                  <BarChart3 className="h-4 w-4 text-purple-600" />
+                  Live revenue estimate
+                </div>
+                {formData.ticketTiers.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {formData.ticketTiers.map((tier, index) => {
                       const subtotal = (Number(tier.priceNumeric) || 0) * (Number(tier.available) || 0);
                       return (
                         <div key={tier.clientId ? `revenue-${tier.clientId}` : `revenue-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-2 text-center">
@@ -953,214 +267,63 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
                         </div>
                       );
                     })}
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center text-xs text-gray-500">
-                      Revenue appears after tiers are added.
-                    </div>
-                  )}
-                  <div className="mt-3 flex items-center justify-between border-t border-gray-200 pt-3">
-                    <span className="text-xs font-medium text-gray-600">Potential gross</span>
-                    <span className="text-xl font-bold text-purple-800">{formData.currency} {revenueTotal.toLocaleString()}</span>
                   </div>
+                ) : (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center text-xs text-gray-500">
+                    Revenue appears after tiers are added.
+                  </div>
+                )}
+                <div className="mt-3 flex items-center justify-between border-t border-gray-200 pt-3">
+                  <span className="text-xs font-medium text-gray-600">Potential gross</span>
+                  <span className="text-xl font-bold text-purple-800">{formData.currency} {revenueTotal.toLocaleString()}</span>
                 </div>
               </div>
-            ) : (
-              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-4 border-b border-gray-100 pb-3">
-                  <div>
-                    <p className="text-sm font-semibold">Expected guests</p>
-                    <p className="mt-0.5 text-xs text-gray-500">Approximate number attending</p>
-                  </div>
-                  <input
-                    type="number"
-                    min="1"
-                    inputMode="numeric"
-                    value={formData.expectedGuests > 0 ? formData.expectedGuests : ''}
-                    onChange={(e) => updateForm('expectedGuests', Math.max(0, Number(e.target.value) || 0))}
-                    placeholder="0"
-                    className="h-10 w-24 rounded-lg border border-gray-200 bg-gray-50 px-3 text-center text-sm outline-none focus:border-gray-400"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-4 border-b border-gray-100 py-3">
-                  <div>
-                    <p className="text-sm font-semibold">Require registration</p>
-                    <p className="mt-0.5 text-xs text-gray-500">Guests confirm their spot in advance</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => updateForm('requireRegistration', !formData.requireRegistration)}
-                    className={`eventz-switch transition ${formData.requireRegistration ? 'bg-purple-600' : 'bg-gray-200'}`}
-                    aria-pressed={formData.requireRegistration}
-                    aria-label="Toggle registration requirement"
-                  >
-                    <span className={`eventz-switch-thumb ${formData.requireRegistration ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-
-                <div className="pt-3">
-                  <label className="mb-2 block text-2xs font-bold uppercase tracking-wide text-gray-500">What's included</label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Free entry', 'Refreshments', 'Networking', 'Certificate'].map((perk) => {
-                      const active = formData.freePerks.includes(perk);
-                      return (
-                        <button
-                          key={perk}
-                          type="button"
-                          onClick={() => toggleFreePerk(perk)}
-                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium ${
-                            active ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-600'
-                          }`}
-                        >
-                          {active && <Check className="h-3 w-3" />}
-                          {perk}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-2 flex gap-2">
-                    <input
-                      type="text"
-                      value={freePerkDraft}
-                      onChange={(e) => setFreePerkDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addFreePerk();
-                        }
-                      }}
-                      placeholder="Custom inclusion"
-                      className="h-9 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 text-xs outline-none focus:border-gray-400"
-                    />
-                    <button
-                      type="button"
-                      onClick={addFreePerk}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-dashed border-purple-300 text-purple-600"
-                      aria-label="Add custom inclusion"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-start gap-2 rounded-xl bg-purple-50 p-3 text-xs leading-5 text-purple-900">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-purple-600" />
-                  <p>Guests receive a free EVENTZ confirmation. Payment is skipped, and registration can stay optional.</p>
-                </div>
-              </div>
-            )}
-
-            <div className="h-px bg-gray-200" />
-
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
-                <Settings className="h-4 w-4 text-purple-600" />
-                Event settings
-              </div>
-              <div className="divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white px-3 shadow-sm">
-                {[
-                  {
-                    key: 'liveStream' as const,
-                    label: 'Live stream',
-                    sub: 'Broadcast this event on EVENTZ',
-                  },
-                  {
-                    key: 'virtualTickets' as const,
-                    label: 'Virtual tickets',
-                    sub: 'Sell online access globally',
-                  },
-                  {
-                    key: 'externalTicketing' as const,
-                    label: 'Use external ticketing',
-                    sub: 'Display price only - buyers will contact you for ticketing',
-                  },
-                  {
-                    key: 'idVerification' as const,
-                    label: 'ID verification',
-                    sub: 'Require ID at entry',
-                  },
-                ].map((setting) => (
-                  <div key={setting.key} className="flex items-center justify-between gap-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium">{setting.label}</p>
-                      <p className="mt-0.5 text-xs text-gray-500">{setting.sub}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleSettingChange(setting.key, !formData.settings[setting.key])}
-                      className={`eventz-switch shrink-0 transition ${formData.settings[setting.key] ? 'bg-purple-600' : 'bg-gray-200'}`}
-                      aria-pressed={formData.settings[setting.key]}
-                      aria-label={`Toggle ${setting.label}`}
-                    >
-                      <span className={`eventz-switch-thumb ${formData.settings[setting.key] ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {formData.settings.virtualTickets && (
-                <div className="mt-3 rounded-2xl border border-purple-100 bg-purple-50 p-3">
-                  <label className="mb-2 block text-2xs font-bold uppercase tracking-wide text-purple-700">Virtual ticket price ({formData.currency})</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={Number.isNaN(formData.streaming.virtualPriceNumeric) ? '' : formData.streaming.virtualPriceNumeric}
-                    onChange={(e) => {
-                      const amount = Math.max(0, Number(e.target.value) || 0);
-                      setFormData((prev) => ({
-                        ...prev,
-                        streaming: {
-                          ...prev.streaming,
-                          virtualPriceNumeric: amount,
-                          virtualPrice: formatMoney(amount, prev.currency),
-                        },
-                      }));
-                    }}
-                    className="h-10 w-full rounded-xl border border-purple-100 bg-white px-3 text-sm outline-none focus:border-gray-400"
-                  />
-                </div>
-              )}
-
-              {formData.settings.externalTicketing && (
-                <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-                  <label className="mb-2 block text-2xs font-bold uppercase tracking-wide text-gray-500">Ticketing contact phone</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="tel"
-                      value={formData.externalTicketingPhone}
-                      onChange={(e) => updateForm('externalTicketingPhone', e.target.value)}
-                      placeholder="+255 7XX XXX XXX"
-                      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-3 text-sm outline-none focus:border-gray-400 focus:bg-white"
-                    />
-                  </div>
-                </div>
-              )}
             </div>
+          ) : (
+            <FreeEntrySection
+              expectedGuests={formData.expectedGuests}
+              requireRegistration={formData.requireRegistration}
+              freePerks={formData.freePerks}
+              freePerkDraft={freePerkDraft}
+              onExpectedGuestsChange={(value) => updateForm('expectedGuests', value)}
+              onRequireRegistrationChange={(value) => updateForm('requireRegistration', value)}
+              onTogglePerk={toggleFreePerk}
+              onPerkDraftChange={setFreePerkDraft}
+              onAddPerk={addFreePerk}
+              onPerkDraftKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addFreePerk();
+                }
+              }}
+            />
+          )}
 
-            <div>
-              <label className="mb-2 block text-2xs font-bold uppercase tracking-[0.12em] text-gray-500">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => updateForm('description', e.target.value)}
-                placeholder="Tell guests what to expect..."
-                rows={4}
-                className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
-              />
-            </div>
+          <div className="h-px bg-gray-200" />
 
-            <button
-              type="button"
-              onClick={handlePublish}
-              disabled={isSubmitting}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-purple-600 text-sm font-bold text-white shadow-lg shadow-purple-200 hover:bg-purple-700 disabled:opacity-70"
-            >
-              {isSubmitting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Bolt className="h-4 w-4" />}
-              {isEditing ? 'Save event' : 'Publish event'}
-            </button>
-          </div>
-        </section>
+          <EventSettingsSection
+            settings={formData.settings}
+            currency={formData.currency}
+            externalTicketingPhone={formData.externalTicketingPhone}
+            streaming={formData.streaming}
+            onSettingChange={handleSettingChange}
+            onExternalTicketingPhoneChange={(value) => updateForm('externalTicketingPhone', value)}
+            onVirtualPriceChange={(amount) => {
+              setFormData((prev) => ({
+                ...prev,
+                streaming: {
+                  ...prev.streaming,
+                  virtualPriceNumeric: amount,
+                  virtualPrice: formatMoney(amount, prev.currency),
+                },
+              }));
+            }}
+          />
+
+          <DescriptionField value={formData.description} onChange={(value) => updateForm('description', value)} />
+
+          <PublishButton isSubmitting={isSubmitting} isEditing={isEditing} onPublish={handlePublish} />
+        </div>
       </main>
     </div>
   );

@@ -3,6 +3,8 @@ import { DeleteAccountSection } from './DeleteAccountSection';
 
 interface PrivacySettings {
   profileVisibility: string;
+  showFollowers: boolean;
+  showStats: boolean;
   showEmail: boolean;
   showPhone: boolean;
   allowMessages: boolean;
