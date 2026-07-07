@@ -2,6 +2,25 @@
 @import "./styles/globals.css";
 
 @layer base {
+  *,
+  *:focus,
+  *:focus-visible,
+  *:focus-within {
+    outline: none !important;
+    box-shadow: none;
+  }
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [role="button"],
+  [tabindex] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer base {
   html, body, #root {
     height: 100%;
     width: 100%;
