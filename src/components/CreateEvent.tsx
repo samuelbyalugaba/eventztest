@@ -66,7 +66,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
   const {
     savedEventId,
     setSavedEventId,
-    setCurrentStatus: _setCurrentStatus,
+    setCurrentStatus,
     isAutoSaving,
   } = useEventAutoSave({
     formData,

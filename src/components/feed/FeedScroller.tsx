@@ -13,13 +13,13 @@ interface FeedScrollerProps {
   isPaused?: boolean;
   currentUserId?: string | null;
   onProfileClick: (user: any, e?: React.MouseEvent) => void;
-  onLike: (id: number) => void | Promise<void>;
-  onSave: (id: number) => void | Promise<void>;
-  onShare: (post: Post) => void | Promise<void>;
+  onLike: (id: number) => Promise<void>;
+  onSave: (id: number) => Promise<void>;
+  onShare: (post: Post) => Promise<void>;
   onMessage: (user: any) => void;
   onUserBlocked: (userId: string) => void;
-  onDelete: (postId: number) => void | Promise<void>;
-  onEditCaption: (postId: number, caption: string) => void | Promise<void>;
+  onDelete: (postId: number) => Promise<void>;
+  onEditCaption: (postId: number, caption: string) => Promise<void>;
   onViewPost: (post: Post, startTime?: number, isMuted?: boolean) => void;
   onViewComments: (post: Post) => void;
 }
