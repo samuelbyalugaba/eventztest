@@ -1,0 +1,16 @@
+# Eventz
+
+> Eventz is the hub of live events — a mobile-first platform to discover, host, and livestream events with a TikTok-style immersive feed.
+
+## Pages
+
+- [Home](/): Discover trending and nearby live events.
+- [Events](/events): Browse all upcoming and ongoing events.
+- [Live](/live): Watch events streaming right now.
+- [Search](/search): Search events, organizers, and posts.
+- [Support](/support): Help center and contact.
+
+## Optional
+
+- [Privacy](/privacy): Privacy policy.
+- [Terms](/terms): Terms of service.
