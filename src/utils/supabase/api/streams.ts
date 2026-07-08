@@ -81,7 +81,8 @@ export const getProfileStreamedVideos = async (userId: string) => {
 
   const eventIds = ownedEvents
     .map((event: any) => event.id)
-    .filter((id: unknown): id is number | string => typeof id === 'number' || typeof id === 'string');
+    .filter((id: unknown): id is number | string => typeof id === 'number' || typeof id === 'string')
+    .map(Number);
 
   let byEvent: CloudflareStream[] = [];
   if (eventIds.length > 0) {

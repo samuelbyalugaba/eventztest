@@ -1,4 +1,10 @@
 export { supabase } from '../client';
+export {
+  onAuthStateChange,
+  updateUserEmail,
+  deleteAccount,
+  signOut,
+} from './auth';
 
 export type { ReportContentType } from './moderation';
 export {

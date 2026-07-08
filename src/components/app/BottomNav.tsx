@@ -18,6 +18,7 @@ export default function BottomNav({ location, shouldHideBottomNav, isSearchTab, 
         <div className="flex items-center justify-around h-[4.75rem]">
           <Link
             to="/events"
+            aria-label="Events"
             className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
               (location.pathname === '/events' || location.pathname === '/') && !isSearchTab ? 'text-primary' : 'text-gray-500'
             }`}
@@ -27,6 +28,7 @@ export default function BottomNav({ location, shouldHideBottomNav, isSearchTab, 
           </Link>
           <Link
             to="/live"
+            aria-label="Live"
             className={`relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
               location.pathname === '/live' ? 'text-primary' : 'text-gray-500'
             }`}
@@ -51,6 +53,7 @@ export default function BottomNav({ location, shouldHideBottomNav, isSearchTab, 
           </Link>
           <Link
             to="/feed"
+            aria-label="Feed"
             className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
               location.pathname === '/feed' ? 'text-primary' : 'text-gray-500'
             }`}
@@ -60,6 +63,7 @@ export default function BottomNav({ location, shouldHideBottomNav, isSearchTab, 
           </Link>
           <Link
             to="/profile"
+            aria-label="Profile"
             className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors ${
               location.pathname === '/profile' ? 'text-primary' : 'text-gray-500'
             }`}

@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '../../integrations/supabase/types';
 
 const normalizeEnv = (value: unknown) => (typeof value === 'string' ? value.trim() : undefined);
 const looksLikeJwt = (value: string) => value.split('.').length === 3;
@@ -14,22 +15,20 @@ const supabaseKey = (() => {
   return undefined;
 })();
 
-const resolvedSupabaseUrl = supabaseUrl || 'https://placeholder.supabase.co';
-const resolvedSupabaseKey = supabaseKey || 'placeholder';
+const resolvedSupabaseUrl = supabaseUrl || '';
+const resolvedSupabaseKey = supabaseKey || '';
 
 export const isSupabaseConfigured = () => {
   return (
     !!supabaseUrl &&
     !!supabaseKey &&
-    supabaseUrl !== 'https://placeholder.supabase.co' &&
-    supabaseKey !== 'placeholder' &&
+    supabaseUrl !== '' &&
+    supabaseKey !== '' &&
     looksLikeJwt(supabaseKey)
   );
 };
 
-type EventzSupabaseClient = SupabaseClient<any, 'public', 'public'>;
-
-const createSupabaseClientInstance = (): EventzSupabaseClient => createClient<any, 'public', 'public'>(
+const createSupabaseClientInstance = () => createClient<Database>(
   resolvedSupabaseUrl,
   resolvedSupabaseKey,
   {
@@ -42,7 +41,7 @@ const createSupabaseClientInstance = (): EventzSupabaseClient => createClient<an
   }
 );
 
-const createNativeOAuthSupabaseClientInstance = (): EventzSupabaseClient => createClient<any, 'public', 'public'>(
+const createNativeOAuthSupabaseClientInstance = () => createClient<Database>(
   resolvedSupabaseUrl,
   resolvedSupabaseKey,
   {
@@ -56,12 +55,9 @@ const createNativeOAuthSupabaseClientInstance = (): EventzSupabaseClient => crea
   }
 );
 
-type SupabaseClientInstance = EventzSupabaseClient;
-type NativeOAuthSupabaseClientInstance = EventzSupabaseClient;
-
 declare global {
-  var __eventzSupabaseClient: SupabaseClientInstance | undefined;
-  var __eventzNativeOAuthSupabaseClient: NativeOAuthSupabaseClientInstance | undefined;
+  var __eventzSupabaseClient: ReturnType<typeof createSupabaseClientInstance> | undefined;
+  var __eventzNativeOAuthSupabaseClient: ReturnType<typeof createNativeOAuthSupabaseClientInstance> | undefined;
 }
 
 export const supabase =

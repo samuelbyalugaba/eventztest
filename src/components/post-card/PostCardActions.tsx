@@ -30,6 +30,7 @@ export function PostCardActions({
       <button
         onClick={handleLike}
         className={`feed-action-btn feed-like-btn ${isLiked ? 'feed-action-liked' : ''}`}
+        aria-label={isLiked ? 'Unlike post' : 'Like post'}
       >
         <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
         <span>{likesCount}</span>
@@ -41,6 +42,7 @@ export function PostCardActions({
           onViewComments?.();
         }}
         className="feed-action-btn"
+        aria-label="Comments"
       >
         <CommentIcon
           className="h-[1.05rem] w-[1.05rem] overflow-visible"

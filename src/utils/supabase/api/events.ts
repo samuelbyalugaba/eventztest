@@ -142,6 +142,24 @@ export const incrementEventView = async (eventId: number) => {
   }
 };
 
+type EventAnalytics = {
+  views: number
+  dailyActivity: { date: string; count: number }[]
+  interested: number
+  shares: number
+  ticketsSold: number
+  revenue: number
+  trends: {
+    interested: { last7: number; prev7: number }
+    tickets: { last7: number; prev7: number }
+    shares: { last7: number; prev7: number }
+  }
+  demographics: {
+    locations: Record<string, number>
+    ageGroups: Record<string, number>
+  }
+}
+
 export const getEventAnalytics = async (eventId: number) => {
   try {
     const { data, error } = await supabase.rpc('get_event_analytics', {
@@ -159,6 +177,8 @@ export const getEventAnalytics = async (eventId: number) => {
       };
     }
 
+    const analytics = data as unknown as EventAnalytics
+
     const calculateTrendFromStats = (last7: number, prev7: number) => {
       if (prev7 === 0) return { change: last7 > 0 ? 100 : 0, trend: 'neutral' as const };
       const change = Math.round(((last7 - prev7) / prev7) * 100);
@@ -168,31 +188,31 @@ export const getEventAnalytics = async (eventId: number) => {
       };
     };
 
-    const interestedTrend = calculateTrendFromStats(data.trends.interested.last7, data.trends.interested.prev7);
-    const ticketsTrend = calculateTrendFromStats(data.trends.tickets.last7, data.trends.tickets.prev7);
-    const sharesTrend = calculateTrendFromStats(data.trends.shares.last7, data.trends.shares.prev7);
+    const interestedTrend = calculateTrendFromStats(analytics.trends.interested.last7, analytics.trends.interested.prev7);
+    const ticketsTrend = calculateTrendFromStats(analytics.trends.tickets.last7, analytics.trends.tickets.prev7);
+    const sharesTrend = calculateTrendFromStats(analytics.trends.shares.last7, analytics.trends.shares.prev7);
 
-    const revenueStr = data.revenue > 0 ? `TSh ${data.revenue.toLocaleString()}` : 'TSh 0';
+    const revenueStr = analytics.revenue > 0 ? `TSh ${analytics.revenue.toLocaleString()}` : 'TSh 0';
 
     return {
       views: {
-        total: data.views,
+        total: analytics.views,
         change: 0,
         trend: 'neutral',
-        daily: data.dailyActivity
+        daily: analytics.dailyActivity
       },
       interested: {
-        total: data.interested,
+        total: analytics.interested,
         change: interestedTrend.change,
         trend: interestedTrend.trend
       },
       shares: {
-        total: data.shares,
+        total: analytics.shares,
         change: sharesTrend.change,
         trend: sharesTrend.trend
       },
       ticketsSold: {
-        total: data.ticketsSold,
+        total: analytics.ticketsSold,
         change: ticketsTrend.change,
         trend: ticketsTrend.trend
       },
@@ -202,15 +222,15 @@ export const getEventAnalytics = async (eventId: number) => {
         trend: ticketsTrend.trend
       },
       demographics: {
-        locations: Object.entries(data.demographics.locations).map(([city, count]) => {
-          const total = Object.values(data.demographics.locations).reduce((a: any, b: any) => a + b, 0) as number;
+        locations: Object.entries(analytics.demographics.locations).map(([city, count]) => {
+          const total = Object.values(analytics.demographics.locations).reduce((a: any, b: any) => a + b, 0) as number;
           return {
             city,
             percent: total > 0 ? Math.round(((count as number) / total) * 100) : 0
           };
         }),
-        ageGroups: Object.entries(data.demographics.ageGroups).map(([range, count]) => {
-          const total = Object.values(data.demographics.ageGroups).reduce((a: any, b: any) => a + b, 0) as number;
+        ageGroups: Object.entries(analytics.demographics.ageGroups).map(([range, count]) => {
+          const total = Object.values(analytics.demographics.ageGroups).reduce((a: any, b: any) => a + b, 0) as number;
           return {
             range,
             percent: total > 0 ? Math.round(((count as number) / total) * 100) : 0
@@ -282,16 +302,18 @@ export const createEvent = async (eventData: Omit<Event, 'id' | 'created_at' | '
     });
   }
   
+  const { organizer, isSaved, hasReminder, ...dbFields } = eventData;
+
   const { data, error } = await supabase
     .from('events')
-    .insert(eventData)
+    .insert(dbFields as typeof dbFields & { organizer_id: string })
     .select()
     .single();
 
   if (error) {
     throw error;
   }
-  return data;
+  return data as unknown as Event;
 };
 
 export const updateEvent = async (eventId: number, eventData: Partial<Event>) => {
@@ -312,9 +334,11 @@ export const updateEvent = async (eventId: number, eventData: Partial<Event>) =>
     });
   }
 
+  const { organizer, isSaved, hasReminder, ...dbFields } = eventData;
+
   const { data, error } = await supabase
     .from('events')
-    .update(eventData)
+    .update(dbFields)
     .eq('id', eventId)
     .select()
     .single();
@@ -322,7 +346,7 @@ export const updateEvent = async (eventId: number, eventData: Partial<Event>) =>
   if (error) {
     throw error;
   }
-  return data;
+  return data as unknown as Event;
 };
 
 export const deleteEvent = async (id: number) => {
@@ -395,13 +419,13 @@ const notifyLiveStreamsUpdated = (_eventId?: number, _isLive?: boolean) => {
 export const updateEventStreamingStatus = async (eventId: number, isLive: boolean) => {
   const { data: currentEvent } = await supabase.from('events').select('streaming').eq('id', eventId).single();
   
-  const currentStreaming = currentEvent?.streaming || {};
+  const currentStreaming = (currentEvent?.streaming || {}) as Record<string, unknown>;
   const now = new Date().toISOString();
   const updates: any = {
     streaming: {
       isLive,
       available: true,
-      provider: (currentStreaming as any).provider || 'agora',
+      provider: currentStreaming.provider || 'agora',
       liveViewers: isLive ? 0 : 0,
       ...(isLive
         ? { startedAt: now, endedAt: null }
@@ -515,8 +539,8 @@ export const updateLiveViewerCount = async (eventId: number, delta: number) => {
 
   if (fetchError) throw fetchError;
 
-  const currentStreaming = currentEvent?.streaming || {};
-  const currentCount = currentStreaming.liveViewers || 0;
+  const currentStreaming = (currentEvent?.streaming || {}) as Record<string, unknown>;
+  const currentCount = (currentStreaming.liveViewers as number) || 0;
   const newCount = Math.max(0, currentCount + delta);
 
   const { data, error } = await supabase

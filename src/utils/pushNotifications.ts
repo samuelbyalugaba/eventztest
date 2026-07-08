@@ -132,6 +132,15 @@ const savePushSubscription = async (userId: string, subscription: PushSubscripti
         platform: navigator.platform,
         enabled: true,
         last_used_at: new Date().toISOString(),
+      } as {
+        user_id: string;
+        endpoint: string;
+        p256dh: string;
+        auth: string;
+        user_agent: string;
+        platform: string;
+        enabled: boolean;
+        last_used_at: string;
       },
       { onConflict: 'endpoint' }
     );

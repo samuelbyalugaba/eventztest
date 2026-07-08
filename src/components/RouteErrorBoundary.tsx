@@ -4,6 +4,7 @@ interface Props {
   children: ReactNode;
   onReset?: () => void;
   fallback?: ReactNode;
+  onRetry?: () => void;
 }
 
 interface State {
@@ -28,6 +29,7 @@ export class RouteErrorBoundary extends Component<Props, State> {
   private handleReset = () => {
     this.setState({ hasError: false, error: null });
     this.props.onReset?.();
+    this.props.onRetry?.();
   };
 
   public render() {

@@ -1,41 +1,27 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Ban, Camera, Menu, ShieldAlert } from 'lucide-react';
-import { preloadCamera } from '../utils/cameraPreloader';
 import { toast } from 'sonner';
-import { blockUser, deleteEvent, reportContent, Ticket, ApiPost, toggleFollow } from '../utils/supabase/api';
+import { blockUser, deleteEvent, reportContent, ApiPost, toggleFollow } from '../utils/supabase/api';
 import type { Event as AppEvent } from '../utils/supabase/api';
-import { TicketListModal } from './TicketListModal';
 import { Conversation, Post as UiPost } from '../types';
 import { formatTimeAgo } from '../utils/format';
-import { EventListModal } from './EventListModal';
 import { useProfileData } from '../hooks/useProfileData';
-import { useProfileStore } from '../store/profileStore';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
-
-
-// Lazy-load heavy modals
-const SettingsModal = lazy(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
-const LiveSetupModal = lazy(() => import('./LiveSetupModal').then(m => ({ default: m.LiveSetupModal })));
-const EventDetailModal = lazy(() => import('./EventDetailModal').then(m => ({ default: m.EventDetailModal })));
-const TicketViewer = lazy(() => import('./TicketViewer').then(m => ({ default: m.TicketViewer })));
+import type { ProfileTab } from './profile/ProfileTabs';
 import { ProfileHeader } from './profile/ProfileHeader';
 import { ProfileBio } from './profile/ProfileBio';
 import { ProfileStats } from './profile/ProfileStats';
-import { ProfileTabs, type ProfileTab } from './profile/ProfileTabs';
+import { ProfileTabs } from './profile/ProfileTabs';
 import { ProfileContent } from './profile/ProfileContent';
 import { ProfileSidebar } from './profile/ProfileSidebar';
 import { ProfileActions } from './profile/ProfileActions';
+import { ProfileSafetyMenu } from './profile/ProfileSafetyMenu';
+import { ProfileError } from './profile/ProfileError';
+import { ProfileFab } from './profile/ProfileFab';
+import { ProfileModals } from './profile/ProfileModals';
+import { useProfileStats } from './profile/useProfileStats';
 import { confirmBlockUser } from '../utils/moderation';
-import { ReportReasonModal } from './ui/ReportReasonModal';
-import { ConfirmDialog } from './ui/confirm-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
 
 type TicketViewerTicket = {
   id: number;
@@ -85,7 +71,6 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       }, { replace: true, state: returnToEvent.state });
       return;
     }
-
     navigate(-1);
   } : undefined);
 
@@ -98,16 +83,14 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [showLiveSetupModal, setShowLiveSetupModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [eventPendingDelete, setEventPendingDelete] = useState<AppEvent | null>(null);
-
   const [showTicketListModal, setShowTicketListModal] = useState(false);
-  const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);
+  const [selectedEventTickets, setSelectedEventTickets] = useState<any[]>([]);
   const [showEventListModal, setShowEventListModal] = useState(false);
   const [showReportReason, setShowReportReason] = useState(false);
 
   const {
     currentUser,
     userProfile,
-    
     publishedEvents,
     savedEvents,
     savedPosts,
@@ -132,12 +115,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     loadMorePosts,
   } = useProfileData(userId, activeTab);
 
-  // Scroll to top on mount or when user changes
   useEffect(() => {
-    // Target the parent scroll container if it exists
     const container = document.querySelector('.overflow-y-auto.overscroll-behavior-y-contain');
     if (container) {
-      container.scrollTop = 0;
+      (container as HTMLElement).scrollTop = 0;
     } else {
       window.scrollTo(0, 0);
     }
@@ -146,6 +127,28 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const profileImage = userProfile?.avatar_url;
   const displayName = userProfile?.full_name || 'User';
   const organizerCategory = userProfile?.organizer_type;
+
+  const {
+    uniqueTicketGroups,
+    pastHostedEvents,
+    hostedCount,
+    attendedCount,
+    displayFollowers,
+    displayFollowing,
+  } = useProfileStats({
+    userId,
+    isOwnProfile,
+    isOrganizer,
+    ticketEvents,
+    publishedEvents,
+    attendedEvents,
+    streamedVideos,
+    isLoadingOrganizerEvents,
+    isLoadingStreamedVideos,
+    isLoadingTickets,
+    isLoading,
+    followStats,
+  });
 
   const handleDeleteEvent = async (event: AppEvent) => {
     if (!currentUser || currentUser.id !== event.organizer_id) return;
@@ -209,69 +212,11 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
       timestamp: formatTimeAgo(post.created_at), likes: post.likes_count || 0, comments: [], comments_count: post.comments_count || 0,
       shares: 0, views: post.views || 0, isLiked: post.is_liked || false, isSaved: post.is_saved || false,
       isHighlight: !!post.video_url,
-      highlights: post.video_url ? [{ id: post.id, thumbnail: (post.image_urls?.find(url => !url.match(/\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', duration: post.duration || '', title: post.content || 'Video Highlight', videoUrl: post.video_url, views: post.views || 0 }] : undefined,
+      highlights: post.video_url ? [{ id: post.id, thumbnail: (post.image_urls?.find((url: string) => !url.match(/\.(mp4|webm|ogg|ogv|mov|m4v|hevc|3gp|3gpp)$/i))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop', duration: post.duration || '', title: post.content || 'Video Highlight', videoUrl: post.video_url, views: post.views || 0 }] : undefined,
       video_url: post.video_url
     };
     onViewPost?.(uiPost);
   };
-
-  const groupedTickets = ticketEvents.reduce((acc, ticket) => {
-    const eventId = ticket.event_id;
-    if (!acc[eventId]) acc[eventId] = [];
-    acc[eventId].push(ticket);
-    return acc;
-  }, {} as Record<number, Ticket[]>);
-  const uniqueTicketGroups = Object.values(groupedTickets) as Ticket[][];
-  const pastHostedEvents = publishedEvents.filter(e => new Date(e.date) < new Date());
-  const pastHostedEventIds = new Set(pastHostedEvents.map((event) => event.id));
-  const additionalHostedStreams = streamedVideos.filter(
-    (stream) =>
-      (stream.has_recording || stream.playback_url) &&
-      (!stream.event_id || !pastHostedEventIds.has(stream.event_id))
-  );
-  const computedHostedCount = pastHostedEvents.length + additionalHostedStreams.length;
-
-  // Per-user persistent cache — hydrates any profile instantly with the last-seen numbers.
-  const cachedHostedCount = useProfileStore((s) => s.hostedCount);
-  const cachedAttendedCount = useProfileStore((s) => s.attendedCount);
-  const perUserSnapshot = useProfileStore((s) => (userId ? s.userStatsCache[userId] : null));
-  const hostedDataReady = !isLoadingOrganizerEvents && !isLoadingStreamedVideos;
-  const attendedDataReady = !isLoadingTickets;
-  const followsReady = !isLoading;
-
-  // Always render numbers — never "-". Prefer live data, then per-user cache, then own-profile cache, then 0.
-  const hostedCount = hostedDataReady
-    ? computedHostedCount
-    : (isOwnProfile ? cachedHostedCount : (perUserSnapshot?.hosted ?? 0));
-  const attendedCount = attendedDataReady
-    ? attendedEvents.length
-    : (isOwnProfile ? cachedAttendedCount : (perUserSnapshot?.attended ?? 0));
-  const displayFollowers = followsReady ? followStats.followers : (perUserSnapshot?.followers ?? followStats.followers);
-  const displayFollowing = followsReady ? followStats.following : (perUserSnapshot?.following ?? followStats.following);
-
-  // Stats row is always ready — instant hydration from cache, live values update in place.
-  const statsReady = true;
-
-  // Persist own-profile counts for legacy consumers.
-  useEffect(() => {
-    if (isOwnProfile && hostedDataReady) useProfileStore.getState().setHostedCount(computedHostedCount);
-  }, [computedHostedCount, hostedDataReady, isOwnProfile]);
-  useEffect(() => {
-    if (isOwnProfile && attendedDataReady) useProfileStore.getState().setAttendedCount(attendedEvents.length);
-  }, [attendedEvents.length, attendedDataReady, isOwnProfile]);
-
-  // Write per-user snapshot whenever fresh data arrives, so next visit is instant.
-  useEffect(() => {
-    if (!userId) return;
-    const patch: any = {};
-    if (hostedDataReady) patch.hosted = computedHostedCount;
-    if (attendedDataReady) patch.attended = attendedEvents.length;
-    if (followsReady) {
-      patch.followers = followStats.followers;
-      patch.following = followStats.following;
-    }
-    if (Object.keys(patch).length) useProfileStore.getState().setUserStats(userId, patch);
-  }, [userId, hostedDataReady, attendedDataReady, followsReady, computedHostedCount, attendedEvents.length, followStats.followers, followStats.following]);
 
   const profileSubpagePath = (section: 'hosted' | 'followers' | 'following') => (
     userId ? `/profile/${userId}/${section}` : `/${section}`
@@ -345,21 +290,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   };
 
   if (isProfileError) {
-    return (
-      <div className="bg-white min-h-screen pb-14 px-4 pt-[calc(0.95rem+var(--eventz-safe-area-top))] sm:px-5 flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-          <span className="text-red-500 text-2xl font-bold">!</span>
-        </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Could not load profile</h2>
-        <p className="text-gray-500 mb-6 max-w-sm">This profile may not exist or is temporarily unavailable.</p>
-        <button
-          onClick={() => refetchProfile()}
-          className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary"
-        >
-          Try again
-        </button>
-      </div>
-    );
+    return <ProfileError onRetry={refetchProfile} />;
   }
 
   return (
@@ -386,14 +317,11 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
               onEditProfile={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
               onSettings={() => { setSettingsInitialView('main'); setShowSettingsModal(true); }}
               onDashboard={() => navigate('/dashboard')}
-               onWallet={() => navigate('/wallet')}
+              onWallet={() => navigate('/wallet')}
               onLogout={onLogout}
             />
           ) : (
-            <ProfileSafetyMenu
-              onReport={handleReportProfile}
-              onBlock={handleBlockProfile}
-            />
+            <ProfileSafetyMenu onReport={handleReportProfile} onBlock={handleBlockProfile} />
           )
         }
       />
@@ -413,7 +341,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         attendedCount={attendedCount}
         followers={displayFollowers}
         following={displayFollowing}
-        dataReady={statsReady}
+        dataReady={true}
         onHostedClick={() => {
           if (isOrganizer) {
             navigate(profileSubpagePath('hosted'), { state: hostedRouteState });
@@ -437,17 +365,16 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         onMessage={() => {
           if (!currentUser) { toast.error('Please sign in to message'); return; }
           if (!userId) { toast.error('Could not find this profile'); return; }
-
           navigate('/messages', {
             state: {
               returnTo: currentRouteTarget,
               startConversationUser: {
-              id: userId,
-              name: displayName,
-              username: userProfile?.username || '',
-              avatar: userProfile?.avatar_url || '',
-              verified: !!userProfile?.verified,
-              isOrganizer: !!userProfile?.is_organizer,
+                id: userId,
+                name: displayName,
+                username: userProfile?.username || '',
+                avatar: userProfile?.avatar_url || '',
+                verified: !!userProfile?.verified,
+                isOrganizer: !!userProfile?.is_organizer,
               },
             },
           });
@@ -484,110 +411,50 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         streamedVideos={streamedVideos}
       />
 
-      {/* FAB */}
-      {isOwnProfile && (
-        <button
-          onClick={async () => { preloadCamera(); await import('./CreatePostPage'); navigate('/compose/post'); }}
-          className="fixed bottom-[calc(6.25rem+var(--eventz-safe-area-bottom))] right-5 w-12 h-12 rounded-full bg-primary shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center z-40 group"
-          title="Share a post"
-        >
-          <Camera className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
-        </button>
-      )}
+      {isOwnProfile && <ProfileFab />}
 
-      {/* Modals - lazy-loaded with Suspense */}
-      <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"><div className="h-10 w-10 animate-spin rounded-full border-2 border-white/30 border-t-white" /></div>}>
-        {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} initialView={settingsInitialView} />}
-        {showLiveSetupModal && <LiveSetupModal isOpen={showLiveSetupModal} onClose={() => setShowLiveSetupModal(false)} />}
-        {showTicketViewer && selectedTicket && <TicketViewer ticket={selectedTicket} onClose={() => setShowTicketViewer(false)} />}
-        {selectedEvent && (
-          <EventDetailModal
-            event={selectedEvent}
-            onClose={() => setSelectedEvent(null)}
-            onPurchaseTicket={() => toast.info("Please go to Events page to purchase tickets")}
-            onPurchaseNormalTicket={() => toast.info("Please go to Events page to purchase tickets")}
-          />
-        )}
-      </Suspense>
-      {showTicketListModal && (
-        <TicketListModal
-          isOpen={showTicketListModal}
-          eventName={selectedEventTickets[0]?.event?.title || 'My Tickets'}
-          onClose={() => setShowTicketListModal(false)}
-          tickets={selectedEventTickets}
-          onSelectTicket={(ticket) => {
-            setSelectedTicket({
-              id: ticket.id, name: ticket.event?.title || 'Event', date: ticket.event?.date || '', time: ticket.event?.time || '',
-              location: ticket.event?.location || '', image: ticket.event?.image_url || '', category: (ticket.event as any)?.category || '',
-              ticketType: ticket.ticket_type || '', price: ticket.price || '', qrCode: ticket.qr_code || ticket.barcode || ticket.ticket_number || String(ticket.id),
-              ticketNumber: ticket.ticket_number,
-            });
-            setShowTicketViewer(true);
-          }}
-        />
-      )}
-      {showEventListModal && (
-          <EventListModal
-            title={isOrganizer ? "Hosted" : "Attended Events"}
-            events={isOrganizer ? pastHostedEvents : (attendedEvents as any)}
-            streams={isOrganizer ? streamedVideos : []}
-            onClose={() => setShowEventListModal(false)}
-            onEventClick={(event) => {
-              setSelectedEvent(event);
-              setShowEventListModal(false);
-            }}
-          />
-        )}
-      <ConfirmDialog
-        open={eventPendingDelete !== null}
-        onOpenChange={(open) => {
+      <ProfileModals
+        showSettingsModal={showSettingsModal}
+        settingsInitialView={settingsInitialView}
+        onCloseSettings={() => setShowSettingsModal(false)}
+        showLiveSetupModal={showLiveSetupModal}
+        onCloseLiveSetup={() => setShowLiveSetupModal(false)}
+        showTicketViewer={showTicketViewer}
+        selectedTicket={selectedTicket}
+        onCloseTicketViewer={() => setShowTicketViewer(false)}
+        selectedEvent={selectedEvent}
+        onCloseEventDetail={() => setSelectedEvent(null)}
+        showTicketListModal={showTicketListModal}
+        selectedEventTickets={selectedEventTickets}
+        onCloseTicketList={() => setShowTicketListModal(false)}
+        onSelectTicket={(ticket) => {
+          setSelectedTicket({
+            id: ticket.id, name: ticket.event?.title || 'Event', date: ticket.event?.date || '', time: ticket.event?.time || '',
+            location: ticket.event?.location || '', image: ticket.event?.image_url || '', category: (ticket.event as any)?.category || '',
+            ticketType: ticket.ticket_type || '', price: ticket.price || '', qrCode: ticket.qr_code || ticket.barcode || ticket.ticket_number || String(ticket.id),
+            ticketNumber: ticket.ticket_number,
+          });
+          setShowTicketViewer(true);
+        }}
+        showEventListModal={showEventListModal}
+        isOrganizer={isOrganizer}
+        pastHostedEvents={pastHostedEvents}
+        attendedEvents={attendedEvents}
+        streamedVideos={streamedVideos}
+        onCloseEventList={() => setShowEventListModal(false)}
+        onEventClickFromList={(event) => {
+          setSelectedEvent(event);
+          setShowEventListModal(false);
+        }}
+        eventPendingDelete={eventPendingDelete}
+        onConfirmDeleteOpenChange={(open) => {
           if (!open) setEventPendingDelete(null);
         }}
-        title="Delete event?"
-        description="This removes the event and cannot be undone."
-        confirmLabel="Delete"
-        destructive
-        onConfirm={handleConfirmDeleteEvent}
-      />
-      <ReportReasonModal
-        open={showReportReason}
-        onOpenChange={setShowReportReason}
-        label="this profile"
-        onConfirm={handleReportReasonConfirm}
+        onConfirmDelete={handleConfirmDeleteEvent}
+        showReportReason={showReportReason}
+        onReportReasonOpenChange={setShowReportReason}
+        onReportReasonConfirm={handleReportReasonConfirm}
       />
     </div>
-  );
-}
-
-function ProfileSafetyMenu({ onReport, onBlock }: { onReport: () => void; onBlock: () => void }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Profile actions"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-900 transition-colors hover:bg-gray-100 active:bg-gray-100"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className="z-[80] min-w-[170px] rounded-xl border-gray-100 bg-white p-1.5 shadow-lg">
-        <DropdownMenuItem
-          onClick={onReport}
-          className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 focus:bg-gray-50"
-        >
-          <ShieldAlert className="h-4 w-4" />
-          Report profile
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={onBlock}
-          className="gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 focus:bg-red-50 focus:text-red-600"
-        >
-          <Ban className="h-4 w-4" />
-          Block profile
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

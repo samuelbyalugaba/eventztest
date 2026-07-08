@@ -3,11 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useAuth } from './contexts/AuthContext';
 import { useMessaging } from './contexts/MessagingContext';
-import { getPosts } from './utils/supabase/api';
-import { formatTimeAgo } from './utils/format';
 import { queryClient } from './queryClient';
 import { queryKeys } from './queryKeys';
-import { isVideoMedia } from './utils/media';
+import { getPosts } from './utils/supabase/api';
+import { mapPostsToViewModel } from './utils/postMapper';
 import { DesktopSidebar } from './components/desktop/DesktopSidebar';
 import { RightRail } from './components/desktop/RightRail';
 import LoadingScreen from './components/app/LoadingScreen';
@@ -16,9 +15,6 @@ import KeepAliveTabs from './components/app/KeepAliveTabs';
 import AppRoutes from './components/app/AppRoutes';
 import BottomNav from './components/app/BottomNav';
 import { ReportReasonProvider } from './contexts/ReportReasonContext';
-
-const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
-const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export default function App() {
   const navigate = useNavigate();
@@ -39,148 +35,54 @@ export default function App() {
     sendMessage: handleSendMessage,
   } = useMessaging();
 
-  const handleAuthSuccess = (_token: string, _user: any) => {
+  const handleAuthSuccess = (_token: string, _user: Record<string, unknown>) => {
     navigate('/events', { replace: true });
+  };
+
+  const scheduleIdle = (cb: () => void, timeout: number): (() => void) => {
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    if (typeof w.requestIdleCallback === 'function') {
+      const handle = w.requestIdleCallback(cb, { timeout });
+      return () => w.cancelIdleCallback?.(handle);
+    }
+    const handle = window.setTimeout(cb, Math.min(timeout / 2, 750));
+    return () => window.clearTimeout(handle);
   };
 
   useEffect(() => {
     if (!isAuthenticated) return;
-
-    const prefetchFeed = async () => {
-      try {
-        const cachedRaw = localStorage.getItem(FEED_CACHE_KEY);
-        if (cachedRaw) {
-          const cached = JSON.parse(cachedRaw);
-          if (cached.timestamp && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS) {
-            const cachedPosts = Array.isArray(cached.posts) ? cached.posts : [];
-            queryClient.setQueryData(queryKeys.feed.firstPage(currentUser?.id), {
-              pages: [{ posts: cachedPosts, count: cachedPosts.length }],
-              pageParams: [0],
-            });
-            return;
-          }
-        }
-        const fresh = await getPosts({ currentUserId: currentUser?.id, limit: 20, offset: 0 });
-        const mapped = (fresh || []).map((p: any) => {
-          const isOrganizerPage = !!p.posted_as_organizer;
-          const displayName = p.user?.full_name || p.user?.username || 'Unknown User';
-          const avatarUrl = p.user?.avatar_url;
+    const cleanup = scheduleIdle(() => {
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.feed.firstPage(currentUser?.id),
+        queryFn: async () => {
+          const fresh = await getPosts({ currentUserId: currentUser?.id, limit: 20, offset: 0 });
           return {
-            id: p.id,
-            user_id: p.user_id,
-            user: {
-              id: p.user?.id || 'unknown',
-              name: displayName || 'Unknown',
-              username: p.user?.username || '@unknown',
-              avatar: avatarUrl || '',
-              verified: p.user?.verified || false,
-              isOrganizer: p.user?.is_organizer || false,
-              isOrganizerPage,
-            },
-            event: p.event ? {
-              id: p.event.id,
-              name: p.event.title,
-              date: p.event.date,
-              time: p.event.time,
-              location: p.event.location,
-              image: p.event.image_url,
-              price: p.event.price_range,
-            } : undefined,
-            content: {
-              text: p.content,
-              images: p.image_urls,
-              image: p.image_urls?.[0],
-              hashtags: p.hashtags,
-            },
-            timestamp: formatTimeAgo(p.created_at),
-            likes: p.likes_count || 0,
-            comments: [],
-            comments_count: p.comments_count || 0,
-            shares: 0,
-            views: p.views || 0,
-            isLiked: p.is_liked || false,
-            isSaved: p.is_saved || false,
-            isHighlight: !!p.video_url,
-            highlights: p.video_url ? [{
-              id: p.id,
-              thumbnail: (p.image_urls?.find((url: string) => !isVideoMedia(url))) || 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=500&fit=crop',
-              duration: p.duration || '',
-              title: p.content || 'Video Highlight',
-              videoUrl: p.video_url,
-              views: p.views || 0,
-            }] : undefined,
-            mutualFriends: [],
+            posts: fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [],
+            count: fresh?.length ?? 0,
           };
-        });
-        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ posts: mapped, timestamp: Date.now() }));
-        queryClient.setQueryData(queryKeys.feed.firstPage(currentUser?.id), {
-          pages: [{ posts: mapped, count: mapped.length }],
-          pageParams: [0],
-        });
-      } catch (error) {
-        console.warn('Feed prefetch failed', error);
-      }
-    };
-
-    const w = window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-    let scheduled: { type: 'idle' | 'timeout'; handle: number };
-    if (typeof w.requestIdleCallback === 'function') {
-      scheduled = { type: 'idle', handle: w.requestIdleCallback(() => { void prefetchFeed(); }, { timeout: 5000 }) };
-    } else {
-      scheduled = { type: 'timeout', handle: window.setTimeout(() => { void prefetchFeed(); }, 3000) as unknown as number };
-    }
-    return () => {
-      if (scheduled.type === 'timeout') window.clearTimeout(scheduled.handle);
-      else (window as any).cancelIdleCallback?.(scheduled.handle);
-    };
+        },
+        staleTime: 5 * 60 * 1000,
+      });
+    }, 5000);
+    return cleanup;
   }, [isAuthenticated, currentUser?.id]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const handle = window.setTimeout(() => {
+    const cleanup = scheduleIdle(() => {
       void import('./components/MessagesPage');
-    }, 1000);
-    return () => window.clearTimeout(handle);
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const preloadRoutes = () => {
       void import('./components/EventDetails');
       void import('./components/LiveFeed');
       void import('./components/Feed');
       void import('./components/Profile');
-      void import('./components/profile/ProfileListPage');
-      void import('./components/CreateEventWrapper');
-      void import('./components/PostDetailWrapper');
-      void import('./components/ProfileModalWrapper');
-      void import('./components/EventDetailWrapper');
-      void import('./components/LiveStreamPage');
       void import('./components/CreatePostPage');
-      void import('./components/MessagesPage');
       void import('./components/DashboardPage');
       void import('./components/WalletPage');
-    };
-
-    const w = window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-    let scheduled: { type: 'idle' | 'timeout'; handle: number };
-    if (typeof w.requestIdleCallback === 'function') {
-      scheduled = { type: 'idle', handle: w.requestIdleCallback(preloadRoutes, { timeout: 1500 }) };
-    } else {
-      scheduled = { type: 'timeout', handle: window.setTimeout(preloadRoutes, 750) as unknown as number };
-    }
-
-    return () => {
-      if (scheduled.type === 'timeout') window.clearTimeout(scheduled.handle);
-      else w.cancelIdleCallback?.(scheduled.handle);
-    };
+    }, 1500);
+    return cleanup;
   }, [isAuthenticated]);
 
   const handleLogout = async () => {
@@ -305,7 +207,7 @@ export default function App() {
   return (
     <ReportReasonProvider>
     <div className="h-[100dvh] overflow-hidden bg-gray-50">
-      <div className="fixed top-0 left-0 right-0 z-[1] bg-primary" style={{ height: 'var(--eventz-safe-area-top)' }} />
+      <div className="fixed top-0 left-0 right-0 z-[1] bg-primary" style={{ height: 'var(--eventz-safe-area-top)' }} aria-hidden="true" />
       <Toaster
         position="top-center"
         richColors={false}

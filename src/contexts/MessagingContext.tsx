@@ -34,18 +34,22 @@ interface StartConversationUser {
   id?: string;
 }
 
-interface MessagingContextValue {
+interface MessagingDataContextValue {
   conversations: Conversation[];
   isLoadingConversations: boolean;
   onlineFriends: OnlineFriend[];
   hasLiveEvents: boolean;
+}
+
+interface MessagingActionsContextValue {
   startConversation: (user: StartConversationUser) => Promise<Conversation | null>;
   sendMessage: (conversationId: number, text: string) => Promise<void>;
   markAsRead: (conversationId: number) => Promise<void>;
   deleteConversation: (conversationId: number) => Promise<void>;
 }
 
-const MessagingContext = createContext<MessagingContextValue | null>(null);
+const MessagingDataContext = createContext<MessagingDataContextValue | null>(null);
+const MessagingActionsContext = createContext<MessagingActionsContextValue | null>(null);
 
 async function fetchAndFormatConversations(userId: string): Promise<Conversation[]> {
   const apiConvs = await getConversations(userId);
@@ -278,22 +282,43 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser]);
 
-  const value = useMemo<MessagingContextValue>(() => ({
+  const dataValue = useMemo<MessagingDataContextValue>(() => ({
     conversations,
     isLoadingConversations,
     onlineFriends,
     hasLiveEvents,
+  }), [conversations, isLoadingConversations, onlineFriends, hasLiveEvents]);
+
+  const actionsValue = useMemo<MessagingActionsContextValue>(() => ({
     startConversation: handleStartConversation,
     sendMessage: handleSendMessage,
     markAsRead: handleMarkAsRead,
     deleteConversation: handleDeleteConversation,
-  }), [conversations, isLoadingConversations, onlineFriends, hasLiveEvents, handleStartConversation, handleSendMessage, handleMarkAsRead, handleDeleteConversation]);
+  }), [handleStartConversation, handleSendMessage, handleMarkAsRead, handleDeleteConversation]);
 
-  return <MessagingContext.Provider value={value}>{children}</MessagingContext.Provider>;
+  return (
+    <MessagingDataContext.Provider value={dataValue}>
+      <MessagingActionsContext.Provider value={actionsValue}>
+        {children}
+      </MessagingActionsContext.Provider>
+    </MessagingDataContext.Provider>
+  );
 }
 
-export function useMessaging() {
-  const ctx = useContext(MessagingContext);
-  if (!ctx) throw new Error('useMessaging must be used within MessagingProvider');
+export function useMessagingData() {
+  const ctx = useContext(MessagingDataContext);
+  if (!ctx) throw new Error('useMessagingData must be used within MessagingProvider');
   return ctx;
+}
+
+export function useMessagingActions() {
+  const ctx = useContext(MessagingActionsContext);
+  if (!ctx) throw new Error('useMessagingActions must be used within MessagingProvider');
+  return ctx;
+}
+
+export function useMessaging(): MessagingDataContextValue & MessagingActionsContextValue {
+  const data = useMessagingData();
+  const actions = useMessagingActions();
+  return { ...data, ...actions };
 }

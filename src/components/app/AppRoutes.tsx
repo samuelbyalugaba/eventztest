@@ -146,13 +146,20 @@ export default function AppRoutes({
           <Suspense fallback={<DashboardPageSkeleton />}><WalletPage /></Suspense>
         } />
         <Route path="/compose/post" element={
-          <Suspense fallback={null}><CreatePostPage /></Suspense>
+          <Suspense fallback={<div className="flex h-[100dvh] items-center justify-center bg-white"><div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" /></div>}><CreatePostPage /></Suspense>
         } />
         <Route path="/privacy" element={<LegalPage type="privacy" />} />
         <Route path="/terms" element={<LegalPage type="terms" />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/delete-account" element={<DeleteAccountPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="*" element={
+          <div className="flex h-[100dvh] flex-col items-center justify-center bg-gray-50 p-4">
+            <h1 className="text-6xl font-bold text-purple-600">404</h1>
+            <p className="mt-4 text-lg text-gray-600">Page not found</p>
+            <a href="/events" className="mt-6 rounded-lg bg-purple-600 px-6 py-2 text-white transition-colors hover:bg-purple-700">Go to Events</a>
+          </div>
+        } />
       </Routes>
 
       {backgroundLocation && (

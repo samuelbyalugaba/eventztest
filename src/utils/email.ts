@@ -26,49 +26,48 @@ export const DEFAULT_EMAIL_PREFERENCES = {
   security: true,
 };
 
+const emailPrefs = () => (supabase.from as (t: string) => any)('email_preferences')
+
 export const getEmailPreferences = async (userId: string): Promise<EmailPreferences> => {
-  const { data, error } = await supabase
-    .from('email_preferences')
+  const { data, error } = await emailPrefs()
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
 
   if (error) {
     if (error.code === 'PGRST205') {
-      return DEFAULT_EMAIL_PREFERENCES as EmailPreferences;
+      return DEFAULT_EMAIL_PREFERENCES as unknown as EmailPreferences;
     }
     throw error;
   }
 
-  if (data) return data as EmailPreferences;
+  if (data) return data as unknown as EmailPreferences;
 
-  const { data: created, error: createError } = await supabase
-    .from('email_preferences')
+  const { data: created, error: createError } = await emailPrefs()
     .insert({ user_id: userId, ...DEFAULT_EMAIL_PREFERENCES })
     .select('*')
     .single();
 
   if (createError) {
     if (createError.code === 'PGRST205') {
-      return DEFAULT_EMAIL_PREFERENCES as EmailPreferences;
+      return DEFAULT_EMAIL_PREFERENCES as unknown as EmailPreferences;
     }
     throw createError;
   }
-  return created as EmailPreferences;
+  return created as unknown as EmailPreferences;
 };
 
 export const updateEmailPreferences = async (
   userId: string,
   updates: EmailPreferenceUpdate
 ): Promise<EmailPreferences> => {
-  const { data, error } = await supabase
-    .from('email_preferences')
+  const { data, error } = await emailPrefs()
     .upsert({ user_id: userId, ...updates }, { onConflict: 'user_id' })
     .select('*')
     .single();
 
   if (error) throw error;
-  return data as EmailPreferences;
+  return data as unknown as EmailPreferences;
 };
 
 export const getEmailSystemState = async () => {

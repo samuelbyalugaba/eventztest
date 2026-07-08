@@ -25,32 +25,7 @@ const AuthContext =
   globalThis.__eventzAuthContext ??
   (globalThis.__eventzAuthContext = createContext<AuthContextType | undefined>(undefined));
 
-const AUTH_PROFILE_CACHE_KEY = 'eventz-auth-profile-cache-v1';
 const slugifyUsername = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
-const readCachedAuthProfile = (userId: string) => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(AUTH_PROFILE_CACHE_KEY);
-    if (!raw) return null;
-    const cached = JSON.parse(raw);
-    return cached?.profile?.id === userId ? cached.profile : null;
-  } catch (error) {
-    console.warn('Failed to read cached auth profile:', error);
-    return null;
-  }
-};
-const writeCachedAuthProfile = (profile: any | null) => {
-  if (typeof window === 'undefined') return;
-  try {
-    if (profile) {
-      window.localStorage.setItem(AUTH_PROFILE_CACHE_KEY, JSON.stringify({ profile, timestamp: Date.now() }));
-    } else {
-      window.localStorage.removeItem(AUTH_PROFILE_CACHE_KEY);
-    }
-  } catch (error) {
-    console.warn('Failed to write cached auth profile:', error);
-  }
-};
 const buildUsernameCandidates = (seed: string) => {
   const base = slugifyUsername(seed) || 'user';
   const suffix = Date.now().toString(36).slice(-4);
@@ -64,25 +39,18 @@ const buildUsernameCandidates = (seed: string) => {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isOrganizer, setIsOrganizer] = useState(false);
-  const [hasOrganizerProfile, setHasOrganizerProfile] = useState(false);
+
+  const storeProfile = useProfileStore(s => s.profile);
+  const storeIsOrganizer = useProfileStore(s => s.isOrganizer);
+  const hasOrganizerProfile = storeProfile ? (storeProfile.is_organizer || !!storeProfile.organizer_type) : false;
 
   const syncProfileState = (data: any | null) => {
-    setProfile(data);
     if (data) {
-      const isOrg = data.is_organizer || false;
-      setIsOrganizer(isOrg);
-      setHasOrganizerProfile(isOrg || !!data.organizer_type);
       useProfileStore.getState().setProfile(data);
-      writeCachedAuthProfile(data);
     } else {
-      setIsOrganizer(false);
-      setHasOrganizerProfile(false);
       useProfileStore.getState().clear();
-      writeCachedAuthProfile(null);
     }
   };
 
@@ -137,10 +105,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const startProfileBootstrap = (sessionUser: SupabaseUser) => {
-    const cached = useProfileStore.getState().profile || readCachedAuthProfile(sessionUser.id);
-    if (cached?.id === sessionUser.id) {
-      syncProfileState(cached);
-    }
     void ensureProfile(sessionUser);
     void prefetchDashboardData(sessionUser);
   };
@@ -227,10 +191,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user,
-      profile,
+      profile: storeProfile,
       isAuthenticated,
       isLoading,
-      isOrganizer,
+      isOrganizer: storeIsOrganizer,
       hasOrganizerProfile,
       refreshProfile,
       signOut

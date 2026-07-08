@@ -38,6 +38,7 @@ export const incrementPostView = async (postId: number) => {
   const { error } = await supabase.rpc('increment_post_view', { post_id: postId });
 
   if (error) {
+    console.warn('Failed to increment post view:', error.message);
   }
 };
 
@@ -95,6 +96,7 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
 
       if (saved) saved.forEach(s => savedPostIds.add(s.post_id));
     } catch (e) {
+      console.warn('Failed to fetch user likes/saves:', e);
     }
   }
 
@@ -211,14 +213,6 @@ export const deletePost = async (postId: number) => {
     await deleteFile('posts', post.video_url);
   }
 
-  try {
-    localStorage.removeItem('eventz-feed-cache-v1');
-    sessionStorage.removeItem('feedScrollPos');
-    sessionStorage.removeItem('feedLastPostId');
-  } catch (error) {
-    console.error('Failed to clear feed cache:', error);
-  }
-
   if (typeof window !== 'undefined') {
     queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
   }
@@ -236,17 +230,19 @@ export const createPost = async (post: Omit<ApiPost, 'id' | 'created_at' | 'user
     throw new Error('Post content cannot exceed 2000 characters');
   }
 
+  const { is_saved, ...dbPost } = post
+
   const { data, error } = await supabase
     .from('posts')
     .insert({
-      ...post,
-      content: post.content?.trim()
+      ...dbPost,
+      content: dbPost.content?.trim()
     })
     .select()
     .single();
 
   if (error) throw error;
-  return data;
+  return data as unknown as ApiPost;
 };
 
 export const updatePostCaption = async (postId: number, userId: string, caption: string) => {

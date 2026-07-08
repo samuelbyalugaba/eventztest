@@ -72,83 +72,97 @@ export const getProfile = async (userId: string) => {
   return data;
 };
 
-export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
-  const sanitizedUpdates: Partial<Profile> = Object.fromEntries(
-    Object.entries(updates).filter(([, v]) => v !== undefined)
-  ) as Partial<Profile>;
+type ProfileDbFields = {
+  avatar_url?: string | null
+  bio?: string | null
+  birthdate?: string | null
+  contact_email?: string | null
+  full_name?: string | null
+  is_organizer?: boolean | null
+  last_notification_read_at?: string | null
+  location?: string | null
+  organizer_type?: string | null
+  phone?: number | null
+  username?: string | null
+  verified?: boolean | null
+}
 
-  const emptyStringToNullKeys: (keyof Profile)[] = [
-    'username',
-    'full_name',
-    'avatar_url',
-    'bio',
-    'location',
-    'birthdate',
-    'cover_url',
-    'organizer_type',
-    'phone',
-    'website',
-    'contact_email',
-    'description'
+const toDbProfile = (updates: Record<string, unknown>): ProfileDbFields => {
+  const db: ProfileDbFields = {}
+  if ('avatar_url' in updates) db.avatar_url = updates.avatar_url as string | null
+  if ('bio' in updates) db.bio = updates.bio as string | null
+  if ('birthdate' in updates) db.birthdate = updates.birthdate as string | null
+  if ('contact_email' in updates) db.contact_email = updates.contact_email as string | null
+  if ('full_name' in updates) db.full_name = updates.full_name as string | null
+  if ('is_organizer' in updates) db.is_organizer = updates.is_organizer as boolean | null
+  if ('location' in updates) db.location = updates.location as string | null
+  if ('organizer_type' in updates) db.organizer_type = updates.organizer_type as string | null
+  if ('phone' in updates) db.phone = updates.phone != null ? Number(updates.phone) : null
+  if ('username' in updates) db.username = updates.username as string | null
+  if ('verified' in updates) db.verified = updates.verified as boolean | null
+  return db
+}
+
+export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
+  const sanitizedUpdates: Record<string, unknown> = Object.fromEntries(
+    Object.entries(updates).filter(([, v]) => v !== undefined)
+  );
+
+  const emptyStringToNullKeys = [
+    'username', 'full_name', 'avatar_url', 'bio', 'location',
+    'birthdate', 'cover_url', 'organizer_type', 'phone',
+    'website', 'contact_email', 'description'
   ];
 
   for (const k of emptyStringToNullKeys) {
-    const v = (sanitizedUpdates as any)[k];
+    const v = sanitizedUpdates[k];
     if (typeof v === 'string' && v.trim() === '') {
-      (sanitizedUpdates as any)[k] = null;
+      sanitizedUpdates[k] = null;
     }
   }
 
-  const removedPrivilegedKeys: (keyof Profile)[] = [];
-  for (const k of ['is_organizer', 'verified'] as (keyof Profile)[]) {
+  for (const k of ['is_organizer', 'verified']) {
     if (k in sanitizedUpdates) {
-      delete (sanitizedUpdates as any)[k];
-      removedPrivilegedKeys.push(k);
+      delete sanitizedUpdates[k];
     }
   }
 
-  if (removedPrivilegedKeys.length > 0 && Object.keys(sanitizedUpdates).length === 0) {
-    throw new Error('Unauthorized: You cannot update privileged profile fields directly.');
-  }
-
-  if (sanitizedUpdates.username && sanitizedUpdates.username.length < 3) {
+  if (sanitizedUpdates.username && (sanitizedUpdates.username as string).length < 3) {
     throw new Error('Username must be at least 3 characters');
   }
   
-  if (sanitizedUpdates.full_name && sanitizedUpdates.full_name.length > 50) {
+  if (sanitizedUpdates.full_name && (sanitizedUpdates.full_name as string).length > 50) {
     throw new Error('Name cannot exceed 50 characters');
   }
 
   if (sanitizedUpdates.birthdate) {
-    const birthDate = new Date(sanitizedUpdates.birthdate);
+    const birthDate = new Date(sanitizedUpdates.birthdate as string);
     const today = new Date();
     if (birthDate > today) {
       throw new Error('Birthdate cannot be in the future');
     }
   }
 
+  const dbUpdates = toDbProfile(sanitizedUpdates)
+
   const { data, error } = await supabase
     .from('profiles')
-    .upsert({ ...sanitizedUpdates, id: userId })
+    .upsert({ ...dbUpdates, id: userId })
     .select()
     .single();
 
-  if (!error) return data;
+  if (!error) return data as unknown as Profile;
 
-  const baseFields: Partial<Profile> = {
-    username: sanitizedUpdates.username,
-    full_name: sanitizedUpdates.full_name,
-    avatar_url: sanitizedUpdates.avatar_url,
-    bio: sanitizedUpdates.bio,
-    location: sanitizedUpdates.location,
-    birthdate: sanitizedUpdates.birthdate,
-    cover_url: sanitizedUpdates.cover_url,
-    organizer_type: sanitizedUpdates.organizer_type,
-    contact_email: sanitizedUpdates.contact_email,
-    phone: sanitizedUpdates.phone,
-    website: sanitizedUpdates.website,
-    social_links: sanitizedUpdates.social_links,
-    description: sanitizedUpdates.description
+  const baseFields: ProfileDbFields = {
+    username: dbUpdates.username,
+    full_name: dbUpdates.full_name,
+    avatar_url: dbUpdates.avatar_url,
+    bio: dbUpdates.bio,
+    location: dbUpdates.location,
+    birthdate: dbUpdates.birthdate,
+    organizer_type: dbUpdates.organizer_type,
+    contact_email: dbUpdates.contact_email,
+    phone: dbUpdates.phone,
   };
 
   const { data: data2, error: error2 } = await supabase
@@ -157,17 +171,17 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
     .select()
     .single();
 
-  if (!error2) return data2;
+  if (!error2) return data2 as unknown as Profile;
 
   const hasOtherUpdates = Object.keys(sanitizedUpdates).some(key => key !== 'avatar_url' && key !== 'id');
   
   if (!hasOtherUpdates && sanitizedUpdates.avatar_url) {
     const { data: data3, error: error3 } = await supabase
       .from('profiles')
-      .upsert({ id: userId, avatar_url: sanitizedUpdates.avatar_url })
+      .upsert({ id: userId, avatar_url: sanitizedUpdates.avatar_url as string | null })
       .select()
       .single();
-    if (!error3) return data3;
+    if (!error3) return data3 as unknown as Profile;
   }
 
   throw error2 || error;

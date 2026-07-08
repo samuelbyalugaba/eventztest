@@ -1,46 +1,21 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Menu, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { type Event as ApiEvent } from '../utils/supabase/api';
-
 import { prefetchUserStats } from '../utils/statsPrefetch';
 import { useProfileStore } from '../store/profileStore';
-
-
 import {
   type ScreenId,
   type DashboardScope,
-  type DashboardTier,
-  type DashboardTicket,
-  type DashboardScan,
-  type DashboardTransaction,
   type DashboardStats,
   defaultStats,
 } from './dashboard/types';
 import {
-  getInitials,
-  getRangeStart,
-  dateInRange,
-  isGiftTransaction,
-  mapOrganizerEvent,
-  transactionAmount,
-} from './dashboard/utils';
-import {
-  TopBar,
-  DashboardMenu,
-  EventSelector,
   DashboardLoading,
   DashboardModalFallback,
 } from './dashboard/shared';
-import { DashboardHome } from './dashboard/DashboardHome';
-import { EventsScreen } from './dashboard/EventsScreen';
-import { StreamScreen } from './dashboard/StreamScreen';
-import { NotifyScreen } from './dashboard/NotifyScreen';
-import { PayoutsScreen } from './dashboard/PayoutsScreen';
-import { DetailScreen } from './dashboard/DetailScreen';
-import { EventDetailScreen } from './dashboard/EventDetailScreen';
+import { useDashboardStats } from './dashboard/useDashboardStats';
+import { DashboardScreenView } from './dashboard/DashboardScreen';
 
 const TicketScannerModal = lazy(() => import('./TicketScannerModal').then((module) => ({ default: module.TicketScannerModal })));
 
@@ -76,10 +51,10 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState<boolean>(!hasCache);
   const [fetchError, setFetchError] = useState<null | 'partial' | 'full'>(null);
 
-  const events = (dashboardCache?.events ?? []) as ApiEvent[];
-  const tickets = (dashboardCache?.tickets ?? []) as DashboardTicket[];
-  const transactions = (dashboardCache?.transactions ?? []) as DashboardTransaction[];
-  const scans = (dashboardCache?.scans ?? []) as DashboardScan[];
+  const events = dashboardCache?.events ?? [];
+  const tickets = dashboardCache?.tickets ?? [];
+  const transactions = dashboardCache?.transactions ?? [];
+  const scans = dashboardCache?.scans ?? [];
 
   useEffect(() => {
     if (cachedStats) setStats((prev) => ({ ...prev, ...cachedStats }));
@@ -108,17 +83,11 @@ export function DashboardPage() {
     const loadDashboard = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          navigate('/events', { replace: true });
-          return;
-        }
+        if (!user) { navigate('/events', { replace: true }); return; }
         currentUserId = user.id;
 
         const { data: profileRow } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
+          .from('profiles').select('*').eq('id', user.id).maybeSingle();
         if (!alive) return;
         if (profileRow) setProfile(profileRow);
 
@@ -132,41 +101,24 @@ export function DashboardPage() {
 
         transactionsChannel = supabase
           .channel(`dashboard-tx-${user.id}-${mountId}`)
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
-            () => {
-              if (currentUserId) void runPrefetch(currentUserId, user.email || '');
-            }
-          )
-          .subscribe();
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+            () => { if (currentUserId) void runPrefetch(currentUserId, user.email || ''); }
+          ).subscribe();
 
         ticketsChannel = supabase
           .channel(`dashboard-tickets-${user.id}-${mountId}`)
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'tickets' },
-            () => {
-              if (currentUserId) void runPrefetch(currentUserId, user.email || '');
-            }
-          )
-          .subscribe();
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' },
+            () => { if (currentUserId) void runPrefetch(currentUserId, user.email || ''); }
+          ).subscribe();
 
         const handleVisibility = () => {
-          if (!document.hidden && currentUserId) {
-            void runPrefetch(currentUserId, user.email || '');
-          }
+          if (!document.hidden && currentUserId) void runPrefetch(currentUserId, user.email || '');
         };
         document.addEventListener('visibilitychange', handleVisibility);
         (window as any).__dashCleanupVis = () => document.removeEventListener('visibilitychange', handleVisibility);
       } catch (error: any) {
-        if (alive) {
-          setFetchError('full');
-          toast.error(error?.message || 'Failed to load dashboard');
-        }
-      } finally {
-        if (alive) setIsLoading(false);
-      }
+        if (alive) { setFetchError('full'); toast.error(error?.message || 'Failed to load dashboard'); }
+      } finally { if (alive) setIsLoading(false); }
     };
 
     void loadDashboard();
@@ -201,169 +153,63 @@ export function DashboardPage() {
     setScreen(newScreen);
   }, [location.pathname]);
 
-  const organizerName = profile?.full_name || profile?.display_name || profile?.name || profile?.username || 'Dashboard';
-  const organizerLocation = profile?.location || 'Location not set';
-  const initials = getInitials(organizerName);
+  const {
+    organizerName,
+    initials,
+    organizerEvents,
+    rangedScans,
+    giftTransactions,
+    scopes,
+    connectedEventCount,
+    activeEventCount,
+    eventCount,
+    allScope,
+    selectedScope,
+    scannerEvents,
+    selectedGiftTransactions,
+  } = useDashboardStats({
+    profile,
+    stats,
+    events,
+    tickets,
+    transactions,
+    scans,
+    range,
+    selectedId,
+    walletBalance,
+  });
 
-  const organizerEvents = useMemo(() => events.filter((event) => !(event.streaming as any)?.isInstant), [events]);
-  const rangeStart = useMemo(() => getRangeStart(range), [range]);
-  const rangedTickets = useMemo(
-    () => tickets.filter((ticket) => dateInRange(ticket.purchase_date, rangeStart)),
-    [tickets, rangeStart]
-  );
-  const rangedTransactions = useMemo(
-    () => transactions.filter((transaction) => dateInRange(transaction.created_at, rangeStart)),
-    [transactions, rangeStart]
-  );
-  const rangedOrganizerEvents = useMemo(() => {
-    if (!rangeStart) return organizerEvents;
-    const activeEventIds = new Set<number>();
-    rangedTickets.forEach((ticket) => activeEventIds.add(Number(ticket.event_id)));
-    rangedTransactions.forEach((transaction) => {
-      if (transaction.event_id != null) activeEventIds.add(Number(transaction.event_id));
-    });
-    return organizerEvents.filter((event) => {
-      if (event.streaming?.isLive) return true;
-      if (activeEventIds.has(event.id)) return true;
-      return dateInRange(event.date, rangeStart);
-    });
-  }, [organizerEvents, rangeStart, rangedTickets, rangedTransactions]);
-  const rangedScans = useMemo(
-    () => scans.filter((scan) => dateInRange(scan.scanned_at, rangeStart)),
-    [scans, rangeStart]
-  );
-  const giftTransactions = useMemo(() => rangedTransactions.filter(isGiftTransaction), [rangedTransactions]);
-  const scopes = useMemo(() => {
-    const visibleEvents = rangedOrganizerEvents.slice(0, 6);
-    return visibleEvents.map((event, index) => {
-      const eventTickets = rangedTickets.filter((ticket) => Number(ticket.event_id) === event.id);
-      const scope = mapOrganizerEvent(event, index, eventTickets);
-      const gifts = giftTransactions
-        .filter((transaction) => Number(transaction.event_id) === event.id)
-        .reduce((sum, transaction) => sum + transactionAmount(transaction), 0);
-      return { ...scope, gifts };
-    });
-  }, [rangedOrganizerEvents, rangedTickets, giftTransactions]);
-
-  const connectedEventCount = Math.max(stats.totalEvents || organizerEvents.length, 0);
-  const activeEventCount = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return organizerEvents.filter((event) => {
-      if (event.streaming?.isLive) return true;
-      if (!event.date) return true;
-      const date = new Date(event.date);
-      return Number.isFinite(date.getTime()) && date >= today;
-    }).length;
-  }, [organizerEvents]);
-  const eventCount = Math.max(rangedOrganizerEvents.length, 0);
-  const allRevenue = scopes.reduce((sum, scope) => sum + scope.revenue, 0);
-  const allTickets = scopes.reduce((sum, scope) => sum + scope.tickets, 0);
-  const allLiveViewers = scopes.reduce((sum, scope) => sum + scope.viewers, 0);
-  const allPeakViewers = scopes.reduce((sum, scope) => sum + scope.peakViewers, 0);
-  const allPageViews = scopes.reduce((sum, scope) => sum + scope.pageViews, 0);
-  const allFollowers = stats.followers || 0;
-  const allVirtual = scopes.reduce((sum, scope) => sum + scope.virtualTickets, 0);
-  const allGifts = giftTransactions.reduce((sum, transaction) => sum + transactionAmount(transaction), 0);
-  const allAvailable = walletBalance;
-  const allLocked = 0;
-  const allCheckoutStarts = scopes.reduce((sum, scope) => sum + scope.checkoutStarts, 0);
-  const hasLiveScope = scopes.some((scope) => scope.status === 'live');
-  const allTiers = useMemo(() => {
-    const tiers = new Map<string, DashboardTier>();
-    scopes.forEach((scope) => {
-      scope.tiers.forEach((tier) => {
-        const current = tiers.get(tier.name);
-        if (current) {
-          current.tickets += tier.tickets;
-          current.revenue += tier.revenue;
-        } else {
-          tiers.set(tier.name, { ...tier });
-        }
-      });
-    });
-    return Array.from(tiers.values());
-  }, [scopes]);
-
-  const allScope: DashboardScope = {
-    id: 'all',
-    name: 'All events',
-    subtitle: `${eventCount} events - combined totals`,
-    location: organizerLocation,
-    status: hasLiveScope ? 'live' : 'upcoming',
-    statusLabel: hasLiveScope ? 'Live now' : 'All',
-    color: hasLiveScope ? '#15803D' : 'var(--primary)',
-    softColor: hasLiveScope ? '#DCFCE7' : '#EDE9FE',
-    revenue: allRevenue,
-    available: allAvailable,
-    locked: allLocked,
-    tickets: allTickets,
-    virtualTickets: allVirtual,
-    viewers: allLiveViewers,
-    peakViewers: allPeakViewers,
-    gifts: allGifts,
-    followers: allFollowers,
-    pageViews: allPageViews,
-    checkoutStarts: allCheckoutStarts,
-    tiers: allTiers,
-  };
-
-  const selectedScope = selectedId === 'all' ? allScope : scopes.find((scope) => scope.id === selectedId) || allScope;
   const detail = detailScope || selectedScope;
-  const selectedGiftTransactions = useMemo(
-    () => (selectedScope.id === 'all' ? giftTransactions : giftTransactions.filter((transaction) => Number(transaction.event_id) === selectedScope.routeId)),
-    [giftTransactions, selectedScope.id, selectedScope.routeId]
-  );
-  const detailGiftTransactions = useMemo(
-    () => (detail.id === 'all' ? giftTransactions : giftTransactions.filter((transaction) => Number(transaction.event_id) === detail.routeId)),
-    [detail.id, detail.routeId, giftTransactions]
-  );
-  const scannerEvents = useMemo(
-    () => organizerEvents.filter((event) => event.status !== 'draft' && event.status !== 'cancelled'),
-    [organizerEvents]
-  );
+  const detailGiftTransactions = detail.id === 'all'
+    ? giftTransactions
+    : giftTransactions.filter((transaction: any) => Number(transaction.event_id) === detail.routeId);
   const scannerEvent = scannerEvents.find((event) => event.id === scannerEventId) || scannerEvents[0] || null;
 
   const openScanner = () => {
-    if (!scannerEvent) {
-      toast.error('Create or publish an event before scanning tickets');
-      return;
-    }
+    if (!scannerEvent) { toast.error('Create or publish an event before scanning tickets'); return; }
     setScannerEventId(scannerEvent.id);
     setShowScanner(true);
   };
 
-  const openWithdraw = () => {
-    navigate('/wallet');
+  const openWithdraw = () => navigate('/wallet');
+
+  const navTo = (next: ScreenId) => {
+    setSelectorOpen(false);
+    const pathMap: Record<string, string> = { 'dash': '/dashboard', 'events': '/dashboard/events', 'stream': '/dashboard/live', 'notify': '/dashboard/notify', 'payouts': '/dashboard/payouts' };
+    navigate(pathMap[next] || '/dashboard');
   };
 
   const go = (next: ScreenId, nextDetail?: DashboardScope) => {
     if (nextDetail) setDetailScope(nextDetail);
     setSelectorOpen(false);
-    if (tabScreens.has(next)) {
-      navTo(next);
-    } else {
-      setScreen(next);
-    }
-  };
-
-  const navTo = (next: ScreenId) => {
-    setSelectorOpen(false);
-    const pathMap: Record<string, string> = {
-      'dash': '/dashboard',
-      'events': '/dashboard/events',
-      'stream': '/dashboard/live',
-      'notify': '/dashboard/notify',
-      'payouts': '/dashboard/payouts',
-    };
-    navigate(pathMap[next] || '/dashboard');
+    if (tabScreens.has(next)) navTo(next);
+    else setScreen(next);
   };
 
   const back = () => {
     setSelectorOpen(false);
-    if (tabScreens.has(screen)) {
-      navigate(-1);
-    } else {
+    if (tabScreens.has(screen)) navigate(-1);
+    else {
       const subPath = location.pathname.replace(/^\/dashboard\/?/, '');
       const parentScreen: ScreenId =
         subPath === 'events' ? 'events' :
@@ -381,54 +227,46 @@ export function DashboardPage() {
     window.setTimeout(() => setSelectorOpen(false), 120);
   };
 
-  const currentScreen = () => {
-    if (screen === 'events') return <EventsScreen scopes={scopes} onGo={go} onNew={() => navigate('/create')} onScan={openScanner} onBack={back} />;
-    if (screen === 'stream') return <StreamScreen scope={detail} giftTransactions={detailGiftTransactions} onBack={back} onGo={go} onScan={openScanner} />;
-    if (screen === 'notify') return <NotifyScreen scope={selectedScope} onBack={back} onGo={go} onScan={openScanner} />;
-    if (screen === 'payouts') return <PayoutsScreen eventCount={connectedEventCount} walletBalance={walletBalance} transactions={transactions} onBack={back} onWithdraw={openWithdraw} onGo={go} onScan={openScanner} />;
-    if (screen === 'tickets') return <DetailScreen type="tickets" scope={selectedScope} giftTransactions={selectedGiftTransactions} eventCount={selectedScope.id === 'all' ? eventCount : 1} onBack={back} onGo={go} />;
-    if (screen === 'revenue') return <DetailScreen type="revenue" scope={selectedScope} giftTransactions={selectedGiftTransactions} eventCount={selectedScope.id === 'all' ? eventCount : 1} onBack={back} onGo={go} />;
-    if (screen === 'gifts') return <DetailScreen type="gifts" scope={selectedScope} giftTransactions={selectedGiftTransactions} eventCount={selectedScope.id === 'all' ? eventCount : 1} onBack={back} onGo={go} />;
-    if (screen === 'event-detail') return <EventDetailScreen scope={detail} onBack={back} onGo={go} />;
-
-    return (
-      <>
-        <TopBar
-          title={organizerName}
-          subtitle={`${activeEventCount} active event${activeEventCount === 1 ? '' : 's'}`}
-          initials={initials}
-          onBackToProfile={() => navigate('/profile')}
-          action={
-            <div className="flex items-center gap-2">
-              <button type="button" className="h-[34px] w-[38px] p-0 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center flex-shrink-0" onClick={openScanner} aria-label="Scan ticket">
-                <QrCode className="h-4 w-4" />
-              </button>
-              <button type="button" className="h-[34px] w-[38px] p-0 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center flex-shrink-0" onClick={() => setMenuOpen(true)} aria-label="Menu">
-                <Menu className="h-4 w-4" />
-              </button>
-            </div>
-          }
-        />
-        {menuOpen && (
-          <DashboardMenu onClose={() => setMenuOpen(false)} onNav={(screen) => { setMenuOpen(false); navTo(screen); }} />
-        )}
-        <EventSelector
-          selected={selectedScope}
-          allScope={allScope}
-          scopes={scopes}
-          eventCount={eventCount}
-          isOpen={selectorOpen}
-          onToggle={() => setSelectorOpen((value) => !value)}
-          onPick={pickScope}
-        />
-        <DashboardHome selected={selectedScope} eventCount={connectedEventCount} walletBalance={walletBalance} scans={rangedScans} range={range} onRange={setRange} onGo={go} onWithdraw={openWithdraw} fetchError={fetchError} onRetry={retryFetch} />
-      </>
-    );
-  };
-
   return (
     <div className="fixed inset-0 z-70 bg-[#F0F2F5] text-[#111827] antialiased">
-      <div className="h-full w-full max-w-[520px] mx-auto bg-[#F0F2F5] overflow-hidden flex flex-col relative">{isLoading ? <DashboardLoading /> : currentScreen()}</div>
+      <div className="h-full w-full max-w-[520px] mx-auto bg-[#F0F2F5] overflow-hidden flex flex-col relative">
+        {isLoading ? <DashboardLoading /> : (
+          <DashboardScreenView
+            screen={screen}
+            organizerName={organizerName}
+            initials={initials}
+            activeEventCount={activeEventCount}
+            menuOpen={menuOpen}
+            onOpenMenu={() => setMenuOpen(true)}
+            onCloseMenu={() => setMenuOpen(false)}
+            onNav={navTo}
+            selectedScope={selectedScope}
+            allScope={allScope}
+            scopes={scopes}
+            eventCount={eventCount}
+            selectorOpen={selectorOpen}
+            onSelectorToggle={() => setSelectorOpen((v) => !v)}
+            onPickScope={pickScope}
+            connectedEventCount={connectedEventCount}
+            walletBalance={walletBalance}
+            rangedScans={rangedScans}
+            range={range}
+            onRangeChange={setRange}
+            onGo={go}
+            onWithdraw={openWithdraw}
+            fetchError={fetchError}
+            onRetry={retryFetch}
+            detailScope={detailScope}
+            selectedGiftTransactions={selectedGiftTransactions}
+            detailGiftTransactions={detailGiftTransactions}
+            giftTransactions={giftTransactions}
+            transactions={transactions}
+            onOpenScanner={openScanner}
+            onBack={back}
+            onNewEvent={() => navigate('/create')}
+          />
+        )}
+      </div>
       {showScanner && scannerEvent ? (
         <Suspense fallback={<DashboardModalFallback />}>
           <TicketScannerModal

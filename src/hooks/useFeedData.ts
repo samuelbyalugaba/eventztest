@@ -7,6 +7,7 @@ import { mapPostsToViewModel } from '../utils/postMapper';
 import type { Post } from '../types';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
+import { useInView } from '../utils/useInView';
 
 const FEED_PAGE_SIZE = 20;
 
@@ -120,11 +121,20 @@ export function useFeedData(initialCurrentUser?: any) {
   const hasMore = postsQuery.hasNextPage ?? false;
   const isLoadingMore = postsQuery.isFetchingNextPage;
 
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const sentinelInView = useInView(sentinelRef);
+
   const handleLoadMore = useCallback(() => {
     if (!postsQuery.isFetchingNextPage && postsQuery.hasNextPage) {
       postsQuery.fetchNextPage();
     }
   }, [postsQuery]);
+
+  useEffect(() => {
+    if (sentinelInView && hasMore && !isLoadingMore) {
+      handleLoadMore();
+    }
+  }, [sentinelInView, hasMore, isLoadingMore, handleLoadMore]);
 
   const feedQueryKey = queryKeys.feed.firstPage(currentUser?.id);
   const setPosts: React.Dispatch<React.SetStateAction<Post[]>> = useCallback((updater) => {
@@ -198,5 +208,6 @@ export function useFeedData(initialCurrentUser?: any) {
     refreshNotifications,
     setNotifications,
     setNotificationsLoading,
+    sentinelRef,
   };
 }

@@ -260,7 +260,7 @@ export const subscribeToMessages = (conversationId: number, callback: (message: 
         const message = {
           ...payload.new,
           sender
-        } as Message;
+        } as unknown as Message;
         
         callback(message);
       }
@@ -288,7 +288,7 @@ export const subscribeToAllMessages = (callback: (message: Message) => void) => 
         const message = {
           ...payload.new,
           sender
-        } as Message;
+        } as unknown as Message;
         
         callback(message);
       }

@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
+import * as Sentry from '@sentry/react';
 
 interface Props {
   children: ReactNode;
@@ -37,9 +38,13 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error, componentStack: null };
   }
 
-  public componentDidCatch(_error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ componentStack: errorInfo.componentStack || null });
-    void this.recoverFromChunkLoadError(_error);
+    Sentry.captureException(error, {
+      extra: { componentStack: errorInfo.componentStack },
+      tags: { boundary: 'ErrorBoundary' },
+    });
+    void this.recoverFromChunkLoadError(error);
   }
 
   private async recoverFromChunkLoadError(error: Error) {

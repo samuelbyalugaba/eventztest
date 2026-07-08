@@ -1,5 +1,15 @@
 import { supabase } from './client';
 
+type OrganizerStats = {
+  totalEvents: number
+  followers: number
+  totalViews: number
+  ticketsSold: number
+  revenue: number
+  liveStreams: number
+  avgRating: number
+}
+
 export const getOrganizerStats = async (userId: string) => {
   const { data, error } = await supabase.rpc('get_organizer_stats', {
     target_user_id: userId
@@ -9,14 +19,16 @@ export const getOrganizerStats = async (userId: string) => {
     throw error;
   }
 
+  const stats = data as unknown as OrganizerStats
+
   return {
-    totalEvents: data.totalEvents,
-    followers: data.followers,
-    totalViews: data.totalViews,
-    ticketsSold: data.ticketsSold,
-    revenue: data.revenue,
-    liveStreams: data.liveStreams,
-    avgRating: data.avgRating
+    totalEvents: stats.totalEvents,
+    followers: stats.followers,
+    totalViews: stats.totalViews,
+    ticketsSold: stats.ticketsSold,
+    revenue: stats.revenue,
+    liveStreams: stats.liveStreams,
+    avgRating: stats.avgRating
   };
 };
 

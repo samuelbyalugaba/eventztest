@@ -138,7 +138,8 @@ export async function getLocalWalletBalance(userId: string): Promise<number> {
 
   let balance = 0;
   for (const tx of data) {
-    const type = tx.metadata?.type;
+    const metadata = tx.metadata as Record<string, unknown> | null
+    const type = metadata?.type as string | undefined
     if (type === 'deposit' || type === 'top-up' || type === 'gift-received' || type === 'ticket-sale') {
       balance += tx.amount || 0;
     } else if (type === 'withdrawal' || type === 'payment' || type === 'gift') {

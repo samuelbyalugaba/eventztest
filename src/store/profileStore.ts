@@ -41,6 +41,17 @@ interface ProfileState {
   clear: () => void;
 }
 
+const stripPII = (profile: Record<string, unknown> | null): Record<string, unknown> | null => {
+  if (!profile) return null;
+  const { email: _, phone: __, birthdate: ___, balance: ____, ...safe } = profile;
+  return safe;
+};
+
+const stripDashboardPIICache = (cache: DashboardCache | null): DashboardCache | null => {
+  if (!cache) return null;
+  return { ...cache, transactions: [] };
+};
+
 export const useProfileStore = create<ProfileState>()(
   persist(
     (set, get) => ({
@@ -94,26 +105,24 @@ export const useProfileStore = create<ProfileState>()(
         attendedCount: 0,
         walletBalance: null,
         dashboardCache: null,
-        // keep userStatsCache so other-user visits stay instant across sign-outs
       }),
     }),
     {
       name: PROFILE_STORE_KEY,
-      version: 1,
+      version: 2,
       migrate: (persisted, version) => {
-        if (version < 1) {
-          const { hostedCount: _, ...rest } = persisted as any;
-          return rest;
+        if (version < 2) {
+          const stored = persisted as Record<string, unknown>;
+          return { ...stored, profile: null, dashboardCache: null, walletBalance: null };
         }
         return persisted;
       },
       partialize: (state) => ({
-        profile: state.profile,
+        profile: stripPII(state.profile as Record<string, unknown> | null),
         followStats: state.followStats,
         organizerStats: state.organizerStats,
         attendedCount: state.attendedCount,
-        walletBalance: state.walletBalance,
-        dashboardCache: state.dashboardCache,
+        dashboardCache: stripDashboardPIICache(state.dashboardCache),
         userStatsCache: state.userStatsCache,
       }),
     },

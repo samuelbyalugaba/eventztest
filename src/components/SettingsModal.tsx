@@ -2,7 +2,7 @@ import { X, User, Shield, HelpCircle, ChevronRight, Mail } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PromptDialog } from './ui/prompt-dialog';
 import { toast } from 'sonner';
-import { supabase, getProfile, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
+import { getProfile, updateProfile, checkUsernameUnique, onAuthStateChange, updateUserEmail, deleteAccount as apiDeleteAccount, signOut as apiSignOut } from '../utils/supabase/api';
 import { searchNominatim } from '../utils/nominatim';
 import { Sheet, SheetContent, SheetClose, SheetTitle, SheetDescription } from "./ui/sheet";
 import { useAuth } from '../contexts/AuthContext';
@@ -132,7 +132,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       } catch (error) {}
     };
     loadSettings();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => loadSettings());
+    const { data: { subscription } } = onAuthStateChange(() => loadSettings());
     return () => { subscription.unsubscribe(); };
   }, [profile, user]);
 
@@ -155,8 +155,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
         }
         const nextEmail = (profileData.email || '').trim();
         if (nextEmail && nextEmail !== user.email) {
-          const { error: authUpdateError } = await supabase.auth.updateUser({ email: nextEmail });
-          if (authUpdateError) throw authUpdateError;
+          await updateUserEmail(nextEmail);
           toast.info('Email change requested. Please check your inbox to confirm.');
         }
         await updateProfile(user.id, {
@@ -212,15 +211,8 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
     setShowDeletePrompt(false);
     setIsDeletingAccount(true);
     try {
-      const { data, error } = await supabase.functions.invoke('delete-account', { method: 'POST', body: {} });
-      if (error) {
-        let msg = error.message || 'Failed to delete account';
-        const resp = (error as any)?.context;
-        if (resp?.json) { try { const b = await resp.json(); msg = b?.error || msg; } catch (e) { console.error(e); } }
-        throw new Error(msg);
-      }
-      if ((data as any)?.error) throw new Error((data as any).error);
-      await supabase.auth.signOut();
+      await apiDeleteAccount();
+      await apiSignOut();
       localStorage.removeItem('eventz-user-profile');
       localStorage.removeItem('eventz-privacy');
       toast.success('Account deleted');

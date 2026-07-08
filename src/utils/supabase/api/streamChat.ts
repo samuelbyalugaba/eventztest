@@ -92,7 +92,7 @@ export const subscribeToStreamMessages = (eventId: number, callback: (message: S
         const message = {
           ...payload.new,
           user
-        } as StreamMessage;
+        } as unknown as StreamMessage;
         
         callback(message);
       }

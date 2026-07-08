@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import App from "./App.tsx";
 import "./index.css";
 import { registerServiceWorker } from "./utils/registerSW";
@@ -14,17 +15,16 @@ import { configureNativeRuntime } from "./utils/nativeRuntime";
 import { queryClient } from "./queryClient";
 
 Sentry.init({
-  dsn: "https://7b817c9e06419fc7dc62b72df3867c77@o4511699114983424.ingest.de.sentry.io/4511699126648912",
-  dataCollection: {
-    // userInfo: false,
-    // httpBodies: []
-  }
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  enabled: import.meta.env.PROD,
+  dataCollection: {},
 });
 
 try {
   void configureNativeRuntime();
   registerServiceWorker();
 } catch (e) {
+  console.warn('Native runtime init failed:', e);
 }
 
 const CHUNK_RELOAD_KEY = 'eventz-chunk-reload-attempted-at';
@@ -76,6 +76,7 @@ createRoot(document.getElementById("root")!).render(
           </MessagingProvider>
         </BrowserRouter>
       </AuthProvider>
+      {import.meta.env.DEV && <ReactQueryDevtools />}
     </QueryClientProvider>
   </Sentry.ErrorBoundary>
 );

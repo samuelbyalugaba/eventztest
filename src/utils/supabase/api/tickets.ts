@@ -31,7 +31,7 @@ export const getUserTickets = async (userId: string) => {
     .order('purchase_date', { ascending: false });
 
   if (error) throw error;
-  return data;
+  return data as unknown as Ticket[];
 };
 
 export const hasActiveVirtualTicket = async (userId: string, eventId: number) => {
@@ -75,9 +75,9 @@ export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'e
     p_customer_name: ticket.customer_name,
     p_customer_email: ticket.customer_email,
     p_ticket_number: ticket.ticket_number,
-    p_qr_code: ticket.qr_code || null,
-    p_user_id: (ticket as any).user_id || null,
-    p_price: ticket.price || null,
+    p_qr_code: ticket.qr_code ?? null,
+    p_user_id: (ticket as any).user_id ?? null,
+    p_price: ticket.price ?? null,
     p_transaction_id: (ticket as any).transaction_id
   });
 
@@ -85,18 +85,20 @@ export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'e
     throw error;
   }
 
-  if (data && data.id) {
+  const result = data as unknown as { id: number } | null
+
+  if (result?.id) {
     const { data: fullTicket, error: fetchError } = await supabase
       .from('tickets')
       .select()
-      .eq('id', data.id)
+      .eq('id', result.id)
       .single();
       
     if (fetchError) throw fetchError;
-    return fullTicket;
+    return fullTicket as unknown as Ticket;
   }
 
-  return data;
+  return data as unknown as Ticket;
 };
 
 export const scanTicket = async (ticketCode: string, eventId: number) => {
