@@ -15,9 +15,28 @@ const configureStatusBar = async () => {
   }
 };
 
-export const configureNativeRuntime = async () => {
-  if (!isNativeCapacitor()) return;
+const detectSafeArea = (property: 'top' | 'bottom'): string => {
+  const key = property === 'top' ? 'safe-area-inset-top' : 'safe-area-inset-bottom';
+  const testEl = document.createElement('div');
+  testEl.style.cssText = `position:fixed;padding-${property}:env(${key}, 0px);pointer-events:none`;
+  document.body.appendChild(testEl);
+  const value = getComputedStyle(testEl)[`padding${property.charAt(0).toUpperCase() + property.slice(1)}` as keyof CSSStyleDeclaration] as string;
+  document.body.removeChild(testEl);
+  return value || '0px';
+};
 
-  setNativeClassNames();
-  await configureStatusBar();
+const setSafeAreaVariables = () => {
+  const top = detectSafeArea('top');
+  const bottom = detectSafeArea('bottom');
+  if (top !== '0px') document.documentElement.style.setProperty('--eventz-safe-area-top', top);
+  if (bottom !== '0px') document.documentElement.style.setProperty('--eventz-safe-area-bottom', bottom);
+};
+
+export const configureNativeRuntime = async () => {
+  if (isNativeCapacitor()) {
+    setNativeClassNames();
+    await configureStatusBar();
+  }
+
+  setSafeAreaVariables();
 };
