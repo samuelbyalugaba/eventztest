@@ -7,8 +7,28 @@
   *:focus-visible,
   *:focus-within {
     outline: none !important;
-    box-shadow: none;
+    box-shadow: none !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-shadow: 0 0 #0000 !important;
   }
+
+  *:focus,
+  *:focus-visible,
+  *:focus-within,
+  *:focus *,
+  *:focus-visible *,
+  *:focus-within * {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+    --tw-ring-color: transparent !important;
+    --tw-ring-offset-color: transparent !important;
+    --tw-ring-offset-width: 0px !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+  }
+
   button,
   a,
   input,
