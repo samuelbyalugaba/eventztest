@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { createStreamClient, initializeLocalTracks, playLocalPreview, switchLocalCamera } from '../components/livestream/sessionUtils';
 
-export function useAgoraBroadcast() {
+export function useAgoraBroadcast(initialIsLive = false) {
   const client = useRef<IAgoraRTCClient | null>(null);
   const [isClientReady, setIsClientReady] = useState(false);
 
@@ -13,7 +13,7 @@ export function useAgoraBroadcast() {
 
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
-  const [streamHealth, setStreamHealth] = useState<'good' | 'poor' | 'offline'>('offline');
+  const [streamHealth, setStreamHealth] = useState<'good' | 'poor' | 'offline'>(initialIsLive ? 'good' : 'offline');
 
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0);

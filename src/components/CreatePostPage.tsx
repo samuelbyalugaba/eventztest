@@ -1,140 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { BackButton } from './ui/BackButton';
-import { X, RotateCw, ImagePlus, MapPin, Loader2, Camera } from 'lucide-react';
+import { X, RotateCw, ImagePlus, Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../utils/supabase/client';
-import { createPost, uploadImage } from '../utils/supabase/api';
 import { takePreloaded } from '../utils/cameraPreloader';
-
-type MediaItem = {
-  file: File;
-  url: string;
-  kind: 'image' | 'video';
-};
-
-const C = {
-  void: '#0E0B1F',
-  glass: 'rgba(255,255,255,0.05)',
-  glass2: 'rgba(255,255,255,0.09)',
-  hairline: 'rgba(255,255,255,0.12)',
-  violet: '#7C3AED',
-  purple: '#9333EA',
-  ink: '#F3F1FC',
-  mute: 'rgba(243,241,252,0.55)',
-};
-
-const GRADIENT = `linear-gradient(135deg, ${C.violet}, ${C.purple})`;
-const GRADIENT_FALLBACK = C.purple;
-const CHAR_LIMIT = 240;
-const LONG_PRESS_MS = 200;
-
-function GlassButton({ icon, size = 44, onClick, label }: {
-  icon: React.ReactNode; size?: number; onClick: () => void; label: string;
-}) {
-  const [hover, setHover] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      aria-label={label}
-      style={{
-        width: size, height: size, borderRadius: '50%',
-        border: `1px solid ${C.hairline}`,
-        background: hover ? C.glass2 : C.glass,
-        color: C.ink, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', cursor: 'pointer',
-        backdropFilter: 'blur(6px)',
-        transition: 'background 0.15s ease, transform 0.15s ease',
-        transform: hover ? 'scale(1.05)' : 'scale(1)',
-      }}
-    >
-      {icon}
-    </button>
-  );
-}
-
-function ShutterButton({ isRecording, onTap, onStartRecording, onStopRecording }: {
-  isRecording: boolean;
-  onTap: () => void;
-  onStartRecording: () => void;
-  onStopRecording: () => void;
-}) {
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isLongPress = useRef(false);
-
-  const handlePointerDown = () => {
-    if (isRecording) {
-      onStopRecording();
-      return;
-    }
-    isLongPress.current = false;
-    pressTimer.current = setTimeout(() => {
-      isLongPress.current = true;
-      onStartRecording();
-    }, LONG_PRESS_MS);
-  };
-
-  const handlePointerUp = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-    if (!isLongPress.current && !isRecording) {
-      onTap();
-    }
-  };
-
-  return (
-    <button
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={() => {
-        if (pressTimer.current) {
-          clearTimeout(pressTimer.current);
-          pressTimer.current = null;
-        }
-      }}
-      aria-label={isRecording ? 'Stop recording' : 'Take photo'}
-      style={{
-        position: 'relative', width: 80, height: 80,
-        borderRadius: '50%', border: 'none', background: 'transparent',
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        userSelect: 'none', WebkitUserSelect: 'none', touchAction: 'none',
-      }}
-    >
-      {isRecording ? (
-        <>
-          <span style={{
-            position: 'absolute', inset: -4, borderRadius: '50%',
-            border: '3px solid #FF3B30', opacity: 0.6,
-          }} />
-          <span style={{
-            position: 'relative', width: 32, height: 32, borderRadius: 6,
-            background: '#FF3B30',
-          }} />
-        </>
-      ) : (
-        <>
-          <span style={{
-            position: 'absolute', inset: 0, borderRadius: '50%',
-            backgroundColor: GRADIENT_FALLBACK,
-            backgroundImage: GRADIENT, filter: 'blur(15px)', opacity: 0.65,
-          }} />
-          <span style={{
-            position: 'absolute', inset: 0, borderRadius: '50%',
-            backgroundColor: GRADIENT_FALLBACK,
-            backgroundImage: GRADIENT, padding: 4,
-          }}>
-            <span style={{ display: 'block', width: '100%', height: '100%', borderRadius: '50%', background: C.void }} />
-          </span>
-          <span style={{ position: 'relative', width: 56, height: 56, borderRadius: '50%', backgroundColor: GRADIENT_FALLBACK, backgroundImage: GRADIENT }} />
-        </>
-      )}
-    </button>
-  );
-}
+import { usePostCreation } from '../hooks/usePostCreation';
+import { useDiscardDialog } from '../hooks/useDiscardDialog';
+import { useHighlightCreation } from '../hooks/useHighlightCreation';
+import { GlassButton } from './create-post/GlassButton';
+import { ShutterButton } from './create-post/ShutterButton';
+import { CaptionEditor } from './create-post/CaptionEditor';
+import { MediaPreviews } from './create-post/MediaPreviews';
+import { PostSettings } from './create-post/PostSettings';
+import { C } from './create-post/constants';
 
 function formatDuration(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -143,15 +20,7 @@ function formatDuration(seconds: number) {
 }
 
 export default function CreatePostPage() {
-  const navigate = useNavigate();
   const [view, setView] = useState<'camera' | 'compose'>('camera');
-  const [caption, setCaption] = useState('');
-  const [locationData, setLocationData] = useState<{ lat: number; lng: number; label: string } | null>(null);
-  const [showLocationSearch, setShowLocationSearch] = useState(false);
-  const [locationQuery, setLocationQuery] = useState('');
-  const [locationSearching, setLocationSearching] = useState(false);
-  const [locationSuggestions, setLocationSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
-  const [isPosting, setIsPosting] = useState(false);
 
   // Camera
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -167,11 +36,6 @@ export default function CreatePostPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Captured media
-  const [capturedMedia, setCapturedMedia] = useState<MediaItem | null>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
@@ -201,67 +65,35 @@ export default function CreatePostPage() {
     }
   }, []);
 
-  useEffect(() => {
-    startCamera(facingMode);
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
-    };
-  }, [facingMode, startCamera]);
-
-  const handleFlip = () => {
+  const handleFlip = useCallback(() => {
     setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
-  };
+  }, []);
 
-  const handleRemoveLocation = () => {
-    setLocationData(null);
-  };
-
-  const handleOpenLocationSearch = () => {
-    setShowLocationSearch(true);
-    setLocationQuery('');
-    setLocationSuggestions([]);
-  };
-
-  const handleLocationSelect = (suggestion: { display_name: string; lat: string; lon: string }) => {
-    const parts = suggestion.display_name.split(',').map(s => s.trim());
-    const label = parts.length >= 2 ? `${parts[0]}, ${parts[1]}` : parts[0];
-    setLocationData({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon), label });
-    setShowLocationSearch(false);
-    setLocationQuery('');
-    setLocationSuggestions([]);
-  };
-
-  const locationSearchRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!showLocationSearch) {
-      setLocationSuggestions([]);
-      setLocationQuery('');
-      return;
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
     }
-    const timer = setTimeout(async () => {
-      if (!locationQuery.trim()) {
-        setLocationSuggestions([]);
-        return;
-      }
-      setLocationSearching(true);
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=6`,
-          { headers: { 'Accept-Language': 'en' } }
-        );
-        const data = await res.json();
-        setLocationSuggestions(data || []);
-      } catch (error) {
-        console.error('Failed to fetch location suggestions:', error);
-        setLocationSuggestions([]);
-      } finally {
-        setLocationSearching(false);
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [locationQuery, showLocationSearch]);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingDuration(0);
+  }, []);
+
+  // Form/posting state
+  const {
+    capturedMedia, setCapturedMedia,
+    galleryInputRef, handleGallerySelect,
+    caption, setCaption,
+    textareaRef,
+    remaining, canPost,
+    isPosting,
+    locationData, showLocationSearch, locationQuery, setLocationQuery,
+    locationSearching, locationSuggestions, locationSearchRef,
+    handleRemoveLocation, handleOpenLocationSearch, handleLocationSelect,
+    handlePost,
+  } = usePostCreation(() => setView('compose'));
 
   const capturePhoto = useCallback(() => {
     const video = videoRef.current;
@@ -288,7 +120,7 @@ export default function CreatePostPage() {
       setCapturedMedia({ file, url: URL.createObjectURL(file), kind: 'image' });
       setView('compose');
     }, 'image/jpeg', 0.92);
-  }, [cameraReady, capturedMedia, facingMode]);
+  }, [cameraReady, capturedMedia, facingMode, setCapturedMedia]);
 
   const startRecording = useCallback(() => {
     const stream = streamRef.current;
@@ -322,93 +154,36 @@ export default function CreatePostPage() {
       console.error('Failed to start recording:', error);
       toast.error('Failed to start recording');
     }
-  }, [cameraReady, capturedMedia]);
+  }, [cameraReady, capturedMedia, setCapturedMedia]);
 
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
-    setIsRecording(false);
-    setRecordingDuration(0);
-  }, []);
+  const { goBack } = useDiscardDialog({
+    view,
+    isRecording,
+    capturedMedia,
+    caption,
+    stopRecording,
+    setCapturedMedia,
+    setCaption,
+    setView,
+    streamRef,
+  });
 
-  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (capturedMedia) URL.revokeObjectURL(capturedMedia.url);
-    const isVideo = file.type.startsWith('video/');
-    setCapturedMedia({ file, url: URL.createObjectURL(file), kind: isVideo ? 'video' : 'image' });
-    setView('compose');
-    e.target.value = '';
-  };
+  useHighlightCreation();
+
+  useEffect(() => {
+    startCamera(facingMode);
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [facingMode, startCamera]);
 
   useEffect(() => {
     if (view === 'compose' && textareaRef.current) {
       textareaRef.current.focus();
     }
-  }, [view]);
-
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    }
-  }, [caption]);
-
-  const remaining = CHAR_LIMIT - caption.length;
-  const canPost = caption.trim().length > 0 && remaining >= 0 && capturedMedia !== null;
-
-  const handlePost = async () => {
-    if (!canPost || !capturedMedia || isPosting) return;
-    setIsPosting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const url = await uploadImage(capturedMedia.file, 'posts', `user_${user.id}`);
-      const extraLines: string[] = [];
-      if (locationData) extraLines.push(`📍 ${locationData.label}`);
-      const finalContent = [caption.trim(), ...extraLines].filter(Boolean).join('\n\n');
-
-      await createPost({
-        user_id: user.id,
-        content: finalContent,
-        image_urls: [url],
-        hashtags: [],
-        posted_as_organizer: false,
-      } as any);
-
-      toast.success('Post created successfully');
-      window.dispatchEvent(new Event('postsUpdated'));
-      navigate('/feed');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to create post');
-    } finally {
-      setIsPosting(false);
-    }
-  };
-
-  const goBack = () => {
-    if (isRecording) {
-      stopRecording();
-    }
-    if (view === 'compose') {
-      if (capturedMedia) URL.revokeObjectURL(capturedMedia.url);
-      setCapturedMedia(null);
-      setCaption('');
-      setView('camera');
-    } else {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
-      navigate(-1);
-    }
-  };
+  }, [view, textareaRef]);
 
   return (
     <div className="fixed inset-0 z-[100]" style={{ background: '#000' }}>
@@ -533,11 +308,7 @@ export default function CreatePostPage() {
           position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
         }}>
           <div style={{ flex: '1 1 auto', position: 'relative', minHeight: 0, background: '#000' }}>
-            {capturedMedia?.kind === 'video' ? (
-              <video src={capturedMedia.url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} controls />
-            ) : capturedMedia?.url ? (
-              <img src={capturedMedia.url} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            ) : null}
+            <MediaPreviews capturedMedia={capturedMedia} />
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '18px 16px' }}>
               <BackButton onClick={goBack} className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05] backdrop-blur-sm text-[#F3F1FC] hover:bg-white/[0.09] hover:scale-105 transition-all duration-150" iconClassName="h-[17px] w-[17px]" />
             </div>
@@ -553,124 +324,28 @@ export default function CreatePostPage() {
             marginTop: -24, position: 'relative', zIndex: 2,
             animation: 'camFadeUp 0.35s ease',
           }}>
-            <textarea
-              ref={textareaRef}
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Tell people what's happening..."
-              rows={1}
-              style={{
-                width: '100%', border: 'none', outline: 'none', resize: 'none',
-                background: 'transparent', color: C.ink, fontSize: 16,
-                lineHeight: 1.5, minHeight: 44,
-              }}
+            <CaptionEditor
+              caption={caption}
+              setCaption={setCaption}
+              textareaRef={textareaRef}
             />
 
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 16 }}>
-              {locationData ? (
-                <button
-                  onClick={handleRemoveLocation}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '8px 12px', borderRadius: 10, maxWidth: '55%',
-                    border: '1px solid transparent',
-                    backgroundColor: GRADIENT_FALLBACK,
-                    backgroundImage: GRADIENT,
-                    color: '#0E0B1F',
-                    fontSize: 13, fontWeight: 700,
-                    cursor: 'pointer', transition: 'all 0.15s ease',
-                    overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-                  }}
-                >
-                  <MapPin size={14} style={{ flexShrink: 0 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{locationData.label}</span>
-                  <span style={{ marginLeft: 4, opacity: 0.6 }}>✕</span>
-                </button>
-              ) : showLocationSearch ? (
-                <div ref={locationSearchRef} style={{ position: 'relative', flex: 1, maxWidth: '60%' }}>
-                  <input
-                    autoFocus
-                    value={locationQuery}
-                    onChange={(e) => setLocationQuery(e.target.value)}
-                    placeholder="Search location..."
-                    style={{
-                      width: '100%', border: `1px solid ${C.hairline}`, outline: 'none',
-                      background: C.glass, color: C.ink, fontSize: 13,
-                      padding: '8px 12px', borderRadius: 10, minHeight: 36,
-                    }}
-                  />
-                  {locationSearching && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, padding: '8px 12px', color: C.mute, fontSize: 12 }}>
-                      Searching...
-                    </div>
-                  )}
-                  {locationSuggestions.length > 0 && (
-                    <div style={{
-                      position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, right: 0,
-                      background: '#1C1733', border: `1px solid ${C.hairline}`,
-                      borderRadius: 12, overflow: 'hidden', zIndex: 10,
-                      boxShadow: '0 12px 30px -10px rgba(0,0,0,0.6)',
-                    }}>
-                      {locationSuggestions.map((s, i) => (
-                        <div
-                          key={i}
-                          onClick={() => handleLocationSelect(s)}
-                          style={{
-                            padding: '10px 14px', fontSize: 13, color: C.ink,
-                            cursor: 'pointer',
-                            borderBottom: i < locationSuggestions.length - 1 ? `1px solid ${C.hairline}` : undefined,
-                          }}
-                        >
-                          {s.display_name.split(',').slice(0, 3).join(',')}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={handleOpenLocationSearch}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '8px 12px', borderRadius: 10, maxWidth: '55%',
-                    border: `1px solid ${C.hairline}`,
-                    background: C.glass, color: C.mute,
-                    fontSize: 13, fontWeight: 400,
-                    cursor: 'pointer', transition: 'all 0.15s ease',
-                  }}
-                >
-                  <MapPin size={14} style={{ flexShrink: 0 }} />
-                  <span>Add location</span>
-                </button>
-              )}
-
-              <span style={{
-                marginLeft: 'auto', fontSize: 13, fontWeight: 600,
-                color: remaining < 0 ? '#FF6B6B' : C.mute,
-              }}>
-                {remaining < 24 ? `${remaining} LEFT` : ''}
-              </span>
-
-              <button
-                disabled={!canPost || isPosting}
-                onClick={handlePost}
-                style={{
-                  fontWeight: 700, fontSize: 14, flexShrink: 0,
-                  padding: '11px 24px', borderRadius: 100, border: 'none',
-                  cursor: canPost && !isPosting ? 'pointer' : 'default',
-                  color: canPost && !isPosting ? '#0E0B1F' : C.mute,
-                  background: canPost && !isPosting ? undefined : 'rgba(255,255,255,0.08)',
-                  backgroundColor: canPost && !isPosting ? GRADIENT_FALLBACK : undefined,
-                  backgroundImage: canPost && !isPosting ? GRADIENT : undefined,
-                  boxShadow: canPost && !isPosting ? '0 6px 22px -4px rgba(110,79,224,0.6)' : 'none',
-                  transition: 'all 0.2s ease',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}
-              >
-                {isPosting ? <Loader2 size={16} style={{ animation: 'camSpin 1s linear infinite' }} /> : null}
-                {isPosting ? 'Posting...' : 'Post'}
-              </button>
-            </div>
+            <PostSettings
+              locationData={locationData}
+              showLocationSearch={showLocationSearch}
+              locationQuery={locationQuery}
+              setLocationQuery={setLocationQuery}
+              locationSearching={locationSearching}
+              locationSuggestions={locationSuggestions}
+              locationSearchRef={locationSearchRef}
+              onRemoveLocation={handleRemoveLocation}
+              onOpenLocationSearch={handleOpenLocationSearch}
+              onLocationSelect={handleLocationSelect}
+              remaining={remaining}
+              canPost={canPost}
+              isPosting={isPosting}
+              onPost={handlePost}
+            />
           </div>
         </div>
       )}

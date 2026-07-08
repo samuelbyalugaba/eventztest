@@ -14,6 +14,7 @@ export function useStreamPhase(event: Event, onUpdateStatus: (isLive: boolean) =
   localVideoTrack: ICameraVideoTrack | null;
   elapsedTime: number;
   getEndStats: () => StreamStats;
+  setStreamHealth: (health: 'good' | 'poor' | 'offline') => void;
 }) {
   const [phase, setPhase] = useState<StreamPhase>(event.streaming?.isLive ? 'live' : 'setup');
   const [isLive, setIsLive] = useState(event.streaming?.isLive || false);
@@ -41,6 +42,7 @@ export function useStreamPhase(event: Event, onUpdateStatus: (isLive: boolean) =
       setEndStats(deps.getEndStats());
       setIsLive(false);
       setPhase('ended');
+      deps.setStreamHealth('offline');
       try { await Promise.resolve(onUpdateStatus(false)); } catch { /* ignore */ }
       if (opts?.showToast) toast.info('Stream ended');
     }
@@ -92,6 +94,7 @@ export function useStreamPhase(event: Event, onUpdateStatus: (isLive: boolean) =
             setIsLive(true);
             setIsStarting(false);
             setPhase('live');
+            deps.setStreamHealth('good');
             await Promise.resolve(onUpdateStatus(true));
             toast.success("You are now LIVE");
           } catch (e: any) { toast.error(`Failed: ${e.message}`); setIsStarting(false); }

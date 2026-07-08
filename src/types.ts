@@ -46,9 +46,16 @@ export interface Comment {
   user: {
     name: string;
     avatar: string;
+    id?: string;
+    username?: string;
+    verified?: boolean;
+    is_organizer?: boolean;
   };
   text: string;
   timestamp: string;
+  likes_count?: number;
+  is_liked?: boolean;
+  parent_id?: number;
 }
 
 export interface HighlightClip {

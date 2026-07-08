@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
-import { nativeOAuthSupabase, supabase, isSupabaseConfigured } from '../utils/supabase/client';
-import { checkUsernameUnique } from '../utils/supabase/api';
+import { AlertCircle } from 'lucide-react';
+import { isSupabaseConfigured } from '../utils/supabase/client';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import authLogoBlack from '../assets/auth-logo-black.png';
-import appleIcon from '../assets/apple-icon.png';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../utils/legal';
-import { getNativeAuthRedirectTo, isNativeCapacitor } from '../utils/platform';
+import { useAuthForm } from '../hooks/useAuthForm';
+import { useAuthSubmit } from '../hooks/useAuthSubmit';
+import { useOAuthNative } from '../hooks/useOAuthNative';
+import { useEmailActions } from '../hooks/useEmailActions';
+import { AuthHeader } from './auth/AuthHeader';
+import { EmailField } from './auth/EmailField';
+import { PasswordField } from './auth/PasswordField';
+import { SubmitButton } from './auth/SubmitButton';
+import { OAuthButtons } from './auth/OAuthButtons';
+import { OrDivider } from './auth/OrDivider';
 
 interface AuthScreenProps {
   onAuthSuccess: (accessToken: string, user: any) => void;
@@ -15,22 +21,8 @@ interface AuthScreenProps {
 }
 
 export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps) {
-  // Mode state
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEmailActionSubmitting, setIsEmailActionSubmitting] = useState(false);
-  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
-  const [isAppleSubmitting, setIsAppleSubmitting] = useState(false);
-
-  // Form state
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    fullName: ''
-  });
-
-  // Configuration check
   const [isConfigured, setIsConfigured] = useState(true);
 
   useEffect(() => {
@@ -44,361 +36,24 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
     }
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const validateForm = () => {
-    if (!formData.email || !formData.password) {
-      toast.error('Missing Fields', { description: 'Please fill in all required fields.' });
-      return false;
-    }
-    if (!isLogin && !formData.fullName) {
-      toast.error('Missing Name', { description: 'Please enter your full name.' });
-      return false;
-    }
-    if (formData.password.length < 6) {
-      toast.error('Weak Password', { description: 'Password must be at least 6 characters long.' });
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast.error('Invalid Email', { description: 'Please enter a valid email address.' });
-      return false;
-    }
-    return true;
-  };
-
-  const validateEmailOnly = () => {
-    if (!formData.email) {
-      toast.error('Email required', { description: 'Enter your email address first.' });
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast.error('Invalid Email', { description: 'Please enter a valid email address.' });
-      return false;
-    }
-    return true;
-  };
-
-  const getEmailRedirectTo = (next = '/events') => {
-    const origin = window.location.origin;
-    return `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
-  };
-
-  const finishNativeOAuthSignIn = async (callbackUrl: string, providerLabel: string) => {
-    const url = new URL(callbackUrl);
-    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
-    const oauthError =
-      url.searchParams.get('error_description') ||
-      url.searchParams.get('error') ||
-      hashParams.get('error_description') ||
-      hashParams.get('error');
-    if (oauthError) throw new Error(oauthError);
-
-    const accessToken = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token');
-    if (accessToken && refreshToken) {
-      const { data, error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-      if (error) throw error;
-      if (!data.session || !data.user) throw new Error(`${providerLabel} sign-in did not return a session.`);
-
-      toast.success('Welcome back!');
-      onAuthSuccess(data.session.access_token, data.user);
-      return;
-    }
-
-    const code = url.searchParams.get('code');
-    if (!code) throw new Error(`${providerLabel} sign-in did not return an authorization code.`);
-
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw error;
-    if (!data.session || !data.user) throw new Error(`${providerLabel} sign-in did not return a session.`);
-
-    toast.success('Welcome back!');
-    onAuthSuccess(data.session.access_token, data.user);
-  };
-
-  const handleResetPassword = async () => {
-    if (!isConfigured || !validateEmailOnly()) return;
-
-    setIsEmailActionSubmitting(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: getEmailRedirectTo('/events'),
-      });
-      if (error) throw error;
-      toast.success('Reset email sent', { description: 'Check your inbox for the password reset link.' });
-    } catch (error: any) {
-      toast.error('Could not send reset email', { description: error?.message || 'Please try again.' });
-    } finally {
-      setIsEmailActionSubmitting(false);
-    }
-  };
-
-  const handleResendVerification = async () => {
-    if (!isConfigured || !validateEmailOnly()) return;
-
-    setIsEmailActionSubmitting(true);
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: formData.email,
-        options: {
-          emailRedirectTo: getEmailRedirectTo('/events'),
-        },
-      });
-      if (error) throw error;
-      toast.success('Verification email sent', { description: 'Check your inbox to confirm your account.' });
-    } catch (error: any) {
-      toast.error('Could not send verification email', { description: error?.message || 'Please try again.' });
-    } finally {
-      setIsEmailActionSubmitting(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isConfigured) {
-      toast.error('Configuration Error', { description: 'Cannot proceed without database connection.' });
-      return;
-    }
-
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      if (isLogin) {
-        // LOGIN FLOW
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (error) throw error;
-
-        if (data.session && data.user) {
-          let userName = data.user.user_metadata?.name || data.user.email || 'User';
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name, username')
-              .eq('id', data.user.id)
-              .single();
-
-            const displayFromProfile =
-              profile?.full_name ||
-              (profile?.username ? `@${String(profile.username).replace(/^@/, '')}` : null);
-
-            if (displayFromProfile) userName = displayFromProfile;
-          } catch (error) {
-            console.error('Failed to load user profile:', error);
-          }
-
-          toast.success('Welcome back!', { description: `Signed in as ${userName}` });
-          onAuthSuccess(data.session.access_token, data.user);
-        }
-      } else {
-        // SIGNUP FLOW
-        const { data, error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            emailRedirectTo: getEmailRedirectTo('/events'),
-            data: {
-              name: formData.fullName,
-            },
-          },
-        });
-
-        if (error) throw error;
-
-        if (data.user) {
-          // Create user profile
-          if (data.session) {
-            // Generate unique username
-            const baseUsername = formData.fullName.toLowerCase().replace(/[^a-z0-9]/g, '');
-            let finalUsername = baseUsername;
-            let isUnique = await checkUsernameUnique(finalUsername);
-            
-            if (!isUnique) {
-              let counter = 1;
-              while (counter <= 10) {
-                const candidate = `${baseUsername}${counter}`;
-                if (await checkUsernameUnique(candidate)) {
-                  finalUsername = candidate;
-                  isUnique = true;
-                  break;
-                }
-                counter++;
-              }
-              if (!isUnique) {
-                 finalUsername = `${baseUsername}${Math.floor(Date.now() % 10000)}`;
-              }
-            }
-
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .upsert([
-                {
-                  id: data.user.id,
-                  email: formData.email,
-                  full_name: formData.fullName,
-                  username: finalUsername,
-                  avatar_url: null,
-                }
-              ], { onConflict: 'id', ignoreDuplicates: true });
-            
-            if (profileError) {
-              // Continue anyway as auth succeeded
-            }
-
-            toast.success('Account Created!', { description: `Welcome to Eventz, ${formData.fullName}!` });
-            onAuthSuccess(data.session.access_token, data.user);
-          } else {
-            // Email confirmation required case
-            toast.success('Signup Successful', { description: 'Please check your email to confirm your account.' });
-            setIsLogin(true);
-            setFormData(prev => ({ ...prev, password: '' }));
-          }
-        }
-      }
-    } catch (error: any) {
-      let message = error.message || 'An unexpected error occurred.';
-      if (message.includes('Invalid login credentials')) message = 'Incorrect email or password.';
-      if (message.includes('User already registered')) message = 'This email is already registered. Please login.';
-      if (message.includes('Email not confirmed')) message = 'Please verify your email before signing in.';
-      
-      toast.error('Authentication Failed', { description: message });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
-    if (!isConfigured) {
-      toast.error('Configuration Error', { description: 'Cannot proceed without database connection.' });
-      return;
-    }
-    const providerLabel = provider === 'apple' ? 'Apple' : 'Google';
-    const setProviderSubmitting = provider === 'apple' ? setIsAppleSubmitting : setIsGoogleSubmitting;
-    setProviderSubmitting(true);
-    try {
-      if (isNativeCapacitor()) {
-        const [{ App }, { Browser }] = await Promise.all([import('@capacitor/app'), import('@capacitor/browser')]);
-        const redirectTo = getNativeAuthRedirectTo();
-        let completed = false;
-        let urlOpenHandle: Awaited<ReturnType<typeof App.addListener>> | null = null;
-        let browserFinishedHandle: Awaited<ReturnType<typeof Browser.addListener>> | null = null;
-
-        const cleanup = async () => {
-          await Promise.all([urlOpenHandle?.remove(), browserFinishedHandle?.remove()]);
-        };
-
-        urlOpenHandle = await App.addListener('appUrlOpen', ({ url }) => {
-          if (!url.startsWith(redirectTo) || completed) return;
-          completed = true;
-
-          void (async () => {
-            try {
-              await cleanup();
-              await Browser.close().catch(() => undefined);
-              await finishNativeOAuthSignIn(url, providerLabel);
-            } catch (error: any) {
-              const message = error?.message || `${providerLabel} sign-in failed.`;
-              toast.error('Authentication Failed', { description: message });
-            } finally {
-              setProviderSubmitting(false);
-            }
-          })();
-        });
-
-        browserFinishedHandle = await Browser.addListener('browserFinished', () => {
-          if (completed) return;
-          completed = true;
-          void cleanup();
-          setProviderSubmitting(false);
-        });
-
-        try {
-          const { data, error } = await nativeOAuthSupabase.auth.signInWithOAuth({
-            provider,
-            options: {
-              redirectTo,
-              skipBrowserRedirect: true,
-            },
-          });
-          if (error) throw error;
-          if (!data.url) throw new Error(`${providerLabel} sign-in did not return an authorization URL.`);
-
-          await Browser.open({ url: data.url, toolbarColor: '#FAFAFA' });
-        } catch (error) {
-          completed = true;
-          await cleanup();
-          throw error;
-        }
-        return;
-      }
-
-      const redirectTo = import.meta.env.VITE_AUTH_REDIRECT_URL || getEmailRedirectTo('/events');
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo },
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      const message = error?.message || `${providerLabel} sign-in failed.`;
-      toast.error('Authentication Failed', { description: message });
-      setProviderSubmitting(false);
-    }
-  };
-
-  const handleGoogleSignIn = () => handleOAuthSignIn('google');
-  const handleAppleSignIn = () => handleOAuthSignIn('apple');
-  const isOAuthSubmitting = isGoogleSubmitting || isAppleSubmitting;
-  const renderGoogleIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
-      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.655 32.658 29.264 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.964 3.036l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.651-.389-3.917z" />
-      <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 19.027 12 24 12c3.059 0 5.842 1.154 7.964 3.036l5.657-5.657C34.046 6.053 29.268 4 24 4c-7.682 0-14.354 4.327-17.694 10.691z" />
-      <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.243 0-9.623-3.319-11.273-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
-      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.215-2.262 4.087-4.084 5.57l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.651-.389-3.917z" />
-    </svg>
+  const { formData, setFormData, handleInputChange, resetForm } = useAuthForm();
+  const { handleSubmit, isSubmitting, resetSubmitState } = useAuthSubmit(
+    isLogin,
+    formData,
+    isConfigured,
+    onAuthSuccess,
+    () => { setIsLogin(true); setFormData(prev => ({ ...prev, password: '' })); },
   );
+  const { handleGoogleSignIn, handleAppleSignIn, isGoogleSubmitting, isAppleSubmitting, isOAuthSubmitting } = useOAuthNative(isConfigured, onAuthSuccess);
+  const { handleResetPassword, handleResendVerification, isEmailActionSubmitting } = useEmailActions(isConfigured, formData);
 
-  const renderOAuthButtons = () => (
-    <div className="mt-4 grid grid-cols-2 gap-2">
-      <button
-        type="button"
-        onClick={handleAppleSignIn}
-        disabled={isOAuthSubmitting || isSubmitting || !isConfigured}
-        className="inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-2 text-center text-sm font-semibold leading-tight text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isAppleSubmitting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <img src={appleIcon} alt="" aria-hidden="true" className="h-[18px] w-[18px] shrink-0 object-contain brightness-0" />
-        )}
-        <span className="min-w-0 truncate">Apple</span>
-      </button>
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        disabled={isOAuthSubmitting || isSubmitting || !isConfigured}
-        className="inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-2 text-center text-sm font-semibold leading-tight text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isGoogleSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : renderGoogleIcon()}
-        <span className="min-w-0 truncate">Google</span>
-      </button>
-    </div>
-  );
+  const handleTabChange = (v: string) => {
+    const nextIsLogin = v === 'login';
+    setIsLogin(nextIsLogin);
+    resetForm();
+    resetSubmitState();
+    setShowPassword(false);
+  };
 
   return (
     <div
@@ -409,21 +64,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
       }`}
     >
       <div className="w-full max-w-md">
-        <div className="mb-6 min-h-[7.25rem] text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center overflow-visible">
-            <img
-              src={authLogoBlack}
-              alt="Eventz"
-              className="h-12 w-12 scale-[1.55] object-contain"
-            />
-          </div>
-          <div className="mt-3 text-2xl font-semibold text-gray-900">
-            {isLogin ? 'Sign in' : 'Join Eventz'}
-          </div>
-          <div className="mt-1 text-sm text-gray-600">
-            Discover Events. Live Stream. Get Tickets
-          </div>
-        </div>
+        <AuthHeader isLogin={isLogin} />
 
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
           {!isConfigured && (
@@ -433,17 +74,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
             </div>
           )}
 
-          <Tabs
-            value={isLogin ? 'login' : 'signup'}
-            onValueChange={(v) => {
-              const nextIsLogin = v === 'login';
-              setIsLogin(nextIsLogin);
-              setFormData({ email: '', password: '', fullName: '' });
-              setIsSubmitting(false);
-              setShowPassword(false);
-            }}
-            className="p-4"
-          >
+          <Tabs value={isLogin ? 'login' : 'signup'} onValueChange={handleTabChange} className="p-4">
             <TabsList className="w-full h-auto bg-gray-100 p-1 rounded-xl flex overflow-x-auto scrollbar-hide">
               <TabsTrigger
                 className="flex-1 min-h-8 min-w-[76px] py-1.5 text-[0.76rem] font-semibold rounded-lg transition-all gap-1 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=inactive]:text-gray-500"
@@ -461,26 +92,25 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
 
             <TabsContent value="login" className="mt-4">
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="auth-login-email" className="text-sm font-medium text-gray-800 block text-left">Your Email</label>
-                  <input
-                    id="auth-login-email"
-                    name="email"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
-                    placeholder="Email"
-                    disabled={isSubmitting}
-                    autoComplete="email"
-                    inputMode="email"
-                  />
-                </div>
+                <EmailField
+                  id="auth-login-email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  disabled={isSubmitting}
+                  label="Your Email"
+                />
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <label htmlFor="auth-login-password" className="text-sm font-medium text-gray-800 block text-left">Password</label>
+                <PasswordField
+                  id="auth-login-password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  disabled={isSubmitting}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  showPassword={showPassword}
+                  onToggleShowPassword={() => setShowPassword(!showPassword)}
+                  label="Password"
+                  labelAction={
                     <button
                       type="button"
                       onClick={handleResetPassword}
@@ -489,45 +119,10 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                     >
                       Forgot password?
                     </button>
-                  </div>
-                  <div className="relative">
-                      <input
-                      id="auth-login-password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="block w-full h-11 pl-3 pr-11 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
-                      placeholder="••••••••"
-                      disabled={isSubmitting}
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute top-0 bottom-0 right-0 w-11 flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
+                  }
+                />
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !isConfigured}
-                  className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-gray-900 px-4 text-center text-sm font-semibold leading-tight text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <span className="inline-flex items-center justify-center">
-                      <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                      Processing...
-                    </span>
-                  ) : (
-                    'Sign in'
-                  )}
-                </button>
+                <SubmitButton isSubmitting={isSubmitting} disabled={!isConfigured} label="Sign in" />
               </form>
 
               <button
@@ -539,13 +134,16 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                 Resend verification email
               </button>
 
-              <div className="mt-4 flex items-center gap-3">
-                <div className="h-px flex-1 bg-gray-200" />
-                <div className="text-xs font-medium text-gray-500">OR</div>
-                <div className="h-px flex-1 bg-gray-200" />
-              </div>
-
-              {renderOAuthButtons()}
+              <OrDivider />
+              <OAuthButtons
+                onGoogleSignIn={handleGoogleSignIn}
+                onAppleSignIn={handleAppleSignIn}
+                isOAuthSubmitting={isOAuthSubmitting}
+                isGoogleSubmitting={isGoogleSubmitting}
+                isAppleSubmitting={isAppleSubmitting}
+                isSubmitting={isSubmitting}
+                isConfigured={isConfigured}
+              />
             </TabsContent>
 
             <TabsContent value="signup" className="mt-4">
@@ -566,72 +164,39 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="auth-signup-email" className="text-sm font-medium text-gray-800 block text-left">Your Email</label>
-                  <input
-                    id="auth-signup-email"
-                    name="email"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
-                    placeholder="Email"
-                    disabled={isSubmitting}
-                    autoComplete="email"
-                    inputMode="email"
-                  />
-                </div>
+                <EmailField
+                  id="auth-signup-email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  disabled={isSubmitting}
+                  label="Your Email"
+                />
 
-                <div className="space-y-1.5">
-                  <label htmlFor="auth-signup-password" className="text-sm font-medium text-gray-800 block text-left">Password</label>
-                  <div className="relative">
-                    <input
-                      id="auth-signup-password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="block w-full h-11 pl-3 pr-11 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
-                      placeholder="At least 6 characters"
-                      disabled={isSubmitting}
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute top-0 bottom-0 right-0 w-11 flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
+                <PasswordField
+                  id="auth-signup-password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  disabled={isSubmitting}
+                  autoComplete="new-password"
+                  placeholder="At least 6 characters"
+                  showPassword={showPassword}
+                  onToggleShowPassword={() => setShowPassword(!showPassword)}
+                  label="Password"
+                />
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !isConfigured}
-                  className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-gray-900 px-4 text-center text-sm font-semibold leading-tight text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <span className="inline-flex items-center justify-center">
-                      <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                      Processing...
-                    </span>
-                  ) : (
-                    'Create account'
-                  )}
-                </button>
+                <SubmitButton isSubmitting={isSubmitting} disabled={!isConfigured} label="Create account" />
               </form>
 
-              <div className="mt-4 flex items-center gap-3">
-                <div className="h-px flex-1 bg-gray-200" />
-                <div className="text-xs font-medium text-gray-500">OR</div>
-                <div className="h-px flex-1 bg-gray-200" />
-              </div>
-
-              {renderOAuthButtons()}
+              <OrDivider />
+              <OAuthButtons
+                onGoogleSignIn={handleGoogleSignIn}
+                onAppleSignIn={handleAppleSignIn}
+                isOAuthSubmitting={isOAuthSubmitting}
+                isGoogleSubmitting={isGoogleSubmitting}
+                isAppleSubmitting={isAppleSubmitting}
+                isSubmitting={isSubmitting}
+                isConfigured={isConfigured}
+              />
             </TabsContent>
           </Tabs>
         </div>

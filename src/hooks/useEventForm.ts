@@ -1,17 +1,12 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '../utils/supabase/client';
 import { uploadImage } from '../utils/supabase/api';
 import {
   TIER_COLORS,
   DEFAULT_FREE_PERKS,
   DEFAULT_PERKS,
-  eventCategories,
-  createCurrencies,
   formatMoney,
   calculatePriceRange,
-  normalizeDateInput,
-  normalizeTimeInput,
   parseMoney,
   createTierClientId,
   getInitialCurrency,

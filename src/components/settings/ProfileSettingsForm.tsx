@@ -21,15 +21,15 @@ interface ProfileSettingsFormProps {
   setCategorySearch: React.Dispatch<React.SetStateAction<string>>;
   showCategoryDropdown: boolean;
   setShowCategoryDropdown: React.Dispatch<React.SetStateAction<boolean>>;
-  categoryRef: React.RefObject<HTMLDivElement | null>;
+  categoryRef: React.RefObject<HTMLDivElement>;
   locationSuggestions: any[];
   setLocationSuggestions: React.Dispatch<React.SetStateAction<any[]>>;
   loadingLocations: boolean;
   showLocationDropdown: boolean;
   setShowLocationDropdown: React.Dispatch<React.SetStateAction<boolean>>;
-  locationRef: React.RefObject<HTMLDivElement | null>;
+  locationRef: React.RefObject<HTMLDivElement>;
   searchLocations: (query: string) => Promise<void>;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  fileInputRef: React.RefObject<HTMLInputElement>;
   handleAvatarClick: () => void;
   handleAvatarChange: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleSaveProfile: () => Promise<void>;

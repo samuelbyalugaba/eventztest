@@ -1,5 +1,4 @@
 import { Phone, Settings } from 'lucide-react';
-import { formatMoney } from './createEventHelpers';
 
 interface EventSettings {
   liveStream: boolean;
