@@ -140,12 +140,15 @@ html.capacitor-android {
 
 @layer base {
   :where(input, textarea, select, button, a, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
   }
 
   :where(input, textarea, select):focus-visible {
-    box-shadow: none;
+    box-shadow: none !important;
   }
 }
 
@@ -583,9 +586,11 @@ select:focus,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.16);
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
 }
 
 input:focus,
@@ -663,7 +668,9 @@ button:focus-visible,
 a:focus-visible,
 [role='button']:focus-visible,
 [tabindex]:not([tabindex='-1']):focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.16);
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
 }
