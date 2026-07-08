@@ -55,6 +55,7 @@ export function useEventDetailModal(event: ApiEvent, onPurchaseTicket: (event: A
       const timeStr = event.time ? event.time.replace(' ', '') : '23:59';
       return new Date(`${dateStr} ${timeStr}`) < new Date();
     } catch {
+      console.warn('Failed to parse event date for isEventPast check', event.date, event.time);
       return false;
     }
   })();
@@ -95,7 +96,7 @@ export function useEventDetailModal(event: ApiEvent, onPurchaseTicket: (event: A
           if (profile && profile.full_name) {
             setOrganizerDisplayName(profile.full_name);
           }
-        } catch {}
+        } catch { console.warn('Failed to fetch organizer profile', event.organizer_id); }
       }
     };
     fetchOrganizerDetails();
@@ -105,7 +106,7 @@ export function useEventDetailModal(event: ApiEvent, onPurchaseTicket: (event: A
         const { data: { user } } = await supabase.auth.getUser();
         const posts = await getPosts({ currentUserId: user?.id, eventId: event.id });
         setEventPosts(posts || []);
-      } catch {}
+      } catch { console.warn('Failed to load event posts', event.id); }
     };
     loadEventPosts();
   }, [event.id, event.organizer_id]);
@@ -135,16 +136,6 @@ export function useEventDetailModal(event: ApiEvent, onPurchaseTicket: (event: A
     };
     checkAccess();
   }, [event.id, requiresVirtualAccess]);
-
-  useEffect(() => {
-    const onPurchased = (e: Event) => {
-      const eventId = (e as any)?.detail?.eventId;
-      if (Number(eventId) !== Number(event.id)) return;
-      setHasVirtualAccess(true);
-    };
-    window.addEventListener('virtualAccessPurchased', onPurchased as EventListener);
-    return () => window.removeEventListener('virtualAccessPurchased', onPurchased as EventListener);
-  }, [event.id]);
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [showMediaViewer, setShowMediaViewer] = useState(false);

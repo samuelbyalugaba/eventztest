@@ -8,13 +8,10 @@ export const REPORT_REASONS = [
 ] as const;
 
 export const askForReportReason = (label = 'this content') => {
-  const input = window.prompt(
-    `Why are you reporting ${label}?\n\nExamples: inappropriate content, harassment, spam, unsafe activity.`,
+  return window.prompt(
+    `Why are you reporting ${label}?`,
     REPORT_REASONS[0]
-  );
-
-  const reason = input?.trim();
-  return reason || null;
+  )?.trim() || null;
 };
 
 export const confirmBlockUser = (name = 'this user') => {

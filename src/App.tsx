@@ -15,6 +15,7 @@ import UnauthenticatedApp from './components/app/UnauthenticatedApp';
 import KeepAliveTabs from './components/app/KeepAliveTabs';
 import AppRoutes from './components/app/AppRoutes';
 import BottomNav from './components/app/BottomNav';
+import { ReportReasonProvider } from './contexts/ReportReasonContext';
 
 const FEED_CACHE_KEY = 'eventz-feed-cache-v1';
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -302,8 +303,9 @@ export default function App() {
   }
 
   return (
+    <ReportReasonProvider>
     <div className="h-[100dvh] overflow-hidden bg-gray-50">
-      <div className="fixed top-0 left-0 right-0 z-[1]" style={{ height: 'var(--eventz-safe-area-top)', backgroundColor: '#7C3AED' }} />
+      <div className="fixed top-0 left-0 right-0 z-[1] bg-primary" style={{ height: 'var(--eventz-safe-area-top)' }} />
       <Toaster
         position="top-center"
         richColors={false}
@@ -384,5 +386,6 @@ export default function App() {
         hasLiveEvents={hasLiveEvents}
       />
     </div>
+    </ReportReasonProvider>
   );
 }

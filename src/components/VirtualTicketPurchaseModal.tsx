@@ -149,7 +149,7 @@ export function VirtualTicketPurchaseModal({ isOpen, onClose, event }: VirtualTi
       });
 
       queryClient.invalidateQueries({ queryKey: queryKeys.profile.tickets(userId) });
-      window.dispatchEvent(new CustomEvent('virtualAccessPurchased', { detail: { eventId: event.id } }));
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       setPaymentStep('success');
       toast.success('Virtual Access Granted');
       setTimeout(() => {

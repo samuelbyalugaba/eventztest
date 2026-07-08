@@ -3,7 +3,7 @@ import { type CarouselApi } from '../components/ui/carousel';
 import { useFullscreen } from './useFullscreen';
 import { toast } from 'sonner';
 import { reportContent } from '../utils/supabase/api';
-import { askForReportReason } from '../utils/moderation';
+import { useReportReason } from '../contexts/ReportReasonContext';
 
 export function usePostDetail({
   post,
@@ -34,6 +34,7 @@ export function usePostDetail({
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const instanceId = useRef(`pv-${Math.random().toString(36).slice(2, 8)}`);
   const enterFullscreen = useFullscreen();
+  const { askReportReason } = useReportReason();
 
   const updateCarouselHeight = useCallback(() => {
     if (!api) return;
@@ -107,7 +108,7 @@ export function usePostDetail({
       toast.error('Please sign in to report content');
       return;
     }
-    const reason = askForReportReason('this post');
+    const reason = await askReportReason('this post');
     if (!reason) return;
 
     try {
@@ -122,14 +123,14 @@ export function usePostDetail({
     } catch (error: any) {
       toast.error(error?.message || 'Failed to submit report');
     }
-  }, [currentUser, post.id, post.user?.id, post.user_id, onBack]);
+  }, [currentUser, post.id, post.user?.id, post.user_id, onBack, askReportReason]);
 
   const handleReportComment = useCallback(async (comment: any) => {
     if (!currentUser) {
       toast.error('Please sign in to report content');
       return;
     }
-    const reason = askForReportReason('this comment');
+    const reason = await askReportReason('this comment');
     if (!reason) return;
 
     try {
@@ -144,7 +145,7 @@ export function usePostDetail({
     } catch (error: any) {
       toast.error(error?.message || 'Failed to submit report');
     }
-  }, [currentUser]);
+  }, [currentUser, askReportReason]);
 
   const handleCommentProfileClick = useCallback((comment: any, e: React.MouseEvent) => {
     const user = comment.user;

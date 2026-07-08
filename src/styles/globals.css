@@ -140,8 +140,8 @@ html.capacitor-android {
 
 @layer base {
   :where(input, textarea, select, button, a, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
-    outline: none !important;
-    outline-offset: 0 !important;
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
     box-shadow: none !important;
     --tw-ring-offset-shadow: 0 0 #0000 !important;
     --tw-ring-shadow: 0 0 #0000 !important;
@@ -586,8 +586,8 @@ select:focus,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: none !important;
-  outline-offset: 0 !important;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
   box-shadow: none !important;
   --tw-ring-offset-shadow: 0 0 #0000 !important;
   --tw-ring-shadow: 0 0 #0000 !important;
@@ -668,8 +668,8 @@ button:focus-visible,
 a:focus-visible,
 [role='button']:focus-visible,
 [tabindex]:not([tabindex='-1']):focus-visible {
-  outline: none !important;
-  outline-offset: 0 !important;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
   box-shadow: none !important;
   --tw-ring-offset-shadow: 0 0 #0000 !important;
   --tw-ring-shadow: 0 0 #0000 !important;

@@ -1,15 +1,25 @@
 
+import * as Sentry from "@sentry/react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./App.tsx";
 import "./index.css";
 import { registerServiceWorker } from "./utils/registerSW";
-import { ErrorBoundary } from "./components/ErrorBoundary";
+
+
 import { AuthProvider } from "./contexts/AuthContext";
 import { MessagingProvider } from "./contexts/MessagingContext";
 import { configureNativeRuntime } from "./utils/nativeRuntime";
 import { queryClient } from "./queryClient";
+
+Sentry.init({
+  dsn: "https://7b817c9e06419fc7dc62b72df3867c77@o4511699114983424.ingest.de.sentry.io/4511699126648912",
+  dataCollection: {
+    // userInfo: false,
+    // httpBodies: []
+  }
+});
 
 try {
   void configureNativeRuntime();
@@ -51,7 +61,13 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 createRoot(document.getElementById("root")!).render(
-  <ErrorBoundary>
+  <Sentry.ErrorBoundary fallback={<div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+    <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full text-center">
+      <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h1>
+      <p className="text-gray-600 mb-4">EVENTZ hit an unexpected error. Try refreshing.</p>
+      <button onClick={() => window.location.reload()} className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors">Refresh app</button>
+    </div>
+  </div>}>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -61,7 +77,7 @@ createRoot(document.getElementById("root")!).render(
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
-  </ErrorBoundary>
+  </Sentry.ErrorBoundary>
 );
 
 // App entry

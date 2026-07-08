@@ -34,6 +34,9 @@ export const getEmailPreferences = async (userId: string): Promise<EmailPreferen
     .maybeSingle();
 
   if (error) {
+    if (error.code === 'PGRST205') {
+      return DEFAULT_EMAIL_PREFERENCES as EmailPreferences;
+    }
     throw error;
   }
 
@@ -45,7 +48,12 @@ export const getEmailPreferences = async (userId: string): Promise<EmailPreferen
     .select('*')
     .single();
 
-  if (createError) throw createError;
+  if (createError) {
+    if (createError.code === 'PGRST205') {
+      return DEFAULT_EMAIL_PREFERENCES as EmailPreferences;
+    }
+    throw createError;
+  }
   return created as EmailPreferences;
 };
 

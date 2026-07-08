@@ -36,7 +36,7 @@ import {
   transactionAmount,
 } from './utils';
 
-export function IconBubble({ children, color = '#7C3AED', soft = '#EDE9FE' }: { children: ReactNode; color?: string; soft?: string }) {
+export function IconBubble({ children, color = 'var(--primary)', soft = '#EDE9FE' }: { children: ReactNode; color?: string; soft?: string }) {
   return (
     <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ color, background: soft }}>
       {children}
@@ -222,7 +222,7 @@ export function RangeTabs({ value, onChange }: { value: string; onChange: (value
 
 export function RevenueChart({ scope }: { scope: DashboardScope }) {
   const rows = [
-    ['Ticket revenue', scope.revenue, '#7C3AED'],
+    ['Ticket revenue', scope.revenue, 'var(--chart-1)'],
     ['Wallet balance available', scope.available, '#059669'],
     ['Gifts received', scope.gifts, '#D97706'],
   ] as const;

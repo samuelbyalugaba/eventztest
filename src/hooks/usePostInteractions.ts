@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Post } from '../types';
 import { toast } from 'sonner';
 import { reportContent, blockUser } from '../utils/supabase/api';
-import { askForReportReason, confirmBlockUser } from '../utils/moderation';
+import { confirmBlockUser } from '../utils/moderation';
+import { useReportReason } from '../contexts/ReportReasonContext';
 
 export function usePostInteractions(
   post: Post,
@@ -19,6 +20,7 @@ export function usePostInteractions(
   const [likesCount, setLikesCount] = useState(post.likes);
   const [isSaved, setIsSaved] = useState(post.isSaved);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
+  const { askReportReason } = useReportReason();
 
   const isOwnPost =
     !!currentUserId && !!postOwnerId && String(currentUserId) === String(postOwnerId);
@@ -40,6 +42,7 @@ export function usePostInteractions(
     try {
       await onLike(post.id);
     } catch {
+      console.warn('Failed to toggle like for post', post.id);
       setIsLiked(!newIsLiked);
       setLikesCount((prev) => (!newIsLiked ? prev + 1 : prev - 1));
     }
@@ -61,6 +64,7 @@ export function usePostInteractions(
     try {
       await onSave(post.id);
     } catch {
+      console.warn('Failed to toggle save for post', post.id);
       setIsSaved(!isSaved);
     }
   };
@@ -71,7 +75,7 @@ export function usePostInteractions(
       return;
     }
 
-    const reason = askForReportReason(displayProfile.name);
+    const reason = await askReportReason(displayProfile.name);
     if (!reason) return;
 
     try {

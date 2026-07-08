@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { supabase, type StreamMessage, getStreamMessages, subscribeToStreamMessages, getEventLikes, subscribeToEventLikes, sendStreamMessage, reportContent } from '../utils/supabase/api';
 import { generateHeart } from '../components/livestream/HeartAnimations';
 import type { FloatingHeart } from '../components/livestream/types';
-import { askForReportReason } from '../utils/moderation';
+import { useReportReason } from '../contexts/ReportReasonContext';
 
 const appendStreamMessage = (prev: StreamMessage[], message: StreamMessage) => {
   if (message.id && prev.some((item) => item.id === message.id)) return prev;
@@ -16,6 +16,7 @@ export function useStreamChat(eventId: number, isLive: boolean) {
   const [chatMessage, setChatMessage] = useState('');
   const [likes, setLikes] = useState(0);
   const [likesAnimation, setLikesAnimation] = useState<FloatingHeart[]>([]);
+  const { askReportReason } = useReportReason();
 
   useEffect(() => {
     const loadChat = async () => {
@@ -27,7 +28,7 @@ export function useStreamChat(eventId: number, isLive: boolean) {
         setMessages((msgs || []).slice(-200));
         setLikes(initialLikes);
       } catch {
-        // ignore
+        console.warn('Failed to load stream chat or likes', eventId);
       }
     };
     loadChat();
@@ -73,7 +74,7 @@ export function useStreamChat(eventId: number, isLive: boolean) {
       toast.error('You cannot report your own message');
       return;
     }
-    const reason = askForReportReason('this live chat message');
+    const reason = await askReportReason('this live chat message');
     if (!reason) return;
     try {
       await reportContent({

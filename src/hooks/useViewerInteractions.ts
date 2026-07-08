@@ -13,6 +13,8 @@ import {
   sendGift,
 } from '../utils/supabase/api';
 import type { LiveStreamData, FloatingHeart, GiftOption } from '../components/livestream/types';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 import { GIFT_OPTIONS } from '../components/livestream/types';
 import { generateHeart } from '../components/livestream/HeartAnimations';
 
@@ -145,7 +147,7 @@ export function useViewerInteractions(stream: LiveStreamData) {
         setIsFollowingHost(true);
         toast.success(`Following ${stream.host}`);
       }
-      window.dispatchEvent(new Event('profileUpdated'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
     } catch { toast.error('Failed to update follow'); }
   };
 

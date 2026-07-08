@@ -9,7 +9,7 @@ import {
 } from '../utils/supabase/api';
 import type { LiveStreamData, GiftBanner } from '../components/livestream/types';
 import { GIFT_OPTIONS } from '../components/livestream/types';
-import { askForReportReason } from '../utils/moderation';
+import { useReportReason } from '../contexts/ReportReasonContext';
 
 type ViewerChatMessage = {
   id?: number;
@@ -39,6 +39,7 @@ export function useViewerChat(stream: LiveStreamData, currentUserId: string | nu
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ViewerChatMessage[]>([]);
   const [giftBanners, setGiftBanners] = useState<GiftBanner[]>([]);
+  const { askReportReason } = useReportReason();
 
   useEffect(() => {
     const loadChat = async () => {
@@ -101,7 +102,7 @@ export function useViewerChat(stream: LiveStreamData, currentUserId: string | nu
       return;
     }
 
-    const reason = askForReportReason('this live chat message');
+    const reason = await askReportReason('this live chat message');
     if (!reason) return;
 
     try {

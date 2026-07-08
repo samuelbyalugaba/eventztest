@@ -49,11 +49,11 @@ export function DashboardHome({
 
         <SectionTitle>Overview - {selected.id === 'all' ? 'all events' : selected.name}</SectionTitle>
         <div className="grid grid-cols-2 gap-[10px] mb-4">
-          <MetricCard icon={Ticket} iconColor="#7C3AED" label="Tickets sold" value={formatNumber(selected.tickets)} delta="From tickets table" onClick={() => onGo('tickets')} />
+          <MetricCard icon={Ticket} iconColor="var(--primary)" label="Tickets sold" value={formatNumber(selected.tickets)} delta="From tickets table" onClick={() => onGo('tickets')} />
           <MetricCard icon={CreditCard} iconColor="#059669" label="Revenue" value={formatMoneyShort(selected.revenue)} delta="From tickets table" onClick={() => onGo('revenue')} />
           <MetricCard icon={PlayCircle} iconColor="#2563EB" label="Live viewers" value={formatNumber(selected.viewers)} delta={selected.status === 'live' ? 'Live now' : 'No live stream now'} onClick={() => onGo('stream')} />
           <MetricCard icon={Gift} iconColor="#D97706" label="Gifts received" value={formatMoneyShort(selected.gifts)} delta={selected.gifts ? 'From transactions' : 'No gifts yet'} onClick={() => onGo('gifts')} />
-          <MetricCard icon={Users} iconColor="#7C3AED" label="Followers" value={formatNumber(selected.followers)} delta="From followers table" />
+          <MetricCard icon={Users} iconColor="var(--primary)" label="Followers" value={formatNumber(selected.followers)} delta="From followers table" />
           <MetricCard icon={Globe2} iconColor="#0891B2" label="Virtual tickets" value={formatNumber(selected.virtualTickets)} delta="From event stream settings" />
         </div>
 

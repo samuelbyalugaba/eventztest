@@ -1,5 +1,6 @@
 import { X, User, Shield, HelpCircle, ChevronRight, Mail } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { PromptDialog } from './ui/prompt-dialog';
 import { toast } from 'sonner';
 import { supabase, getProfile, updateProfile, checkUsernameUnique } from '../utils/supabase/api';
 import { searchNominatim } from '../utils/nominatim';
@@ -78,6 +79,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
   const [emailPreferences, setEmailPreferences] = useState(DEFAULT_EMAIL_PREFERENCES);
   const [isSavingEmailPreferences, setIsSavingEmailPreferences] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeletePrompt, setShowDeletePrompt] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -202,7 +204,12 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
   const handleDeleteAccount = async () => {
     if (!user) { toast.error('You must be logged in to delete your account'); return; }
     if (!window.confirm('Delete your EVENTZ account? This removes your profile and signs you out. This action cannot be undone.')) return;
-    if (window.prompt('Type DELETE to permanently delete your account.') !== 'DELETE') { toast.error('Account deletion cancelled'); return; }
+    setShowDeletePrompt(true);
+  };
+
+  const handleDeletePromptConfirm = useCallback(async (typed: string) => {
+    if (typed !== 'DELETE') { toast.error('Account deletion cancelled'); return; }
+    setShowDeletePrompt(false);
     setIsDeletingAccount(true);
     try {
       const { data, error } = await supabase.functions.invoke('delete-account', { method: 'POST', body: {} });
@@ -222,7 +229,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       window.location.assign('/events');
     } catch (error: any) { toast.error(error?.message || 'Failed to delete account'); }
     finally { setIsDeletingAccount(false); }
-  };
+  }, [handleOpenChange]);
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
@@ -325,6 +332,17 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
           </div>
         </div>
       </SheetContent>
+      <PromptDialog
+        open={showDeletePrompt}
+        onOpenChange={setShowDeletePrompt}
+        title="Delete Account"
+        description="Type DELETE to permanently delete your account."
+        placeholder="DELETE"
+        matchValue="DELETE"
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDeletePromptConfirm}
+      />
     </Sheet>
   );
 }

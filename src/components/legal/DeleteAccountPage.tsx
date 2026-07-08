@@ -1,13 +1,15 @@
 import { Loader2, Mail, Trash2 } from 'lucide-react';
 import { BackButton } from '../ui/BackButton';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { PromptDialog } from '../ui/prompt-dialog';
 import { toast } from 'sonner';
 import { supabase } from '../../utils/supabase/client';
 import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, TERMS_OF_SERVICE_URL } from '../../utils/legal';
 
 export function DeleteAccountPage() {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeletePrompt, setShowDeletePrompt] = useState(false);
 
   const handleSignedInDeletion = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -19,12 +21,16 @@ export function DeleteAccountPage() {
     const confirmed = window.confirm('Delete your Eventz account permanently? This removes your profile, posts, saved items, and account access.');
     if (!confirmed) return;
 
-    const typed = window.prompt('Type DELETE to confirm permanent account deletion.');
+    setShowDeletePrompt(true);
+  };
+
+  const handleDeletePromptConfirm = useCallback(async (typed: string) => {
     if (typed !== 'DELETE') {
       toast.error('Account deletion cancelled');
       return;
     }
 
+    setShowDeletePrompt(false);
     setIsDeleting(true);
     try {
       const { data, error } = await supabase.functions.invoke('delete-account', {
@@ -45,7 +51,7 @@ export function DeleteAccountPage() {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, []);
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 text-gray-900">
@@ -107,6 +113,17 @@ export function DeleteAccountPage() {
           <Link to={TERMS_OF_SERVICE_URL} className="font-medium text-purple-700">Terms of Service</Link>.
         </p>
       </main>
+      <PromptDialog
+        open={showDeletePrompt}
+        onOpenChange={setShowDeletePrompt}
+        title="Delete Account"
+        description="Type DELETE to confirm permanent account deletion."
+        placeholder="DELETE"
+        matchValue="DELETE"
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDeletePromptConfirm}
+      />
     </div>
   );
 }

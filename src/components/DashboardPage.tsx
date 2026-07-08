@@ -292,7 +292,7 @@ export function DashboardPage() {
     location: organizerLocation,
     status: hasLiveScope ? 'live' : 'upcoming',
     statusLabel: hasLiveScope ? 'Live now' : 'All',
-    color: hasLiveScope ? '#15803D' : '#7C3AED',
+    color: hasLiveScope ? '#15803D' : 'var(--primary)',
     softColor: hasLiveScope ? '#DCFCE7' : '#EDE9FE',
     revenue: allRevenue,
     available: allAvailable,

@@ -27,7 +27,8 @@ import { ProfileTabs, type ProfileTab } from './profile/ProfileTabs';
 import { ProfileContent } from './profile/ProfileContent';
 import { ProfileSidebar } from './profile/ProfileSidebar';
 import { ProfileActions } from './profile/ProfileActions';
-import { askForReportReason, confirmBlockUser } from '../utils/moderation';
+import { confirmBlockUser } from '../utils/moderation';
+import { ReportReasonModal } from './ui/ReportReasonModal';
 import { ConfirmDialog } from './ui/confirm-dialog';
 import {
   DropdownMenu,
@@ -101,7 +102,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const [showTicketListModal, setShowTicketListModal] = useState(false);
   const [selectedEventTickets, setSelectedEventTickets] = useState<Ticket[]>([]);
   const [showEventListModal, setShowEventListModal] = useState(false);
-  
+  const [showReportReason, setShowReportReason] = useState(false);
 
   const {
     currentUser,
@@ -299,8 +300,11 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
   const handleReportProfile = async () => {
     if (!currentUser) { toast.error('Please sign in to report profiles'); return; }
     if (!userId) { toast.error('Could not find this profile'); return; }
-    const reason = askForReportReason('this profile');
-    if (!reason) return;
+    setShowReportReason(true);
+  };
+
+  const handleReportReasonConfirm = async (reason: string) => {
+    if (!reason || !userId) return;
     try {
       await reportContent({
         contentType: 'profile',
@@ -544,6 +548,12 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         confirmLabel="Delete"
         destructive
         onConfirm={handleConfirmDeleteEvent}
+      />
+      <ReportReasonModal
+        open={showReportReason}
+        onOpenChange={setShowReportReason}
+        label="this profile"
+        onConfirm={handleReportReasonConfirm}
       />
     </div>
   );

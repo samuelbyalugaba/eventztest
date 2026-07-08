@@ -6,7 +6,7 @@ import verifiedBadge from '../assets/verified-badge.png';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import { toast } from 'sonner';
 import { reportContent } from '../utils/supabase/api';
-import { askForReportReason } from '../utils/moderation';
+import { ReportReasonModal } from './ui/ReportReasonModal';
 import { useVisualViewport } from '../utils/useVisualViewport';
 
 
@@ -33,6 +33,8 @@ export function CommentsSheet({
 }: CommentsSheetProps) {
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: number, name: string } | null>(null);
+  const [showReportReason, setShowReportReason] = useState(false);
+  const [reportTargetComment, setReportTargetComment] = useState<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { offsetBottom } = useVisualViewport();
 
@@ -71,16 +73,19 @@ export function CommentsSheet({
       toast.error('Please sign in to report content');
       return;
     }
-    const reason = askForReportReason('this comment');
-    if (!reason) return;
+    setReportTargetComment(comment);
+    setShowReportReason(true);
+  };
 
+  const handleReportReasonConfirm = async (reason: string) => {
+    if (!reason || !reportTargetComment) return;
     try {
       await reportContent({
         contentType: 'comment',
-        contentId: comment.id,
+        contentId: reportTargetComment.id,
         reason,
-        details: comment.text,
-        reportedUserId: comment.user?.id || comment.user_id,
+        details: reportTargetComment.text,
+        reportedUserId: reportTargetComment.user?.id || reportTargetComment.user_id,
       });
       toast.success('Report submitted');
     } catch (error: any) {
@@ -288,6 +293,12 @@ export function CommentsSheet({
           </div>
         </div>
       </SheetContent>
+      <ReportReasonModal
+        open={showReportReason}
+        onOpenChange={setShowReportReason}
+        label="this comment"
+        onConfirm={handleReportReasonConfirm}
+      />
     </Sheet>
   );
 }

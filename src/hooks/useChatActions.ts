@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { Message, blockUser, reportContent, deleteMessage, getMessages } from '../utils/supabase/api';
 import { toast } from 'sonner';
-import { askForReportReason, confirmBlockUser } from '../utils/moderation';
+import { confirmBlockUser } from '../utils/moderation';
+import { useReportReason } from '../contexts/ReportReasonContext';
 
 export function useChatActions(
   recipient: { id: string; full_name?: string | null; username?: string | null },
@@ -12,6 +13,7 @@ export function useChatActions(
   const [showMenu, setShowMenu] = useState(false);
   const [messagePendingDelete, setMessagePendingDelete] = useState<Message | null>(null);
   const [selectedMediaUrl, setSelectedMediaUrl] = useState<string | null>(null);
+  const { askReportReason } = useReportReason();
 
   const handleBlockUser = useCallback(async () => {
     if (!confirmBlockUser(recipient.full_name || recipient.username || 'this user')) return;
@@ -26,7 +28,7 @@ export function useChatActions(
   }, [recipient, onBack]);
 
   const handleReportUser = useCallback(async () => {
-    const reason = askForReportReason(recipient.full_name || recipient.username || 'this user');
+    const reason = await askReportReason(recipient.full_name || recipient.username || 'this user');
     if (!reason) return;
     try {
       await reportContent({
@@ -40,7 +42,7 @@ export function useChatActions(
     } catch (error: any) {
       toast.error(error?.message || 'Failed to submit report');
     }
-  }, [recipient]);
+  }, [recipient, askReportReason]);
 
   const handleDeleteMessage = useCallback(async (messageId: number) => {
     setMessages(prev => prev.filter(m => m.id !== messageId));
@@ -55,7 +57,7 @@ export function useChatActions(
   }, [conversationId, setMessages]);
 
   const handleReportMessage = useCallback(async (msg: Message) => {
-    const reason = askForReportReason('this message');
+    const reason = await askReportReason('this message');
     if (!reason) return;
     try {
       await reportContent({
@@ -69,7 +71,7 @@ export function useChatActions(
     } catch (error: any) {
       toast.error(error?.message || 'Failed to submit report');
     }
-  }, []);
+  }, [askReportReason]);
 
   return {
     showMenu,
