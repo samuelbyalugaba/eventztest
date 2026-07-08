@@ -303,6 +303,7 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-gray-50">
+      <div className="fixed top-0 left-0 right-0 z-[1]" style={{ height: 'var(--eventz-safe-area-top)', backgroundColor: '#7C3AED' }} />
       <Toaster
         position="top-center"
         richColors={false}
