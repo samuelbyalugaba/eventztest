@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Plus, QrCode, Menu } from 'lucide-react';
+import { Plus, QrCode, Menu, Calendar } from 'lucide-react';
 import { type DashboardScope, type ScreenId } from './types';
 import { BackTopBar, SectionTitle, DashboardMenu, EmptyCard, EventRow } from './shared';
+import { EmptyState } from '../ui/EmptyState';
 
 export function EventsScreen({ scopes, onGo, onNew, onScan, onBack }: { scopes: DashboardScope[]; onGo: (screen: ScreenId, detail?: DashboardScope) => void; onNew: () => void; onScan: () => void; onBack: () => void }) {
   const active = scopes.filter((scope) => scope.status !== 'completed');
@@ -34,7 +35,9 @@ export function EventsScreen({ scopes, onGo, onNew, onScan, onBack }: { scopes: 
       <div className="flex-1 overflow-y-auto [scrollbar-width:none]">
         <div className="px-4 pt-[14px] pb-[calc(86px+var(--eventz-safe-area-bottom))]">
           <SectionTitle>Active & upcoming</SectionTitle>
-          {active.map((scope) => <EventRow key={scope.id} scope={scope} onClick={() => onGo('event-detail', scope)} />)}
+          {active.length > 0 ? active.map((scope) => <EventRow key={scope.id} scope={scope} onClick={() => onGo('event-detail', scope)} />) : (
+            <EmptyState icon={Calendar} title="No active events" description="Create and publish an event to see it here" />
+          )}
           <SectionTitle>Completed</SectionTitle>
           {completed.length ? completed.map((scope) => <EventRow key={scope.id} scope={scope} onClick={() => onGo('event-detail', scope)} />) : <EmptyCard>No completed events yet</EmptyCard>}
         </div>

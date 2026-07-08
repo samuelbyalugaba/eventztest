@@ -47,13 +47,13 @@ export function WalletPage() {
   };
 
   return (
-    <div className="bg-[#F4F1FF] min-h-[100dvh] flex flex-col max-w-[390px] mx-auto">
-      <div className="sticky top-0 z-10 bg-[#F4F1FF] px-5 pt-4 pb-3 flex items-center justify-between">
+    <div className="bg-secondary min-h-[100dvh] flex flex-col max-w-[390px] mx-auto">
+      <div className="sticky top-0 z-10 bg-secondary px-5 pt-4 pb-3 flex items-center justify-between">
         <BackButton
           className="w-[38px] h-[38px] bg-white rounded-full flex items-center justify-center border border-[#DDD6FE]"
           iconClassName="w-[18px] h-[18px] text-[#6B21E8]"
         />
-        <span className="text-lg font-medium text-[#1A0533]">My Wallet</span>
+        <span className="text-lg font-medium text-foreground">My Wallet</span>
       </div>
 
       <section className="bg-gradient-to-br from-primary to-[#9333EA] rounded-[18px] p-5 relative overflow-hidden text-white mx-4 mb-5">
@@ -65,8 +65,8 @@ export function WalletPage() {
         <div className="relative z-[1] text-2xs font-medium text-white/55 mb-[14px]">Live &middot; Updated just now</div>
       </section>
 
-      <div className="bg-white rounded-t-[28px] flex-1 border border-[#EDE9FE] border-b-0 px-4 pt-[22px] pb-8">
-        <div className="flex bg-[#F4F1FF] rounded-[14px] p-[4px] mb-[22px]">
+      <div className="bg-white rounded-t-[28px] flex-1 border border-border border-b-0 px-4 pt-[22px] pb-8">
+        <div className="flex bg-secondary rounded-[14px] p-[4px] mb-[22px]">
           {tabs.map(tab => {
             const Icon = tabIcon(tab.key);
             const isActive = activeTab === tab.key;
@@ -88,13 +88,13 @@ export function WalletPage() {
         {activeTab === 'deposit' && (
           <div>
             <div className="flex gap-2.5 mb-[18px]">
-              <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
+              <div className="flex-1 bg-input-background border border-border rounded-[14px] px-[14px] py-3">
                 <div className="text-sm font-medium text-[#059669]">{loading ? '—' : `TSh ${totalDeposited.toLocaleString()}`}</div>
-                <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Deposited</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-[0.5px] mt-[3px]">Total Deposited</div>
               </div>
-              <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
+              <div className="flex-1 bg-input-background border border-border rounded-[14px] px-[14px] py-3">
                 <div className="text-sm font-medium text-primary">M-Pesa</div>
-                <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Default method</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-[0.5px] mt-[3px]">Default method</div>
               </div>
             </div>
 
@@ -104,7 +104,7 @@ export function WalletPage() {
                 <select
                   value={provider}
                   onChange={e => setProvider(e.target.value)}
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-sm text-[#1A0533] outline-none appearance-none transition-colors focus:border-gray-400 focus:bg-white pr-10"
+                  className="w-full bg-input-background border border-border rounded-[14px] px-[14px] py-[13px] text-sm text-foreground outline-none appearance-none transition-colors focus:border-gray-400 focus:bg-white pr-10"
                 >
                   <option>M-Pesa (Vodacom)</option>
                   <option>Airtel Money</option>
@@ -126,7 +126,7 @@ export function WalletPage() {
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   placeholder="Enter amount"
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-gray-400 focus:bg-white"
+                  className="w-full bg-input-background border border-border rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-foreground outline-none transition-colors focus:border-gray-400 focus:bg-white"
                 />
               </div>
               <div className="flex gap-2 flex-wrap mt-2">
@@ -137,7 +137,7 @@ export function WalletPage() {
                     className={`px-[15px] py-[7px] rounded-[20px] text-xs font-medium transition-all ${
                       Number(amount) === qa
                         ? 'bg-primary text-white border border-primary'
-                        : 'bg-[#F4F1FF] text-primary border border-[#DDD6FE]'
+                        : 'bg-secondary text-primary border border-[#DDD6FE]'
                     }`}
                   >
                     {qa >= 1000 ? `${(qa / 1000).toFixed(0)}K` : qa}
@@ -157,7 +157,7 @@ export function WalletPage() {
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   placeholder="7XX XXX XXX"
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-gray-400 focus:bg-white"
+                  className="w-full bg-input-background border border-border rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-foreground outline-none transition-colors focus:border-gray-400 focus:bg-white"
                 />
               </div>
             </div>
@@ -176,13 +176,13 @@ export function WalletPage() {
         {activeTab === 'withdraw' && (
           <div>
             <div className="flex gap-2.5 mb-[18px]">
-              <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
+              <div className="flex-1 bg-input-background border border-border rounded-[14px] px-[14px] py-3">
                 <div className="text-sm font-medium text-[#DC2626]">{loading ? '—' : `TSh ${totalWithdrawn.toLocaleString()}`}</div>
-                <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Total Withdrawn</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-[0.5px] mt-[3px]">Total Withdrawn</div>
               </div>
-              <div className="flex-1 bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-3">
+              <div className="flex-1 bg-input-background border border-border rounded-[14px] px-[14px] py-3">
                 <div className="text-sm font-medium text-primary">{balance !== null ? `TSh ${balance.toLocaleString()}` : '—'}</div>
-                <div className="text-2xs text-[#8B7BB0] uppercase tracking-[0.5px] mt-[3px]">Max Withdrawable</div>
+                <div className="text-2xs text-muted-foreground uppercase tracking-[0.5px] mt-[3px]">Max Withdrawable</div>
               </div>
             </div>
 
@@ -192,7 +192,7 @@ export function WalletPage() {
                 <select
                   value={provider}
                   onChange={e => setProvider(e.target.value)}
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] px-[14px] py-[13px] text-sm text-[#1A0533] outline-none appearance-none transition-colors focus:border-gray-400 focus:bg-white pr-10"
+                  className="w-full bg-input-background border border-border rounded-[14px] px-[14px] py-[13px] text-sm text-foreground outline-none appearance-none transition-colors focus:border-gray-400 focus:bg-white pr-10"
                 >
                   <option>M-Pesa (Vodacom)</option>
                   <option>Airtel Money</option>
@@ -214,7 +214,7 @@ export function WalletPage() {
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   placeholder="Enter amount"
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-gray-400 focus:bg-white"
+                  className="w-full bg-input-background border border-border rounded-[14px] pl-[54px] pr-[14px] py-[13px] text-sm text-foreground outline-none transition-colors focus:border-gray-400 focus:bg-white"
                 />
               </div>
                 <div className="flex items-center gap-1 mt-1.5 text-xs text-[#D97706]">
@@ -238,7 +238,7 @@ export function WalletPage() {
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   placeholder="7XX XXX XXX"
-                  className="w-full bg-[#FAFAFA] border border-[#EDE9FE] rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-[#1A0533] outline-none transition-colors focus:border-gray-400 focus:bg-white"
+                  className="w-full bg-input-background border border-border rounded-[14px] pl-[78px] pr-[14px] py-[13px] text-sm text-foreground outline-none transition-colors focus:border-gray-400 focus:bg-white"
                 />
               </div>
             </div>
@@ -246,7 +246,7 @@ export function WalletPage() {
             <button
               onClick={handleWithdraw}
               disabled={isProcessing}
-              className="w-full bg-[#1A0533] text-white rounded-[16px] py-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors hover:bg-[#2D0A5A] disabled:opacity-50 mt-2"
+              className="w-full bg-foreground text-white rounded-[16px] py-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors hover:bg-[#2D0A5A] disabled:opacity-50 mt-2"
             >
               <ArrowUpRight className="w-[18px] h-[18px]" />
               {isProcessing ? 'Processing...' : 'Confirm Withdraw'}
@@ -285,13 +285,13 @@ export function WalletPage() {
                   }
 
                   return (
-                    <div key={t.id} className="flex items-center gap-3 py-[13px] border-b border-[#F4F1FF] last:border-b-0">
+                    <div key={t.id} className="flex items-center gap-3 py-[13px] border-b border-secondary last:border-b-0">
                       <div className={`w-[42px] h-[42px] rounded-[13px] flex items-center justify-center shrink-0 ${bgClass}`}>
                         <Icon className={`w-[18px] h-[18px] ${iconClass}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-[#1A0533] truncate">{getTxLabel(t)}</div>
-                        <div className="text-xs text-[#8B7BB0] mt-[2px]">
+                        <div className="text-sm font-medium text-foreground truncate">{getTxLabel(t)}</div>
+                        <div className="text-xs text-muted-foreground mt-[2px]">
                           {new Date(t.created_at).toLocaleDateString()} &middot; {t.status === 'pending' ? 'Pending' : t.provider}
                         </div>
                       </div>

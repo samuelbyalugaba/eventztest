@@ -124,7 +124,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         queryClient.invalidateQueries({ queryKey: queryKeys.events.publicList });
         setCurrentStatus('published');
         toast.success('Event updated successfully', { description: 'Your changes have been saved' });
-        window.dispatchEvent(new Event('eventsUpdated'));
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.root });
         if (onBack) onBack();
       } else {
         const newEvent = await createEvent(eventData as any);
@@ -133,7 +133,7 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
         setCurrentStatus('published');
         toast.success('Event published successfully', { description: 'Your event is now live on EVENTZ' });
         setShowSuccessScreen(true);
-        window.dispatchEvent(new Event('eventsUpdated'));
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.root });
       }
     } catch (error: any) {
       toast.error(`Failed to publish event: ${error.message || 'Unknown error'}`);

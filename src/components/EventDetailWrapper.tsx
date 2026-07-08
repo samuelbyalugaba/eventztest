@@ -6,6 +6,7 @@ import { getEventById, type Event as ApiEvent } from '../utils/supabase/api';
 import { toast } from 'sonner';
 import { VirtualTicketPurchaseModal } from './VirtualTicketPurchaseModal';
 import { SimplifiedTicketModal } from './SimplifiedTicketModal';
+import { queryClient } from '../queryClient';
 import { DetailPageSkeleton } from './skeletons/PageSkeletons';
 
 const EVENT_DETAIL_KEY = (id: number) => ['event', 'detail', id] as const;
@@ -112,7 +113,7 @@ export function EventDetailWrapper({
           }}
           onClose={() => setShowPurchaseModal(false)}
           onSuccess={() => {
-            window.dispatchEvent(new Event('savedEventsUpdated'));
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
           }}
         />
       )}

@@ -6,6 +6,8 @@ import { searchNominatim } from '../utils/nominatim';
 import { Sheet, SheetContent, SheetClose, SheetTitle, SheetDescription } from "./ui/sheet";
 import { useAuth } from '../contexts/AuthContext';
 import { DEFAULT_PRIVACY_SETTINGS, mapUserProfileToSettingsForm, uploadProfileAvatar, validateProfileImageFile } from './settings/profileSettingsShared';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 import { dispatchProfileUpdated } from '../utils/profileUpdates';
 import { DEFAULT_EMAIL_PREFERENCES, getEmailPreferences, updateEmailPreferences, type EmailPreferenceUpdate } from '../utils/email';
 import { ProfileSettingsForm, type ProfileData } from './settings/ProfileSettingsForm';
@@ -193,7 +195,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       } else { localStorage.setItem('eventz-privacy', JSON.stringify(privacy)); }
       toast.success('Privacy settings updated');
       setCurrentView('main');
-      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { fields: ['privacy_settings'] } }));
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
     } catch (error) { toast.error('Failed to save privacy settings'); }
   };
 
@@ -216,7 +218,7 @@ export function SettingsModal({ onClose, initialView = 'main' }: SettingsModalPr
       localStorage.removeItem('eventz-privacy');
       toast.success('Account deleted');
       handleOpenChange(false);
-      window.dispatchEvent(new Event('profileUpdated'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
       window.location.assign('/events');
     } catch (error: any) { toast.error(error?.message || 'Failed to delete account'); }
     finally { setIsDeletingAccount(false); }

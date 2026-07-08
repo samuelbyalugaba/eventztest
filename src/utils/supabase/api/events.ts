@@ -1,6 +1,7 @@
 import { supabase } from './client';
 import type { Profile } from './profile';
 
+import { queryClient } from '../../../queryClient';
 import { deleteFile } from './storage';
 
 export type Event = {
@@ -386,9 +387,9 @@ export const getUpcomingStreams = async () => {
   return (data || []).filter((e: any) => !e.streaming?.isLive);
 };
 
-const notifyLiveStreamsUpdated = (eventId?: number, isLive?: boolean) => {
+const notifyLiveStreamsUpdated = (_eventId?: number, _isLive?: boolean) => {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('liveStreamsUpdated', { detail: { eventId, isLive } }));
+  queryClient.invalidateQueries({ queryKey: ['events'] });
 };
 
 export const updateEventStreamingStatus = async (eventId: number, isLive: boolean) => {

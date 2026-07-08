@@ -24,7 +24,6 @@ export const clearProfileDependentCaches = () => {
   void queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
 };
 
-export const dispatchProfileUpdated = (detail: ProfileUpdatedDetail = {}) => {
+export const dispatchProfileUpdated = (_detail: ProfileUpdatedDetail = {}) => {
   clearProfileDependentCaches();
-  window.dispatchEvent(new CustomEvent<ProfileUpdatedDetail>('profileUpdated', { detail }));
 };

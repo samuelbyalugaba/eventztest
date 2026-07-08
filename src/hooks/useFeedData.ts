@@ -148,21 +148,6 @@ export function useFeedData(initialCurrentUser?: any) {
     });
   }, [feedQueryKey, queryClient]);
 
-  useEffect(() => {
-    const handlePostsUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
-    };
-    const handleProfileUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
-    };
-    window.addEventListener('postsUpdated', handlePostsUpdated);
-    window.addEventListener('profileUpdated', handleProfileUpdated);
-    return () => {
-      window.removeEventListener('postsUpdated', handlePostsUpdated);
-      window.removeEventListener('profileUpdated', handleProfileUpdated);
-    };
-  }, []);
-
   const refreshNotifications = useCallback(async (options?: { silent?: boolean }) => {
     if (!currentUser?.id) {
       setNotifications([]);
@@ -193,14 +178,8 @@ export function useFeedData(initialCurrentUser?: any) {
     const interval = window.setInterval(() => {
       void refreshNotifications({ silent: true });
     }, 60000);
-    const handleNotificationsUpdated = () => {
-      void refreshNotifications({ silent: true });
-    };
-
-    window.addEventListener('notificationsUpdated', handleNotificationsUpdated);
     return () => {
       window.clearInterval(interval);
-      window.removeEventListener('notificationsUpdated', handleNotificationsUpdated);
     };
   }, [currentUser?.id, refreshNotifications]);
 

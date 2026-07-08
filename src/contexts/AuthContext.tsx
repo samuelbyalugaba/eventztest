@@ -211,18 +211,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Listen for manual profile updates
-  useEffect(() => {
-    const handleProfileUpdate = async () => {
-      if (user) {
-        await fetchProfile(user.id);
-      }
-    };
-
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
-  }, [user]);
-
   const signOut = async () => {
     if (user?.id) {
       await unsubscribeFromPushNotifications(user.id).catch(() => undefined);

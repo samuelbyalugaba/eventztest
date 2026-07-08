@@ -140,7 +140,7 @@ export function ProfileListPage({ type }: ProfileListPageProps) {
       });
       setFollowingCount((prev) => nowFollowing ? prev + 1 : prev - 1);
       queryClient.invalidateQueries({ queryKey: queryKeys.profile.summary(user?.id, targetUserId || '') });
-      window.dispatchEvent(new Event('profileUpdated'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
     } catch (err) {
       console.error('Follow toggle failed', err);
       setFollowingIds((prev) => {

@@ -16,6 +16,7 @@ import { CategoryChips } from './event-details/CategoryChips';
 import { EventListSection } from './event-details/EventListSection';
 import { FilterSheet } from './event-details/FilterSheet';
 import { MessagePanel } from './event-details/MessagePanel';
+import { queryClient } from '../queryClient';
 import { useEventsData } from '../hooks/useEventsData';
 import { useEventFilters } from '../hooks/useEventFilters';
 import { useMessaging } from '../hooks/useMessaging';
@@ -265,7 +266,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             image_url: eventToPurchase.image_url
           }}
           onClose={() => setShowPurchaseModal(false)}
-          onSuccess={() => window.dispatchEvent(new Event('savedEventsUpdated'))}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['profile'] })}
         />
       )}
 

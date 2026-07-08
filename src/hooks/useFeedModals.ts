@@ -3,6 +3,8 @@ import { toast } from 'sonner';
 import type { Post, HighlightClip } from '../types';
 import { handleShare } from '../utils/share';
 import { deletePost } from '../utils/supabase/api';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 import { removePostFromFeedCache } from '../hooks/useFeedData';
 
 export function useFeedModals(
@@ -37,7 +39,7 @@ export function useFeedModals(
     try {
       await deletePost(postId);
       removePostFromFeedCache(postId);
-      window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { deletedPostId: postId } }));
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
       toast.success('Post deleted');
     }
     catch (error) { console.error('Error deleting post:', error); toast.error('Failed to delete post'); setPosts(previousPosts); }

@@ -16,7 +16,7 @@ import {
   checkIsFollowing,
   getProfileStreamedVideos,
 } from '../utils/supabase/api';
-import type { ApiPost, Ticket, Event as AppEvent } from '../utils/supabase/api';
+import type { Ticket, Event as AppEvent } from '../utils/supabase/api';
 import { useProfileStore } from '../store/profileStore';
 import { useAuth } from '../contexts/AuthContext';
 import { queryClient } from '../queryClient';
@@ -192,49 +192,6 @@ export function useProfileData(userId?: string, activeTab?: string) {
       .filter((e): e is AppEvent => !!e);
     return Array.from(new Map(attended.map((item) => [item.id, item])).values());
   }, [ticketEvents]);
-
-  /* Event listeners for real-time updates */
-  useEffect(() => {
-    const handleProfileUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.profile.summary(viewerId, targetUserId || '') });
-    };
-    const handleSavedPostsUpdated = () => {
-      if (targetUserId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.profile.savedEvents(targetUserId) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.profile.savedPosts(targetUserId) });
-      }
-    };
-    const handleEventsUpdated = () => {
-      if (targetUserId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.profile.organizerEvents(targetUserId) });
-      }
-    };
-    const handlePostsUpdated = (event: Event) => {
-      const deletedPostId = (event as CustomEvent<{ deletedPostId?: number }>).detail?.deletedPostId;
-      if (typeof deletedPostId === 'number') {
-        queryClient.setQueriesData(
-          { queryKey: queryKeys.profile.root },
-          (cached: unknown) => {
-            if (Array.isArray(cached)) return cached.filter((post: ApiPost) => post.id !== deletedPostId);
-            return cached;
-          },
-        );
-        return;
-      }
-      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
-    };
-
-    window.addEventListener('profileUpdated', handleProfileUpdated);
-    window.addEventListener('savedPostsUpdated', handleSavedPostsUpdated);
-    window.addEventListener('eventsUpdated', handleEventsUpdated);
-    window.addEventListener('postsUpdated', handlePostsUpdated);
-    return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdated);
-      window.removeEventListener('savedPostsUpdated', handleSavedPostsUpdated);
-      window.removeEventListener('eventsUpdated', handleEventsUpdated);
-      window.removeEventListener('postsUpdated', handlePostsUpdated);
-    };
-  }, [targetUserId, viewerId]);
 
   /* Subscriptions for saved items — real-time invalidations */
   useEffect(() => {

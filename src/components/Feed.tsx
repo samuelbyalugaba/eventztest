@@ -5,6 +5,8 @@ import { toggleLikePost, toggleSavePost, getPostComments, updatePostCaption } fr
 import { formatTimeAgo } from '../utils/format';
 import { Post, Conversation } from '../types';
 import { removeUserPostsFromFeedCache, useFeedData } from '../hooks/useFeedData';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 
 import { FeedHeader } from './FeedHeader';
 import { FeedModals } from './feed/FeedModals';
@@ -185,7 +187,7 @@ export function Feed({
       const saved = await toggleSavePost(postId, currentUser.id);
       setPosts(prev => prev.map(post => post.id === postId ? { ...post, isSaved: saved } : post));
       setSelectedPost(prev => (prev && prev.id === postId) ? { ...prev, isSaved: saved } : prev);
-      window.dispatchEvent(new Event('savedPostsUpdated'));
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
       if (saved) toast.success('Post saved!');
     }
     catch (error) {
@@ -203,7 +205,7 @@ export function Feed({
       const updated = await updatePostCaption(postId, currentUser.id, caption);
       setPosts(prev => prev.map(p => p.id !== postId ? p : { ...p, content: { ...(p.content || {}), text: updated.content } } as Post));
       setSelectedPost(prev => { if (!prev || prev.id !== postId) return prev; return { ...prev, content: { ...(prev.content || {}), text: updated.content } } as Post; });
-      window.dispatchEvent(new Event('postsUpdated'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
     } catch (e) { console.error(e); toast.error('Failed to update caption'); throw e; }
   }, [currentUser, setPosts, setSelectedPost]);
 
@@ -231,7 +233,7 @@ export function Feed({
     setSelectedPost(prev => (prev && String(prev.user?.id || prev.user_id || '') === String(userId)) ? null : prev);
     setSelectedPostForComments(prev => (prev && String(prev.user?.id || prev.user_id || '') === String(userId)) ? null : prev);
     removeUserPostsFromFeedCache(userId);
-    window.dispatchEvent(new Event('postsUpdated'));
+    queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
   }, [setPosts, setSelectedPost, setSelectedPostForComments]);
 
   const filteredPosts = posts;

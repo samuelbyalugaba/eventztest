@@ -1,6 +1,8 @@
 import { supabase } from './client';
 import type { Profile } from './profile';
 import type { Event } from './events';
+import { queryClient } from '../../../queryClient';
+import { queryKeys } from '../../../queryKeys';
 import { getBlockedUserIds } from './moderation';
 
 export type ApiPost = {
@@ -218,7 +220,7 @@ export const deletePost = async (postId: number) => {
   }
 
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('postsUpdated', { detail: { deletedPostId: postId } }));
+    queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
   }
 };
 

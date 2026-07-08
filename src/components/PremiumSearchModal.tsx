@@ -1,10 +1,13 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { MapPin, Search, X } from 'lucide-react';
+import { EmptyState } from './ui/EmptyState';
 import { Skeleton } from './ui/skeleton';
 import { UserAvatar } from './UserAvatar';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 import {
   clearRecentEvents,
   LEGACY_RECENT_SEARCHES_KEY,
@@ -313,7 +316,7 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
                 type="button"
                 onClick={() => {
                   onClose();
-                  window.dispatchEvent(new Event('eventsUpdated'));
+                  queryClient.invalidateQueries({ queryKey: queryKeys.events.root });
                 }}
                 className="flex w-full items-center justify-center border-t border-gray-100 px-4 py-4 text-sm font-semibold text-purple-700 transition-colors hover:bg-gray-50"
               >
@@ -381,10 +384,11 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
               {isSearching && <SearchRowSkeleton />}
 
               {showEmptyState && (
-                <div className="px-8 py-12 text-center">
-                  <h3 className="text-base font-semibold text-gray-950">No results found</h3>
-                  <p className="mt-1 text-sm text-gray-500">Try another event, venue, or person.</p>
-                </div>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try another event, venue, or person."
+                />
               )}
             </div>
           )}

@@ -7,6 +7,7 @@ import { SimplifiedTicketModal } from './SimplifiedTicketModal';
 import { getEventById, hasActiveVirtualTicket, type Event as ApiEvent } from '../utils/supabase/api';
 import { supabase } from '../utils/supabase/client';
 import { toast } from 'sonner';
+import { queryClient } from '../queryClient';
 import { LivePageSkeleton } from './skeletons/PageSkeletons';
 
 export function LiveStreamPage() {
@@ -123,7 +124,7 @@ export function LiveStreamPage() {
           }}
           onClose={() => setShowPurchaseModal(false)}
           onSuccess={() => {
-            window.dispatchEvent(new Event('savedEventsUpdated'));
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
           }}
         />
       )}

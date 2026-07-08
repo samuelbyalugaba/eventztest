@@ -132,7 +132,7 @@ export function EventSelector({
         <Filter className="h-3 w-3" />
         Viewing analytics for
       </div>
-      <button type="button" className={`w-full flex items-center justify-between gap-[10px] p-3 rounded-xl border-[1.5px] border-[#E5E7EB] bg-[#FAFAFA] ${isOpen ? 'border-primary border-b-transparent rounded-b-none' : ''}`} onClick={onToggle}>
+      <button type="button" className={`w-full flex items-center justify-between gap-[10px] p-3 rounded-xl border-[1.5px] border-[#E5E7EB] bg-input-background ${isOpen ? 'border-primary border-b-transparent rounded-b-none' : ''}`} onClick={onToggle}>
         <span className="flex items-center gap-[11px] min-w-0">
           <span className="w-[10px] h-[10px] rounded-full shadow-[0_0_0_2.5px_#fff,0_0_0_4px_currentColor] flex-shrink-0" style={{ background: selected.color, color: selected.color }} />
           <span className="min-w-0 text-left">
@@ -144,7 +144,7 @@ export function EventSelector({
           <span className="text-2xs font-medium px-[10px] py-1 rounded-full whitespace-nowrap" style={{ color: selected.color, background: selected.softColor }}>
             {selected.id === 'all' ? `${eventCount} events` : selected.statusLabel}
           </span>
-          <span className={`w-[26px] h-[26px] rounded-full bg-[#F3F4F6] text-[#6B7280] flex items-center justify-center transition-transform duration-200 ${isOpen ? 'rotate-180 bg-[#EDE9FE] text-primary' : ''}`}>
+          <span className={`w-[26px] h-[26px] rounded-full bg-[#F3F4F6] text-[#6B7280] flex items-center justify-center transition-transform duration-200 ${isOpen ? 'rotate-180 bg-border text-primary' : ''}`}>
             <ChevronDown className="h-4 w-4" />
           </span>
         </span>
@@ -247,7 +247,7 @@ export function RevenueChart({ scope }: { scope: DashboardScope }) {
           </div>
         ))
       ) : (
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Revenue history will appear after ticket payments are recorded.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-input-background rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Revenue history will appear after ticket payments are recorded.</div>
       )}
     </div>
   );
@@ -279,7 +279,7 @@ export function TierRows({ scope }: { scope: DashboardScope }) {
           );
         })
       ) : (
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Ticket tier sales will appear after tickets are sold.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-input-background rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Ticket tier sales will appear after tickets are sold.</div>
       )}
     </div>
   );
@@ -312,7 +312,7 @@ export function FunnelCard({ scope }: { scope: DashboardScope }) {
           </div>
         ))
       ) : (
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Conversion data is not available yet.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-input-background rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Conversion data is not available yet.</div>
       )}
     </div>
   );
@@ -341,7 +341,7 @@ export function CheckInFeed({ scans }: { scans: DashboardScan[] }) {
           </div>
         ))
       ) : (
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Recent scans will appear after QR check-ins.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-input-background rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">Recent scans will appear after QR check-ins.</div>
       )}
     </div>
   );
@@ -379,12 +379,12 @@ export function DashboardMenu({ onClose, onNav }: { onClose: () => void; onNav: 
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose} />
-      <div className="fixed right-3 top-[70px] z-50 w-56 rounded-2xl bg-white py-2 shadow-[0_8px_30px_rgba(0,0,0,0.18)] border border-[#EDE9FE]">
+      <div className="fixed right-3 top-[70px] z-50 w-56 rounded-2xl bg-white py-2 shadow-[0_8px_30px_rgba(0,0,0,0.18)] border border-border">
         {items.map(([screenId, label, Icon]) => (
           <button
             key={screenId}
             type="button"
-            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#1A0533] hover:bg-[#F4F1FF] transition-colors"
+            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-secondary transition-colors"
             onClick={() => { onClose(); onNav(screenId); }}
           >
             <Icon className="h-[18px] w-[18px] text-primary" />
@@ -398,7 +398,7 @@ export function DashboardMenu({ onClose, onNav }: { onClose: () => void; onNav: 
 
 export function StatBox({ label, value, note, muted = false }: { label: string; value: string; note: string; muted?: boolean }) {
   return (
-    <div className="bg-[#FAFAFA] border border-[#E9EBF0] rounded-[14px] p-[14px]">
+    <div className="bg-input-background border border-[#E9EBF0] rounded-[14px] p-[14px]">
       <span className="block text-2xs font-medium text-[#6B7280] mb-[6px]">{label}</span>
       <strong className="block text-xl font-semibold text-[#111827] tracking-[-.3px] leading-[1.1]">{value}</strong>
       <em className={`block mt-[5px] text-2xs font-medium text-[#059669] not-italic ${muted ? 'text-[#9CA3AF]' : ''}`}>{note}</em>
@@ -430,7 +430,7 @@ export function GiftList({ gifts }: { gifts: DashboardTransaction[] }) {
           </span>
           <span className="text-2xs font-semibold text-[#059669] bg-[#D1FAE5] px-[10px] py-1 rounded-full">TZS 0 total</span>
         </div>
-        <div className="border border-dashed border-[#E5E7EB] bg-[#FAFAFA] rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">No gifts received yet.</div>
+        <div className="border border-dashed border-[#E5E7EB] bg-input-background rounded-xl py-[18px] px-[18px] text-center text-[#6B7280] text-xs font-medium">No gifts received yet.</div>
       </div>
     );
   }
@@ -447,7 +447,7 @@ export function GiftList({ gifts }: { gifts: DashboardTransaction[] }) {
         const senderName = gift.metadata?.senderName || gift.metadata?.sender_name || gift.metadata?.senderUsername || 'Fan';
         return (
         <div className="flex items-center gap-[10px] py-[10px] border-b border-[#F4F5F7] last:border-b-0 last:pb-0" key={gift.id}>
-          <span className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#EDE9FE] to-[#DDD6FE] flex items-center justify-center text-[10px] font-bold text-[#6D28D9] flex-shrink-0">{getInitials(senderName)}</span>
+          <span className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#EDE9FE] to-[#DDD6FE] flex items-center justify-center text-[10px] font-bold text-primary-dark flex-shrink-0">{getInitials(senderName)}</span>
           <div className="flex-1 min-w-0">
             <strong className="block text-xs font-semibold text-[#111827]">{senderName}</strong>
             <small className="block mt-0.5 text-2xs text-[#9CA3AF]">{formatTransactionTime(gift.created_at) || 'Gift received'}</small>

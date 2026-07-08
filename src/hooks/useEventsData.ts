@@ -80,17 +80,12 @@ export function useEventsData() {
     fetchEvents();
     
     const handleEventsUpdate = () => fetchEvents(true);
-    const handleSavedUpdate = () => fetchEvents(true);
     const eventsChannel = supabase
       .channel('events-page-updates')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, handleEventsUpdate)
       .subscribe();
 
-    window.addEventListener('eventsUpdated', handleEventsUpdate);
-    window.addEventListener('savedEventsUpdated', handleSavedUpdate);
     return () => {
-      window.removeEventListener('eventsUpdated', handleEventsUpdate);
-      window.removeEventListener('savedEventsUpdated', handleSavedUpdate);
       supabase.removeChannel(eventsChannel);
     };
   }, [initialEvents]);  // Note: we use initialEvents not events.length to avoid re-fetch loop

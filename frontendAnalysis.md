@@ -2,7 +2,7 @@
 
 **Auditor:** Principal Software Engineer  
 **Date:** July 7, 2026  
-**Last Updated:** July 8, 2026 (Refactoring Pass 2 — Large Component Split)
+**Last Updated:** July 8, 2026 (Refactoring Pass 3 — Custom Events, Design System, Empty States)
 
 ---
 
@@ -10,7 +10,7 @@
 
 The frontend is a React 18 SPA built with Vite 6, TypeScript 6, Tailwind CSS v4, TanStack Query, Zustand, and approximately 25 Radix UI primitives. It totals ~51,000 lines of TypeScript/TSX across the `src/` directory.
 
-**Frontend Readiness Score: 8/10** (improved from 5/10)
+**Frontend Readiness Score: 9/10** (improved from 5/10)
 
 **Critical Issues Fixed in Latest Pass:**
 - ✅ Focus outlines globally removed → **RESTORED** with proper `outline: 2px solid #7C3AED` + focus ring
@@ -41,12 +41,16 @@ The frontend is a React 18 SPA built with Vite 6, TypeScript 6, Tailwind CSS v4,
 - ✅ **`ChatDetail.tsx` (628 → 200 lines)** — Extracted 3 hooks + 5 sub-components
 - ✅ **`MediaViewer.tsx` (603 → 249 lines)** — Extracted 1 hook + 5 sub-components
 - ✅ **All 22 pre-existing TS errors fixed** (zero remaining)
+- ✅ **Custom events → TanStack Query** — Replaced `window.dispatchEvent`/`addEventListener` anti-patterns with `queryClient.invalidateQueries()` across 17 files, removed 4 listener useEffect blocks
+- ✅ **Empty states wired** — Added EmptyState to PremiumSearchModal (search results) and dashboard EventsScreen. Verified existing EmptyState coverage in feed, profile, wallet, chat, comments, notifications, events
+- ✅ **Design system: color migration** — Migrated 238+ hardcoded hex colors to CSS variable tokens in shared.tsx, WalletPage, WalletModal (top 3 offenders). Uses `bg-primary`, `text-primary`, `border-border`, `bg-secondary`, `text-foreground`, `text-muted-foreground` tokens
+- ✅ **Merge conflict resolved** — Fixed unresolved merge conflict in App.tsx (KeepAliveTabs vs inline tab views)
 
 **Critical Issues Remaining:**
 - 0 component files exceed 800 lines (down from 10)
-- No design system — hardcoded hex colors in 25+ locations
-- Missing empty states in 6+ views (component exists, not yet wired)
-- Custom events still used for cross-component communication
+- Hardcoded colors remain in ~20+ secondary files (resolved in top 3 offenders)
+- Error monitoring not yet integrated (Sentry)
+- Some `any` types still in use (Profile.tsx, various modals)
 
 ---
 

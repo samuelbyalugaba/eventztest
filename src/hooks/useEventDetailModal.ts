@@ -6,6 +6,7 @@ import { getPosts, getProfile, hasActiveVirtualTicket, toggleSaveEvent, incremen
 import type { Event as ApiEvent } from '../utils/supabase/api';
 import { handleShare } from '../utils/share';
 import { formatPrice } from '../utils/currencies';
+import { queryClient } from '../queryClient';
 import { formatEventPrice } from '../utils/eventPriceFormat';
 
 export function useEventDetailModal(event: ApiEvent, onPurchaseTicket: (event: ApiEvent) => void) {
@@ -236,14 +237,12 @@ export function useEventDetailModal(event: ApiEvent, onPurchaseTicket: (event: A
         setIsSaved(saved);
       }
 
-      window.dispatchEvent(new Event('savedEventsUpdated'));
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
 
       toast.success(saved ? 'Event saved!' : 'Event removed from saved', {
         description: saved ? 'View in your profile under Saved Events' : 'Check your profile to see all saved events',
         duration: 2000,
       });
-
-      window.dispatchEvent(new Event('savedEventsUpdated'));
     } catch (error) {
       setIsSaved(!isSaved);
       toast.error('Failed to update saved status');

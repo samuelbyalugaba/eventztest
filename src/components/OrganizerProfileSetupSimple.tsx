@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { supabase, getProfile, uploadImage, checkUsernameUnique, becomeOrganizer } from '../utils/supabase/api';
 import { searchNominatim } from '../utils/nominatim';
 import { CREATOR_CATEGORIES } from '../utils/categories';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 import creatorBadge from '../assets/verified-badge.png';
 
 interface OrganizerProfileSetupProps {
@@ -164,8 +166,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
 
       toast.success('Your Creator profile is ready');
       
-      // Dispatch event to refresh profile across the app
-      window.dispatchEvent(new Event('profileUpdated'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.root });
       
       onComplete();
     } catch (error: any) {

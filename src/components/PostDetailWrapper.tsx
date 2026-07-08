@@ -9,6 +9,8 @@ import { formatTimeAgo } from '../utils/format';
 import { supabase } from '../utils/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
 import { DetailPageSkeleton } from './skeletons/PageSkeletons';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 import { isVideoMedia } from '../utils/media';
 
 const POST_DETAIL_KEY = (id: number, userId?: string) => ['post', 'detail', id, userId || 'anon'] as const;
@@ -220,7 +222,7 @@ export function PostDetailWrapper() {
       }
       return next;
     });
-    window.dispatchEvent(new Event('postsUpdated'));
+    queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
   };
 
   if (postQuery.isPending) {
@@ -262,7 +264,7 @@ export function PostDetailWrapper() {
         try {
           const saved = await toggleSavePost(savePostId, currentUser.id);
           setPost((prev: any) => prev ? { ...prev, isSaved: saved } : prev);
-          window.dispatchEvent(new Event('savedPostsUpdated'));
+          queryClient.invalidateQueries({ queryKey: ['profile'] });
         } catch (e) { console.error(e); }
       }}
       onEditCaption={handleEditCaption}

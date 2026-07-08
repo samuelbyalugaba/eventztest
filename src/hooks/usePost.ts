@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { createPost, uploadImage } from '../utils/supabase/api';
+import { queryClient } from '../queryClient';
+import { queryKeys } from '../queryKeys';
 import type { MediaItem } from './useCamera';
 
 export function usePost() {
@@ -40,7 +42,7 @@ export function usePost() {
       } as any);
 
       toast.success('Post created successfully');
-      window.dispatchEvent(new Event('postsUpdated'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });
       navigate('/feed');
     } catch (error: any) {
       toast.error(error?.message || 'Failed to create post');

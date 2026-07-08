@@ -168,7 +168,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         });
       }
       if (selectedEvent?.id === event.id) setSelectedEvent(null);
-      window.dispatchEvent(new Event('eventsUpdated'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.root });
       toast.success('Event deleted');
     } catch (error: any) {
       toast.error(error?.message || 'Failed to delete event');

@@ -336,7 +336,6 @@ export default function App() {
       <DesktopSidebar />
       <RightRail />
       <div className="h-[100dvh] overflow-hidden max-w-7xl mx-auto lg:max-w-none lg:ml-64 xl:ml-72 xl:mr-80">
-<<<<<<< HEAD
         <KeepAliveTabs
           isEventsTab={isEventsTab}
           isFeedTab={isFeedTab}
@@ -360,79 +359,7 @@ export default function App() {
           handleStartOrganizerSetup={handleStartOrganizerSetup}
           backgroundLocation={backgroundLocation}
         />
-        <div
-=======
-        {/* Keep-alive tab views with lazy loading */}
         <div 
-          ref={eventsScrollRef}
-          style={{ display: isEventsTab ? 'block' : 'none' }}
-          className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
-          data-eventz-view="events"
-        >
-          {shouldMountEventsTab && (
-            <RouteErrorBoundary>
-              <Suspense fallback={<EventsPageSkeleton />}>
-                <EventDetails
-                  conversations={conversations}
-                  onStartConversation={handleStartConversation}
-                  onSendMessage={handleSendMessage}
-                />
-              </Suspense>
-            </RouteErrorBoundary>
-          )}
-        </div>
-        <div style={{ display: isFeedTab ? 'block' : 'none' }} className="h-[100dvh] overflow-hidden" data-eventz-view="feed">
-          {shouldMountFeedTab && (
-            <RouteErrorBoundary>
-              <Suspense fallback={<FeedPageSkeleton />}>
-                <Feed
-                  conversations={conversations}
-                  onStartConversation={handleStartConversation}
-                  currentUser={currentUser ?? undefined}
-                  onViewPost={handleViewPost}
-                  isPaused={!isFeedTab || !!backgroundLocation}
-                />
-              </Suspense>
-            </RouteErrorBoundary>
-          )}
-        </div>
-        <div 
-          ref={liveScrollRef}
-          style={{ display: isLiveTab ? 'block' : 'none' }}
-          className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
-          data-eventz-view="live"
-        >
-          {shouldMountLiveTab && (
-            <Suspense fallback={<LivePageSkeleton />}>
-              <LiveFeed />
-            </Suspense>
-          )}
-        </div>
-        <div 
-          ref={profileScrollRef}
-          style={{ display: isOwnProfileTab ? 'block' : 'none' }}
-          className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
-          data-eventz-view="profile"
-        >
-          {shouldMountProfileTab && (
-            <RouteErrorBoundary>
-              <Suspense fallback={<ProfilePageSkeleton />}>
-                <Profile
-                  onLogout={handleLogout}
-                  onCreateEvent={handleCreateEvent}
-                  onEditEvent={handleEditEvent}
-                  onStartOrganizerSetup={handleStartOrganizerSetup}
-                  onStartConversation={handleStartConversation}
-                  onViewPost={handleViewPost}
-                  isPaused={!isOwnProfileTab || !!backgroundLocation}
-                />
-              </Suspense>
-            </RouteErrorBoundary>
-          )}
-        </div>
-
-        <div 
->>>>>>> 80ca4c03f710fea59831921482454c3bb01b0954
           ref={routeScrollRef}
           style={{ display: isKeepAliveTab ? 'none' : 'block' }}
           className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
