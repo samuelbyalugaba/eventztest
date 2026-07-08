@@ -19,7 +19,7 @@
   *:focus *,
   *:focus-visible *,
   *:focus-within * {
-    outline: 0 solid transparent !important;
+    outline: none !important;
     outline-offset: 0 !important;
     box-shadow: none !important;
     --tw-ring-color: transparent !important;
