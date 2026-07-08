@@ -361,7 +361,7 @@ export default function App() {
         />
         <div 
           ref={routeScrollRef}
-          style={{ display: isKeepAliveTab ? 'none' : 'block' }}
+          style={{ display: isKeepAliveTab && !isEventModal && !isPostModal ? 'none' : 'block' }}
           className="h-[100dvh] overflow-y-auto overscroll-behavior-y-contain scrollbar-hide"
         >
           <AppRoutes
