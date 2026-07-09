@@ -30,7 +30,7 @@ interface DashboardDataInput {
 }
 
 export function useDashboardStats(data: DashboardDataInput) {
-  const { profile, events, tickets, transactions, scans, range, selectedId, walletBalance } = data;
+  const { profile, stats, events, tickets, transactions, scans, range, selectedId, walletBalance } = data;
 
   const organizerName = profile?.full_name || profile?.display_name || profile?.name || profile?.username || 'Dashboard';
   const initials = getInitials(organizerName);
