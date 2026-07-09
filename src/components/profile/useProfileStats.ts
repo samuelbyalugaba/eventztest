@@ -55,9 +55,14 @@ export function useProfileStats({
     });
   }, [publishedEvents]);
 
+  const playableStreamsCount = useMemo(() => {
+    return streamedVideos.filter((s: any) => s?.has_recording || s?.playback_url).length;
+  }, [streamedVideos]);
+
+  // Match what HostedPage actually displays: past events + streams with playback
   const hostedCount = useMemo(() => {
-    return publishedEvents.length + streamedVideos.length;
-  }, [publishedEvents, streamedVideos]);
+    return pastHostedEvents.length + playableStreamsCount;
+  }, [pastHostedEvents, playableStreamsCount]);
 
   const attendedCount = useMemo(() => {
     return attendedEvents.length + ticketEvents.length;
@@ -66,6 +71,12 @@ export function useProfileStats({
   const displayFollowers = followStats.followers;
   const displayFollowing = followStats.following;
 
+  // Stats are only "ready" once the underlying queries have resolved,
+  // so we never flash 0 → N as data streams in.
+  const statsReady = isOrganizer
+    ? !isLoading && !isLoadingOrganizerEvents && !isLoadingStreamedVideos
+    : !isLoading && !isLoadingTickets;
+
   return {
     uniqueTicketGroups,
     pastHostedEvents,
@@ -73,5 +84,6 @@ export function useProfileStats({
     attendedCount,
     displayFollowers,
     displayFollowing,
+    statsReady,
   };
 }
