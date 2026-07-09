@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { Event as ApiEvent } from '../../utils/supabase/api';
+import { useProfileStore } from '../../store/profileStore';
 
 interface UseProfileStatsParams {
   userId?: string;
@@ -30,6 +31,10 @@ export function useProfileStats({
   isLoading,
   followStats,
 }: UseProfileStatsParams) {
+  const cacheKey = userId || (isOwnProfile ? '__self__' : '');
+  const cachedSnapshot = useProfileStore((s) => (cacheKey ? s.userStatsCache[cacheKey] : null));
+  const setUserStats = useProfileStore((s) => s.setUserStats);
+
   const uniqueTicketGroups = useMemo(() => {
     if (!ticketEvents.length) return [];
     const grouped = new Map<string, any[]>();
@@ -59,23 +64,34 @@ export function useProfileStats({
     return streamedVideos.filter((s: any) => s?.has_recording || s?.playback_url).length;
   }, [streamedVideos]);
 
-  // Match what HostedPage actually displays: past events + streams with playback
-  const hostedCount = useMemo(() => {
-    return pastHostedEvents.length + playableStreamsCount;
-  }, [pastHostedEvents, playableStreamsCount]);
-
-  const attendedCount = useMemo(() => {
-    return attendedEvents.length + ticketEvents.length;
-  }, [attendedEvents, ticketEvents]);
-
-  const displayFollowers = followStats.followers;
-  const displayFollowing = followStats.following;
-
-  // Stats are only "ready" once the underlying queries have resolved,
-  // so we never flash 0 → N as data streams in.
-  const statsReady = isOrganizer
+  const freshQueriesResolved = isOrganizer
     ? !isLoading && !isLoadingOrganizerEvents && !isLoadingStreamedVideos
     : !isLoading && !isLoadingTickets;
+
+  const freshHosted = pastHostedEvents.length + playableStreamsCount;
+  const freshAttended = attendedEvents.length + ticketEvents.length;
+
+  // Prefer live values once queries resolved; otherwise fall back to persisted
+  // snapshot so returning users see the right numbers immediately on reload.
+  const hostedCount = freshQueriesResolved ? freshHosted : cachedSnapshot?.hosted ?? freshHosted;
+  const attendedCount = freshQueriesResolved ? freshAttended : cachedSnapshot?.attended ?? freshAttended;
+  const displayFollowers = !isLoading ? followStats.followers : cachedSnapshot?.followers ?? followStats.followers;
+  const displayFollowing = !isLoading ? followStats.following : cachedSnapshot?.following ?? followStats.following;
+
+  // Ready if we have a cached snapshot OR the fresh queries have resolved.
+  const statsReady = !!cachedSnapshot || (freshQueriesResolved && !isLoading);
+
+  // Persist snapshot whenever fresh data resolves so the next visit is instant.
+  useEffect(() => {
+    if (!cacheKey) return;
+    if (!freshQueriesResolved || isLoading) return;
+    setUserStats(cacheKey, {
+      hosted: freshHosted,
+      attended: freshAttended,
+      followers: followStats.followers,
+      following: followStats.following,
+    });
+  }, [cacheKey, freshQueriesResolved, isLoading, freshHosted, freshAttended, followStats.followers, followStats.following, setUserStats]);
 
   return {
     uniqueTicketGroups,
