@@ -65,43 +65,56 @@ export function useFeedData(initialCurrentUser?: any) {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
   const initialUserLoaded = useRef(false);
+  const cacheCleared = useRef(false);
 
   useEffect(() => {
     setCurrentUser(initialCurrentUser || null);
   }, [initialCurrentUser]);
 
+  useEffect(() => {
+    if (!cacheCleared.current) {
+      cacheCleared.current = true;
+      queryClient.removeQueries({ queryKey: ['feed'] });
+    }
+  }, []);
+
   const postsQuery = useInfiniteQuery({
     queryKey: queryKeys.feed.firstPage(currentUser?.id),
     queryFn: async ({ pageParam }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUser(user);
-        if (!initialUserLoaded.current) {
-          initialUserLoaded.current = true;
-          try {
-            const profile = await getProfile(user.id);
-            setCurrentUserProfile(profile || null);
-          } catch (error) {
-            console.warn('Failed to load profile for feed:', error);
-            setCurrentUserProfile(null);
-          }
-          try {
-            const following = await getFollowedUserIds(user.id);
-            setFollowingIds(new Set(following));
-          } catch (e) {
-            console.error('Error loading following:', e);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setCurrentUser(user);
+          if (!initialUserLoaded.current) {
+            initialUserLoaded.current = true;
+            try {
+              const profile = await getProfile(user.id);
+              setCurrentUserProfile(profile || null);
+            } catch (error) {
+              console.warn('Failed to load profile for feed:', error);
+              setCurrentUserProfile(null);
+            }
+            try {
+              const following = await getFollowedUserIds(user.id);
+              setFollowingIds(new Set(following));
+            } catch (e) {
+              console.error('Error loading following:', e);
+            }
           }
         }
+        const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset: pageParam as number });
+        return {
+          posts: fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [],
+          count: fresh?.length ?? 0,
+        };
+      } catch (error) {
+        console.error('Feed query error:', error);
+        return { posts: [], count: 0 };
       }
-      const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset: pageParam as number });
-      return {
-        posts: fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [],
-        count: fresh?.length ?? 0,
-      };
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
-      if (lastPage.count < FEED_PAGE_SIZE) return undefined;
+    getNextPageParam: (lastPage, allPages, lastPageParam) => {
+      if (!lastPage || lastPage.count < FEED_PAGE_SIZE || !Array.isArray(allPages)) return undefined;
       return (lastPageParam as number) + FEED_PAGE_SIZE;
     },
     staleTime: 5 * 60 * 1000,
