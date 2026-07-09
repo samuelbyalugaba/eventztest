@@ -55,18 +55,20 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated) return;
     const cleanup = scheduleIdle(() => {
-      queryClient.prefetchQuery({
+      queryClient.prefetchInfiniteQuery({
         queryKey: queryKeys.feed.firstPage(currentUser?.id),
-        queryFn: async () => {
-          const fresh = await getPosts({ currentUserId: currentUser?.id, limit: 20, offset: 0 });
+        queryFn: async ({ pageParam }) => {
+          const fresh = await getPosts({ currentUserId: currentUser?.id, limit: 20, offset: (pageParam as number) ?? 0 });
           return {
             posts: fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [],
             count: fresh?.length ?? 0,
           };
         },
+        initialPageParam: 0,
         staleTime: 5 * 60 * 1000,
       });
     }, 5000);
+
     return cleanup;
   }, [isAuthenticated, currentUser?.id]);
 
