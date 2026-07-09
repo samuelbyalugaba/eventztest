@@ -161,20 +161,21 @@ export const getMutualFollows = async (userId: string) => {
 };
 
 export const subscribeToOnlineUsers = (userId: string, callback: (onlineUserIds: string[]) => void) => {
-  const channel = supabase.channel('online-users');
+  // Unique channel name per subscription so remounts don't re-use an already-subscribed channel
+  const channel = supabase.channel(`online-users:${userId}:${Math.random().toString(36).slice(2, 8)}`);
 
   channel
     .on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
       const userIds = new Set<string>();
-      
+
       for (const id in state) {
         const presences = state[id] as any[];
         presences.forEach(p => {
           if (p.user_id) userIds.add(p.user_id);
         });
       }
-      
+
       callback(Array.from(userIds));
     })
     .subscribe(async (status) => {
@@ -183,5 +184,12 @@ export const subscribeToOnlineUsers = (userId: string, callback: (onlineUserIds:
       }
     });
 
+  const originalUnsubscribe = channel.unsubscribe.bind(channel);
+  (channel as any).unsubscribe = async () => {
+    try { await originalUnsubscribe(); } catch { /* noop */ }
+    try { await supabase.removeChannel(channel); } catch { /* noop */ }
+  };
+
   return channel;
 };
+
