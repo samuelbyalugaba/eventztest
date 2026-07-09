@@ -135,6 +135,7 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     attendedCount,
     displayFollowers,
     displayFollowing,
+    statsReady,
   } = useProfileStats({
     userId,
     isOwnProfile,
