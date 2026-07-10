@@ -197,7 +197,7 @@ export function MessagePanel({
                     }
                   }}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-gray-900 placeholder-gray-500"
                 />
                 <button
                   onClick={onSendMessage}

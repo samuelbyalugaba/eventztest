@@ -251,7 +251,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                     <input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       placeholder="Give your livestream a title"
                     />
                   </div>
@@ -261,7 +261,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                       <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       >
                         <option>General</option>
                         <option>Music</option>
@@ -275,7 +275,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                       <select
                         value={visibility}
                         onChange={(e) => setVisibility(e.target.value as any)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       >
                         <option value="public">Public</option>
                         <option value="followers">Followers</option>
@@ -288,7 +288,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                     <input
                       value={virtualPrice}
                       onChange={(e) => setVirtualPrice(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       placeholder="e.g. TSh 1,000"
                     />
                   </div>

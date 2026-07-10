@@ -145,7 +145,7 @@ export function PostDetailModal({
             onChange={(e) => onCommentTextChange(e.target.value)}
             placeholder="Add a comment..."
             rows={1}
-            className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 resize-none min-h-[20px] max-h-[80px] py-1.5 focus:ring-0"
+            className="flex-1 bg-transparent border-none p-0 text-sm text-gray-900 placeholder-gray-400 resize-none min-h-[20px] max-h-[80px] py-1.5"
             onInput={(e) => {
               const target = e.target as HTMLTextAreaElement;
               target.style.height = 'auto';

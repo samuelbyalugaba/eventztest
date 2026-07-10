@@ -58,7 +58,7 @@ export function CategorySelector({
           }}
           onFocus={() => setShowDropdown(true)}
           placeholder="e.g. Event Organizer, DJ, Artist, Promoter"
-          className="w-full pl-11 pr-10 py-3.5 bg-gray-50 border border-gray-100 focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
+          className="w-full pl-11 pr-10 py-3.5 bg-gray-50 border border-gray-100 focus:border-gray-300 focus:bg-white rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
         />
         <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`} />
 

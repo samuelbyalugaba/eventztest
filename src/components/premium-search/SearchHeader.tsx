@@ -45,7 +45,7 @@ export function SearchHeader({
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
             autoFocus
-            className="h-10 w-full rounded-full border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm font-medium text-gray-950 shadow-none outline-none transition-colors placeholder:text-gray-500 focus:border-gray-200 focus:bg-gray-50 focus:shadow-none focus:outline-none focus:ring-0 focus-visible:border-gray-200 focus-visible:outline-none focus-visible:ring-0"
+            className="h-10 w-full rounded-full border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm font-medium text-gray-950 shadow-none outline-none transition-colors placeholder:text-gray-500"
             style={{ WebkitTapHighlightColor: 'transparent', outline: 'none', boxShadow: 'none' }}
           />
         </div>

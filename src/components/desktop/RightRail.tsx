@@ -46,7 +46,7 @@ export function RightRail() {
             placeholder="Search events, people…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-[#1A1A1A] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400/20 focus:border-gray-400/40 transition"
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-[#1A1A1A] placeholder:text-gray-400 transition"
           />
         </div>
 

@@ -2,28 +2,6 @@
 @import "./styles/globals.css";
 
 @layer base {
-  *,
-  *:focus,
-  *:focus-visible,
-  *:focus-within {
-    outline: none;
-    box-shadow: none;
-  }
-
-  *:focus,
-  *:focus-visible,
-  *:focus-within,
-  *:focus *,
-  *:focus-visible *,
-  *:focus-within * {
-    outline: none;
-    outline-offset: 0;
-    box-shadow: none;
-    --tw-ring-color: transparent;
-    --tw-ring-offset-color: transparent;
-    --tw-ring-offset-width: 0px;
-  }
-
   button,
   a,
   input,

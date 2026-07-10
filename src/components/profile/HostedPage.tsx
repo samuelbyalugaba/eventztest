@@ -210,7 +210,7 @@ export function HostedPage() {
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder={activeView === 'events' ? 'Search hosted events...' : 'Search streams...'}
-            className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-4 focus:ring-gray-100"
+            className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-400"
           />
         </div>
 
@@ -287,7 +287,7 @@ function HostedEventCard({
       onKeyDown={(keyboardEvent) => {
         if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') onOpen();
       }}
-      className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] cursor-pointer focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+      className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] cursor-pointer"
     >
       <div className="relative aspect-[1.75] overflow-hidden bg-gradient-to-br from-purple-950 via-purple-700 to-indigo-600">
         <ImageWithFallback
@@ -329,7 +329,7 @@ function HostedStreamCard({
       onKeyDown={(keyboardEvent) => {
         if (canOpen && (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ')) onOpen();
       }}
-      className={`overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+      className={`overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)] ${
         canOpen ? 'cursor-pointer' : ''
       }`}
     >

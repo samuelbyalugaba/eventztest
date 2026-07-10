@@ -157,7 +157,7 @@ export function AuthScreen({ onAuthSuccess, embedded = false }: AuthScreenProps)
                     required
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+                    className="block w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none"
                     placeholder="Full Name"
                     disabled={isSubmitting}
                     autoComplete="name"

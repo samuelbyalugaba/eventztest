@@ -24,7 +24,7 @@ export function DateTimeFields({ date, time, onDateChange, onTimeChange }: DateT
             }}
             onPaste={(e) => e.preventDefault()}
             onDrop={(e) => e.preventDefault()}
-            className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100 ${date ? 'text-gray-900' : 'text-gray-500'}`}
+            className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition ${date ? 'text-gray-900' : 'text-gray-500'}`}
             aria-label="Event date"
           />
           <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -43,7 +43,7 @@ export function DateTimeFields({ date, time, onDateChange, onTimeChange }: DateT
             }}
             onPaste={(e) => e.preventDefault()}
             onDrop={(e) => e.preventDefault()}
-            className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100 ${time ? 'text-gray-900' : 'text-gray-500'}`}
+            className={`native-picker-field h-11 w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-0 pr-10 text-sm leading-[44px] outline-none transition ${time ? 'text-gray-900' : 'text-gray-500'}`}
             aria-label="Event time"
           />
           <Clock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />

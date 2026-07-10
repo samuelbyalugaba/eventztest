@@ -40,7 +40,7 @@ export function PostDetailCaptionEditor({
           <textarea
             value={captionDraft}
             onChange={(e) => setCaptionDraft(e.target.value)}
-            className="w-full min-h-[140px] p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400/20"
+            className="w-full min-h-[140px] p-4 bg-gray-50 rounded-2xl border border-gray-100"
             disabled={isSavingCaption}
           />
           <div className="mt-4 flex items-center justify-end gap-2">

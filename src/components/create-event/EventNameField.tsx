@@ -12,7 +12,7 @@ export function EventNameField({ value, onChange }: EventNameFieldProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="e.g. Nairobi Jazz Night"
-        className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+        className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition"
       />
     </div>
   );

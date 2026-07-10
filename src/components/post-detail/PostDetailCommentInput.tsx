@@ -69,7 +69,7 @@ export function PostDetailCommentInput({
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Add a comment..."
               rows={1}
-              className="min-h-[20px] max-h-[110px] flex-1 resize-none border-none bg-transparent p-0 py-1.5 text-sm font-medium text-gray-900 placeholder-gray-400 focus:ring-0"
+              className="min-h-[20px] max-h-[110px] flex-1 resize-none border-none bg-transparent p-0 py-1.5 text-sm font-medium text-gray-900 placeholder-gray-400"
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';

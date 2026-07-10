@@ -87,7 +87,7 @@ export function ChatList({ conversations, onSelectConversation, onStartNewChat, 
             placeholder={isSearching ? "Search people..." : "Search messages..."}
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full bg-gray-100 rounded-2xl py-3 pl-12 pr-4 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="w-full bg-gray-100 rounded-2xl py-3 pl-12 pr-4 text-gray-900 placeholder-gray-500"
             autoFocus={isSearching}
           />
         </div>

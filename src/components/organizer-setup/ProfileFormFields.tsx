@@ -45,7 +45,7 @@ export function ProfileFormFields({
             value={organizerName}
             onChange={(e) => onOrganizerNameChange(e.target.value)}
             placeholder="e.g. The Night Club"
-            className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
+            className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all"
           />
         </div>
       </div>
@@ -59,7 +59,7 @@ export function ProfileFormFields({
             value={username}
             onChange={(e) => onUsernameChange(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
             placeholder="username"
-            className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
+            className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white  rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
           />
           <div className="absolute right-4 top-1/2 -translate-y-1/2">
             {checking ? (
@@ -86,7 +86,7 @@ export function ProfileFormFields({
             onChange={(e) => onLocationChange(e.target.value)}
             onFocus={() => {}}
             placeholder="City, Country"
-            className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
+            className="w-full pl-11 pr-11 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white  rounded-xl text-sm text-gray-900 font-medium outline-none transition-all"
           />
           {loadingLocations && (
             <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 animate-spin" />
@@ -117,7 +117,7 @@ export function ProfileFormFields({
           onChange={(e) => onBioChange(e.target.value)}
           placeholder="Tell your story..."
           rows={4}
-          className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-4 focus:ring-gray-400/10 rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
+          className="w-full px-4 py-3.5 bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white  rounded-xl text-sm text-gray-900 placeholder-gray-400 font-medium outline-none transition-all resize-none"
         />
       </div>
     </section>

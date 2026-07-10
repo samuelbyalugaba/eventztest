@@ -59,7 +59,7 @@ export function OrganizerPaymentsTab({
                 type="text"
                 value={paymentData.bankName}
                 onChange={(e) => setPaymentData({ ...paymentData, bankName: e.target.value })}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm"
                 placeholder="e.g., CRDB Bank"
               />
             </div>
@@ -69,7 +69,7 @@ export function OrganizerPaymentsTab({
                 type="text"
                 value={paymentData.accountNumber}
                 onChange={(e) => setPaymentData({ ...paymentData, accountNumber: e.target.value })}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm"
                 placeholder="Your account number"
               />
             </div>
@@ -79,7 +79,7 @@ export function OrganizerPaymentsTab({
                 type="text"
                 value={paymentData.accountName}
                 onChange={(e) => setPaymentData({ ...paymentData, accountName: e.target.value })}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm"
                 placeholder="Account holder name"
               />
             </div>
@@ -91,7 +91,7 @@ export function OrganizerPaymentsTab({
               type="tel"
               value={paymentData.mobileMoney}
               onChange={(e) => setPaymentData({ ...paymentData, mobileMoney: e.target.value })}
-              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm"
               placeholder="+255 XXX XXX XXX"
             />
             <p className="text-gray-500 text-xs mt-2">M-Pesa, Tigo Pesa, Airtel Money</p>

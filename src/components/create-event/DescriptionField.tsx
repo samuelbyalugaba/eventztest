@@ -12,7 +12,7 @@ export function DescriptionField({ value, onChange }: DescriptionFieldProps) {
         onChange={(e) => onChange(e.target.value)}
         placeholder="Tell guests what to expect..."
         rows={4}
-        className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+        className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition"
       />
     </div>
   );

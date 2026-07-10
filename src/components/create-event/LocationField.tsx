@@ -16,7 +16,7 @@ export function LocationField({ value, onChange }: LocationFieldProps) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="e.g. Mlimani City Hall, Dar es Salaam"
-          className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+          className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition"
         />
       </div>
     </div>

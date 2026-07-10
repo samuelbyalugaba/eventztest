@@ -104,7 +104,7 @@ export function AuthCallbackPage() {
               onChange={(event) => setPassword(event.target.value)}
               placeholder="New password"
               autoComplete="new-password"
-              className="h-11 w-full rounded-xl border border-gray-200 px-3 text-gray-900 outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
+              className="h-11 w-full rounded-xl border border-gray-200 px-3 text-gray-900 outline-none"
             />
             <label htmlFor="recovery-confirm-password" className="sr-only">Confirm password</label>
             <input
@@ -114,7 +114,7 @@ export function AuthCallbackPage() {
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Confirm password"
               autoComplete="new-password"
-              className="h-11 w-full rounded-xl border border-gray-200 px-3 text-gray-900 outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
+              className="h-11 w-full rounded-xl border border-gray-200 px-3 text-gray-900 outline-none"
             />
             <button
               type="submit"

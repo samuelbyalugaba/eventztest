@@ -70,14 +70,14 @@ export function TicketCheckout({
           placeholder="Full Name"
           value={formData.name}
           onChange={(e) => onFormDataChange({ ...formData, name: e.target.value })}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 outline-none transition-all"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200  outline-none transition-all"
         />
         <input
           type="email"
           placeholder="Email Address"
           value={formData.email}
           onChange={(e) => onFormDataChange({ ...formData, email: e.target.value })}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 outline-none transition-all"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200  outline-none transition-all"
         />
       </div>
 
@@ -114,7 +114,7 @@ export function TicketCheckout({
                   placeholder="255 7XX XXX XXX"
                   value={paymentPhone}
                   onChange={(e) => onPaymentPhoneChange(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-gray-400 focus:ring-2 focus:ring-gray-100 outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200  outline-none transition-all"
                 />
               </div>
             </div>

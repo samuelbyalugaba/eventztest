@@ -39,7 +39,7 @@ export function PasswordField({
           required
           value={value}
           onChange={onChange}
-          className="block w-full h-11 pl-3 pr-11 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+          className="block w-full h-11 pl-3 pr-11 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 outline-none"
           placeholder={placeholder}
           disabled={disabled}
           autoComplete={autoComplete}

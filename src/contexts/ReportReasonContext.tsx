@@ -55,7 +55,7 @@ export function ReportReasonProvider({ children }: { children: ReactNode }) {
             <select
               value={reason}
               onChange={e => setReason(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
             >
               {REPORT_REASONS.map(r => (
                 <option key={r} value={r}>{r}</option>
