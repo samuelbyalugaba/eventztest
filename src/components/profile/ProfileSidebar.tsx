@@ -37,7 +37,7 @@ export function ProfileSidebar({
           <Menu className="w-7 h-7" />
         </button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 bg-white border-l border-gray-100 h-[75vh] bottom-auto overflow-hidden">
+      <SheetContent side="right" className="w-[300px] sm:w-[340px] p-0 bg-white h-[75vh] bottom-auto overflow-hidden">
         <SheetTitle className="sr-only">Menu</SheetTitle>
         <SheetDescription className="sr-only">
           Navigation menu for wallet, dashboard, settings, and logout.

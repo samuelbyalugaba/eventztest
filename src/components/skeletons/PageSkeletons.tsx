@@ -429,25 +429,43 @@ export function DetailPageSkeleton() {
 
 export function ListPageSkeleton() {
   return (
-    <div className="min-h-screen bg-white px-4 pb-24 pt-[calc(1rem+var(--eventz-safe-area-top))]">
-      <div className="mb-5 flex items-center gap-3">
-        <Skeleton.Circle className="h-10 w-10" />
-        <div className="space-y-2">
-          <Skeleton.Line className="h-5 w-32" />
-          <Skeleton.Line className="h-3 w-20" />
-        </div>
-      </div>
-      <div className="space-y-3">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3">
-            <Skeleton.Circle className="h-12 w-12" />
-            <div className="flex-1 space-y-2">
-              <Skeleton.Line className="h-4 w-36" />
-              <Skeleton.Line className="h-3 w-24" />
+    <div className="min-h-screen bg-white pb-[calc(2rem+var(--eventz-safe-area-bottom))]">
+      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 pt-[var(--eventz-safe-area-top)]">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Skeleton.Circle className="h-9 w-9 bg-gray-50" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton.Line className="h-5 w-32" />
+              <Skeleton.Line className="h-3 w-20" />
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+        <div className="grid grid-cols-2 text-center">
+          <div className="py-2.5">
+            <Skeleton.Line className="mx-auto h-4 w-20" />
+          </div>
+          <div className="py-2.5">
+            <Skeleton.Line className="mx-auto h-4 w-20" />
+          </div>
+        </div>
+      </header>
+      <main className="px-4 py-4">
+        <div className="relative mb-4">
+          <Skeleton className="h-11 w-full rounded-xl" />
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-3 rounded-xl px-1 py-2.5">
+              <Skeleton.Circle className="h-12 w-12" />
+              <div className="flex-1 space-y-2">
+                <Skeleton.Line className="h-4 w-36" />
+                <Skeleton.Line className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-9 w-20 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </main>
     </div>
   );
 }
