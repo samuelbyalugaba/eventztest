@@ -20,12 +20,21 @@ Sentry.init({
   dataCollection: {},
 });
 
-try {
-  void configureNativeRuntime();
-  registerServiceWorker();
-} catch (e) {
-  console.warn('Native runtime init failed:', e);
-}
+// Defer non-critical bootstrap to idle so first paint isn't blocked.
+const runIdle = (cb: () => void) => {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(cb, { timeout: 2000 });
+  else window.setTimeout(cb, 500);
+};
+
+runIdle(() => {
+  try {
+    void configureNativeRuntime();
+    registerServiceWorker();
+  } catch (e) {
+    console.warn('Native runtime init failed:', e);
+  }
+});
 
 const CHUNK_RELOAD_KEY = 'eventz-chunk-reload-attempted-at';
 const recoverFromBundleError = async () => {
