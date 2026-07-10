@@ -66,9 +66,11 @@ export function DashboardPage() {
   useEffect(() => {
     let alive = true;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let ticketsChannel: ReturnType<typeof supabase.channel> | null = null;
     let transactionsChannel: ReturnType<typeof supabase.channel> | null = null;
     let currentUserId: string | null = null;
+    let currentUserEmail: string = '';
     const mountId = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
 
     const runPrefetch = async (userId: string, email: string) => {
@@ -80,39 +82,47 @@ export function DashboardPage() {
       else setFetchError('partial');
     };
 
+    const debouncedPrefetch = (userId: string, email: string) => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (alive && currentUserId) void runPrefetch(userId, email);
+      }, 500);
+    };
+
     const loadDashboard = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { navigate('/events', { replace: true }); return; }
         currentUserId = user.id;
+        currentUserEmail = user.email || '';
 
         const { data: profileRow } = await supabase
           .from('profiles').select('*').eq('id', user.id).maybeSingle();
         if (!alive) return;
         if (profileRow) setProfile(profileRow);
 
-        await runPrefetch(user.id, user.email || '');
+        await runPrefetch(user.id, currentUserEmail);
 
         pollTimer = setInterval(() => {
           if (!currentUserId) return;
           if (typeof document !== 'undefined' && document.hidden) return;
-          void runPrefetch(currentUserId, user.email || '');
+          void runPrefetch(currentUserId, currentUserEmail);
         }, 30_000);
 
         transactionsChannel = supabase
           .channel(`dashboard-tx-${user.id}-${mountId}`)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
-            () => { if (currentUserId) void runPrefetch(currentUserId, user.email || ''); }
+            () => { if (currentUserId) debouncedPrefetch(currentUserId, currentUserEmail); }
           ).subscribe();
 
         ticketsChannel = supabase
           .channel(`dashboard-tickets-${user.id}-${mountId}`)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' },
-            () => { if (currentUserId) void runPrefetch(currentUserId, user.email || ''); }
+            () => { if (currentUserId) debouncedPrefetch(currentUserId, currentUserEmail); }
           ).subscribe();
 
         const handleVisibility = () => {
-          if (!document.hidden && currentUserId) void runPrefetch(currentUserId, user.email || '');
+          if (!document.hidden && currentUserId) debouncedPrefetch(currentUserId, currentUserEmail);
         };
         document.addEventListener('visibilitychange', handleVisibility);
         (window as any).__dashCleanupVis = () => document.removeEventListener('visibilitychange', handleVisibility);
@@ -125,6 +135,7 @@ export function DashboardPage() {
     return () => {
       alive = false;
       if (pollTimer) clearInterval(pollTimer);
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (ticketsChannel) supabase.removeChannel(ticketsChannel);
       if (transactionsChannel) supabase.removeChannel(transactionsChannel);
       const cleanupVis = (window as any).__dashCleanupVis;

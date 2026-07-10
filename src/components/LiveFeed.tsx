@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from './ui/EmptyState';
-import { Filter, Video, Smartphone, Clock } from 'lucide-react';
+import { Filter, Video, Smartphone, Clock, Radio } from 'lucide-react';
 import { toast } from 'sonner';
 import { normalizePlaceName } from '../utils/nominatim';
 import { locations, liveCategories, type LocationOption } from '../utils/locations';
@@ -170,7 +170,7 @@ export function LiveFeed() {
                   ))}
                 </div>
               ) : (
-                <EmptyState title="No live events at the moment" />
+                <EmptyState icon={Radio} title="No live events at the moment" description="Check back later for live streams" />
               )}
             </div>
 

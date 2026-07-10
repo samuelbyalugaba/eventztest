@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownLeft, Ticket, Clock } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Ticket, Clock, Wallet } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import type { WalletTransaction } from '../../hooks/useWalletData';
 
@@ -16,7 +16,7 @@ export function WalletHistoryList({ txs, loading, getTxKind, getTxLabel, isOutfl
   }
 
   if (txs.length === 0) {
-    return <EmptyState title="No transactions yet" />;
+    return <EmptyState icon={Wallet} title="No transactions yet" description="Your payment history will appear here" />;
   }
 
   return (

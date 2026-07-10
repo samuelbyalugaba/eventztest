@@ -34,6 +34,7 @@ Severity legend: **P0** blocks perceived quality on every session · **P1** hurt
 ### What's already good
 - Every non-trivial page is `React.lazy` (`AppRoutes.tsx:15-31`) — 17 lazy components.
 - Every lazy route is wrapped in `<Suspense>` with a real skeleton (`ProfilePageSkeleton`, `DashboardPageSkeleton`, `MessagesPageSkeleton`, `ListPageSkeleton`, `GenericPageSkeleton`, `CreatePageSkeleton`, `LivePageSkeleton`, `DetailPageSkeleton`, `FeedPageSkeleton`).
+- `ListPageSkeleton` layout-matches `ProfileListPage` (header + tabs + search + user cards) — no visual flash on navigation.
 - `RouteErrorBoundary` wraps all important routes including `/dashboard`, `/wallet`, `/live/:id`, `/create`, `/compose/post`, `/search`, `/messages`.
 - Vite `manualChunks` splits `react-core`, `radix`, `supabase`, `charts`, `icons`, `agora`, `hls` (`vite.config.ts:23-33`). Good.
 
@@ -80,6 +81,7 @@ Severity legend: **P0** blocks perceived quality on every session · **P1** hurt
 - One centralized library. Exports `PostSkeleton`, `EventCardSkeleton`, `EventGridSkeleton`, `EventCardsSkeleton`, `ListPageSkeleton`, `DetailPageSkeleton`, `DashboardPageSkeleton`, `MessagesPageSkeleton`, `ProfilePageSkeleton`, `LivePageSkeleton`, `CreatePageSkeleton`, `FeedPageSkeleton`, `GenericPageSkeleton`.
 - Uses primitives (`Skeleton.Line`, `Skeleton.Circle`, `Skeleton.Image`) → consistent shimmer.
 - Fallbacks match layouts (post skeleton matches PostCard, event grid matches Events tab grid).
+- `ListPageSkeleton` now matches `ProfileListPage` layout (header, tabs, search bar, user cards) — seamless Suspense → component transition.
 
 ### Findings
 | # | Severity | Finding |
@@ -258,7 +260,7 @@ Currently the app is largely **all-or-nothing per page**: Suspense fallback → 
 ## PART 15 — Loading Consistency
 
 Two loading languages coexist:
-1. **Skeleton system** (`PageSkeletons.tsx`) — used at route Suspense level. Now covers all routes.
+1. **Skeleton system** (`PageSkeletons.tsx`) — used at route Suspense level. Now covers all routes with layout-matched fallbacks.
 2. **Spinners** — only `DashboardModalFallback` (acceptable for small overlay) and in-form indicators.
 
 No unified `<LoadingState size="page|section|inline|button">` primitive to enforce the rule "skeletons for structure, spinners only inside buttons".
@@ -389,7 +391,7 @@ Reference bar: Linear/Stripe/Notion/Vercel all target *sub-100ms visual response
 | Navigation | 7.0 | **7.0** (keep-alive unchanged) |
 | Responsiveness | 6.5 | **7.0** |
 | Perceived Performance | 5.5 | **7.0** |
-| Skeleton Quality | 7.5 | **8.5** (consistent adoption) |
+| Skeleton Quality | 7.5 | **9.0** (consistent adoption, layout-matched fallbacks) |
 | Loading Consistency | 5.0 | **8.0** (spinners eliminated) |
 | Async Architecture | 6.0 | **6.5** (Dashboard still chaotic) |
 | UX Polish | 5.5 | **6.5** |

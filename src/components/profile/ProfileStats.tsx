@@ -13,7 +13,7 @@ interface ProfileStatsProps {
 function StatValue({ value, label }: { value: string; label: string }) {
   return (
     <div className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform focus:outline-none rounded-lg py-1">
-      <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
+      <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5 min-w-[2ch] tabular-nums">
         {value}
       </div>
       <div className="text-[0.61rem] leading-[0.78rem] text-gray-500 font-medium uppercase tracking-wider">
@@ -57,7 +57,7 @@ export function ProfileStats({
         className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform focus:outline-none rounded-lg py-1"
         onClick={onHostedClick}
       >
-        <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
+        <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5 min-w-[2ch] tabular-nums">
           {formatStat(isOrganizer ? (hostedCount ?? 0) : attendedCount)}
         </div>
         <div className="text-[0.61rem] leading-[0.78rem] text-gray-500 font-medium uppercase tracking-wider">
@@ -69,7 +69,7 @@ export function ProfileStats({
         className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform border-l border-gray-100 focus:outline-none rounded-lg py-1"
         onClick={onFollowersClick}
       >
-        <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
+        <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5 min-w-[2ch] tabular-nums">
           {formatStat(followers)}
         </div>
         <div className="text-[0.61rem] leading-[0.78rem] text-gray-500 font-medium uppercase tracking-wider">
@@ -81,7 +81,7 @@ export function ProfileStats({
         className="text-center flex-1 min-h-[2.15rem] cursor-pointer active:scale-95 transition-transform border-l border-gray-100 focus:outline-none rounded-lg py-1"
         onClick={onFollowingClick}
       >
-        <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5">
+        <div className="text-[0.95rem] font-bold text-gray-900 leading-none mb-0.5 min-w-[2ch] tabular-nums">
           {formatStat(following)}
         </div>
         <div className="text-[0.61rem] leading-[0.78rem] text-gray-500 font-medium uppercase tracking-wider">

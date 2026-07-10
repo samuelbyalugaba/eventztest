@@ -197,7 +197,7 @@ export function MetricCard({
         <Icon className="h-3.5 w-3.5" style={{ color: iconColor }} />
         {label}
       </div>
-      <div className="text-xl font-semibold text-[#111827] tracking-[-.5px] leading-[1] mb-[6px]">{value}</div>
+      <div className="text-xl font-semibold text-[#111827] tracking-[-.5px] leading-[1] mb-[6px] min-w-[2ch] tabular-nums">{value}</div>
       <div className="text-2xs font-medium text-[#059669] flex items-center gap-1">
         <TrendingUp className="h-3 w-3" />
         {delta}
@@ -400,7 +400,7 @@ export function StatBox({ label, value, note, muted = false }: { label: string; 
   return (
     <div className="bg-input-background border border-[#E9EBF0] rounded-[14px] p-[14px]">
       <span className="block text-2xs font-medium text-[#6B7280] mb-[6px]">{label}</span>
-      <strong className="block text-xl font-semibold text-[#111827] tracking-[-.3px] leading-[1.1]">{value}</strong>
+      <strong className="block text-xl font-semibold text-[#111827] tracking-[-.3px] leading-[1.1] min-w-[2ch] tabular-nums">{value}</strong>
       <em className={`block mt-[5px] text-2xs font-medium text-[#059669] not-italic ${muted ? 'text-[#9CA3AF]' : ''}`}>{note}</em>
     </div>
   );

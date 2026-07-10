@@ -7,26 +7,38 @@ type NetworkConnection = EventTarget & {
 
 export function useNetworkStatus() {
   const [isLowInternet, setIsLowInternet] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     const connection = (navigator as any).connection ||
       (navigator as any).mozConnection ||
       (navigator as any).webkitConnection as NetworkConnection | undefined;
 
-    if (!connection) return;
-
     const updateConnection = () => {
       setIsLowInternet(
-        connection.effectiveType === '2g' ||
-        connection.effectiveType === 'slow-2g' ||
-        !!connection.saveData
+        connection?.effectiveType === '2g' ||
+        connection?.effectiveType === 'slow-2g' ||
+        !!connection?.saveData
       );
     };
 
-    connection.addEventListener('change', updateConnection);
-    updateConnection();
-    return () => connection.removeEventListener('change', updateConnection);
+    if (connection) {
+      connection.addEventListener('change', updateConnection);
+      updateConnection();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      if (connection) connection.removeEventListener('change', updateConnection);
+    };
   }, []);
 
-  return { isLowInternet };
+  return { isLowInternet, isOffline };
 }

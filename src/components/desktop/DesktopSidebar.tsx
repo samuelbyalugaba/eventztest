@@ -1,9 +1,9 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, Radio, Rss, User, Plus, LogOut } from 'lucide-react';
+import { Calendar, Radio, Rss, User, Plus, LogOut, Loader2 } from 'lucide-react';
 import { UserAvatar } from '../UserAvatar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMessaging } from '../../contexts/MessagingContext';
-import { supabase } from '../../utils/supabase/client';
 
 const navItems = [
   { to: '/events', label: 'Events', icon: Calendar, match: (p: string) => p === '/events' || p === '/' },
@@ -15,11 +15,18 @@ const navItems = [
 export function DesktopSidebar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { hasLiveEvents } = useMessaging();
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const handleLogout = async () => {
-    try { await supabase.auth.signOut(); navigate('/events'); } catch (error) { console.warn('Failed to sign out:', error); }
+    try { await signOut(); navigate('/events', { replace: true }); } catch (error) { console.warn('Failed to sign out:', error); }
+  };
+
+  const handleCreate = () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+    navigate('/create');
   };
 
   return (
@@ -60,11 +67,12 @@ export function DesktopSidebar() {
         })}
 
         <button
-          onClick={() => navigate('/create')}
-          className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#1A1A1A] text-white text-sm font-medium hover:bg-[#2a2a2a] transition-colors shadow-sm"
+          onClick={handleCreate}
+          disabled={isNavigating}
+          className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#1A1A1A] text-white text-sm font-medium hover:bg-[#2a2a2a] transition-colors shadow-sm disabled:opacity-70"
         >
-          <Plus className="w-4 h-4" />
-          Create
+          {isNavigating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          {isNavigating ? 'Opening...' : 'Create'}
         </button>
       </nav>
 

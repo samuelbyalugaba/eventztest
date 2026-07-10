@@ -1,4 +1,5 @@
-import { Plus, BarChart3, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, BarChart3, ChevronRight, Loader2 } from 'lucide-react';
 import verifiedBadge from '../../assets/verified-badge.png';
 
 interface ProfileActionsProps {
@@ -24,16 +25,25 @@ export function ProfileActions({
   onFollow,
   onMessage,
 }: ProfileActionsProps) {
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const handleCreate = () => {
+    if (!onCreateEvent || isNavigating) return;
+    setIsNavigating(true);
+    onCreateEvent();
+  };
+
   if (isOwnProfile) {
     if (isOrganizer) {
       return (
         <div className="flex gap-2 mb-3.5 px-1">
           <button
-            onClick={onCreateEvent}
-            className="flex-1 min-h-8 py-1.5 bg-primary text-white rounded-lg font-medium text-[0.72rem] flex items-center justify-center gap-1 hover:bg-primary-dark transition-all active:scale-95 shadow-sm"
+            onClick={handleCreate}
+            disabled={isNavigating}
+            className="flex-1 min-h-8 py-1.5 bg-primary text-white rounded-lg font-medium text-[0.72rem] flex items-center justify-center gap-1 hover:bg-primary-dark transition-all active:scale-95 shadow-sm disabled:opacity-70 disabled:active:scale-100"
           >
-            <Plus className="w-3 h-3" />
-            Create Event
+            {isNavigating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+            {isNavigating ? 'Opening...' : 'Create Event'}
           </button>
           <button
             onClick={onDashboard}

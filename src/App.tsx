@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useAuth } from './contexts/AuthContext';
 import { useMessaging } from './contexts/MessagingContext';
+import { OfflineBanner } from './components/ui/OfflineBanner';
 import { queryClient } from './queryClient';
 import { queryKeys } from './queryKeys';
 import { getPosts } from './utils/supabase/api';
@@ -90,7 +91,8 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await signOut();
-      navigate('/events');
+      queryClient.clear();
+      navigate('/events', { replace: true });
     } catch (error) {
       console.warn('Sign out failed', error);
     }
@@ -210,6 +212,7 @@ export default function App() {
     <ReportReasonProvider>
     <div className="h-[100dvh] overflow-hidden bg-gray-50">
       <div className="fixed top-0 left-0 right-0 z-[1] bg-primary" style={{ height: 'var(--eventz-safe-area-top)' }} aria-hidden="true" />
+      <OfflineBanner />
       <Toaster
         position="top-center"
         richColors={false}

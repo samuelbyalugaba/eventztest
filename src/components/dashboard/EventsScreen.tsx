@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, QrCode, Menu, Calendar } from 'lucide-react';
+import { Plus, QrCode, Menu, Calendar, Loader2 } from 'lucide-react';
 import { type DashboardScope, type ScreenId } from './types';
 import { BackTopBar, SectionTitle, DashboardMenu, EmptyCard, EventRow } from './shared';
 import { EmptyState } from '../ui/EmptyState';
@@ -8,6 +8,13 @@ export function EventsScreen({ scopes, onGo, onNew, onScan, onBack }: { scopes: 
   const active = scopes.filter((scope) => scope.status !== 'completed');
   const completed = scopes.filter((scope) => scope.status === 'completed');
   const [eventsMenuOpen, setEventsMenuOpen] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const handleNew = () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+    onNew();
+  };
 
   return (
     <>
@@ -16,9 +23,9 @@ export function EventsScreen({ scopes, onGo, onNew, onScan, onBack }: { scopes: 
         onBack={onBack}
         right={
           <div className="flex items-center gap-2">
-            <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0" onClick={onNew}>
-              <Plus className="h-3.5 w-3.5" />
-              New event
+            <button type="button" disabled={isNavigating} className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 disabled:opacity-70" onClick={handleNew}>
+              {isNavigating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              {isNavigating ? 'Opening...' : 'New event'}
             </button>
             <button type="button" className="h-[34px] px-3 rounded-full border border-white/30 bg-white/18 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0 w-[38px] h-[38px] p-0" onClick={onScan} aria-label="Scan ticket">
               <QrCode className="h-4 w-4" />
