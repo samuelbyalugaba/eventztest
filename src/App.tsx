@@ -67,7 +67,7 @@ export default function App() {
         initialPageParam: 0,
         staleTime: 5 * 60 * 1000,
       });
-    }, 5000);
+    }, 500);
 
     return cleanup;
   }, [isAuthenticated, currentUser?.id]);
