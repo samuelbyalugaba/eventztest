@@ -1,11 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { RouteErrorBoundary } from '../RouteErrorBoundary';
-import { LegalPage } from '../legal/LegalPage';
-import { DeleteAccountPage } from '../legal/DeleteAccountPage';
-import { SupportPage } from '../support/SupportPage';
-import { HostedPage } from '../profile/HostedPage';
-import { AuthCallbackPage } from '../AuthCallbackPage';
 import {
   CreatePageSkeleton,
   DashboardPageSkeleton,
@@ -14,10 +9,12 @@ import {
   LivePageSkeleton,
   MessagesPageSkeleton,
   ProfilePageSkeleton,
+  GenericPageSkeleton,
 } from '../skeletons/PageSkeletons';
 
 const Profile = lazy(() => import('../Profile').then(m => ({ default: m.Profile })));
 const ProfileListPage = lazy(() => import('../profile/ProfileListPage').then(m => ({ default: m.ProfileListPage })));
+const HostedPage = lazy(() => import('../profile/HostedPage').then(m => ({ default: m.HostedPage })));
 const CreateEventWrapper = lazy(() => import('../CreateEventWrapper').then(m => ({ default: m.CreateEventWrapper })));
 const PostDetailWrapper = lazy(() => import('../PostDetailWrapper').then(m => ({ default: m.PostDetailWrapper })));
 const ProfileModalWrapper = lazy(() => import('../ProfileModalWrapper').then(m => ({ default: m.ProfileModalWrapper })));
@@ -28,6 +25,10 @@ const MessagesPage = lazy(() => import('../MessagesPage'));
 const DashboardPage = lazy(() => import('../DashboardPage').then(m => ({ default: m.DashboardPage })));
 const SearchPage = lazy(() => import('../SearchPage').then(m => ({ default: m.SearchPage })));
 const WalletPage = lazy(() => import('../WalletPage').then(m => ({ default: m.WalletPage })));
+const LegalPage = lazy(() => import('../legal/LegalPage').then(m => ({ default: m.LegalPage })));
+const DeleteAccountPage = lazy(() => import('../legal/DeleteAccountPage').then(m => ({ default: m.DeleteAccountPage })));
+const SupportPage = lazy(() => import('../support/SupportPage').then(m => ({ default: m.SupportPage })));
+const AuthCallbackPage = lazy(() => import('../AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
 
 interface AppRoutesProps {
   location: any;
@@ -92,10 +93,14 @@ export default function AppRoutes({
           <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="following" /></Suspense>
         } />
         <Route path="/create" element={
-          <Suspense fallback={<CreatePageSkeleton />}><CreateEventWrapper /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<CreatePageSkeleton />}><CreateEventWrapper /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/edit-event/:id" element={
-          <Suspense fallback={<CreatePageSkeleton />}><CreateEventWrapper /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<CreatePageSkeleton />}><CreateEventWrapper /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/post/:id" element={
           <RouteErrorBoundary>
@@ -108,11 +113,13 @@ export default function AppRoutes({
           </RouteErrorBoundary>
         } />
         <Route path="/live/:id" element={
-          <Suspense fallback={<LivePageSkeleton />}><LiveStreamPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<LivePageSkeleton />}><LiveStreamPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/search" element={
           <RouteErrorBoundary>
-            <Suspense fallback={<div className="flex h-[100dvh] items-center justify-center bg-white"><div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" /></div>}>
+            <Suspense fallback={<GenericPageSkeleton />}>
               <SearchPage />
             </Suspense>
           </RouteErrorBoundary>
@@ -128,36 +135,60 @@ export default function AppRoutes({
           </RouteErrorBoundary>
         } />
         <Route path="/dashboard" element={
-          <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/dashboard/events" element={
-          <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/dashboard/live" element={
-          <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/dashboard/notify" element={
-          <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/dashboard/payouts" element={
-          <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<DashboardPageSkeleton />}><DashboardPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/wallet" element={
-          <Suspense fallback={<DashboardPageSkeleton />}><WalletPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<DashboardPageSkeleton />}><WalletPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/compose/post" element={
-          <Suspense fallback={<div className="flex h-[100dvh] items-center justify-center bg-white"><div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" /></div>}><CreatePostPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<CreatePageSkeleton />}><CreatePostPage /></Suspense>
+          </RouteErrorBoundary>
         } />
-        <Route path="/privacy" element={<LegalPage type="privacy" />} />
-        <Route path="/terms" element={<LegalPage type="terms" />} />
-        <Route path="/support" element={<SupportPage />} />
-        <Route path="/delete-account" element={<DeleteAccountPage />} />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/privacy" element={
+          <Suspense fallback={<GenericPageSkeleton />}><LegalPage type="privacy" /></Suspense>
+        } />
+        <Route path="/terms" element={
+          <Suspense fallback={<GenericPageSkeleton />}><LegalPage type="terms" /></Suspense>
+        } />
+        <Route path="/support" element={
+          <Suspense fallback={<GenericPageSkeleton />}><SupportPage /></Suspense>
+        } />
+        <Route path="/delete-account" element={
+          <Suspense fallback={<GenericPageSkeleton />}><DeleteAccountPage /></Suspense>
+        } />
+        <Route path="/auth/callback" element={
+          <Suspense fallback={<GenericPageSkeleton />}><AuthCallbackPage /></Suspense>
+        } />
         <Route path="*" element={
-          <div className="flex h-[100dvh] flex-col items-center justify-center bg-gray-50 p-4">
-            <h1 className="text-6xl font-bold text-purple-600">404</h1>
-            <p className="mt-4 text-lg text-gray-600">Page not found</p>
-            <a href="/events" className="mt-6 rounded-lg bg-purple-600 px-6 py-2 text-white transition-colors hover:bg-purple-700">Go to Events</a>
+          <div className="flex h-[100dvh] flex-col items-center justify-center bg-background p-4">
+            <h1 className="text-6xl font-bold text-primary">404</h1>
+            <p className="mt-4 text-lg text-muted-foreground">Page not found</p>
+            <a href="/events" className="mt-6 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90">Go to Events</a>
           </div>
         } />
       </Routes>

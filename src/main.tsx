@@ -20,12 +20,21 @@ Sentry.init({
   dataCollection: {},
 });
 
-try {
-  void configureNativeRuntime();
-  registerServiceWorker();
-} catch (e) {
-  console.warn('Native runtime init failed:', e);
-}
+// Defer non-critical bootstrap to idle so first paint isn't blocked.
+const runIdle = (cb: () => void) => {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(cb, { timeout: 2000 });
+  else window.setTimeout(cb, 500);
+};
+
+runIdle(() => {
+  try {
+    void configureNativeRuntime();
+    registerServiceWorker();
+  } catch (e) {
+    console.warn('Native runtime init failed:', e);
+  }
+});
 
 const CHUNK_RELOAD_KEY = 'eventz-chunk-reload-attempted-at';
 const recoverFromBundleError = async () => {
@@ -61,11 +70,11 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 createRoot(document.getElementById("root")!).render(
-  <Sentry.ErrorBoundary fallback={<div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-    <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full text-center">
-      <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h1>
-      <p className="text-gray-600 mb-4">EVENTZ hit an unexpected error. Try refreshing.</p>
-      <button onClick={() => window.location.reload()} className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors">Refresh app</button>
+  <Sentry.ErrorBoundary fallback={<div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="bg-card p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-border">
+      <h1 className="text-2xl font-bold text-foreground mb-3">Something went wrong</h1>
+      <p className="text-muted-foreground mb-6">Eventz hit an unexpected error. Try refreshing the app.</p>
+      <button onClick={() => window.location.reload()} className="rounded-full bg-primary text-primary-foreground py-2.5 px-6 text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity">Refresh app</button>
     </div>
   </div>}>
     <QueryClientProvider client={queryClient}>
