@@ -44,11 +44,7 @@ export function useProfileStats({
       if (!grouped.has(eventId)) grouped.set(eventId, []);
       grouped.get(eventId)!.push(ticket);
     });
-    return Array.from(grouped.entries()).map(([eventId, tickets]) => ({
-      eventId,
-      event: tickets[0]?.event,
-      tickets,
-    }));
+    return Array.from(grouped.values());
   }, [ticketEvents]);
 
   const pastHostedEvents = useMemo(() => {

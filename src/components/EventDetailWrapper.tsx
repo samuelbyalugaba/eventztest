@@ -45,7 +45,7 @@ export function EventDetailWrapper({
     queryKey: EVENT_DETAIL_KEY(eventId!),
     queryFn: () => getEventById(eventId!),
     enabled: eventId !== null && !Number.isNaN(eventId),
-    initialData: routeSnapshot,
+    initialData: routeSnapshot as any,
     staleTime: 60_000,
     retry: 1,
   });

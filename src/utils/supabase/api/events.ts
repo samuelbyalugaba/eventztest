@@ -15,10 +15,13 @@ export type Event = {
   city?: string;
   category: string;
   subcategory: string;
+  price?: string;
   price_range: string;
   image_url: string;
   attendees?: number;
   views?: number;
+  created_at?: string;
+  updated_at?: string;
   streaming?: {
     available: boolean;
     quality: 'HD' | '4K' | 'SD';

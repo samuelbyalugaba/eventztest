@@ -298,9 +298,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     <div className="bg-white min-h-screen pb-14 px-4 pt-[calc(0.95rem+var(--eventz-safe-area-top))] sm:px-5">
       <ProfileHeader
         isLoading={isLoading}
-        profileImage={profileImage}
+        profileImage={profileImage ?? undefined}
         displayName={displayName}
-        username={userProfile?.username}
+        username={userProfile?.username ?? undefined}
         isOwnProfile={isOwnProfile}
         isOrganizer={isOrganizer}
         isVerified={!!userProfile?.verified}
@@ -311,9 +311,9 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
             <ProfileSidebar
               isOpen={isSidebarOpen}
               onOpenChange={setIsSidebarOpen}
-              profileImage={profileImage}
+              profileImage={profileImage ?? undefined}
               displayName={displayName}
-              username={userProfile?.username}
+              username={userProfile?.username ?? undefined}
               isOrganizer={isOrganizer}
               onEditProfile={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
               onSettings={() => { setSettingsInitialView('main'); setShowSettingsModal(true); }}
@@ -331,8 +331,8 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
         isLoading={isLoading}
         isOrganizer={isOrganizer}
         isOwnProfile={isOwnProfile}
-        organizerCategory={organizerCategory}
-        bio={userProfile?.bio}
+        organizerCategory={organizerCategory ?? undefined}
+        bio={userProfile?.bio ?? undefined}
         onSetBio={() => { setSettingsInitialView('profile'); setShowSettingsModal(true); }}
       />
 

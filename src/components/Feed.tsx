@@ -261,7 +261,7 @@ export function Feed({
             verified: c.user?.verified || false,
             is_organizer: c.user?.is_organizer || false,
           },
-          text: c.text, timestamp: formatTimeAgo(c.created_at), parent_id: c.parent_id, likes_count: c.likes_count || 0, is_liked: c.is_liked || false
+          text: c.text, timestamp: formatTimeAgo(c.created_at), parent_id: c.parent_id, likes_count: (c as any).likes?.[0]?.count || 0, is_liked: false
         }));
         setPosts(prev => prev.map(p => p.id !== post.id ? p : { ...p, comments: mapped, comments_count: comments.length } as Post));
         setSelectedPostForComments(prev => { if (!prev || prev.id !== post.id) return prev; return { ...prev, comments: mapped, comments_count: comments.length } as Post; });
