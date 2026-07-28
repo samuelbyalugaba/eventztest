@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useAuth } from './contexts/AuthContext';
@@ -36,9 +36,9 @@ export default function App() {
     sendMessage: handleSendMessage,
   } = useMessaging();
 
-  const handleAuthSuccess = (_token: string, _user: Record<string, unknown>) => {
+  const handleAuthSuccess = useCallback((_token: string, _user: Record<string, unknown>) => {
     navigate('/events', { replace: true });
-  };
+  }, [navigate]);
 
   const scheduleIdle = (cb: () => void, timeout: number): (() => void) => {
     const w = window as Window & {
@@ -93,16 +93,16 @@ export default function App() {
       await signOut();
       queryClient.clear();
       navigate('/events', { replace: true });
-    } catch (error) {
-      console.warn('Sign out failed', error);
+    } catch {
+      // Sign out failed; non-critical
     }
   };
 
-  const handleCreateEvent = () => navigate('/create');
-  const handleStartOrganizerSetup = () => navigate('/create');
-  const handleEditEvent = (event: any) => navigate(`/edit-event/${event.id}`);
+  const handleCreateEvent = useCallback(() => navigate('/create'), [navigate]);
+  const handleStartOrganizerSetup = useCallback(() => navigate('/create'), [navigate]);
+  const handleEditEvent = useCallback((event: any) => navigate(`/edit-event/${event.id}`), [navigate]);
 
-  const handleViewPost = (item: any) => {
+  const handleViewPost = useCallback((item: any) => {
     const backgroundBase = (location.state as any)?.backgroundLocation || location;
     if (item.isProfile) {
       if (item.id && item.id !== 'unknown') {
@@ -120,7 +120,7 @@ export default function App() {
         },
       });
     }
-  };
+  }, [navigate, location]);
 
   const backgroundLocation = location.state?.backgroundLocation;
   const isProfileSubpagePath = (path?: string) => {
@@ -261,7 +261,6 @@ export default function App() {
           conversations={conversations}
           handleStartConversation={handleStartConversation}
           handleSendMessage={handleSendMessage}
-          currentUser={currentUser}
           handleViewPost={handleViewPost}
           handleLogout={handleLogout}
           handleCreateEvent={handleCreateEvent}

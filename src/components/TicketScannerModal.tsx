@@ -78,7 +78,7 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
       if (scanner && scanner.isScanning) {
         scanner.stop().then(() => {
           scanner.clear();
-        }).catch(err => console.error("Error stopping scanner:", err));
+        }).catch(() => {});
       }
     };
   }, [isScanning]);
@@ -117,7 +117,6 @@ export function TicketScannerModal({ eventId, eventTitle, events, onEventChange,
 
   const onScanFailure = (_error: any) => {
     // Ignore frame failures, they happen constantly when no QR is in view
-    // console.warn(`Code scan error = ${error}`);
   };
 
   const handleReset = async () => {

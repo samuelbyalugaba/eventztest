@@ -42,7 +42,6 @@ export function usePostInteractions(
     try {
       await onLike(post.id);
     } catch {
-      console.warn('Failed to toggle like for post', post.id);
       setIsLiked(!newIsLiked);
       setLikesCount((prev) => (!newIsLiked ? prev + 1 : prev - 1));
     }
@@ -64,7 +63,6 @@ export function usePostInteractions(
     try {
       await onSave(post.id);
     } catch {
-      console.warn('Failed to toggle save for post', post.id);
       setIsSaved(!isSaved);
     }
   };

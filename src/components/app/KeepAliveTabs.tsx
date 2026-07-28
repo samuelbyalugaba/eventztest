@@ -27,7 +27,6 @@ interface KeepAliveTabsProps {
   conversations: any;
   handleStartConversation: any;
   handleSendMessage: any;
-  currentUser: any;
   handleViewPost: (item: any) => void;
   handleLogout: () => Promise<void>;
   handleCreateEvent: () => void;
@@ -51,7 +50,6 @@ export default function KeepAliveTabs({
   conversations,
   handleStartConversation,
   handleSendMessage,
-  currentUser,
   handleViewPost,
   handleLogout,
   handleCreateEvent,
@@ -86,7 +84,6 @@ export default function KeepAliveTabs({
               <Feed
                 conversations={conversations}
                 onStartConversation={handleStartConversation}
-                currentUser={currentUser}
                 onViewPost={handleViewPost}
                 isPaused={!isFeedTab || !!backgroundLocation}
               />
@@ -101,9 +98,11 @@ export default function KeepAliveTabs({
         data-eventz-view="live"
       >
         {shouldMountLiveTab && (
-          <Suspense fallback={<LivePageSkeleton />}>
-            <LiveFeed />
-          </Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<LivePageSkeleton />}>
+              <LiveFeed />
+            </Suspense>
+          </RouteErrorBoundary>
         )}
       </div>
       <div

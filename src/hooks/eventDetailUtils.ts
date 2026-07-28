@@ -35,7 +35,6 @@ export function isEventPast(event: ApiEvent): boolean {
     const timeStr = event.time ? event.time.replace(' ', '') : '23:59';
     return new Date(`${dateStr} ${timeStr}`) < new Date();
   } catch {
-    console.warn('Failed to parse event date for isEventPast check', event.date, event.time);
     return false;
   }
 }

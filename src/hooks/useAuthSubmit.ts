@@ -75,8 +75,8 @@ export function useAuthSubmit(
               (profile?.username ? `@${String(profile.username).replace(/^@/, '')}` : null);
 
             if (displayFromProfile) userName = displayFromProfile;
-          } catch (error) {
-            console.error('Failed to load user profile:', error);
+          } catch {
+            // Failed to load user profile; non-critical
           }
 
           toast.success('Welcome back!', { description: `Signed in as ${userName}` });

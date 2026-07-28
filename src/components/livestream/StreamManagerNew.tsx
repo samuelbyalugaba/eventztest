@@ -166,8 +166,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
       try {
         const data = await getEventAnalytics(event.id);
         if (!cancelled) setAnalytics(data);
-      } catch (error) {
-        console.warn('Failed to load analytics', error);
+      } catch {
+        // Failed to load analytics; non-critical
       } finally { if (!cancelled) setIsLoadingAnalytics(false); }
     };
     load();

@@ -1,15 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { RtcTokenBuilder, RtcRole } from "https://esm.sh/agora-access-token@2.0.4";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-};
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return corsOptionsResponse(req);
   }
 
   try {
@@ -17,15 +12,9 @@ serve(async (req: Request) => {
     const APP_CERTIFICATE = Deno.env.get("AGORA_APP_CERTIFICATE");
 
     if (!APP_ID || !APP_CERTIFICATE) {
-      return new Response(
-        JSON.stringify({
-          error: "AGORA_APP_ID/AGORA_APP_CERTIFICATE not configured in Edge Function secrets",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return corsResponse({
+        error: "AGORA_APP_ID/AGORA_APP_CERTIFICATE not configured in Edge Function secrets",
+      }, 500, req);
     }
 
     const { channelName, uid, role, expireSeconds } = await req.json();
@@ -70,25 +59,13 @@ serve(async (req: Request) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({
-        token,
-        role: role || "subscriber",
-        channel: channelName,
-        expireAt: privilegeExpiredTs,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return corsResponse({
+      token,
+      role: role || "subscriber",
+      channel: channelName,
+      expireAt: privilegeExpiredTs,
+    }, 200, req);
   } catch (e: any) {
-    return new Response(
-      JSON.stringify({ error: e?.message || "Unknown error" }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      },
-    );
+    return corsResponse({ error: e?.message || "Unknown error" }, 400, req);
   }
 });

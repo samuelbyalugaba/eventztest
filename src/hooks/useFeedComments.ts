@@ -38,7 +38,7 @@ export function useFeedComments(
             timestamp: formatTimeAgo(c.created_at)
           }));
           setSelectedPost(prev => prev && prev.id === selectedPost.id ? { ...prev, comments: mappedComments } : prev);
-        } catch (error) { console.error('Error fetching comments:', error); }
+        } catch (error) { /* comments fetch failed */ }
       };
       fetchComments();
     }
@@ -69,7 +69,7 @@ export function useFeedComments(
             }));
             setSelectedPost(prev => prev ? { ...prev, comments: mappedComments } : null);
           }
-        } catch (e) { console.error('Error fetching comments for modal:', e); }
+        } catch (e) { /* modal comments fetch failed */ }
       };
       fetchComments();
     }

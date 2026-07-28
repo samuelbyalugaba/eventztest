@@ -120,7 +120,6 @@ export function ProfessionalDashboardModal({
   //     toast.success('Stream ended');
   //     setSelectedEventForStream(null);
   //   } catch (error) {
-  //     console.error('Error stopping stream:', error);
   //     toast.error('Failed to stop stream');
   //   }
   // };

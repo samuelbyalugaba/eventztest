@@ -28,7 +28,7 @@ export function useStreamChat(eventId: number, isLive: boolean) {
         setMessages((msgs || []).slice(-200));
         setLikes(initialLikes);
       } catch {
-        console.warn('Failed to load stream chat or likes', eventId);
+        // Failed to load stream chat or likes; non-critical
       }
     };
     loadChat();

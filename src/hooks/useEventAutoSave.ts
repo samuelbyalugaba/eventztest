@@ -33,8 +33,8 @@ export function useEventAutoSave({ formData, buildEventData, isSubmitting, showS
           const newEvent = await createEvent(eventData as any);
           setSavedEventId(newEvent.id);
         }
-      } catch (error) {
-        console.error('Failed to auto-save draft:', error);
+      } catch {
+        // Auto-save draft failed; non-critical
       } finally {
         setIsAutoSaving(false);
       }

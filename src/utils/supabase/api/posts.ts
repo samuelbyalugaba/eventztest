@@ -38,7 +38,7 @@ export const incrementPostView = async (postId: number) => {
   const { error } = await supabase.rpc('increment_post_view', { post_id: postId });
 
   if (error) {
-    console.warn('Failed to increment post view:', error.message);
+    // Failed to increment post view; non-critical
   }
 };
 
@@ -95,8 +95,8 @@ export const getPosts = async (options: { currentUserId?: string; eventId?: numb
         .eq('user_id', options.currentUserId);
 
       if (saved) saved.forEach(s => savedPostIds.add(s.post_id));
-    } catch (e) {
-      console.warn('Failed to fetch user likes/saves:', e);
+    } catch {
+      // Failed to fetch user likes/saves; non-critical
     }
   }
 
@@ -308,8 +308,7 @@ export const getPostComments = async (postId: number) => {
   if (user) {
     try {
       blockedUserIds = await getBlockedUserIds(user.id);
-    } catch (error) {
-      console.error('Failed to get blocked user IDs for comments:', error);
+    } catch {
       blockedUserIds = new Set<string>();
     }
   }

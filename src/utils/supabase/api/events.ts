@@ -365,9 +365,23 @@ export const deleteEvent = async (id: number) => {
 
   if (error) {
     if (error.code === '42883') {
+      const { data: eventPosts } = await supabase
+        .from('posts')
+        .select('id')
+        .eq('event_id', id);
+
+      const postIds = (eventPosts || []).map((p: any) => p.id);
+
+      for (const postId of postIds) {
+        await supabase.from('post_comments').delete().eq('post_id', postId);
+        await supabase.from('post_likes').delete().eq('post_id', postId);
+      }
+
+      await supabase.from('posts').delete().eq('event_id', id);
       await supabase.from('stream_chat_messages').delete().eq('event_id', id);
       await supabase.from('saved_events').delete().eq('event_id', id);
       await supabase.from('tickets').delete().eq('event_id', id);
+
       const { error: deleteError } = await supabase.from('events').delete().eq('id', id);
       if (deleteError) throw deleteError;
     } else {

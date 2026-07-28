@@ -88,13 +88,13 @@ export function StreamSettingsModal({
             </div>
             <div className="space-y-2">
               <label className="text-white/60 text-xs">Category</label>
-              <select value={streamCategory} onChange={(e) => onStreamCategoryChange(e.target.value)} className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm">
+              <select value={streamCategory} onChange={(e) => onStreamCategoryChange(e.target.value)} aria-label="Stream category" className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm">
                 <option>General</option><option>Music</option><option>Sports</option><option>Gaming</option>
               </select>
             </div>
             <div className="space-y-2">
               <label className="text-white/60 text-xs">Visibility</label>
-              <select value={visibility} onChange={(e) => onVisibilityChange(e.target.value as any)} className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm">
+              <select value={visibility} onChange={(e) => onVisibilityChange(e.target.value as any)} aria-label="Stream visibility" className="w-full bg-white/5 text-white rounded-xl px-3 py-2.5 border border-white/10 text-sm">
                 <option value="public">Public</option><option value="ticket">Ticket holders</option><option value="followers">Followers</option>
               </select>
             </div>

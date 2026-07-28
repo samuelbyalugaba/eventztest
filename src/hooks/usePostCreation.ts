@@ -6,6 +6,7 @@ import { createPost, uploadImage } from '../utils/supabase/api';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
 import { CHAR_LIMIT } from '../components/create-post/constants';
+import { searchNominatim } from '../utils/nominatim';
 
 export type MediaItem = {
   file: File;
@@ -62,6 +63,7 @@ export function usePostCreation(onMediaCaptured?: () => void) {
       setLocationQuery('');
       return;
     }
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       if (!locationQuery.trim()) {
         setLocationSuggestions([]);
@@ -69,20 +71,18 @@ export function usePostCreation(onMediaCaptured?: () => void) {
       }
       setLocationSearching(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=6`,
-          { headers: { 'Accept-Language': 'en' } }
-        );
-        const data = await res.json();
+        const data = await searchNominatim(locationQuery, { limit: 6, signal: controller.signal });
         setLocationSuggestions(data || []);
-      } catch (error) {
-        console.error('Failed to fetch location suggestions:', error);
+      } catch {
         setLocationSuggestions([]);
       } finally {
         setLocationSearching(false);
       }
     }, 400);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [locationQuery, showLocationSearch]);
 
   useEffect(() => {

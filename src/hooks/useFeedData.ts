@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { supabase } from '../utils/supabase/client';
-import { getFollowedUserIds, getNotifications, getPosts, getProfile, type Notification } from '../utils/supabase/api';
+import { getFollowedUserIds, getNotifications, getPosts, type Notification } from '../utils/supabase/api';
 import { mapPostsToViewModel } from '../utils/postMapper';
 import type { Post } from '../types';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
-import { useInView } from '../utils/useInView';
+import { useInView } from './useInView';
+import { useAuth } from '../contexts/AuthContext';
 
 const FEED_PAGE_SIZE = 20;
 
@@ -58,18 +59,13 @@ export const removeUserPostsFromFeedCache = (userId: string) => {
   );
 };
 
-export function useFeedData(initialCurrentUser?: any) {
-  const [currentUser, setCurrentUser] = useState<any>(initialCurrentUser || null);
+export function useFeedData() {
+  const { user: authUser, profile: authProfile } = useAuth();
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
-  const initialUserLoaded = useRef(false);
+  const followingLoaded = useRef(false);
   const cacheCleared = useRef(false);
-
-  useEffect(() => {
-    setCurrentUser(initialCurrentUser || null);
-  }, [initialCurrentUser]);
 
   useEffect(() => {
     if (!cacheCleared.current) {
@@ -78,31 +74,19 @@ export function useFeedData(initialCurrentUser?: any) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!authUser?.id || followingLoaded.current) return;
+    followingLoaded.current = true;
+    getFollowedUserIds(authUser.id)
+      .then((following) => setFollowingIds(new Set(following)))
+      .catch(() => {});
+  }, [authUser?.id]);
+
   const postsQuery = useInfiniteQuery({
-    queryKey: queryKeys.feed.firstPage(currentUser?.id),
+    queryKey: queryKeys.feed.firstPage(authUser?.id),
     queryFn: async ({ pageParam }) => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setCurrentUser(user);
-          if (!initialUserLoaded.current) {
-            initialUserLoaded.current = true;
-            try {
-              const profile = await getProfile(user.id);
-              setCurrentUserProfile(profile || null);
-            } catch (error) {
-              console.warn('Failed to load profile for feed:', error);
-              setCurrentUserProfile(null);
-            }
-            try {
-              const following = await getFollowedUserIds(user.id);
-              setFollowingIds(new Set(following));
-            } catch (e) {
-              console.error('Error loading following:', e);
-            }
-          }
-        }
-        const fresh = await getPosts({ currentUserId: user?.id, limit: FEED_PAGE_SIZE, offset: pageParam as number });
+        const fresh = await getPosts({ currentUserId: authUser?.id, limit: FEED_PAGE_SIZE, offset: pageParam as number });
         return {
           posts: fresh && fresh.length > 0 ? mapPostsToViewModel(fresh) : [],
           count: fresh?.length ?? 0,
@@ -149,7 +133,7 @@ export function useFeedData(initialCurrentUser?: any) {
     }
   }, [sentinelInView, hasMore, isLoadingMore, handleLoadMore]);
 
-  const feedQueryKey = queryKeys.feed.firstPage(currentUser?.id);
+  const feedQueryKey = queryKeys.feed.firstPage(authUser?.id);
   const setPosts: React.Dispatch<React.SetStateAction<Post[]>> = useCallback((updater) => {
     queryClient.setQueryData(feedQueryKey, (old: unknown) => {
       if (!old || typeof old !== 'object') return old;
@@ -172,18 +156,18 @@ export function useFeedData(initialCurrentUser?: any) {
   }, [feedQueryKey, queryClient]);
 
   const refreshNotifications = useCallback(async (options?: { silent?: boolean }) => {
-    if (!currentUser?.id) {
+    if (!authUser?.id) {
       setNotifications([]);
       return;
     }
 
     if (!options?.silent) setNotificationsLoading(true);
     try {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list(currentUser.id) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list(authUser.id) });
       const data = await queryClient.fetchQuery({
-        queryKey: queryKeys.notifications.list(currentUser.id),
+        queryKey: queryKeys.notifications.list(authUser.id),
         staleTime: 60_000,
-        queryFn: () => getNotifications(currentUser.id),
+        queryFn: () => getNotifications(authUser.id),
       });
       setNotifications(data ?? []);
     } catch (error) {
@@ -192,10 +176,10 @@ export function useFeedData(initialCurrentUser?: any) {
     } finally {
       if (!options?.silent) setNotificationsLoading(false);
     }
-  }, [currentUser?.id]);
+  }, [authUser?.id]);
 
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!authUser?.id) return;
 
     void refreshNotifications();
     const interval = window.setInterval(() => {
@@ -204,19 +188,19 @@ export function useFeedData(initialCurrentUser?: any) {
     return () => {
       window.clearInterval(interval);
     };
-  }, [currentUser?.id, refreshNotifications]);
+  }, [authUser?.id, refreshNotifications]);
 
   return {
     posts,
     setPosts,
     hasMore,
     isLoadingMore,
-    currentUser,
+    currentUser: authUser,
     isLoading,
     followingIds,
     notifications,
     notificationsLoading,
-    currentUserProfile,
+    currentUserProfile: authProfile,
     handleLoadMore,
     refreshNotifications,
     setNotifications,

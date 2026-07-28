@@ -18,6 +18,7 @@ import { ProfileSidebar } from './profile/ProfileSidebar';
 import { ProfileActions } from './profile/ProfileActions';
 import { ProfileSafetyMenu } from './profile/ProfileSafetyMenu';
 import { ProfileError } from './profile/ProfileError';
+import { ProfilePageSkeleton } from './skeletons/PageSkeletons';
 import { ProfileFab } from './profile/ProfileFab';
 import { ProfileModals } from './profile/ProfileModals';
 import { useProfileStats } from './profile/useProfileStats';
@@ -292,6 +293,10 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
 
   if (isProfileError) {
     return <ProfileError onRetry={refetchProfile} />;
+  }
+
+  if (isLoading) {
+    return <ProfilePageSkeleton />;
   }
 
   return (

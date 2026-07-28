@@ -1,7 +1,7 @@
 import { Share2, Bookmark, MoreHorizontal, Trash2, Send } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { useVisualViewport } from '../utils/useVisualViewport';
+import { useVisualViewport } from '../hooks/useVisualViewport';
 import { PostDetailView } from './PostDetailView';
 import type { Post } from '../types';
 

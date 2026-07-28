@@ -49,7 +49,7 @@ export function useViewerChat(stream: LiveStreamData, currentUserId: string | nu
           setMessages(msgs.slice(-200).map(mapStreamMessageToViewerChat));
         }
       } catch (error) {
-        console.warn('Failed to load chat messages', error);
+        // Failed to load chat messages; non-critical
       }
     };
     loadChat();
@@ -91,7 +91,6 @@ export function useViewerChat(stream: LiveStreamData, currentUserId: string | nu
     } catch (error) {
       setMessage(text);
       toast.error('Failed to send message');
-      console.warn('Failed to send message', error);
     }
   };
 

@@ -20,7 +20,7 @@ export function DesktopSidebar() {
   const [isNavigating, setIsNavigating] = useState(false);
 
   const handleLogout = async () => {
-    try { await signOut(); navigate('/events', { replace: true }); } catch (error) { console.warn('Failed to sign out:', error); }
+    try { await signOut(); navigate('/events', { replace: true }); } catch { /* sign out failed */ }
   };
 
   const handleCreate = () => {

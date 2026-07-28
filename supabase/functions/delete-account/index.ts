@@ -1,12 +1,6 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client, x-supabase-client-platform",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -14,21 +8,21 @@ const USER_STORAGE_BUCKETS = ["avatars", "events", "posts"];
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return corsOptionsResponse(req);
   }
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return json({ error: "Method not allowed" }, 405, req);
   }
 
   try {
     const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
     if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-      return json({ error: "Missing Authorization header" }, 401);
+      return json({ error: "Missing Authorization header" }, 401, req);
     }
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return json({ error: "Server not configured for account deletion" }, 500);
+      return json({ error: "Server not configured for account deletion" }, 500, req);
     }
 
     const token = authHeader.replace(/^Bearer\s+/i, "");
@@ -41,7 +35,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userError } = await admin.auth.getUser(token);
     if (userError || !userData?.user) {
-      return json({ error: "Unauthorized" }, 401);
+      return json({ error: "Unauthorized" }, 401, req);
     }
 
     const userId = userData.user.id;
@@ -50,7 +44,7 @@ Deno.serve(async (req: Request) => {
 
     const { error: deleteError } = await admin.auth.admin.deleteUser(userId, false);
     if (deleteError) {
-      return json({ error: deleteError.message || "Failed to delete user" }, 400);
+      return json({ error: deleteError.message || "Failed to delete user" }, 400, req);
     }
 
     await Promise.allSettled([
@@ -58,9 +52,9 @@ Deno.serve(async (req: Request) => {
       admin.from("organizer_profiles").delete().eq("id", userId),
     ]);
 
-    return json({ success: true });
+    return json({ success: true }, 200, req);
   } catch (error) {
-    return json({ error: error?.message || "Unknown account deletion error" }, 500);
+    return json({ error: error?.message || "Unknown account deletion error" }, 500, req);
   }
 });
 
@@ -88,9 +82,9 @@ async function removeUserOwnedStorage(admin: ReturnType<typeof createClient>, us
   );
 }
 
-function json(body: Record<string, unknown>, status = 200) {
+function json(body: Record<string, unknown>, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
 }

@@ -4,13 +4,7 @@
 //
 // Call: POST /cloudflare-stream-backfill   (Authorization: Bearer <user JWT>)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 const CF_ACCOUNT_ID = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
 const CF_STREAM_TOKEN = Deno.env.get("CLOUDFLARE_STREAM_TOKEN");
@@ -19,13 +13,13 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return corsOptionsResponse(req);
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+    if (!authHeader?.startsWith("Bearer ")) return corsResponse({ error: "Unauthorized" }, 401, req);
     if (!CF_ACCOUNT_ID || !CF_STREAM_TOKEN) {
-      return json({ error: "Cloudflare not configured" }, 500);
+      return corsResponse({ error: "Cloudflare not configured" }, 500, req);
     }
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -34,7 +28,7 @@ Deno.serve(async (req) => {
     const { data: userData, error: userErr } = await userClient.auth.getUser(
       authHeader.replace("Bearer ", ""),
     );
-    if (userErr || !userData?.user) return json({ error: "Unauthorized" }, 401);
+    if (userErr || !userData?.user) return corsResponse({ error: "Unauthorized" }, 401, req);
     const userId = userData.user.id;
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -44,7 +38,7 @@ Deno.serve(async (req) => {
       .from("events")
       .select("id, organizer_id, title, image_url, streaming")
       .eq("organizer_id", userId);
-    if (evErr) return json({ error: evErr.message }, 500);
+    if (evErr) return corsResponse({ error: evErr.message }, 500, req);
 
     const liveInputs = (events || [])
       .map((e: any) => ({
@@ -119,16 +113,9 @@ Deno.serve(async (req) => {
       results.push({ eventId: ev.eventId, recordings: videos.length, latest: latest?.uid || null });
     }
 
-    return json({ ok: true, totalRecordings, eventsScanned: liveInputs.length, results });
+    return corsResponse({ ok: true, totalRecordings, eventsScanned: liveInputs.length, results }, 200, req);
   } catch (err) {
     console.error("backfill error", err);
-    return json({ error: err instanceof Error ? err.message : "unknown" }, 500);
+    return corsResponse({ error: err instanceof Error ? err.message : "unknown" }, 500, req);
   }
 });
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}

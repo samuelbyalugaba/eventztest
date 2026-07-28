@@ -55,7 +55,6 @@ export function useEventDetailModal(event: ApiEvent, onPurchaseTicket: (event: A
       const timeStr = event.time ? event.time.replace(' ', '') : '23:59';
       return new Date(`${dateStr} ${timeStr}`) < new Date();
     } catch {
-      console.warn('Failed to parse event date for isEventPast check', event.date, event.time);
       return false;
     }
   })();
@@ -96,7 +95,9 @@ export function useEventDetailModal(event: ApiEvent, onPurchaseTicket: (event: A
           if (profile && profile.full_name) {
             setOrganizerDisplayName(profile.full_name);
           }
-        } catch { console.warn('Failed to fetch organizer profile', event.organizer_id); }
+        } catch {
+          // Failed to fetch organizer profile; non-critical
+        }
       }
     };
     fetchOrganizerDetails();
@@ -106,7 +107,9 @@ export function useEventDetailModal(event: ApiEvent, onPurchaseTicket: (event: A
         const { data: { user } } = await supabase.auth.getUser();
         const posts = await getPosts({ currentUserId: user?.id, eventId: event.id });
         setEventPosts(posts || []);
-      } catch { console.warn('Failed to load event posts', event.id); }
+      } catch {
+        // Failed to load event posts; non-critical
+      }
     };
     loadEventPosts();
   }, [event.id, event.organizer_id]);

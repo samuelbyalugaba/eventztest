@@ -1,100 +1,68 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../utils/supabase/client';
 import { getEvents, getSavedEvents, type Event as ApiEvent } from '../utils/supabase/api';
-import { queryClient } from '../queryClient';
+import { useAuth } from '../contexts/AuthContext';
 import { queryKeys } from '../queryKeys';
 
-const CACHE_DURATION_MS = 15 * 60 * 1000;
-
-const getInitialEvents = (): ApiEvent[] => {
-  const cachedEvents = queryClient.getQueryData<ApiEvent[]>(queryKeys.events.publicList);
-  return Array.isArray(cachedEvents) ? cachedEvents : [];
-};
-
 export function useEventsData() {
-  const initialEvents = (() => getInitialEvents())();
-  const [events, setEvents] = useState<ApiEvent[]>(initialEvents);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isFetching, setIsFetching] = useState(initialEvents.length === 0);
-  const [hasLoadedEvents, setHasLoadedEvents] = useState(initialEvents.length > 0);
-  const hasEventsRef = useRef(initialEvents.length > 0);
-  const lastFetchTimeRef = useRef(0);
+  const { user: authUser } = useAuth();
+  const queryClient = useQueryClient();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(authUser?.id ?? null);
 
   useEffect(() => {
-    const fetchEvents = async (force = false) => {
-      const now = Date.now();
-      if (!force && hasEventsRef.current && (now - lastFetchTimeRef.current) < CACHE_DURATION_MS) {
-        setHasLoadedEvents(true);
-        setIsFetching(false);
-        return;
+    if (authUser?.id) {
+      setCurrentUserId(authUser.id);
+      return;
+    }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUserId(user?.id ?? null);
+    });
+  }, [authUser]);
+
+  const eventsQuery = useQuery({
+    queryKey: queryKeys.events.publicList,
+    queryFn: async (): Promise<ApiEvent[]> => {
+      const allEvents = await getEvents();
+      if (!currentUserId) {
+        return (allEvents as any[]).map(e => ({ ...e, isSaved: false })) as ApiEvent[];
       }
-      
-      try {
-        setIsFetching(true);
-        if (force) {
-          await queryClient.invalidateQueries({ queryKey: queryKeys.events.root });
-        }
-        const allEvents = await queryClient.fetchQuery({
-          queryKey: queryKeys.events.publicList,
-          staleTime: 15 * 60 * 1000,
-          queryFn: () => getEvents(),
-        });
-        const publicEvents = (allEvents as any[]).map(e => ({ ...e, isSaved: false })) as ApiEvent[];
-        setEvents(publicEvents);
-        queryClient.setQueryData(queryKeys.events.publicList, publicEvents);
-        lastFetchTimeRef.current = Date.now();
-        hasEventsRef.current = true;
-        setHasLoadedEvents(true);
 
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          setCurrentUserId(user?.id ?? null);
+      const savedEvents = await getSavedEvents(currentUserId);
+      const savedIds = new Set((savedEvents as any[]).map(e => e.id));
+      return (allEvents as any[]).map(e => ({
+        ...e,
+        isSaved: savedIds.has(e.id),
+      })) as ApiEvent[];
+    },
+    staleTime: 15 * 60 * 1000,
+    placeholderData: (prev) => prev,
+  });
 
-          if (!user) {
-            return;
-          }
-
-          const savedEvents = await getSavedEvents(user.id);
-          const savedIds = new Set((savedEvents as any[]).map(e => e.id));
-          const eventsWithSaved = (allEvents as any[]).map(e => ({
-            ...e,
-            isSaved: savedIds.has(e.id)
-          }));
-
-          queryClient.setQueryData(queryKeys.events.list(user.id), eventsWithSaved);
-          queryClient.setQueryData(queryKeys.events.publicList, eventsWithSaved as ApiEvent[]);
-          setEvents(eventsWithSaved as ApiEvent[]);
-          lastFetchTimeRef.current = Date.now();
-        } catch (_savedEventsError) {
-        }
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          return;
-        }
-        console.error('Failed to fetch events:', error);
-      } finally {
-        setIsFetching(false);
-      }
-    };
-
-    fetchEvents();
-    
-    const handleEventsUpdate = () => fetchEvents(true);
-    const eventsChannel = supabase
+  useEffect(() => {
+    const channel = supabase
       .channel('events-page-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, handleEventsUpdate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.root });
+      })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(eventsChannel);
+      supabase.removeChannel(channel);
     };
-  }, [initialEvents]);  // Note: we use initialEvents not events.length to avoid re-fetch loop
+  }, [queryClient]);
+
+  const removeEvent = (eventId: string | number) => {
+    queryClient.setQueryData<ApiEvent[]>(queryKeys.events.publicList, (old) =>
+      old ? old.filter(e => e.id !== eventId) : old,
+    );
+  };
 
   return {
-    events,
-    setEvents,
+    events: eventsQuery.data ?? [],
+    removeEvent,
     currentUserId,
-    isFetching,
-    hasLoadedEvents,
+    isFetching: eventsQuery.isFetching,
+    hasLoadedEvents: eventsQuery.isSuccess,
   };
 }

@@ -52,7 +52,7 @@ export function useViewerInteractions(stream: LiveStreamData) {
         const totalLikes = await getEventLikes(stream.id);
         setLikes(totalLikes);
       } catch (error) {
-        console.warn('Failed to load initial stream state', error);
+        // Failed to load initial stream state; non-critical
       }
     };
     loadState();
@@ -128,7 +128,6 @@ export function useViewerInteractions(stream: LiveStreamData) {
     } catch (error) {
       setIsLiked(!newIsLiked);
       setLikes((p) => !newIsLiked ? p + 1 : Math.max(0, p - 1));
-      console.warn('Failed to toggle like', error);
     } finally {
       setTimeout(() => { pendingLikeRef.current = false; }, 3000);
     }
@@ -177,7 +176,7 @@ export function useViewerInteractions(stream: LiveStreamData) {
         toast.success('Stream link copied!');
       }
     } catch (error) {
-      console.warn('Failed to share stream link', error);
+      // Failed to share stream link; non-critical
     }
   };
 

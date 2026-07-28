@@ -31,8 +31,8 @@ runIdle(() => {
   try {
     void configureNativeRuntime();
     registerServiceWorker();
-  } catch (e) {
-    console.warn('Native runtime init failed:', e);
+  } catch {
+    // Native runtime init failed; non-critical
   }
 });
 
@@ -49,8 +49,8 @@ const recoverFromBundleError = async () => {
     }
     const registrations = await navigator.serviceWorker?.getRegistrations?.();
     await Promise.all((registrations || []).map((registration) => registration.update()));
-  } catch (error) {
-    console.warn('Failed to clean up caches for bundle reload:', error);
+  } catch {
+    // Failed to clean up caches for bundle reload; non-critical
   }
 
   window.location.reload();

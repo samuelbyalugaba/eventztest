@@ -1,13 +1,7 @@
 // Provisions a Cloudflare Stream Live Input for an event.
 // Returns RTMPS ingest URL + stream key (for OBS) and HLS playback URL (for viewers).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 const CF_ACCOUNT_ID = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
 const CF_STREAM_TOKEN = Deno.env.get("CLOUDFLARE_STREAM_TOKEN");
@@ -17,23 +11,20 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return corsOptionsResponse(req);
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return json({ error: "Unauthorized" }, 401);
+      return corsResponse({ error: "Unauthorized" }, 401, req);
     }
 
     if (!CF_ACCOUNT_ID || !CF_STREAM_TOKEN) {
-      return json(
-        {
-          error:
-            "Cloudflare Stream not configured. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_STREAM_TOKEN secrets.",
-        },
-        500,
-      );
+      return corsResponse({
+        error:
+          "Cloudflare Stream not configured. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_STREAM_TOKEN secrets.",
+      }, 500, req);
     }
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -42,14 +33,14 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await userClient.auth.getUser(token);
     if (userErr || !userData?.user) {
-      return json({ error: "Unauthorized" }, 401);
+      return corsResponse({ error: "Unauthorized" }, 401, req);
     }
     const userId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
     const eventId = Number(body.eventId);
     if (!eventId || Number.isNaN(eventId)) {
-      return json({ error: "eventId is required" }, 400);
+      return corsResponse({ error: "eventId is required" }, 400, req);
     }
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -61,22 +52,22 @@ Deno.serve(async (req) => {
       .eq("id", eventId)
       .single();
 
-    if (evErr || !event) return json({ error: "Event not found" }, 404);
+    if (evErr || !event) return corsResponse({ error: "Event not found" }, 404, req);
     if (event.organizer_id !== userId) {
-      return json({ error: "Forbidden" }, 403);
+      return corsResponse({ error: "Forbidden" }, 403, req);
     }
 
     const existing = (event.streaming || {}) as Record<string, unknown>;
 
     // If we already provisioned a Cloudflare live input for this event, reuse it.
     if (existing.provider === "cloudflare" && existing.cf_live_input_uid) {
-      return json({
+      return corsResponse({
         ingestUrl: existing.ingest_url,
         streamKey: existing.stream_key,
         playbackUrl: existing.playback_url,
         liveInputUid: existing.cf_live_input_uid,
         reused: true,
-      });
+      }, 200, req);
     }
 
     // Create a new Live Input on Cloudflare Stream
@@ -102,13 +93,10 @@ Deno.serve(async (req) => {
     const cfJson = await cfRes.json();
     if (!cfRes.ok || !cfJson?.success) {
       console.error("Cloudflare error", JSON.stringify(cfJson));
-      return json(
-        {
-          error: "Cloudflare API error",
-          details: cfJson?.errors || cfJson,
-        },
-        502,
-      );
+      return corsResponse({
+        error: "Cloudflare API error",
+        details: cfJson?.errors || cfJson,
+      }, 502, req);
     }
 
     const result = cfJson.result;
@@ -140,26 +128,19 @@ Deno.serve(async (req) => {
 
     if (updErr) {
       console.error("DB update error", updErr);
-      return json({ error: "Failed to save stream config" }, 500);
+      return corsResponse({ error: "Failed to save stream config" }, 500, req);
     }
 
-    return json({
+    return corsResponse({
       ingestUrl,
       streamKey,
       playbackUrl,
       liveInputUid,
       reused: false,
-    });
+    }, 200, req);
   } catch (err) {
     console.error("create-stream error", err);
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return json({ error: msg }, 500);
+    return corsResponse({ error: msg }, 500, req);
   }
 });
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}

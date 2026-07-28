@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import { toast } from 'sonner';
 import { reportContent } from '../utils/supabase/api';
 import { ReportReasonModal } from './ui/ReportReasonModal';
-import { useVisualViewport } from '../utils/useVisualViewport';
+import { useVisualViewport } from '../hooks/useVisualViewport';
 
 
 interface CommentsSheetProps {

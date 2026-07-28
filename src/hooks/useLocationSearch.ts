@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { searchNominatim } from '../utils/nominatim';
 
 export function useLocationSearch() {
   const [locationData, setLocationData] = useState<{ lat: number; lng: number; label: string } | null>(null);
@@ -14,6 +15,7 @@ export function useLocationSearch() {
       setLocationQuery('');
       return;
     }
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       if (!locationQuery.trim()) {
         setLocationSuggestions([]);
@@ -21,11 +23,7 @@ export function useLocationSearch() {
       }
       setLocationSearching(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=6`,
-          { headers: { 'Accept-Language': 'en' } }
-        );
-        const data = await res.json();
+        const data = await searchNominatim(locationQuery, { limit: 6, signal: controller.signal });
         setLocationSuggestions(data || []);
       } catch {
         setLocationSuggestions([]);
@@ -33,7 +31,10 @@ export function useLocationSearch() {
         setLocationSearching(false);
       }
     }, 400);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [locationQuery, showLocationSearch]);
 
   const handleOpenLocationSearch = () => {

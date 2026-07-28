@@ -146,7 +146,7 @@ export function PostDetailWrapper() {
           setPost((prev: any) => prev ? { ...prev, comments, comments_count: comments.length } : prev);
         }
       } catch (error) {
-        console.warn('Failed to fetch comments for post wrapper:', error);
+        // Failed to fetch comments for post wrapper; non-critical
       }
     })();
   }, [post?.id]);
@@ -203,7 +203,7 @@ export function PostDetailWrapper() {
           ),
         };
       });
-    } catch (e) { console.error(e); }
+    } catch (e) { /* like comment failed */ }
   };
 
   const handleEditCaption = async (captionPostId: number, caption: string) => {
@@ -257,7 +257,7 @@ export function PostDetailWrapper() {
             isLiked: !prev.isLiked,
             likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1,
           } : prev);
-        } catch (e) { console.error(e); }
+        } catch (e) { /* like failed */ }
       }}
       onSave={async (savePostId) => {
         if (!currentUser) return;
@@ -265,7 +265,7 @@ export function PostDetailWrapper() {
           const saved = await toggleSavePost(savePostId, currentUser.id);
           setPost((prev: any) => prev ? { ...prev, isSaved: saved } : prev);
           queryClient.invalidateQueries({ queryKey: ['profile'] });
-        } catch (e) { console.error(e); }
+        } catch (e) { /* save failed */ }
       }}
       onEditCaption={handleEditCaption}
       onShare={async (sharePost) => {

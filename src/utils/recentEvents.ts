@@ -12,8 +12,7 @@ const readStringList = (key: string) => {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(key) || '[]');
     return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
-  } catch (error) {
-    console.warn('Failed to read recent events:', error);
+  } catch {
     return [];
   }
 };

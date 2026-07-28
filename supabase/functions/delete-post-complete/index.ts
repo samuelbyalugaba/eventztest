@@ -1,12 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client, x-supabase-client-platform",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-};
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 type DeletePostBody = {
   postId: number;
@@ -14,25 +8,19 @@ type DeletePostBody = {
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return corsOptionsResponse(req);
   }
 
   try {
     const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
     if (!authHeader || !authHeader.toLowerCase().startsWith("bearer ")) {
-      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return corsResponse({ error: "Missing Authorization header" }, 401, req);
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(JSON.stringify({ error: "Server not configured (missing SUPABASE_URL or SERVICE_ROLE)" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return corsResponse({ error: "Server not configured (missing SUPABASE_URL or SERVICE_ROLE)" }, 500, req);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -41,18 +29,12 @@ serve(async (req: Request) => {
     const userId = userData.user?.id || "";
 
     if (userError || !userId) {
-      return new Response(JSON.stringify({ error: "Invalid auth token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return corsResponse({ error: "Invalid auth token" }, 401, req);
     }
 
     const { postId }: DeletePostBody = await req.json();
     if (!postId || typeof postId !== "number") {
-      return new Response(JSON.stringify({ error: "postId is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return corsResponse({ error: "postId is required" }, 400, req);
     }
 
     const { data: post, error: fetchErr } = await supabase
@@ -61,30 +43,18 @@ serve(async (req: Request) => {
       .eq("id", postId)
       .single();
     if (fetchErr) {
-      return new Response(JSON.stringify({ error: fetchErr.message || "Failed to fetch post" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return corsResponse({ error: fetchErr.message || "Failed to fetch post" }, 400, req);
     }
     if (!post) {
-      return new Response(JSON.stringify({ error: "Post not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return corsResponse({ error: "Post not found" }, 404, req);
     }
     if (post.user_id !== userId) {
-      return new Response(JSON.stringify({ error: "Not authorized to delete this post" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return corsResponse({ error: "Not authorized to delete this post" }, 403, req);
     }
 
     const { error: delErr } = await supabase.from("posts").delete().eq("id", postId);
     if (delErr) {
-      return new Response(JSON.stringify({ error: delErr.message || "Failed to delete post" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return corsResponse({ error: delErr.message || "Failed to delete post" }, 400, req);
     }
 
     try {
@@ -103,15 +73,9 @@ serve(async (req: Request) => {
       // Best effort; ignore storage errors
     }
 
-    return new Response(JSON.stringify({ success: true, postId }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return corsResponse({ success: true, postId }, 200, req);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return corsResponse({ error: message }, 500, req);
   }
 });

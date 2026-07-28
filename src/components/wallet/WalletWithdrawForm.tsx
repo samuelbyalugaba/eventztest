@@ -46,6 +46,7 @@ export function WalletWithdrawForm({
           <select
             value={provider}
             onChange={e => onProviderChange(e.target.value)}
+            aria-label="Mobile Money Provider"
             className="w-full bg-input-background border border-border rounded-[14px] px-[14px] py-[13px] text-sm text-foreground outline-none appearance-none transition-colors focus:border-gray-400 focus:bg-white pr-10"
           >
             <option>M-Pesa (Vodacom)</option>

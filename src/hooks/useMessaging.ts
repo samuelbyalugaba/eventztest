@@ -9,7 +9,7 @@ interface MessagingProps {
   onSendMessage: (conversationId: number, messageText: string) => void;
 }
 
-export function useMessaging({ conversations: globalConversations, onStartConversation, onSendMessage }: MessagingProps) {
+export function useMessagingUI({ conversations: globalConversations, onStartConversation, onSendMessage }: MessagingProps) {
   const [showMessages, setShowMessages] = useState(false);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messageText, setMessageText] = useState('');

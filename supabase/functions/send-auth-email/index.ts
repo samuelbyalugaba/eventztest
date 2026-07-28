@@ -1,11 +1,6 @@
 import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, webhook-id, webhook-signature, webhook-timestamp",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 type AuthEmailData = {
   email_action_type?: string;
@@ -35,10 +30,10 @@ type OutgoingAuthEmail = {
   text: string;
 };
 
-const json = (body: unknown, status = 200) =>
+const json = (body: unknown, status = 200, req?: Request) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
 
 const getJsonSecret = (name: string, key = "default") => {
@@ -276,8 +271,8 @@ const getMessagesForPayload = (payload: AuthHookPayload) => {
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") return corsOptionsResponse(req);
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
   try {
     const hookSecret = Deno.env.get("SEND_EMAIL_HOOK_SECRET");

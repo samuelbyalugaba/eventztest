@@ -24,7 +24,7 @@ export function RightRail() {
       try {
         const events = await getEvents({ limit: 5 });
         if (!cancelled) setTrending((events || []).slice(0, 5));
-      } catch (error) { console.warn('Failed to load trending events:', error); }
+      } catch (error) { /* Failed to load trending events; non-critical */ }
     })();
     return () => { cancelled = true; };
   }, []);

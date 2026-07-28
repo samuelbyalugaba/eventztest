@@ -57,12 +57,11 @@ async function waitForDepositTransaction(transactionId: number, depositId: strin
           .eq('id', transactionId);
         return providerStatus === 'success';
       }
-    } catch (error) {
-      console.error('Failed to get deposit status:', error);
+    } catch {
       try {
         await ntzsApi.reconcilePendingDeposits();
-      } catch (error2) {
-        console.error('Failed to reconcile pending deposits:', error2);
+      } catch {
+        // Reconciliation failed
       }
     }
 

@@ -261,6 +261,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                       <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
+                        aria-label="Category"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       >
                         <option>General</option>
@@ -275,6 +276,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                       <select
                         value={visibility}
                         onChange={(e) => setVisibility(e.target.value as any)}
+                        aria-label="Visibility"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       >
                         <option value="public">Public</option>

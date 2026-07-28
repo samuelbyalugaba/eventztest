@@ -19,7 +19,7 @@ import { MessagePanel } from './event-details/MessagePanel';
 import { queryClient } from '../queryClient';
 import { useEventsData } from '../hooks/useEventsData';
 import { useEventFilters } from '../hooks/useEventFilters';
-import { useMessaging } from '../hooks/useMessaging';
+import { useMessagingUI } from '../hooks/useMessaging';
 
 interface EventDetailsProps {
   conversations: Conversation[];
@@ -31,7 +31,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { events, setEvents, currentUserId, isFetching, hasLoadedEvents } = useEventsData();
+  const { events, removeEvent, currentUserId, isFetching, hasLoadedEvents } = useEventsData();
 
   const {
     setSelectedLocation,
@@ -70,7 +70,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     messageText, setMessageText,
     handleStartConversationLocal,
     handleSendMessage,
-  } = useMessaging({ conversations: globalConversations, onStartConversation, onSendMessage });
+  } = useMessagingUI({ conversations: globalConversations, onStartConversation, onSendMessage });
 
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [eventToPurchase, setEventToPurchase] = useState<ApiEvent | null>(null);
@@ -89,6 +89,13 @@ export function EventDetails({ conversations: globalConversations, onStartConver
       setShowSearchModal(true);
     }
   }, [location.search]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      navigate(`/profile/${selectedUser.id}`);
+      setSelectedUser(null);
+    }
+  }, [selectedUser, navigate]);
 
   const closeSearchModal = () => {
     setShowSearchModal(false);
@@ -138,8 +145,7 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     setEventPendingDelete(null);
     try {
       await deleteEvent(event.id);
-      const next = events.filter(e => e.id !== event.id);
-      setEvents(next);
+      removeEvent(event.id);
       toast.success('Event deleted');
     } catch (error: any) {
       toast.error(error?.message || 'Failed to delete event');
@@ -283,14 +289,6 @@ export function EventDetails({ conversations: globalConversations, onStartConver
             setDetectStatus('Ready');
           }}
         />
-      )}
-
-      {selectedUser && (
-        (() => {
-          navigate(`/profile/${selectedUser.id}`);
-          setSelectedUser(null);
-          return null;
-        })()
       )}
 
       {selectedEvent && (

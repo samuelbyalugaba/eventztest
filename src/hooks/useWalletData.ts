@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useProfileStore } from '../store/profileStore';
 import { ntzsApi, getLocalWalletBalance } from '../utils/ntzs-api';
@@ -47,6 +47,7 @@ export function useWalletData(isActive = true) {
   const [balance, setBalance] = useState<number | null>(cachedBalance);
   const [ntzsAvailable, setNtzsAvailable] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadWalletData = useCallback(async (forceLoading = false) => {
     try {
@@ -63,8 +64,7 @@ export function useWalletData(isActive = true) {
           ntzsBalance = balanceTzs || 0;
           setNtzsAvailable(true);
         }
-      } catch (error) {
-        console.warn('nTZS balance lookup failed', error);
+      } catch {
         setNtzsAvailable(false);
       }
 
@@ -99,8 +99,8 @@ export function useWalletData(isActive = true) {
             setTxs(filterWalletTransactions(refreshedTransactions));
             return;
           }
-        } catch (error) {
-          console.warn('Wallet reconciliation failed', error);
+        } catch {
+          // Wallet reconciliation failed; non-critical
         }
       }
 
@@ -145,7 +145,12 @@ export function useWalletData(isActive = true) {
     };
   }, [currentUserId, isActive, loadWalletData]);
 
-  const pollDepositStatus = useCallback(async (depositId: string | number) => {
+  const pollDepositStatus = useCallback((depositId: string | number) => {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+
     let attempts = 0;
     const maxAttempts = 20;
     const interval = 3000;
@@ -186,15 +191,23 @@ export function useWalletData(isActive = true) {
         if (attempts % 3 === 0) {
           await loadWalletData();
         }
-      } catch (error) {
-        console.warn('Deposit status poll failed', error);
+      } catch {
+        // Deposit status poll failed; non-critical
       }
 
-      setTimeout(poll, interval);
+      pollTimerRef.current = setTimeout(poll, interval);
     };
 
-    setTimeout(poll, interval);
+    pollTimerRef.current = setTimeout(poll, interval);
   }, [loadWalletData]);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleDeposit = useCallback(async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {

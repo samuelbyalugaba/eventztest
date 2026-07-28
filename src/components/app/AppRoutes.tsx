@@ -60,13 +60,19 @@ export default function AppRoutes({
         <Route path="/live" element={null} />
         <Route path="/profile" element={null} />
         <Route path="/hosted" element={
-          <Suspense fallback={<ListPageSkeleton />}><HostedPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<ListPageSkeleton />}><HostedPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/followers" element={
-          <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="followers" /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="followers" /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/following" element={
-          <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="following" /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="following" /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/profile/:userId" element={
           <RouteErrorBoundary>
@@ -84,13 +90,19 @@ export default function AppRoutes({
           </RouteErrorBoundary>
         } />
         <Route path="/profile/:userId/hosted" element={
-          <Suspense fallback={<ListPageSkeleton />}><HostedPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<ListPageSkeleton />}><HostedPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/profile/:userId/followers" element={
-          <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="followers" /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="followers" /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/profile/:userId/following" element={
-          <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="following" /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<ListPageSkeleton />}><ProfileListPage type="following" /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/create" element={
           <RouteErrorBoundary>
@@ -170,19 +182,29 @@ export default function AppRoutes({
           </RouteErrorBoundary>
         } />
         <Route path="/privacy" element={
-          <Suspense fallback={<GenericPageSkeleton />}><LegalPage type="privacy" /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<GenericPageSkeleton />}><LegalPage type="privacy" /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/terms" element={
-          <Suspense fallback={<GenericPageSkeleton />}><LegalPage type="terms" /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<GenericPageSkeleton />}><LegalPage type="terms" /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/support" element={
-          <Suspense fallback={<GenericPageSkeleton />}><SupportPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<GenericPageSkeleton />}><SupportPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/delete-account" element={
-          <Suspense fallback={<GenericPageSkeleton />}><DeleteAccountPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<GenericPageSkeleton />}><DeleteAccountPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="/auth/callback" element={
-          <Suspense fallback={<GenericPageSkeleton />}><AuthCallbackPage /></Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={<GenericPageSkeleton />}><AuthCallbackPage /></Suspense>
+          </RouteErrorBoundary>
         } />
         <Route path="*" element={
           <div className="flex h-[100dvh] flex-col items-center justify-center bg-background p-4">
@@ -196,34 +218,42 @@ export default function AppRoutes({
       {backgroundLocation && (
         <Routes>
           <Route path="/post/:id" element={
-            <Suspense fallback={<DetailPageSkeleton />}><PostDetailWrapper /></Suspense>
+            <RouteErrorBoundary>
+              <Suspense fallback={<DetailPageSkeleton />}><PostDetailWrapper /></Suspense>
+            </RouteErrorBoundary>
           } />
           <Route path="/event/:id" element={
-            <Suspense fallback={<DetailPageSkeleton />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+            <RouteErrorBoundary>
+              <Suspense fallback={<DetailPageSkeleton />}><EventDetailWrapper onStartConversation={handleStartConversation} /></Suspense>
+            </RouteErrorBoundary>
           } />
           <Route path="/profile" element={
-            <Suspense fallback={<ProfilePageSkeleton />}>
-              <ProfileModalWrapper
-                onLogout={handleLogout}
-                onCreateEvent={handleCreateEvent}
-                onEditEvent={handleEditEvent}
-                onStartOrganizerSetup={handleStartOrganizerSetup}
-                onStartConversation={handleStartConversation}
-                onViewPost={handleViewPost}
-              />
-            </Suspense>
+            <RouteErrorBoundary>
+              <Suspense fallback={<ProfilePageSkeleton />}>
+                <ProfileModalWrapper
+                  onLogout={handleLogout}
+                  onCreateEvent={handleCreateEvent}
+                  onEditEvent={handleEditEvent}
+                  onStartOrganizerSetup={handleStartOrganizerSetup}
+                  onStartConversation={handleStartConversation}
+                  onViewPost={handleViewPost}
+                />
+              </Suspense>
+            </RouteErrorBoundary>
           } />
           <Route path="/profile/:userId" element={
-            <Suspense fallback={<ProfilePageSkeleton />}>
-              <ProfileModalWrapper
-                onLogout={handleLogout}
-                onCreateEvent={handleCreateEvent}
-                onEditEvent={handleEditEvent}
-                onStartOrganizerSetup={handleStartOrganizerSetup}
-                onStartConversation={handleStartConversation}
-                onViewPost={handleViewPost}
-              />
-            </Suspense>
+            <RouteErrorBoundary>
+              <Suspense fallback={<ProfilePageSkeleton />}>
+                <ProfileModalWrapper
+                  onLogout={handleLogout}
+                  onCreateEvent={handleCreateEvent}
+                  onEditEvent={handleEditEvent}
+                  onStartOrganizerSetup={handleStartOrganizerSetup}
+                  onStartConversation={handleStartConversation}
+                  onViewPost={handleViewPost}
+                />
+              </Suspense>
+            </RouteErrorBoundary>
           } />
         </Routes>
       )}

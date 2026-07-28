@@ -134,7 +134,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
           ? events.map((e: any) => ({ ...e, coverImage: e.image_url || e.coverImage, price: e.price_range || e.price }))
           : [],
       ),
-    enabled: !!targetUserId && isOrganizer,
+    enabled: !!targetUserId && isOrganizer && activeTab === 'hosted',
     staleTime: PROFILE_CACHE_TTL_MS,
   });
 
@@ -155,14 +155,14 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const ticketsQuery = useQuery({
     queryKey: queryKeys.profile.tickets(targetUserId || ''),
     queryFn: () => getUserTickets(targetUserId!),
-    enabled: !!targetUserId && !isOrganizer,
+    enabled: !!targetUserId && !isOrganizer && (activeTab === 'tickets' || !activeTab),
     staleTime: PROFILE_CACHE_TTL_MS,
   });
 
   const streamedVideosQuery = useQuery({
     queryKey: queryKeys.profile.streamedVideos(targetUserId || ''),
     queryFn: () => getProfileStreamedVideos(targetUserId!),
-    enabled: !!targetUserId,
+    enabled: !!targetUserId && (activeTab === 'streamed' || !activeTab),
     staleTime: PROFILE_CACHE_TTL_MS,
   });
 

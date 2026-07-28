@@ -105,6 +105,7 @@ export const useProfileStore = create<ProfileState>()(
         attendedCount: 0,
         walletBalance: null,
         dashboardCache: null,
+        userStatsCache: {},
       }),
     }),
     {

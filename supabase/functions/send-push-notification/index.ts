@@ -1,12 +1,6 @@
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-eventz-internal-secret",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 type PushKind = "config" | "generic" | "like" | "comment" | "follow";
 
@@ -33,10 +27,10 @@ type PushSubscriptionRow = {
   auth: string;
 };
 
-const json = (body: unknown, status = 200) =>
+const json = (body: unknown, status = 200, req?: Request) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
 
 const getJsonSecret = (name: string, key = "default") => {
@@ -249,8 +243,8 @@ const sendToSubscriptions = async (
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") return corsOptionsResponse(req);
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
   try {
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
@@ -264,11 +258,11 @@ Deno.serve(async (req) => {
       return json({
         configured,
         publicKey: configured ? vapidPublicKey : "",
-      });
+      }, 200, req);
     }
 
     if (!vapidPublicKey || !vapidPrivateKey) {
-      return json({ error: "Push notification keys are not configured" }, 500);
+      return json({ error: "Push notification keys are not configured" }, 500, req);
     }
 
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
@@ -280,7 +274,7 @@ Deno.serve(async (req) => {
     const admin = createAdminClient();
 
     if (kind === "generic") {
-      if (!isInternal) return json({ error: "Unauthorized" }, 401);
+      if (!isInternal) return json({ error: "Unauthorized" }, 401, req);
 
       const userIds = body.userIds || (body.userId ? [body.userId] : []);
       const result = await sendToSubscriptions(admin, userIds, {
@@ -293,18 +287,18 @@ Deno.serve(async (req) => {
         data: body.data || {},
       });
 
-      return json({ ok: true, ...result });
+      return json({ ok: true, ...result }, 200, req);
     }
 
     const user = await getAuthenticatedUser(req);
-    if (!user) return json({ error: "Unauthorized" }, 401);
+    if (!user) return json({ error: "Unauthorized" }, 401, req);
 
     const { userIds, payload } = await buildSocialPayload(admin, user.id, { ...body, kind });
     const targetIds = userIds.filter((userId) => userId !== user.id);
     const result = await sendToSubscriptions(admin, targetIds, payload);
 
-    return json({ ok: true, ...result });
+    return json({ ok: true, ...result }, 200, req);
   } catch (error) {
-    return json({ error: (error as Error).message || "Failed to send push notification" }, 400);
+    return json({ error: (error as Error).message || "Failed to send push notification" }, 400, req);
   }
 });

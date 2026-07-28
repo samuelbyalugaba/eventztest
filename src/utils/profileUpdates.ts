@@ -16,8 +16,8 @@ export const clearProfileDependentCaches = () => {
       .forEach((key) => window.localStorage.removeItem(key));
     window.sessionStorage.removeItem('feedScrollPos');
     window.sessionStorage.removeItem('feedLastPostId');
-  } catch (error) {
-    console.warn('Failed to clear profile caches:', error);
+  } catch {
+    // Failed to clear profile caches; non-critical
   }
 
   void queryClient.invalidateQueries({ queryKey: queryKeys.feed.root });

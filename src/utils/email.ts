@@ -92,7 +92,7 @@ export const sendSocialEmailNotification = async (
       body: { kind, ...payload },
       headers: { Authorization: `Bearer ${token}` },
     });
-  } catch (error) {
-    console.warn('Failed to send email notification:', error);
+  } catch {
+    // Failed to send email notification; non-critical
   }
 };

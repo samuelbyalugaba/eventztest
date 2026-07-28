@@ -7,6 +7,7 @@ import { Post, Conversation } from '../types';
 import { removeUserPostsFromFeedCache, useFeedData } from '../hooks/useFeedData';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
+import { useAuth } from '../contexts/AuthContext';
 
 import { FeedHeader } from './FeedHeader';
 import { FeedModals } from './feed/FeedModals';
@@ -27,7 +28,6 @@ type RouteTarget = {
 interface FeedProps {
   conversations: Conversation[];
   onStartConversation: (user: { name: string; username?: string; avatar: string; verified: boolean; isOrganizer?: boolean; id?: string }) => Promise<Conversation | null | undefined> | Conversation | null;
-  currentUser?: { id: string; user_metadata?: Record<string, unknown> } | null;
   onViewPost?: (post: Post) => void;
   isPaused?: boolean;
 }
@@ -35,10 +35,10 @@ interface FeedProps {
 export function Feed({ 
   conversations: globalConversations, 
   onStartConversation, 
-  currentUser: propCurrentUser,
   onViewPost,
   isPaused
 }: FeedProps) {
+  const { user: currentUser, profile: currentUserProfile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const currentRouteTarget = useMemo<RouteTarget>(() => ({
@@ -55,15 +55,14 @@ export function Feed({
     setPosts,
     hasMore,
     isLoadingMore,
-    currentUser,
     isLoading,
+    followingIds,
     notifications,
     notificationsLoading,
-    currentUserProfile,
     handleLoadMore,
     refreshNotifications,
     setNotifications,
-  } = useFeedData(propCurrentUser);
+  } = useFeedData();
 
   const {
     selectedPost,
@@ -266,7 +265,7 @@ export function Feed({
         setPosts(prev => prev.map(p => p.id !== post.id ? p : { ...p, comments: mapped, comments_count: comments.length } as Post));
         setSelectedPostForComments(prev => { if (!prev || prev.id !== post.id) return prev; return { ...prev, comments: mapped, comments_count: comments.length } as Post; });
       }
-    } catch (err) { console.error('Error fetching comments:', err); }
+    } catch (err) { /* comments fetch failed */ }
   }, [setPosts]);
 
   const onLikeId = useCallback((id: number) => toggleLike(id), [toggleLike]);

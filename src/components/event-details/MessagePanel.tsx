@@ -190,7 +190,7 @@ export function MessagePanel({
                   type="text"
                   value={messageText}
                   onChange={(e) => onMessageTextChange(e.target.value)}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       onSendMessage();

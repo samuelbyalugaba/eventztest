@@ -69,8 +69,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
       const registrations = await navigator.serviceWorker?.getRegistrations?.();
       await Promise.all((registrations || []).map((registration) => registration.update()));
-    } catch (error) {
-      console.error('Failed to clean up caches for chunk reload:', error);
+    } catch {
+      // Failed to clean up caches; non-critical
     }
 
     window.location.reload();

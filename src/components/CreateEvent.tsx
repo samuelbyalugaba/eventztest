@@ -98,8 +98,8 @@ export function CreateEvent({ onBack, event }: CreateEventProps) {
       try {
         const data = await getEventAnalytics(savedEventId);
         setAnalytics(data);
-      } catch (error) {
-        console.error('Failed to fetch analytics:', error);
+      } catch {
+        // Failed to fetch analytics; non-critical
       }
     };
 

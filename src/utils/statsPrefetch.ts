@@ -30,8 +30,8 @@ async function fetchWalletBalance(userId: string, email: string) {
       const { balanceTzs } = await ntzsApi.getBalance(nUser.id);
       return balanceTzs || 0;
     }
-  } catch (error) {
-    console.warn('Failed to fetch wallet balance:', error);
+  } catch {
+    // Failed to fetch wallet balance; non-critical
   }
   return getLocalWalletBalance(userId);
 }

@@ -1,13 +1,7 @@
 // Polls Cloudflare Stream Live Input state and syncs events.streaming.isLive.
 // Public — anyone can trigger a refresh; we only update DB when CF says state changed.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 const CF_ACCOUNT_ID = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
 const CF_STREAM_TOKEN = Deno.env.get("CLOUDFLARE_STREAM_TOKEN");
@@ -15,15 +9,15 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return corsOptionsResponse(req);
 
   try {
     if (!CF_ACCOUNT_ID || !CF_STREAM_TOKEN) {
-      return json({
+      return corsResponse({
         configured: false,
         results: [],
         message: "Cloudflare Stream credentials are not configured",
-      });
+      }, 200, req);
     }
     const body = await req.json().catch(() => ({}));
     const eventId = body.eventId ? Number(body.eventId) : null;
@@ -38,7 +32,7 @@ Deno.serve(async (req) => {
     if (eventId) query = query.eq("id", eventId);
 
     const { data: events, error } = await query;
-    if (error) return json({ error: error.message }, 500);
+    if (error) return corsResponse({ error: error.message }, 500, req);
 
     const results: Array<Record<string, unknown>> = [];
 
@@ -74,16 +68,9 @@ Deno.serve(async (req) => {
       results.push({ eventId: ev.id, state, isLive, changed: isLive !== wasLive });
     }
 
-    return json({ results });
+    return corsResponse({ results }, 200, req);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return json({ error: msg }, 500);
+    return corsResponse({ error: msg }, 500, req);
   }
 });
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}

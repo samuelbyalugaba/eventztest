@@ -30,7 +30,7 @@ export function useChatMessages(conversationId: number, userId: string) {
     getMessages(conversationId).then(msgs => {
       setMessages(msgs || []);
       scrollToBottom('auto');
-      markMessagesAsRead(conversationId, userId).catch(console.error);
+      markMessagesAsRead(conversationId, userId).catch(() => {});
     });
 
     const subscription = subscribeToMessages(conversationId, (newMessage) => {
@@ -40,7 +40,7 @@ export function useChatMessages(conversationId: number, userId: string) {
       });
       scrollToBottom();
       if (newMessage.sender_id !== userId) {
-        markMessagesAsRead(conversationId, userId).catch(console.error);
+        markMessagesAsRead(conversationId, userId).catch(() => {});
       }
     });
 
@@ -66,12 +66,6 @@ export function useChatMessages(conversationId: number, userId: string) {
           return [...prev, sent];
         });
       }
-      getMessages(conversationId).then((msgs) => {
-        if (Array.isArray(msgs)) {
-          setMessages(msgs);
-          scrollToBottom();
-        }
-      }).catch(() => {});
       scrollToBottom();
       return true;
     } catch (error) {
@@ -106,12 +100,6 @@ export function useChatMessages(conversationId: number, userId: string) {
             return [...prev, sent];
           });
         }
-        getMessages(conversationId).then((msgs) => {
-          if (Array.isArray(msgs)) {
-            setMessages(msgs);
-            scrollToBottom();
-          }
-        }).catch(() => {});
         toast.success(isVideo ? 'Video sent' : 'Image sent', { id: toastId });
         scrollToBottom();
       }

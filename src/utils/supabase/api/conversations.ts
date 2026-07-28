@@ -60,8 +60,7 @@ export const getConversations = async (userId: string) => {
   let blockedUserIds = new Set<string>();
   try {
     blockedUserIds = await getBlockedUserIds(userId);
-  } catch (error) {
-    console.warn('Failed to get blocked user IDs for conversations:', error);
+  } catch {
     blockedUserIds = new Set<string>();
   }
 
@@ -84,18 +83,22 @@ export const getConversations = async (userId: string) => {
 
   const conversationIds = visibleConversations.map((c: any) => c.id);
 
-  const { data: allMessages } = await supabase
-    .from('messages')
-    .select('*')
-    .in('conversation_id', conversationIds)
-    .order('created_at', { ascending: false });
-
   const lastMsgByConv = new Map<number, any>();
-  if (allMessages) {
-    for (const msg of allMessages) {
-      if (!lastMsgByConv.has(msg.conversation_id)) {
-        lastMsgByConv.set(msg.conversation_id, msg);
-      }
+  if (conversationIds.length > 0) {
+    const lastMsgResults = await Promise.all(
+      conversationIds.map(async (convId: number) => {
+        const { data } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', convId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return { convId, msg: data };
+      })
+    );
+    for (const { convId, msg } of lastMsgResults) {
+      if (msg) lastMsgByConv.set(convId, msg);
     }
   }
 
@@ -283,11 +286,11 @@ export const subscribeToAllMessages = (callback: (message: Message) => void) => 
           .from('profiles')
           .select('*')
           .eq('id', payload.new.sender_id)
-          .single();
+          .maybeSingle();
         
         const message = {
           ...payload.new,
-          sender
+          sender: sender ?? { id: payload.new.sender_id, name: 'Unknown', username: '', avatar: '' }
         } as unknown as Message;
         
         callback(message);

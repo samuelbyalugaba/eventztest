@@ -221,8 +221,8 @@ export const sendSocialPushNotification = async (
       body: { kind, ...payload },
       headers: { Authorization: `Bearer ${token}` },
     });
-  } catch (error) {
-    console.warn('Failed to send push notification:', error);
+  } catch {
+    // Failed to send push notification; non-critical
   }
 };
 

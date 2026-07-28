@@ -1,21 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 const NTZS_API_KEY = Deno.env.get('NTZS_API_KEY');
 const NTZS_BASE_URL = 'https://www.ntzs.co.tz/api/v1';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-};
-
-function jsonResponse(body: object, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
 
 type TransactionRow = {
   id: number | string;
@@ -246,18 +234,18 @@ async function reconcilePendingDepositsFromBalance(
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return corsOptionsResponse(req);
   }
 
   try {
     if (!NTZS_API_KEY) {
       console.error('[ntzs-proxy] Missing NTZS_API_KEY');
-      return jsonResponse({ error: 'Server configuration error: Missing NTZS_API_KEY. Add it in Supabase Edge Function Secrets.' }, 500);
+      return corsResponse({ error: 'Server configuration error: Missing NTZS_API_KEY. Add it in Supabase Edge Function Secrets.' }, 500, req);
     }
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return jsonResponse({ error: 'Unauthorized' }, 401);
+      return corsResponse({ error: 'Unauthorized' }, 401, req);
     }
 
     // Validate JWT
@@ -270,7 +258,7 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData?.user?.id) {
-      return jsonResponse({ error: 'Invalid or expired token' }, 401);
+      return corsResponse({ error: 'Invalid or expired token' }, 401, req);
     }
     const authenticatedUserId = userData.user.id;
     const authenticatedEmail = String(userData.user.email || '');
@@ -279,15 +267,15 @@ serve(async (req) => {
     try {
       bodyData = await req.json();
     } catch {
-      return jsonResponse({ error: 'Invalid JSON body' }, 400);
+      return corsResponse({ error: 'Invalid JSON body' }, 400, req);
     }
 
     const { action, payload } = bodyData;
-    if (!action) return jsonResponse({ error: 'Missing action' }, 400);
+    if (!action) return corsResponse({ error: 'Missing action' }, 400, req);
 
     if (action === 'reconcile_pending_deposits') {
       if (!supabaseServiceRoleKey) {
-        return jsonResponse({ error: 'Server configuration error: Missing service role key.' }, 500);
+        return corsResponse({ error: 'Server configuration error: Missing service role key.' }, 500, req);
       }
 
       const admin = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -297,12 +285,12 @@ serve(async (req) => {
         authenticatedEmail
       );
 
-      return jsonResponse(reconciliation);
+      return corsResponse(reconciliation, 200, req);
     }
 
     // For create_user, enforce the externalId matches the authenticated user
     if (action === 'create_user' && payload?.externalId && payload.externalId !== authenticatedUserId) {
-      return jsonResponse({ error: 'Cannot create user for a different account' }, 403);
+      return corsResponse({ error: 'Cannot create user for a different account' }, 403, req);
     }
 
     // Route to nTZS API endpoint
@@ -317,11 +305,11 @@ serve(async (req) => {
         apiBody = payload;
         break;
       case 'get_user':
-        if (!payload?.userId) return jsonResponse({ error: 'Missing payload.userId' }, 400);
+        if (!payload?.userId) return corsResponse({ error: 'Missing payload.userId' }, 400, req);
         endpoint = `/users/${payload.userId}`;
         break;
       case 'get_balance':
-        if (!payload?.userId) return jsonResponse({ error: 'Missing payload.userId' }, 400);
+        if (!payload?.userId) return corsResponse({ error: 'Missing payload.userId' }, 400, req);
         endpoint = `/users/${payload.userId}`;
         break;
       case 'deposit':
@@ -330,7 +318,7 @@ serve(async (req) => {
         apiBody = payload;
         break;
       case 'get_deposit':
-        if (!payload?.depositId) return jsonResponse({ error: 'Missing payload.depositId' }, 400);
+        if (!payload?.depositId) return corsResponse({ error: 'Missing payload.depositId' }, 400, req);
         endpoint = `/deposits/${payload.depositId}`;
         break;
       case 'transfer':
@@ -344,7 +332,7 @@ serve(async (req) => {
         apiBody = payload;
         break;
       default:
-        return jsonResponse({ error: `Unknown action: ${action}` }, 400);
+        return corsResponse({ error: `Unknown action: ${action}` }, 400, req);
     }
 
     const url = `${NTZS_BASE_URL}${endpoint}`;
@@ -358,10 +346,10 @@ serve(async (req) => {
     if (action === 'get_deposit' && supabaseServiceRoleKey) {
       const admin = createClient(supabaseUrl, supabaseServiceRoleKey);
       const reconciliation = await reconcileDepositByProviderData(admin, authenticatedUserId, data);
-      return jsonResponse({ ...data, reconciliation });
+      return corsResponse({ ...data, reconciliation }, 200, req);
     }
 
-    return jsonResponse(data);
+    return corsResponse(data, 200, req);
 
   } catch (error: any) {
     console.error('[ntzs-proxy] Internal Error:', error);
@@ -377,21 +365,21 @@ serve(async (req) => {
       const shortfall = Math.max(0, Number(providerDetails.required ?? 0) - available);
       const suggestedAmount = Math.max(0, Math.floor(requested - shortfall));
 
-      return jsonResponse({
+      return corsResponse({
         error: 'Amount too high. Try a smaller amount.',
         code: 'amount_too_high',
         suggestedAmount,
         statusCode,
         apiUnavailable: false,
         fallback: false,
-      }, 200);
+      }, 200, req);
     }
 
-    return jsonResponse({
+    return corsResponse({
       error: 'Internal error.',
       statusCode,
       apiUnavailable: isFallbackable,
       fallback: isFallbackable,
-    }, 200);
+    }, 200, req);
   }
 });

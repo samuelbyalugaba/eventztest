@@ -1,11 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-eventz-internal-secret",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { getCorsHeaders, corsResponse, corsOptionsResponse } from "../shared/cors.ts";
 
 type EmailCategory =
   | "transactional"
@@ -54,10 +48,10 @@ type Recipient = {
   preferences?: Record<string, unknown> | null;
 };
 
-const json = (body: unknown, status = 200) =>
+const json = (body: unknown, status = 200, req?: Request) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
 
 const getJsonSecret = (name: string, key = "default") => {
@@ -593,8 +587,8 @@ const buildSocialEmail = async (
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") return corsOptionsResponse(req);
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
   try {
     const body = (await req.json().catch(() => ({}))) as EmailRequest;
@@ -604,7 +598,7 @@ Deno.serve(async (req) => {
       return json({
         configured: Boolean(Deno.env.get("RESEND_API_KEY")),
         from: Deno.env.get("EMAIL_FROM") || "",
-      });
+      }, 200, req);
     }
 
     const internalSecret = Deno.env.get("EVENTZ_INTERNAL_FUNCTION_SECRET");
@@ -614,7 +608,7 @@ Deno.serve(async (req) => {
 
     if (kind === "like" || kind === "comment" || kind === "follow") {
       const user = await getAuthenticatedUser(req);
-      if (!user) return json({ error: "Unauthorized" }, 401);
+      if (!user) return json({ error: "Unauthorized" }, 401, req);
 
       const { userIds, request } = await buildSocialEmail(admin, user.id, body);
       const recipients = await getRecipientsForUsers(
@@ -629,10 +623,10 @@ Deno.serve(async (req) => {
         targetUserId: body.targetUserId,
       });
 
-      return json({ ok: true, ...result });
+      return json({ ok: true, ...result }, 200, req);
     }
 
-    if (!isInternal) return json({ error: "Unauthorized" }, 401);
+    if (!isInternal) return json({ error: "Unauthorized" }, 401, req);
 
     const explicitRecipients = getExplicitRecipients(normalizeEmailList(body.to));
     const userRecipients = await getRecipientsForUsers(admin, [
@@ -641,11 +635,11 @@ Deno.serve(async (req) => {
     ]);
     const recipients = [...explicitRecipients, ...userRecipients];
 
-    if (recipients.length === 0) return json({ error: "No valid recipients" }, 400);
+    if (recipients.length === 0) return json({ error: "No valid recipients" }, 400, req);
 
     const result = await deliverEmail(admin, recipients, body, body.metadata || {});
-    return json({ ok: true, ...result });
+    return json({ ok: true, ...result }, 200, req);
   } catch (error) {
-    return json({ error: (error as Error).message || "Failed to send email" }, 400);
+    return json({ error: (error as Error).message || "Failed to send email" }, 400, req);
   }
 });

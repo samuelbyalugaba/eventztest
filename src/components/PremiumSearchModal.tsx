@@ -47,7 +47,6 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
         const data = await getTrending();
         setTrendingData(data);
       } catch (error) {
-        console.warn('Failed to load trending data:', error);
         setTrendingData({ events: [], people: [] });
       } finally {
         setIsLoadingTrending(false);
@@ -75,7 +74,6 @@ export function PremiumSearchModal({ onClose, events, onEventSelect, onPersonSel
         const results = await searchProfiles(searchQuery);
         setPeopleResults(results || []);
       } catch (error) {
-        console.warn('Failed to search profiles:', error);
         setPeopleResults([]);
       } finally {
         setIsSearchingPeople(false);

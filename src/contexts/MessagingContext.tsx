@@ -98,7 +98,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       try {
         const streams = await getLiveStreams();
         setHasLiveEvents(streams.length > 0);
-      } catch (error) { console.warn('Failed to check live events:', error); }
+      } catch { /* Failed to check live events; non-critical */ }
     };
     check();
     const id = setInterval(check, 60000);
@@ -154,7 +154,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
             id: f.id, name: f.full_name || '', username: f.username || '', avatar: f.avatar_url || '',
           })));
         });
-      } catch (error) { console.warn('Failed to setup presence:', error); }
+      } catch { /* Failed to setup presence; non-critical */ }
     })();
     return () => { if (channel) channel.unsubscribe(); };
   }, [isAuthenticated, currentUser]);
@@ -193,7 +193,9 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
           return [newConv, ...prev];
         });
         return newConv;
-      } catch (error) { console.error('Failed to start conversation:', error); }
+      } catch {
+        // Failed to start conversation; non-critical
+      }
     }
     return null;
   }, [currentUser]);
@@ -261,7 +263,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
         lastMessage: { ...conv.lastMessage, isRead: true },
       } : conv);
     });
-    try { await markMessagesAsRead(conversationId, currentUser.id); } catch (error) { console.warn('Failed to mark messages as read:', error); }
+    try { await markMessagesAsRead(conversationId, currentUser.id); } catch { /* Failed to mark messages as read */ }
   }, [currentUser]);
 
   const handleDeleteConversation = useCallback(async (conversationId: number) => {

@@ -59,7 +59,7 @@ const mapUpcoming = (e: any): LiveStream => {
   };
 };
 
-export function useLiveFeedData() {
+export function useLiveFeedData(isActive = true) {
   const queryClient = useQueryClient();
 
   const liveQuery = useQuery({
@@ -104,13 +104,14 @@ export function useLiveFeedData() {
 
   /* Polling for OBS-driven streams without webhooks */
   useEffect(() => {
+    if (!isActive) return;
     const pollCf = () => {
       supabase.functions.invoke('cloudflare-stream-status', { body: {} }).catch(() => {});
     };
     pollCf();
     const cfInterval = setInterval(pollCf, 15_000);
     return () => clearInterval(cfInterval);
-  }, []);
+  }, [isActive]);
 
   /* DB change subscription */
   useEffect(() => {

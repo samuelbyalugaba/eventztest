@@ -143,48 +143,32 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
     }
   }
 
-  const dbUpdates = toDbProfile(sanitizedUpdates)
-
   const { data, error } = await supabase
     .from('profiles')
-    .upsert({ ...dbUpdates, id: userId })
+    .upsert({ ...sanitizedUpdates, id: userId })
     .select()
     .single();
 
   if (!error) return data as unknown as Profile;
 
-  const baseFields: ProfileDbFields = {
-    username: dbUpdates.username,
-    full_name: dbUpdates.full_name,
-    avatar_url: dbUpdates.avatar_url,
-    bio: dbUpdates.bio,
-    location: dbUpdates.location,
-    birthdate: dbUpdates.birthdate,
-    organizer_type: dbUpdates.organizer_type,
-    contact_email: dbUpdates.contact_email,
-    phone: dbUpdates.phone,
-  };
-
   const { data: data2, error: error2 } = await supabase
     .from('profiles')
-    .upsert({ ...baseFields, id: userId })
+    .upsert({ ...sanitizedUpdates, id: userId }, { onConflict: 'id', ignoreDuplicates: false })
     .select()
     .single();
 
   if (!error2) return data2 as unknown as Profile;
 
-  const hasOtherUpdates = Object.keys(sanitizedUpdates).some(key => key !== 'avatar_url' && key !== 'id');
-  
-  if (!hasOtherUpdates && sanitizedUpdates.avatar_url) {
-    const { data: data3, error: error3 } = await supabase
-      .from('profiles')
-      .upsert({ id: userId, avatar_url: sanitizedUpdates.avatar_url as string | null })
-      .select()
-      .single();
-    if (!error3) return data3 as unknown as Profile;
-  }
+  const { data: data3, error: error3 } = await supabase
+    .from('profiles')
+    .update(sanitizedUpdates)
+    .eq('id', userId)
+    .select()
+    .single();
 
-  throw error2 || error;
+  if (!error3) return data3 as unknown as Profile;
+
+  throw error3 || error2 || error;
 };
 
 export const checkUsernameUnique = async (username: string, currentUserId?: string) => {
@@ -225,11 +209,17 @@ export const becomeOrganizer = async (details: {
   return data;
 };
 
+const sanitizeIlikeInput = (value: string) =>
+  value.replace(/[%_]/g, (ch) => `\\${ch}`);
+
 export const searchProfiles = async (query: string) => {
+  const sanitized = sanitizeIlikeInput(query.trim());
+  if (!sanitized) return [];
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+    .or(`username.ilike.%${sanitized}%,full_name.ilike.%${sanitized}%`)
     .limit(10);
 
   if (error) throw error;

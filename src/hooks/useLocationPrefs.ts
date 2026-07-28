@@ -45,8 +45,8 @@ export function useLocationPrefs(locationSearch: string) {
           const stored = localStorage.getItem(STORAGE_KEY);
           if (stored) setRecentLocations(JSON.parse(stored));
         }
-      } catch (error) {
-        console.warn('Failed to load location preferences:', error);
+      } catch {
+        // Failed to load location preferences; non-critical
       }
     };
     loadPreferences();
@@ -109,8 +109,8 @@ export function useLocationPrefs(locationSearch: string) {
       } else {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       }
-    } catch (error) {
-      console.warn('Failed to persist recent locations:', error);
+    } catch {
+      // Failed to persist recent locations; non-critical
     }
   };
 

@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { X, ExternalLink, Download } from 'lucide-react';
-import { useVisualViewport } from '../utils/useVisualViewport';
+import { useVisualViewport } from '../hooks/useVisualViewport';
 import { isVideoMedia } from '../utils/media';
 import type { Profile } from '../utils/supabase/api';
 import { ConfirmDialog } from './ui/confirm-dialog';
