@@ -162,7 +162,7 @@ export function useProfileData(userId?: string, activeTab?: string) {
   const streamedVideosQuery = useQuery({
     queryKey: queryKeys.profile.streamedVideos(targetUserId || ''),
     queryFn: () => getProfileStreamedVideos(targetUserId!),
-    enabled: !!targetUserId && (activeTab === 'streamed' || !activeTab),
+    enabled: !!targetUserId && (isOrganizer || activeTab === 'streamed' || !activeTab),
     staleTime: PROFILE_CACHE_TTL_MS,
   });
 

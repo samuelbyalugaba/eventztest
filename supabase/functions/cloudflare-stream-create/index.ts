@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
     // Create a new Live Input on Cloudflare Stream
     const cfPayload = {
-      meta: { name: `event-${eventId}` },
+      meta: { name: event.title || `event-${eventId}` },
       recording: { mode: "automatic", requireSignedURLs: false },
       defaultCreator: userId,
     };
