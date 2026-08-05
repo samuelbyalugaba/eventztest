@@ -22,6 +22,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const isMobile = useIsMobile();
 
   // ── Agora / broadcast ──
+  const isObsDefault = Boolean(event.streaming?.ingest_url || event.streaming?.stream_key);
   const {
     client,
     localAudioTrack,
@@ -34,7 +35,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     toggleCamera,
     toggleMic,
     toggleCameraDevice,
-  } = useAgoraBroadcast(event.streaming?.isLive || false);
+  } = useAgoraBroadcast(event.streaming?.isLive || false, isObsDefault);
 
   // ── Metrics (viewer count, revenue, timer) ──
   const [viewerCount, setViewerCount] = useState(event.streaming?.liveViewers || 0);
@@ -66,7 +67,9 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [showSettings, setShowSettings] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(true);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'settings' | 'monetization' | 'analytics'>('settings');
-  const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>('webcam');
+  const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>(
+    (event.streaming?.ingest_url || event.streaming?.stream_key) ? 'obs' : 'webcam'
+  );
   const [streamTitle, setStreamTitle] = useState(event.title || '');
   const [streamCategory, setStreamCategory] = useState(event.category || 'General');
   const [visibility, setVisibility] = useState<'public' | 'ticket' | 'followers'>((event.streaming as any)?.visibility || 'public');
