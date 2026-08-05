@@ -57,11 +57,14 @@ describe('feed query cache actions', () => {
   });
 
   it('removes blocked user posts from paged query payloads', () => {
-    queryClient.setQueryData(queryKeys.feed.page('viewer-1', 20), [post(3, 'blocked-user'), post(4, 'friend')]);
+    queryClient.setQueryData(queryKeys.feed.page('viewer-1', 20), {
+      posts: [post(3, 'blocked-user'), post(4, 'friend')],
+      count: 2,
+    });
 
     removeUserPostsFromFeedCache('blocked-user');
 
-    const cached = queryClient.getQueryData<Post[]>(queryKeys.feed.page('viewer-1', 20));
-    expect(cached?.map((item) => item.id)).toEqual([4]);
+    const cached = queryClient.getQueryData<{ posts: Post[]; count: number }>(queryKeys.feed.page('viewer-1', 20));
+    expect(cached?.posts.map((item) => item.id)).toEqual([4]);
   });
 });

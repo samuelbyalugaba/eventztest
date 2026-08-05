@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { ReactNode } from 'react';
 
@@ -96,9 +96,11 @@ describe('useFeedData', () => {
     expect(result.current.currentUser).toEqual(mockUser);
   });
 
-  it('has notifications loading as false initially', () => {
+  it('has notifications loading as false initially', async () => {
     const { result } = renderHook(() => useFeedData(), { wrapper: createWrapper() });
-    expect(result.current.notificationsLoading).toBe(false);
+    await waitFor(() => {
+      expect(result.current.notificationsLoading).toBe(false);
+    });
     expect(result.current.notifications).toEqual([]);
   });
 
