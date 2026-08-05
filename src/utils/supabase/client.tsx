@@ -7,10 +7,12 @@ const looksLikeJwt = (value: string) => value.split('.').length === 3;
 
 const supabaseUrl = normalizeEnv(import.meta.env.VITE_SUPABASE_URL);
 const anonKey = normalizeEnv(import.meta.env.VITE_SUPABASE_ANON_KEY);
+const publishableKey = normalizeEnv(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 const legacyKey = normalizeEnv(import.meta.env.VITE_SUPABASE_KEY);
 
 const supabaseKey = (() => {
   if (anonKey && looksLikeJwt(anonKey)) return anonKey;
+  if (publishableKey && looksLikeJwt(publishableKey)) return publishableKey;
   if (legacyKey && looksLikeJwt(legacyKey)) return legacyKey;
   return undefined;
 })();
