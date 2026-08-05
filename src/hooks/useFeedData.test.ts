@@ -1,8 +1,27 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { queryClient } from '../queryClient';
 import { queryKeys } from '../queryKeys';
-import { removePostFromFeedCache, removeUserPostsFromFeedCache } from './useFeedData';
 import type { Post } from '../types';
+
+vi.mock('../utils/supabase/client', () => ({
+  supabase: {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }),
+  },
+  isSupabaseConfigured: vi.fn().mockReturnValue(true),
+}));
+
+vi.mock('../utils/supabase/api', () => ({
+  getPosts: vi.fn().mockResolvedValue([]),
+  getProfile: vi.fn().mockResolvedValue(null),
+  getFollowedUserIds: vi.fn().mockResolvedValue([]),
+  getNotifications: vi.fn().mockResolvedValue([]),
+}));
+
+import { removePostFromFeedCache, removeUserPostsFromFeedCache } from './useFeedData';
 
 const post = (id: number, userId: string): Post => ({
   id,

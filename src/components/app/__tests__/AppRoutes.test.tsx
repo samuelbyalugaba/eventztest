@@ -1,6 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '../../../test/utils';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '../../../test/utils';
 import AppRoutes from '../AppRoutes';
+
+vi.mock('../../legal/LegalPage', () => ({
+  LegalPage: ({ type }: { type: string }) => (
+    <div>
+      <h1>{type === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}</h1>
+      <p>{type === 'privacy' ? 'Eventz privacy policy' : 'Eventz terms of use'}</p>
+    </div>
+  ),
+}));
 
 const defaultProps = {
   location: { pathname: '/', search: '', hash: '', state: null, key: '' },
@@ -19,24 +28,28 @@ describe('AppRoutes', () => {
     expect(window.location.pathname).toBe('/events');
   });
 
-  it('renders privacy route', () => {
+  it('renders privacy route', async () => {
     render(
       <AppRoutes
         {...defaultProps}
         location={{ ...defaultProps.location, pathname: '/privacy' }}
       />
     );
-    expect(screen.getAllByText(/privacy/i).length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText(/privacy/i).length).toBeGreaterThan(0);
+    });
   });
 
-  it('renders terms route', () => {
+  it('renders terms route', async () => {
     render(
       <AppRoutes
         {...defaultProps}
         location={{ ...defaultProps.location, pathname: '/terms' }}
       />
     );
-    expect(screen.getAllByText(/terms/i).length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText(/terms/i).length).toBeGreaterThan(0);
+    });
   });
 
   it('renders 404 for unknown routes', () => {

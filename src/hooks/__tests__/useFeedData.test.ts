@@ -44,6 +44,17 @@ vi.mock('../../queryClient', () => ({
   }),
 }));
 
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: vi.fn().mockReturnValue({
+    user: { id: 'user-1', email: 'test@test.com' },
+    profile: { id: 'user-1', full_name: 'Test User' },
+    isAuthenticated: true,
+    isLoading: false,
+    signOut: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 import { useFeedData } from '../useFeedData';
 
 function createWrapper() {
