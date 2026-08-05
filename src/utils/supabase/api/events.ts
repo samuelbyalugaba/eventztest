@@ -652,8 +652,9 @@ const supabaseFunctionUrl = (name: string) => {
 
 const getSupabaseAnonKey = () => {
   const anonKey = normalizeEnv(import.meta.env.VITE_SUPABASE_ANON_KEY);
+  const publishableKey = normalizeEnv(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
   const legacyKey = normalizeEnv(import.meta.env.VITE_SUPABASE_KEY);
-  const key = anonKey || legacyKey;
+  const key = anonKey || publishableKey || legacyKey;
 
   if (!key) {
     throw new Error('Streaming backend is not configured');
