@@ -81,7 +81,7 @@ describe('useFeedData', () => {
 
   it('accepts an initial current user', () => {
     const mockUser = { id: 'user-1', email: 'test@test.com' };
-    const { result } = renderHook(() => useFeedData(mockUser), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useFeedData(), { wrapper: createWrapper() });
     expect(result.current.currentUser).toEqual(mockUser);
   });
 

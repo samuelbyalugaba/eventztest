@@ -72,37 +72,6 @@ export const getProfile = async (userId: string) => {
   return data;
 };
 
-type ProfileDbFields = {
-  avatar_url?: string | null
-  bio?: string | null
-  birthdate?: string | null
-  contact_email?: string | null
-  full_name?: string | null
-  is_organizer?: boolean | null
-  last_notification_read_at?: string | null
-  location?: string | null
-  organizer_type?: string | null
-  phone?: number | null
-  username?: string | null
-  verified?: boolean | null
-}
-
-const toDbProfile = (updates: Record<string, unknown>): ProfileDbFields => {
-  const db: ProfileDbFields = {}
-  if ('avatar_url' in updates) db.avatar_url = updates.avatar_url as string | null
-  if ('bio' in updates) db.bio = updates.bio as string | null
-  if ('birthdate' in updates) db.birthdate = updates.birthdate as string | null
-  if ('contact_email' in updates) db.contact_email = updates.contact_email as string | null
-  if ('full_name' in updates) db.full_name = updates.full_name as string | null
-  if ('is_organizer' in updates) db.is_organizer = updates.is_organizer as boolean | null
-  if ('location' in updates) db.location = updates.location as string | null
-  if ('organizer_type' in updates) db.organizer_type = updates.organizer_type as string | null
-  if ('phone' in updates) db.phone = updates.phone != null ? Number(updates.phone) : null
-  if ('username' in updates) db.username = updates.username as string | null
-  if ('verified' in updates) db.verified = updates.verified as boolean | null
-  return db
-}
-
 export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
   const sanitizedUpdates: Record<string, unknown> = Object.fromEntries(
     Object.entries(updates).filter(([, v]) => v !== undefined)

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, PlaySquare, Search } from 'lucide-react';
+import { Calendar, PlaySquare, Search, X } from 'lucide-react';
 import { BackButton } from '../ui/BackButton';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -158,6 +158,14 @@ export function HostedPage() {
     navigate(`/event/${event.id}`, { state: { backgroundLocation: location } });
   };
 
+  const [selectedStream, setSelectedStream] = useState<CloudflareStream | null>(null);
+
+  const getStreamPlaybackUrl = (stream: CloudflareStream) => {
+    if (stream.playback_url) return stream.playback_url;
+    if (stream.uid && !stream.uid.startsWith('event-')) return `https://iframe.videodelivery.net/${stream.uid}`;
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-[calc(2rem+var(--eventz-safe-area-bottom))]">
       <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 pt-[var(--eventz-safe-area-top)]">
@@ -260,7 +268,7 @@ export function HostedPage() {
                   <HostedStreamCard
                     key={stream.uid || stream.id}
                     stream={stream}
-                    onOpen={() => stream.event && openEvent(stream.event)}
+                    onOpen={() => setSelectedStream(stream)}
                   />
                 ))}
               </div>
@@ -268,6 +276,39 @@ export function HostedPage() {
           </section>
         )}
       </main>
+
+      {selectedStream && (() => {
+        const playbackUrl = getStreamPlaybackUrl(selectedStream);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setSelectedStream(null)}>
+            <div className="relative w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => setSelectedStream(null)}
+                className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              {playbackUrl ? (
+                <div className="aspect-video overflow-hidden rounded-2xl bg-black">
+                  <iframe
+                    src={playbackUrl}
+                    title={selectedStream.title || 'Streamed video'}
+                    className="h-full w-full"
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <div className="aspect-video flex flex-col items-center justify-center rounded-2xl bg-gray-900 text-center">
+                  <PlaySquare className="h-12 w-12 text-gray-500 mb-3" />
+                  <p className="text-white font-semibold">Recording not available</p>
+                  <p className="text-gray-400 text-sm mt-1">This stream does not have a playback URL yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

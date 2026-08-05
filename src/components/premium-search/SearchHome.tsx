@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { queryClient } from '../../queryClient';
 import { queryKeys } from '../../queryKeys';
-import { clearRecentEvents } from '../../utils/recentEvents';
+
 import { EventSearchRow, SearchRowSkeleton } from './SearchRow';
 
 function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
-import { supabase } from '../utils/supabase/client';
 import { getFollowedUserIds, getNotifications, getPosts, type Notification } from '../utils/supabase/api';
 import { mapPostsToViewModel } from '../utils/postMapper';
 import type { Post } from '../types';

@@ -1,4 +1,4 @@
-import { useBaseConnection, getCloudflareIframeUrl } from './useBaseConnection';
+import { useBaseConnection } from './useBaseConnection';
 import type { LiveStreamData } from '../components/livestream/types';
 
 export { getCloudflareIframeUrl } from './useBaseConnection';

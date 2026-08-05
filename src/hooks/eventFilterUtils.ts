@@ -1,6 +1,7 @@
 import type { Event as ApiEvent } from '../utils/supabase/api';
 import { normalizePlaceName } from '../utils/nominatim';
-import type { TimeFilterId, LocationOption } from './eventFilterConstants';
+import type { TimeFilterId } from './useEventFilters';
+import type { LocationOption } from './eventFilterConstants';
 import { COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE } from './eventFilterConstants';
 
 export const eventMatchesLocation = (event: ApiEvent, selectedLocation: string) => {
@@ -89,17 +90,6 @@ export const inferDeviceCountryCode = () => {
 
   return DEFAULT_COUNTRY_CODE;
 };
-
-const extractReverseCity = (address: Record<string, string | undefined> = {}) =>
-  String(
-    address.city ||
-      address.town ||
-      address.village ||
-      address.municipality ||
-      address.county ||
-      address.state ||
-      ''
-  ).trim();
 
 export const mergeUniqueById = (items: LocationOption[]) => {
   const seen = new Set<string>();

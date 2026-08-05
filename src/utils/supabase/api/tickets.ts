@@ -75,7 +75,7 @@ export const createTicket = async (ticket: Omit<Ticket, 'id' | 'created_at' | 'e
     p_customer_name: ticket.customer_name,
     p_customer_email: ticket.customer_email,
     p_ticket_number: ticket.ticket_number,
-    p_qr_code: ticket.qr_code ?? null,
+    p_qr_code: ticket.qr_code as string,
     p_user_id: (ticket as any).user_id ?? null,
     p_price: ticket.price ?? null,
     p_transaction_id: (ticket as any).transaction_id

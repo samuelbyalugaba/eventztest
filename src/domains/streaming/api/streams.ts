@@ -1,5 +1,5 @@
 import { supabase } from '../../../shared/api/client';
-import type { Event } from './events';
+import type { Event } from '../../events/api/events';
 
 export type CloudflareStream = {
   id: number;

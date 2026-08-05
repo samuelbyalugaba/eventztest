@@ -74,7 +74,7 @@ export function buildVideosForViewer(event: ApiEvent, eventPosts: any[]) {
       videoUrl: highlight.video || '',
       eventName: event.title,
     })) || []),
-    ...eventPosts.filter((p: any) => p.video_url).map((post: any, index: number) => ({
+    ...eventPosts.filter((p: any) => p.video_url).map((post: any) => ({
       id: 2000 + post.id,
       thumbnail: post.image_urls?.[0] || '',
       views: post.views || 0,

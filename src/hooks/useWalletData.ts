@@ -159,7 +159,7 @@ export function useWalletData(isActive = true) {
       const { data } = await supabase
         .from('transactions')
         .select('id, status')
-        .eq('id', depositId)
+        .eq('id', Number(depositId))
         .single();
 
       if (data && data.status !== 'pending') {

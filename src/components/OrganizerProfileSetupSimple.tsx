@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase, getProfile, uploadImage, checkUsernameUnique, becomeOrganizer } from '../utils/supabase/api';
@@ -26,7 +26,6 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
-  const [checking, setChecking] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
 
 
@@ -124,7 +123,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
             onOrganizerNameChange={setOrganizerName}
             username={username}
             onUsernameChange={(val) => { setUsername(val.toLowerCase().replace(/[^a-z0-9]/g, '')); setAvailable(null); }}
-            checking={checking}
+            checking={false}
             available={available}
             location={location}
             onLocationChange={(val) => { setLocation(val); searchLocations(val); }}
