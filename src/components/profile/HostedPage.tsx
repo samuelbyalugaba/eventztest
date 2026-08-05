@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar, PlaySquare, Search, X } from 'lucide-react';
 import { BackButton } from '../ui/BackButton';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -13,6 +13,7 @@ import {
   type Event as AppEvent,
   type Profile,
 } from '../../utils/supabase/api';
+import { supabase } from '../../utils/supabase/client';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
 type HostedView = 'events' | 'streams';
@@ -59,7 +60,12 @@ const isPastEvent = (event: AppEvent) => {
 };
 
 const streamHasPlayback = (stream: CloudflareStream) => {
-  return stream.has_recording !== false && Boolean(stream.playback_url || (stream.source !== 'event' && stream.uid));
+  if (stream.has_recording === false) return false;
+  if (stream.playback_url) return true;
+  if (stream.source !== 'event' && stream.uid) return true;
+  const streaming = (stream.event as any)?.streaming;
+  if (streaming?.playback_url || streaming?.recording_url || streaming?.recording_uid) return true;
+  return false;
 };
 
 const streamThumbnailUrl = (stream: CloudflareStream) => {
@@ -124,6 +130,30 @@ export function HostedPage() {
     };
   }, [hasInstantState, targetUserId]);
 
+  const backfillTriggered = useRef(false);
+  useEffect(() => {
+    if (backfillTriggered.current) return;
+    if (streams.length === 0) return;
+    const needsBackfill = streams.some((s) => !s.playback_url && s.uid?.startsWith('event-'));
+    if (!needsBackfill) return;
+    backfillTriggered.current = true;
+
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+        if (!baseUrl) return;
+        await fetch(`${baseUrl}/functions/v1/cloudflare-stream-backfill`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const refreshed = await getProfileStreamedVideos(targetUserId);
+        if (refreshed) setStreams(refreshed);
+      } catch { /* ignore */ }
+    })();
+  }, [streams, targetUserId]);
+
   const pastEvents = useMemo(() => events.filter(isPastEvent), [events]);
 
   const playableStreams = useMemo(
@@ -162,6 +192,10 @@ export function HostedPage() {
 
   const getStreamPlaybackUrl = (stream: CloudflareStream) => {
     if (stream.playback_url) return stream.playback_url;
+    const streaming = (stream.event as any)?.streaming;
+    if (streaming?.playback_url) return streaming.playback_url;
+    if (streaming?.recording_url) return streaming.recording_url;
+    if (streaming?.recording_uid) return `https://iframe.videodelivery.net/${streaming.recording_uid}`;
     if (stream.uid && !stream.uid.startsWith('event-')) return `https://iframe.videodelivery.net/${stream.uid}`;
     return null;
   };

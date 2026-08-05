@@ -36,12 +36,12 @@ function eventToStreamRecord(event: Event, userId: string): CloudflareStream | n
     id: -event.id,
     user_id: userId,
     event_id: event.id,
-    uid: `event-${event.id}`,
+    uid: streaming.recording_uid || `event-${event.id}`,
     live_input_uid: streaming.cf_live_input_uid || null,
     title: event.title || 'Streamed video',
-    thumbnail_url: event.image_url || null,
+    thumbnail_url: streaming.replay_thumbnail || event.image_url || null,
     preview_url: null,
-    playback_url: streaming.playback_url || null,
+    playback_url: streaming.playback_url || streaming.recording_url || null,
     duration: null,
     status: 'ended',
     created_at: createdAt,
@@ -54,7 +54,7 @@ function eventToStreamRecord(event: Event, userId: string): CloudflareStream | n
 export const getProfileStreamedVideos = async (userId: string) => {
   const select = `
       *,
-      event:events(id, title, image_url, date, time, location, category)
+      event:events(id, title, image_url, date, time, location, category, streaming)
     `;
 
   const { data, error } = await supabase
