@@ -5,6 +5,7 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { EventCard } from '../EventCard';
 import type { ProfileTab } from './ProfileTabs';
 import type { ApiPost, Ticket, Event as AppEvent, CloudflareStream } from '../../utils/supabase/api';
+import { getReplayIframeUrl, streamHasReplay } from '../../utils/streamPlayback';
 
 interface ProfileContentProps {
   activeTab: ProfileTab;
@@ -134,12 +135,11 @@ function formatDuration(totalSeconds?: number | null) {
 }
 
 function getStreamPlaybackUrl(stream: CloudflareStream) {
-  if (stream.playback_url) return stream.playback_url;
-  return `https://iframe.videodelivery.net/${stream.uid}`;
+  return getReplayIframeUrl(stream) || `https://iframe.videodelivery.net/${stream.uid}`;
 }
 
 function hasPlayableRecording(stream: CloudflareStream) {
-  return stream.has_recording !== false && Boolean(stream.playback_url || (stream.source !== 'event' && stream.uid));
+  return streamHasReplay(stream);
 }
 
 function StreamedTab({ isLoading, streams }: { isLoading: boolean; streams: CloudflareStream[] }) {

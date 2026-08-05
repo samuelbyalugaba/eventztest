@@ -171,14 +171,25 @@ Deno.serve(async (req) => {
           );
           const cfJson = await cfRes.json().catch(() => null);
           if (cfRes.ok && cfJson?.success && Array.isArray(cfJson.result)) {
-            const ready = cfJson.result
-              .filter((v: any) => v?.readyToStream === true || v?.status?.state === "ready")
+            // Find any recording with a UID different from the live input UID
+            // Don't filter by readyToStream — the UID is valid even while processing
+            const recordings = cfJson.result
+              .filter((v: any) => v?.uid && v.uid !== inputUid)
               .sort((a: any, b: any) => new Date(b.created || 0).getTime() - new Date(a.created || 0).getTime());
-            const latest = ready[0];
+            const latest = recordings[0];
             if (latest?.uid) {
               const hls = latest.playback?.hls || `https://videodelivery.net/${latest.uid}/manifest/video.m3u8`;
+              // Extract customer subdomain from playback URL
+              let customerSubdomain: string | null = null;
+              const subdomainMatch = String(latest.playback?.hls || "").match(/(customer-[a-z0-9]+\.cloudflarestream\.com)/i);
+              if (subdomainMatch) customerSubdomain = subdomainMatch[1];
+              // Also check the existing streaming data
+              if (!customerSubdomain && streaming.cf_customer_subdomain) {
+                customerSubdomain = String(streaming.cf_customer_subdomain);
+              }
+
               // Update event with recording data
-              const recordingUpdate = {
+              const recordingUpdate: Record<string, unknown> = {
                 ...updated,
                 replayAvailable: true,
                 recording_uid: latest.uid,
@@ -187,7 +198,9 @@ Deno.serve(async (req) => {
                 replay_thumbnail: latest.thumbnail || undefined,
                 recordingReadyAt: Date.now(),
               };
+              if (customerSubdomain) recordingUpdate.cf_customer_subdomain = customerSubdomain;
               await admin.from("events").update({ streaming: recordingUpdate }).eq("id", event.id);
+
               // Upsert into cloudflare_streams
               await admin.from("cloudflare_streams").upsert({
                 user_id: event.organizer_id,

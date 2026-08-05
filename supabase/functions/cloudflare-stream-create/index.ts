@@ -111,7 +111,12 @@ Deno.serve(async (req) => {
     const playbackUrl: string = result.playback?.hls ??
       `https://videodelivery.net/${liveInputUid}/manifest/video.m3u8`;
 
-    const streamingUpdate = {
+    // Extract customer subdomain from playback URL (e.g. "customer-npjmxl0uic7o3g3o.cloudflarestream.com")
+    let customerSubdomain: string | null = null;
+    const subdomainMatch = playbackUrl.match(/(customer-[a-z0-9]+\.cloudflarestream\.com)/i);
+    if (subdomainMatch) customerSubdomain = subdomainMatch[1];
+
+    const streamingUpdate: Record<string, unknown> = {
       ...existing,
       provider: "cloudflare",
       cf_live_input_uid: liveInputUid,
@@ -120,6 +125,7 @@ Deno.serve(async (req) => {
       playback_url: playbackUrl,
       channel: `event-${eventId}`,
     };
+    if (customerSubdomain) streamingUpdate.cf_customer_subdomain = customerSubdomain;
 
     const { error: updErr } = await admin
       .from("events")

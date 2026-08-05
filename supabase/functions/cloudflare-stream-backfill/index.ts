@@ -66,14 +66,15 @@ Deno.serve(async (req) => {
       }
 
       const videos: any[] = Array.isArray(cfJson.result) ? cfJson.result : [];
-      // Prefer the most recent ready recording
-      const ready = videos
-        .filter((v) => v?.readyToStream === true || v?.status?.state === "ready")
+      // Find recordings with a UID different from the live input UID
+      // Don't filter by readyToStream — the UID is valid even while processing
+      const recordings = videos
+        .filter((v) => v?.uid && v.uid !== ev.liveInputUid)
         .sort((a, b) => new Date(b.created || 0).getTime() - new Date(a.created || 0).getTime());
 
-      for (const v of videos) {
+      for (const v of recordings) {
         const videoUid = v?.uid;
-        if (!videoUid || videoUid === ev.liveInputUid) continue;
+        if (!videoUid) continue;
         const hls: string = v?.playback?.hls || `https://videodelivery.net/${videoUid}/manifest/video.m3u8`;
         await admin.from("cloudflare_streams").upsert({
           user_id: userId,
@@ -85,19 +86,28 @@ Deno.serve(async (req) => {
           preview_url: v?.preview || null,
           playback_url: hls,
           duration: typeof v?.duration === "number" ? v.duration : null,
-          status: v?.status?.state || (v?.readyToStream ? "ready" : null),
+          status: v?.status?.state || (v?.readyToStream ? "ready" : "processing"),
           raw_payload: v || {},
           updated_at: new Date().toISOString(),
         }, { onConflict: "uid" });
         totalRecordings++;
       }
 
-      // Stamp the latest ready recording onto the event so the fallback path works
-      const latest = ready[0];
+      // Stamp the latest recording onto the event so the fallback path works
+      const latest = recordings[0];
       if (latest?.uid) {
         const hls: string = latest?.playback?.hls ||
           `https://videodelivery.net/${latest.uid}/manifest/video.m3u8`;
-        const updated = {
+        // Extract customer subdomain from playback URL
+        let customerSubdomain: string | null = null;
+        const subdomainMatch = String(latest?.playback?.hls || "").match(/(customer-[a-z0-9]+\.cloudflarestream\.com)/i);
+        if (subdomainMatch) customerSubdomain = subdomainMatch[1];
+        // Also check existing streaming data
+        if (!customerSubdomain && (ev.streaming as any).cf_customer_subdomain) {
+          customerSubdomain = String((ev.streaming as any).cf_customer_subdomain);
+        }
+
+        const updated: Record<string, unknown> = {
           ...ev.streaming,
           isLive: false,
           replayAvailable: true,
@@ -107,6 +117,7 @@ Deno.serve(async (req) => {
           replay_thumbnail: latest?.thumbnail || undefined,
           recordingReadyAt: Date.now(),
         };
+        if (customerSubdomain) updated.cf_customer_subdomain = customerSubdomain;
         await admin.from("events").update({ streaming: updated }).eq("id", ev.eventId);
       }
 

@@ -15,6 +15,7 @@ import {
 } from '../../utils/supabase/api';
 import { supabase } from '../../utils/supabase/client';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { streamHasReplay, getReplayIframeUrl, getReplayThumbnail } from '../../utils/streamPlayback';
 
 type HostedView = 'events' | 'streams';
 
@@ -59,22 +60,9 @@ const isPastEvent = (event: AppEvent) => {
   return !Number.isNaN(parsed.getTime()) && parsed < new Date();
 };
 
-const streamHasPlayback = (stream: CloudflareStream) => {
-  if (stream.has_recording === false) return false;
-  if (stream.playback_url) return true;
-  if (stream.source !== 'event' && stream.uid) return true;
-  const streaming = (stream.event as any)?.streaming;
-  if (streaming?.playback_url || streaming?.recording_url || streaming?.recording_uid) return true;
-  return false;
-};
+const streamHasPlayback = streamHasReplay;
 
-const streamThumbnailUrl = (stream: CloudflareStream) => {
-  if (stream.thumbnail_url) return stream.thumbnail_url;
-  if (stream.uid && !String(stream.uid).startsWith('event-')) {
-    return `https://videodelivery.net/${stream.uid}/thumbnails/thumbnail.jpg`;
-  }
-  return stream.event?.image_url || '';
-};
+const streamThumbnailUrl = getReplayThumbnail;
 
 export function HostedPage() {
   const { user } = useAuth();
@@ -135,7 +123,7 @@ export function HostedPage() {
     if (backfillTriggered.current) return;
     if (!targetUserId) return;
     if (streams.length === 0) return;
-    const needsBackfill = streams.some((s) => !s.playback_url && s.uid?.startsWith('event-'));
+    const needsBackfill = streams.some((s) => !streamHasReplay(s));
     if (!needsBackfill) return;
     backfillTriggered.current = true;
     const userId = targetUserId;
@@ -207,27 +195,7 @@ export function HostedPage() {
     };
   }, [selectedStream, closePlayer]);
 
-  const getStreamPlaybackUrl = (stream: CloudflareStream) => {
-    const extractUidFromHls = (url: string): string | null => {
-      const match = url.match(/videodelivery\.net\/([^/]+)/);
-      return match ? match[1] : null;
-    };
-
-    const toIframeUrl = (url: string): string => {
-      if (url.includes('iframe.videodelivery.net')) return url;
-      const uid = extractUidFromHls(url);
-      if (uid) return `https://iframe.videodelivery.net/${uid}`;
-      return url;
-    };
-
-    if (stream.playback_url) return toIframeUrl(stream.playback_url);
-    const streaming = (stream.event as any)?.streaming;
-    if (streaming?.playback_url) return toIframeUrl(streaming.playback_url);
-    if (streaming?.recording_url) return toIframeUrl(streaming.recording_url);
-    if (streaming?.recording_uid) return `https://iframe.videodelivery.net/${streaming.recording_uid}`;
-    if (stream.uid && !stream.uid.startsWith('event-')) return `https://iframe.videodelivery.net/${stream.uid}`;
-    return null;
-  };
+  const getStreamPlaybackUrl = getReplayIframeUrl;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-[calc(2rem+var(--eventz-safe-area-bottom))]">
