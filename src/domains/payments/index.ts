@@ -4,8 +4,5 @@
 // API
 export { createTransaction, waitForTransactionCompletion } from './api/transactions';
 
-// Types
-export type { Transaction } from './types';
-
 // Constants
 export const DOMAIN_NAME = 'payments';

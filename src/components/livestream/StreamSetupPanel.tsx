@@ -9,6 +9,7 @@ interface StreamSetupPanelProps {
   streamTitle: string;
   streamCategory: string;
   visibility: 'public' | 'ticket' | 'followers';
+  streamMethod: 'webcam' | 'obs';
   onToggleCamera: () => void;
   onToggleCameraDevice: () => void;
   onToggleMic: () => void;
@@ -33,6 +34,7 @@ export function StreamSetupPanel({
   streamTitle,
   streamCategory,
   visibility,
+  streamMethod,
   onToggleCamera,
   onToggleCameraDevice,
   onToggleMic,
@@ -106,11 +108,14 @@ export function StreamSetupPanel({
 
         <button
           onClick={onGoLive}
-          disabled={isStarting || !isClientReady}
+          disabled={isStarting || (streamMethod === 'webcam' && !isClientReady)}
           className="w-full py-4 rounded-2xl bg-red-600 text-white font-bold text-base shadow-2xl shadow-red-600/30 hover:shadow-red-600/50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
           <Radio className="w-5 h-5" />
-          {!isClientReady ? 'Preparing studio...' : isStarting ? `Going live in ${countdown}...` : 'Go Live'}
+          {streamMethod === 'obs'
+            ? isStarting ? `Going live in ${countdown}...` : 'Start OBS Stream'
+            : !isClientReady ? 'Preparing studio...' : isStarting ? `Going live in ${countdown}...` : 'Go Live'
+          }
         </button>
       </div>
     </div>

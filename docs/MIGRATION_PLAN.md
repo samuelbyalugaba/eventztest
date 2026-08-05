@@ -1,14 +1,14 @@
-# Migration Plan — Eventz: Current to Target Architecture
+# Migration Plan — Eventz: Hybrid Architecture
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Status:** Active  
-**Last Updated:** July 2026
+**Last Updated:** August 2026
 
 ---
 
 ## Executive Summary
 
-This document defines the phased migration from Eventz's current architecture (React SPA + Supabase BaaS) to the target enterprise architecture (domain-driven microservices with Kubernetes, Kafka, and full observability).
+This document defines the phased migration from Eventz's current architecture (React SPA + Supabase BaaS) to a **hybrid architecture** where Supabase provides database and storage services, while a custom Node.js/Express backend handles authentication, API logic, and real-time communication.
 
 The migration is designed to be **incremental** — each phase delivers value independently and the system remains operational throughout.
 
@@ -55,25 +55,16 @@ The migration is designed to be **incremental** — each phase delivers value in
 │       └────────────┴────────────┴────────────┘              │
 │                          │                                   │
 │                   ┌──────┴──────┐                           │
-│                   │ API Gateway │                           │
+│                   │Custom Backend│                          │
+│                   │(Node.js/     │                          │
+│                   │ Express)     │                          │
 │                   └──────┬──────┘                           │
 │                          │                                   │
 │  ┌───────────┬───────────┼───────────┬───────────┐         │
 │  │           │           │           │           │         │
 │  ▼           ▼           ▼           ▼           ▼         │
-│ Identity   Events    Tickets    Payments   Messaging      │
-│ Service    Service   Service    Service    Service         │
-│  │           │           │           │           │         │
-│  └───────────┴───────────┴───────────┴───────────┘         │
-│                          │                                   │
-│                   ┌──────┴──────┐                           │
-│                   │ Kafka Bus   │                           │
-│                   └──────┬──────┘                           │
-│                          │                                   │
-│  ┌───────────┬───────────┼───────────┬───────────┐         │
-│  │           │           │           │           │         │
-│  ▼           ▼           ▼           ▼           ▼         │
-│ PostgreSQL  Redis   OpenSearch  ClickHouse  Object Store   │
+│ PostgreSQL  Redis   WebSocket   Storage    External APIs   │
+│ (Supabase)  (Railway) (Railway)  (Supabase) (nTZS, etc.)  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -81,215 +72,158 @@ The migration is designed to be **incremental** — each phase delivers value in
 
 ## Migration Phases
 
-### Phase 0: Foundation (Weeks 1-4)
+### Phase 0: Foundation (Weeks 1-4) ✅ COMPLETE
 
 **Goal:** Restructure codebase with DDD boundaries while keeping Supabase.
 
 **No infrastructure changes. No new services. Just code organization.**
 
-| Task | Effort | Risk |
+| Task | Effort | Status |
 |---|---|---|
-| Create `src/domains/` structure | 2 days | Low |
-| Extract domain types from `types.ts` | 1 day | Low |
-| Move API modules into domain folders | 3 days | Low |
-| Move components into domain folders | 5 days | Medium |
-| Move hooks into domain folders | 3 days | Low |
-| Create domain-level barrel exports | 2 days | Low |
-| Update imports across codebase | 5 days | Medium |
-| Add domain-level tests | 5 days | Low |
-| Update documentation | 2 days | Low |
+| Create `src/domains/` structure | 2 days | ✅ Done |
+| Extract domain types from `types.ts` | 1 day | ✅ Done |
+| Move API modules into domain folders | 3 days | ✅ Done |
+| Move components into domain folders | 5 days | ⏳ Pending |
+| Move hooks into domain folders | 3 days | ⏳ Pending |
+| Create domain-level barrel exports | 2 days | ✅ Done |
+| Update imports across codebase | 5 days | ⏳ Pending |
+| Add domain-level tests | 5 days | ⏳ Pending |
+| Update documentation | 2 days | ✅ Done |
 
-**Total:** ~4 weeks (1 developer)
-
-**Deliverable:** Codebase organized by domain, ready for service extraction.
+**Deliverable:** Codebase organized by domain, ready for backend extraction.
 
 ---
 
-### Phase 0B: Marketing Site (Parallel with Phase 1-2)
+### Phase 1: Backend Foundation (Weeks 5-6)
 
-**Goal:** Build a Next.js marketing and discovery site for SEO and public pages.
-
-**Rationale:** Eventz is primarily an application (React SPA), but public pages need SEO. A separate Next.js site handles marketing, public event listings, and organizer profiles while the SPA handles the authenticated experience.
+**Goal:** Deploy custom backend with auth and core API routes.
 
 | Task | Effort | Risk |
 |---|---|---|
-| Initialize Next.js project | 1 day | Low |
-| Build homepage and landing pages | 1 week | Low |
-| Public event listing pages (SSR) | 1 week | Medium |
-| Organizer profile pages (SSR) | 3 days | Medium |
-| Public venue pages | 3 days | Low |
-| Blog/help center | 3 days | Low |
-| SEO optimization (meta, structured data) | 3 days | Low |
-| Shared API client with SPA | 2 days | Low |
-| Deploy to Vercel | 1 day | Low |
+| Fix `backend/package.json` dependencies | 1 day | Low |
+| Install backend dependencies | 1 day | Low |
+| Test Supabase PostgreSQL connection | 1 day | Low |
+| Complete auth service (JWT, registration, login) | 3 days | Medium |
+| Complete identity API routes | 2 days | Medium |
+| Complete events API routes | 2 days | Low |
+| Deploy to Railway | 2 days | Medium |
+| Set up Redis on Railway | 1 day | Low |
 
-**Total:** ~4 weeks (1 developer, parallel track)
+**Total:** ~2 weeks (1 developer)
 
-**Deliverable:** Next.js marketing site deployed, consuming same backend APIs as SPA.
-
-**Architecture:**
-```
-Internet
-    ↓
-Cloudflare
-    ↓
-┌─────────────────┐     ┌─────────────────┐
-│  Next.js Site   │     │   React SPA     │
-│  (Marketing)    │     │   (Application) │
-│  - Homepage     │     │  - Dashboard    │
-│  - Public Events│     │  - Messaging    │
-│  - Organizers   │     │  - Tickets      │
-│  - SEO Pages    │     │  - Wallet       │
-└────────┬────────┘     └────────┬────────┘
-         │                       │
-         └───────────┬───────────┘
-                     ↓
-              API Gateway
-                     ↓
-              Microservices
-```
+**Deliverable:** Custom backend deployed, auth working, core API routes live.
 
 ---
 
-### Phase 1: Identity Extraction (Months 2-3)
+### Phase 2: Auth Migration (Weeks 7-9)
 
-**Goal:** Extract authentication and user management into a dedicated service.
+**Goal:** Migrate authentication from Supabase Auth to custom backend.
 
 | Task | Effort | Risk |
 |---|---|---|
-| Deploy PostgreSQL (managed or self-hosted) | 3 days | Low |
-| Deploy Redis | 2 days | Low |
-| Build Identity Service (Node.js/NestJS) | 3 weeks | Medium |
-| Migrate users from Supabase | 1 week | High |
-| Update frontend auth flow | 3 days | Medium |
-| Deploy API Gateway (Kong/Traefik) | 3 days | Medium |
-| Add OpenTelemetry instrumentation | 3 days | Low |
-| Security review | 2 days | Low |
+| Implement Google OAuth in backend | 3 days | Medium |
+| Implement Apple Sign-In in backend | 3 days | Medium |
+| Create dual-auth transition period | 2 days | Medium |
+| Update frontend AuthContext | 3 days | Medium |
+| Replace `supabase.auth.*` calls | 5 days | High |
+| Test OAuth flows end-to-end | 2 days | Medium |
+| Remove Supabase Auth dependency | 1 day | Low |
 
-**Total:** ~6 weeks (1-2 developers)
+**Total:** ~3 weeks (1 developer)
 
-**Deliverable:** Authentication extracted from Supabase, API Gateway in place.
+**Deliverable:** Authentication fully handled by custom backend.
 
 ---
 
-### Phase 2: Events & Tickets Extraction (Months 4-6)
+### Phase 3: API Migration (Weeks 10-14)
 
-**Goal:** Extract event management and ticketing into dedicated services.
+**Goal:** Route all API calls through custom backend.
 
 | Task | Effort | Risk |
 |---|---|---|
-| Build Event Service | 2 weeks | Medium |
-| Build Ticket Service | 2 weeks | Medium |
-| Deploy Kafka | 3 days | Medium |
-| Implement event-driven communication | 1 week | Medium |
-| Migrate event data | 1 week | High |
-| Migrate ticket data | 1 week | High |
-| Update frontend API calls | 1 week | Medium |
-| Contract testing | 3 days | Low |
+| Create Express routes for all 11 domains | 5 days | Medium |
+| Move business logic from Edge Functions | 5 days | High |
+| Create frontend HTTP API client | 3 days | Medium |
+| Replace `supabase.from()` calls | 10 days | High |
+| Remove RLS policies | 2 days | Medium |
+| Test all API endpoints | 5 days | Medium |
 
-**Total:** ~8 weeks (2 developers)
+**Total:** ~5 weeks (1-2 developers)
 
-**Deliverable:** Events and tickets running as independent services.
+**Deliverable:** All API calls routed through custom backend.
 
 ---
 
-### Phase 3: Payments & Messaging (Months 7-9)
+### Phase 4: Real-time Migration (Weeks 15-17)
 
-**Goal:** Extract payments and messaging into dedicated services.
+**Goal:** Replace Supabase Realtime with WebSocket server.
 
 | Task | Effort | Risk |
 |---|---|---|
-| Build Payment Service | 2 weeks | High |
-| Build Messaging Service | 2 weeks | Medium |
-| Implement Saga pattern for payments | 1 week | High |
-| Implement outbox pattern | 3 days | Medium |
-| Migrate payment data | 1 week | High |
-| Migrate message data | 1 week | Medium |
-| Add idempotency to all payment operations | 3 days | Medium |
-| Load testing | 3 days | Low |
+| Set up Socket.io in backend | 2 days | Low |
+| Implement presence tracking | 3 days | Medium |
+| Replace `supabase.channel()` subscriptions | 5 days | Medium |
+| Add Redis pub/sub for WebSocket | 2 days | Low |
+| Test real-time features | 3 days | Medium |
 
-**Total:** ~8 weeks (2 developers)
+**Total:** ~3 weeks (1 developer)
 
-**Deliverable:** Payments and messaging running as independent services.
+**Deliverable:** Real-time features working via WebSocket.
 
 ---
 
-### Phase 4: Search & Analytics (Months 10-12)
+### Phase 5: Edge Function Migration (Weeks 18-20)
 
-**Goal:** Add search and analytics capabilities.
+**Goal:** Move Edge Functions to backend routes.
 
 | Task | Effort | Risk |
 |---|---|---|
-| Deploy OpenSearch | 2 days | Low |
-| Deploy ClickHouse | 2 days | Low |
-| Build Search Service | 2 weeks | Medium |
-| Build Analytics Service | 2 weeks | Medium |
-| Implement data pipelines | 1 week | Medium |
-| Add analytics events | 3 days | Low |
-| Build analytics dashboards | 1 week | Low |
+| Migrate nTZS payment functions | 3 days | High |
+| Migrate Cloudflare Stream functions | 3 days | Medium |
+| Migrate email delivery functions | 2 days | Low |
+| Migrate push notification functions | 2 days | Low |
+| Migrate account deletion functions | 2 days | Low |
+| Test all migrated functions | 3 days | Medium |
 
-**Total:** ~6 weeks (1-2 developers)
+**Total:** ~3 weeks (1 developer)
 
-**Deliverable:** Full-text search and analytics capabilities.
+**Deliverable:** All Edge Functions replaced by backend routes.
 
 ---
 
-### Phase 5: Infrastructure & Observability (Months 13-15)
+### Phase 6: Storage & Cleanup (Weeks 21-22)
 
-**Goal:** Production-ready infrastructure with full observability.
-
-| Task | Effort | Risk |
-|---|---|---|
-| Deploy Kubernetes cluster | 1 week | High |
-| Set up Terraform | 1 week | Medium |
-| Configure Argo CD (GitOps) | 3 days | Medium |
-| Deploy Prometheus + Grafana | 2 days | Low |
-| Deploy Loki | 2 days | Low |
-| Deploy Tempo | 2 days | Low |
-| Set up distributed tracing | 3 days | Medium |
-| Configure alerts | 2 days | Low |
-| Disaster recovery testing | 3 days | Medium |
-
-**Total:** ~6 weeks (1-2 DevOps engineers)
-
-**Deliverable:** Enterprise-grade infrastructure with full observability.
-
----
-
-### Phase 6: Advanced Capabilities (Months 16+)
-
-**Goal:** Multi-region, AI personalization, enterprise features.
+**Goal:** Optimize storage access and clean up Supabase dependencies.
 
 | Task | Effort | Risk |
 |---|---|---|
-| Multi-region deployment | 4 weeks | High |
-| AI-powered recommendations | 4 weeks | Medium |
-| Enterprise integrations | Ongoing | Low |
-| Global CDN optimization | 2 weeks | Low |
-| Advanced security (mTLS, zero trust) | 3 weeks | Medium |
+| Create storage proxy routes | 2 days | Low |
+| Implement signed URLs | 2 days | Low |
+| Remove Supabase client SDK from frontend | 2 days | Low |
+| Final testing and cleanup | 3 days | Low |
+| Update documentation | 1 day | Low |
 
-**Total:** Ongoing
+**Total:** ~2 weeks (1 developer)
+
+**Deliverable:** Clean architecture, no Supabase client dependency.
 
 ---
 
 ## Migration Principles
 
 ### 1. Strangler Fig Pattern
-New functionality is built in new services. Old functionality is gradually extracted. The monolith shrinks over time.
+New functionality is built in the custom backend. Old functionality is gradually extracted from Supabase. The BaaS dependency shrinks over time.
 
-### 2. Database per Service
-Each service owns its data. No shared databases. Data is synchronized via events.
+### 2. Dual-Auth Transition
+During migration, both Supabase Auth and custom JWT are supported. This allows gradual migration without downtime.
 
-### 3. Event-First Communication
-Services communicate via Kafka events. REST/gRPC only for synchronous queries.
-
-### 4. Backward Compatibility
+### 3. Backward Compatibility
 APIs are versioned. Old versions are supported until all consumers migrate.
 
-### 5. Feature Flags
+### 4. Feature Flags
 New behavior is behind feature flags. Enables safe rollout and quick rollback.
 
-### 6. Zero Downtime
+### 5. Zero Downtime
 Migrations happen without downtime. Blue/green deployments for critical services.
 
 ---
@@ -299,10 +233,10 @@ Migrations happen without downtime. Blue/green deployments for critical services
 | Risk | Impact | Probability | Mitigation |
 |---|---|---|---|
 | Data loss during migration | High | Low | Backup before every migration, test restore |
-| Service downtime | High | Low | Strangler fig, feature flags, rollback |
-| Scope creep | Medium | High | Strict phase boundaries, MVP per phase |
-| Team capacity | Medium | Medium | Phased approach, clear priorities |
-| Infrastructure costs | Medium | Medium | Start with managed services, optimize later |
+| Auth migration breaks login | High | Medium | Dual-auth transition, gradual migration |
+| API migration breaks features | High | Medium | Feature flags, gradual rollout |
+| WebSocket scalability | Medium | Low | Redis pub/sub, horizontal scaling |
+| Storage migration issues | Medium | Low | Keep Supabase storage, proxy through backend |
 
 ---
 
@@ -311,12 +245,23 @@ Migrations happen without downtime. Blue/green deployments for critical services
 | Phase | Success Metric |
 |---|---|
 | Phase 0 | Codebase organized by domain, all tests pass |
-| Phase 1 | Auth extracted, Supabase auth disabled |
-| Phase 2 | Events/tickets independent, Kafka operational |
-| Phase 3 | Payments/messaging independent, Saga pattern working |
-| Phase 4 | Search and analytics operational |
-| Phase 5 | Kubernetes deployed, observability complete |
-| Phase 6 | Multi-region operational |
+| Phase 1 | Backend deployed, auth working, core API routes live |
+| Phase 2 | Auth fully handled by custom backend, all OAuth flows working |
+| Phase 3 | All API calls routed through backend, RLS removed |
+| Phase 4 | Real-time features working via WebSocket |
+| Phase 5 | All Edge Functions replaced by backend routes |
+| Phase 6 | Clean architecture, no Supabase client dependency |
+
+---
+
+## Cost Estimate
+
+| Service | Monthly Cost (10K users) |
+|---|---|
+| Supabase (DB + Storage only) | $0-25 |
+| Railway (backend + Redis) | $5-20 |
+| Vercel (frontend) | $0-20 |
+| **Total** | **$5-65** |
 
 ---
 
@@ -324,7 +269,8 @@ Migrations happen without downtime. Blue/green deployments for critical services
 
 | Date | Decision | Rationale |
 |---|---|---|
+| August 2026 | Hybrid approach (Supabase DB + Custom Backend) | Full control over auth and logic, managed database |
+| August 2026 | Railway for backend | Full Node.js, persistent connections, Redis |
+| August 2026 | Keep Supabase for DB + Storage | Managed services, connection pooling, CDN |
 | July 2026 | Phased approach over rewrite | Reduces risk, delivers value incrementally |
-| July 2026 | Keep Supabase in Phase 0 | Minimizes change while restructuring code |
-| July 2026 | Kafka over RabbitMQ | Better for event streaming and replay |
-| July 2026 | Kubernetes over ECS | Multi-cloud portability, ecosystem |
+| July 2026 | Domain-driven code organization | Clear boundaries, maintainability |

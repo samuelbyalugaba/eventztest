@@ -1,12 +1,12 @@
 # System Architecture — Eventz
 
-**Last Updated:** July 2026
+**Last Updated:** August 2026
 
 ---
 
 ## Overview
 
-Eventz is a **React SPA** backed by **Supabase** (Backend-as-a-Service). The frontend talks directly to Supabase via the JavaScript SDK, with Supabase Edge Functions handling server-side logic that requires elevated permissions.
+Eventz uses a **hybrid architecture** where a custom Node.js/Express backend handles authentication, API logic, and real-time communication, while Supabase provides managed PostgreSQL database and storage services.
 
 ## Architecture Diagram
 
@@ -21,15 +21,19 @@ Eventz is a **React SPA** backed by **Supabase** (Backend-as-a-Service). The fro
 └──────────────────────────┬──────────────────────────────────┘
                            │ HTTPS
 ┌──────────────────────────┴──────────────────────────────────┐
-│                     SUPABASE                                │
+│                  CUSTOM BACKEND (Railway)                    │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │   Auth   │  │PostgreSQL│  │ Storage  │  │ Realtime │   │
-│  │ (JWT)    │  │ (RLS)    │  │ (Images) │  │ (WS)     │   │
+│  │   Auth   │  │   API    │  │WebSocket │  │  Jobs    │   │
+│  │ (JWT)    │  │ Routes   │  │ (Realtime)│  │ (BullMQ) │   │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │              Edge Functions (Deno)                    │  │
-│  │  agora-rtc-token · send-email · ntzs-proxy · ...     │  │
-│  └──────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────┴──────────────────────────────────┐
+│                     SUPABASE                                │
+│  ┌──────────┐  ┌──────────┐                                │
+│  │PostgreSQL│  │ Storage  │                                │
+│  │ (RLS)    │  │ (Images) │                                │
+│  └──────────┘  └──────────┘                                │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────┴──────────────────────────────────┐
@@ -54,58 +58,66 @@ Eventz is a **React SPA** backed by **Supabase** (Backend-as-a-Service). The fro
 | State | Zustand + TanStack Query | Client + server state |
 | UI | Radix UI primitives | Accessible components |
 | Routing | react-router-dom v6 | Client-side routing |
-| Backend | Supabase | Auth, DB, Storage, Realtime, Functions |
-| Database | PostgreSQL 14 | Relational data |
+| Backend | Node.js/Express | API, Auth, Logic |
+| Cache | Redis | Sessions, caching, pub/sub |
+| Database | PostgreSQL 14 (Supabase) | Relational data |
+| Storage | Supabase Storage | Images, videos |
 | Streaming | Agora RTC + Cloudflare Stream | Live + VOD |
 | Payments | nTZS (mobile money) | Tanzania payments |
 | Email | Resend | Transactional email |
 | Monitoring | Sentry | Error tracking |
-| Hosting | Vercel | SPA deployment |
+| Hosting | Vercel (frontend) + Railway (backend) | Deployment |
 | Mobile | Capacitor 8 | Native Android/iOS |
 | PWA | Service Worker + manifest | Offline, installable |
 
 ## Data Flow Patterns
 
-### Direct Client → Supabase (Most Operations)
+### Frontend → Backend → Database (All Operations)
 ```
-Client → Supabase JS SDK → PostgreSQL (RLS enforced)
+Client → Backend API → PostgreSQL (via Knex.js)
 ```
-Used for: reading events, posts, profiles, sending messages, notifications
+Used for: All data operations — reading events, posts, profiles, sending messages, etc.
 
-### Edge Function (Elevated Permissions)
+### Backend → Storage (File Operations)
 ```
-Client → Edge Function (SERVICE_ROLE_KEY) → PostgreSQL
+Client → Backend API → Supabase Storage
 ```
-Used for: payment processing, account deletion, email sending, token generation
+Used for: File uploads, downloads, image optimization
 
-### Real-time Subscription
+### WebSocket (Real-time)
 ```
-Client → WebSocket → Supabase Realtime → PostgreSQL changes
+Client → WebSocket → Backend → Redis Pub/Sub
 ```
-Used for: messages, notifications, presence, live stream events
+Used for: Messages, notifications, presence, live stream events
+
+### External API Calls
+```
+Backend → External APIs (nTZS, Cloudflare, Agora, Resend)
+```
+Used for: Payments, streaming, email delivery
 
 ## Key Architectural Decisions
 
-1. **BaaS over custom backend** — Supabase handles auth, DB, storage, and realtime, reducing backend code by ~80%
-2. **Direct client queries** — Most data access goes directly from client to PostgreSQL via RLS
-3. **Edge Functions for sensitive operations** — Payment, deletion, and email functions use SERVICE_ROLE_KEY
+1. **Custom backend over BaaS** — Full control over auth, logic, and real-time
+2. **Supabase for DB + Storage** — Managed services, connection pooling, CDN
+3. **Backend middleware for auth** — JWT validation, role-based access
 4. **TanStack Query for server state** — Automatic caching, retry, and refetching
 5. **Zustand for client state** — Persisted profile store with PII stripping
 
 ## Current Limitations
 
-- **No backend caching layer** — Every query hits PostgreSQL directly
-- **No message queue** — Background jobs run in Edge Functions (cold starts)
-- **No CDN for API responses** — Only static assets cached by Vercel/Cloudflare
-- **Global Realtime subscriptions** — Scalability concern at high concurrency
+- **No backend caching layer** — Can add Redis for caching
+- **No message queue** — Can add BullMQ for background jobs
+- **WebSocket not yet implemented** — Currently using Supabase Realtime (temporary)
+- **Edge Functions not yet migrated** — 13 functions to migrate to backend
 
 ## Migration Path
 
-See [MIGRATION_PLAN.md](../MIGRATION_PLAN.md) and [TARGET_ARCHITECTURE.md](../TARGET_ARCHITECTURE.md) for the planned migration to:
+See [MIGRATION_PLAN.md](../MIGRATION_PLAN.md) and [TARGET_ARCHITECTURE.md](../TARGET_ARCHITECTURE.md) for the planned migration:
 
-- React SPA for application + Next.js for marketing (hybrid frontend)
-- Redis for caching and queues
-- BullMQ for background jobs
-- Self-hosted PostgreSQL with read replicas
-- Kafka for event streaming
-- Kubernetes for orchestration
+- Phase 1: Backend foundation ✅
+- Phase 2: Auth migration (in progress)
+- Phase 3: API migration
+- Phase 4: Real-time migration
+- Phase 5: Edge Function migration
+- Phase 6: Storage & cleanup

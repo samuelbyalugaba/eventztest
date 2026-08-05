@@ -1,40 +1,43 @@
 # Authentication
 
+**Last Updated:** August 2026
+
 ## Overview
 
-Eventz uses **Supabase Auth** for all authentication. The app supports multiple auth methods, uses PKCE flow for web OAuth, and manages sessions via JWT tokens.
+Eventz uses a **custom backend** for all authentication. The app supports multiple auth methods, uses JWT tokens for session management, and handles OAuth through the backend server.
 
 ## Auth Methods
 
 | Method | Flow | Provider |
 |--------|------|----------|
-| Email + Password | Standard registration/login | Supabase Auth |
-| Google OAuth | Authorization code + PKCE | Google via Supabase |
-| Apple Sign-In | OAuth 2.0 | Apple via Supabase |
-| Magic Links | Email-based passwordless | Supabase Auth |
+| Email + Password | Standard registration/login | Custom Backend |
+| Google OAuth | Authorization code + PKCE | Google via Backend |
+| Apple Sign-In | OAuth 2.0 | Apple via Backend |
+| Magic Links | Email-based passwordless | Custom Backend |
 
 ### Google OAuth Flow
 
 1. User clicks "Sign in with Google"
 2. Redirect to Google consent screen
 3. Google redirects back with authorization code
-4. Supabase exchanges code for tokens (PKCE)
-5. Session created, user profile loaded
+4. Backend exchanges code for tokens
+5. Backend creates/links account
+6. Session created, JWT issued
 
 ### Apple Sign-In Flow
 
 1. User clicks "Sign in with Apple"
 2. Apple OAuth consent screen
 3. Redirect with authorization code
-4. Supabase creates/links account
-5. Session created, user profile loaded
+4. Backend creates/links account
+5. Session created, JWT issued
 
 ### Magic Link Flow
 
 1. User enters email
-2. Supabase sends magic link email
+2. Backend sends magic link email
 3. User clicks link in email
-4. Session created, redirected to app
+4. Session created, JWT issued
 
 ## Session Management
 
@@ -42,7 +45,7 @@ Eventz uses **Supabase Auth** for all authentication. The app supports multiple 
 
 - **Access Token**: JWT, short-lived (~1 hour), contains user ID, role, metadata
 - **Refresh Token**: Long-lived, used to obtain new access tokens
-- **Token Storage**: `localStorage` via Supabase client (flagged in security audit)
+- **Token Storage**: `localStorage` via frontend (flagged in security audit)
 
 ### Refresh Flow
 
@@ -50,7 +53,7 @@ Eventz uses **Supabase Auth** for all authentication. The app supports multiple 
 Access Token expires
     │
     ▼
-Supabase client detects 401
+Frontend detects 401
     │
     ▼
 Automatic refresh using refresh_token
@@ -65,8 +68,8 @@ Request retried
 ### Session Persistence
 
 ```typescript
-// Supabase client configured with session persistence
-// Tokens stored in localStorage automatically
+// Frontend stores tokens in localStorage
+// Backend validates JWT on each request
 // Session survives page reloads
 ```
 
@@ -78,9 +81,9 @@ The `AuthContext` provides auth state to the entire app:
 
 ```typescript
 interface AuthContextType {
-  user: User | null;           // Supabase auth user
+  user: User | null;           // Backend auth user
   profile: Profile | null;     // App profile from profiles table
-  session: Session | null;     // Current session
+  session: Session | null;     // Current session with JWT
   loading: boolean;            // Auth state loading
   signIn: (email, password) => Promise<void>;
   signUp: (email, password, name) => Promise<void>;
@@ -106,8 +109,8 @@ interface AuthContextType {
 On first login, a profile is created automatically:
 
 1. User signs up (email/password or OAuth)
-2. `auth.users` record created by Supabase
-3. Trigger or Edge Function creates `profiles` row
+2. Backend creates user record
+3. Backend creates `profiles` row
 4. Profile data populated from auth metadata
 5. `AuthContext` loads profile into state
 
@@ -125,10 +128,10 @@ The app uses triple-write pattern for profile state (flagged in audits):
 ### Flow
 
 1. User requests account deletion
-2. Edge Function `delete_account` invoked
+2. Backend API invoked
 3. CASCADE deletes related data (events, posts, tickets, messages)
 4. Profile record deleted
-5. Supabase auth user deleted
+5. User record deleted
 6. Session invalidated
 
 ### Data Removed
@@ -145,53 +148,45 @@ The app uses triple-write pattern for profile state (flagged in audits):
 | `post_likes` | CASCADE from `user_id` |
 | `post_comments` | CASCADE from `user_id` |
 
-## Edge Function Auth
+## Backend Auth
 
-### Service Role Key
+### JWT Verification
 
-Edge Functions use `SERVICE_ROLE_KEY` for elevated access:
-
-```typescript
-// Supabase Edge Function
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SERVICE_ROLE_KEY')!  // Bypasses RLS
-);
-```
-
-### Function Secrets
-
-Secrets are configured in the Supabase dashboard:
-- `SERVICE_ROLE_KEY` — Bypasses RLS for admin operations
-- `RESEND_API_KEY` — Email delivery
-- `CLOUDFLARE_API_TOKEN` — Stream management
-- Other service-specific keys
-
-### Auth Verification in Functions
+Backend verifies JWT on all protected routes:
 
 ```typescript
-// Verify user authentication
+// Backend middleware
 const authHeader = req.headers.get('Authorization');
 const token = authHeader?.replace('Bearer ', '');
 
-const { data: { user }, error } = await supabase.auth.getUser(token!);
-if (error || !user) {
-  return new Response('Unauthorized', { status: 401 });
+const user = jwt.verify(token, JWT_SECRET);
+if (!user) {
+  return res.status(401).json({ error: 'Unauthorized' });
 }
+```
+
+### Service Role Key
+
+Backend uses service role key for elevated database access:
+
+```typescript
+// Backend database connection
+const knex = knex({
+  client: 'pg',
+  connection: process.env.DATABASE_URL, // Direct connection
+});
 ```
 
 ## Auth Security
 
 | Measure | Status | Notes |
 |---------|--------|-------|
-| PKCE flow | Implemented | Prevents code interception |
-| Token refresh | Automatic | Via Supabase client |
-| RLS enforcement | Enabled | On all tables |
-| Rate limiting | Not implemented | On Edge Functions |
+| JWT tokens | Implemented | Short-lived access tokens |
+| Token refresh | Automatic | Via frontend |
+| Backend middleware | Implemented | On all protected routes |
+| Rate limiting | Recommended | On login/register endpoints |
 | MFA | Not implemented | Recommended |
-| Email verification | Supabase default | Configurable |
+| Email verification | Backend default | Configurable |
 
 ## Common Auth Issues
 
@@ -199,6 +194,5 @@ if (error || !user) {
 |-------|-------|------------|
 | Token expired | Access token lifetime | Auto-refresh should handle |
 | Session lost | localStorage cleared | Re-authenticate |
-| OAuth redirect fails | Incorrect redirect URL | Check Supabase auth settings |
-| Profile not loading | RLS policy blocking | Check `profiles` RLS policies |
-| Magic link not received | Email delivery issue | Check `email_deliveries` table |
+| OAuth redirect fails | Incorrect redirect URL | Check backend OAuth settings |
+| Profile not loading | Backend error | Check backend logs |

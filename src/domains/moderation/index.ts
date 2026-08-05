@@ -11,7 +11,7 @@ export {
 } from './api/moderation';
 
 // Types
-export type { ReportContentType } from './types';
+export type { ReportContentType } from './api/moderation';
 
 // Constants
 export const DOMAIN_NAME = 'moderation';

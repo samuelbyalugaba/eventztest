@@ -1,6 +1,6 @@
 # Eventz Documentation
 
-**Last Updated:** July 2026
+**Last Updated:** August 2026
 
 This is the central index for all Eventz technical and product documentation.
 
@@ -12,8 +12,8 @@ This is the central index for all Eventz technical and product documentation.
 
 | Document | Description |
 |---|---|
-| [Target Architecture](TARGET_ARCHITECTURE.md) | Enterprise architecture blueprint (target state) |
-| [Migration Plan](MIGRATION_PLAN.md) | Phased approach from current → target |
+| [Target Architecture](TARGET_ARCHITECTURE.md) | Enterprise architecture blueprint (hybrid approach) |
+| [Migration Plan](MIGRATION_PLAN.md) | Phased approach to hybrid backend |
 | [Phase 1 Restructure](PHASE_1_RESTRUCTURE.md) | Immediate code organization guide |
 | [AI Instructions](AI_INSTRUCTIONS.md) | Rules for AI coding assistants |
 | [Architecture Blueprint](TheArchitecture.md) | Future-scale architecture (aspirational) |
@@ -39,11 +39,12 @@ Answers: *How is the platform structured?*
 | [Service Catalog](02-architecture/service-catalog.md) | All services, owners, and dependencies |
 | [Deployment Architecture](02-architecture/deployment-architecture.md) | Cloud layout and infrastructure topology |
 | **ADRs** | |
-| [ADR-001: Supabase Backend](02-architecture/ADRs/ADR-001-supabase-backend.md) | Why Supabase as the backend |
+| [ADR-001: Hybrid Architecture](02-architecture/ADRs/ADR-001-supabase-backend.md) | Why hybrid (Supabase DB + Custom Backend) |
 | [ADR-002: nTZS Payments](02-architecture/ADRs/ADR-002-ntzs-payments.md) | Why nTZS for payments |
 | [ADR-003: Capacitor PWA](02-architecture/ADRs/ADR-003-capacitor-pwa.md) | Why Capacitor for mobile |
 | [ADR-004: Agora Streaming](02-architecture/ADRs/ADR-004-agora-streaming.md) | Why Agora for live streaming |
 | [ADR-005: React SPA + Vite](02-architecture/ADRs/ADR-005-react-spa-vite.md) | Why React SPA with Vite |
+| [ADR-006: Hybrid Backend](02-architecture/ADRs/ADR-006-hybrid-backend.md) | Why hybrid backend architecture |
 
 ### 3. Software Design Documentation
 Answers: *How does each domain work internally?*

@@ -1,5 +1,9 @@
 # Edge Functions Reference
 
+**Last Updated:** August 2026
+
+> **⚠️ MIGRATION NOTICE**: These Edge Functions are being migrated to the custom backend. See [MIGRATION_PLAN.md](../MIGRATION_PLAN.md) for the migration timeline. New features should be implemented in the backend, NOT in Edge Functions.
+
 Supabase Edge Functions deployed in `supabase/functions/`. All functions are Deno-based, run on Supabase infrastructure, and use shared CORS helpers.
 
 ## Base URL

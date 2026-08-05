@@ -1,4 +1,4 @@
-// Moderation Domain
+// Moderation Domain Types
 // Manages: Reports, blocks, content review
 
-export type { ReportContentType } from './types';
+export type ReportContentType = 'post' | 'event' | 'comment' | 'message' | 'profile';

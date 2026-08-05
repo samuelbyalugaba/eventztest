@@ -26,8 +26,19 @@ export {
   generateStreamKeys,
 } from './api/events';
 
+export {
+  getSavedEvents,
+  getSavedPosts,
+  toggleSaveEvent,
+  toggleReminder,
+  subscribeToSavedEvents,
+  subscribeToSavedPosts,
+} from './api/saved';
+
+export { getTrending } from './api/search';
+
 // Types
-export type { Event, EventStreaming, TicketTier, EventHighlight } from './types';
+export type { Event } from './api/events';
 
 // Constants
 export const DOMAIN_NAME = 'events';

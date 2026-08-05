@@ -6,7 +6,7 @@ export { onAuthStateChange, updateUserEmail, deleteAccount, signOut } from './ap
 export { getProfile, updateProfile, checkUsernameUnique, becomeOrganizer, searchProfiles } from './api/profile';
 
 // Types
-export type { Profile, OrganizerProfile } from './types';
+export type { Profile } from './api/profile';
 
 // Constants
 export const DOMAIN_NAME = 'identity';

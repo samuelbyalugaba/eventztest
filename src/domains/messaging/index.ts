@@ -16,7 +16,7 @@ export {
 } from './api/conversations';
 
 // Types
-export type { Conversation, Message } from './types';
+export type { Conversation, Message } from './api/conversations';
 
 // Constants
 export const DOMAIN_NAME = 'messaging';

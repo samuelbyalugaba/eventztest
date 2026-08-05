@@ -60,7 +60,7 @@ export function StreamSettingsModal({
   if (!showSettings) return null;
 
   return (
-    <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-lg flex items-end md:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-lg flex items-end md:items-center justify-center" onClick={onClose}>
       <div className="w-full max-w-lg bg-gray-900/95 border border-white/10 rounded-t-3xl md:rounded-3xl p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex min-w-0 flex-1 rounded-2xl bg-white/5 p-1">

@@ -6,7 +6,8 @@ export { getStreamMessages, sendStreamMessage, subscribeToStreamMessages } from 
 export { getProfileStreamedVideos } from './api/streams';
 
 // Types
-export type { StreamMessage, CloudflareStream } from './types';
+export type { StreamMessage } from './api/streamChat';
+export type { CloudflareStream } from './api/streams';
 
 // Constants
 export const DOMAIN_NAME = 'streaming';

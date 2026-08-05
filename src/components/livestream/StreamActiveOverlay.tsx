@@ -29,6 +29,8 @@ interface StreamActiveOverlayProps {
   chatMessage: string;
   likesAnimation: FloatingHeart[];
   isChatVisible: boolean;
+  streamMethod: 'webcam' | 'obs';
+  obsStatus?: 'waiting' | 'connected' | 'live';
   onToggleCamera: () => void;
   onToggleCameraDevice: () => void;
   onToggleMic: () => void;
@@ -62,6 +64,8 @@ export function StreamActiveOverlay({
   chatMessage,
   likesAnimation,
   isChatVisible,
+  streamMethod,
+  obsStatus = 'waiting',
   onToggleCamera,
   onToggleCameraDevice,
   onToggleMic,
@@ -141,6 +145,14 @@ export function StreamActiveOverlay({
               <Activity className="w-3.5 h-3.5" />
               <span>{streamHealth === 'good' ? 'GOOD' : streamHealth === 'poor' ? 'POOR' : 'BAD'}</span>
             </div>
+            {streamMethod === 'obs' && (
+              <>
+                <div className="w-px h-4 bg-white/20" />
+                <div className={`flex items-center gap-1 text-2xs font-bold ${obsStatus === 'live' ? 'text-green-400' : obsStatus === 'connected' ? 'text-yellow-400' : 'text-white/50'}`}>
+                  <span>OBS: {obsStatus === 'live' ? 'STREAMING' : obsStatus === 'connected' ? 'CONNECTED' : 'WAITING'}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right action rail */}

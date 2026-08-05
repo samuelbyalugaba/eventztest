@@ -1,71 +1,72 @@
 # REST API Reference
 
-Client-side API modules in `src/utils/supabase/api/`. All functions use the shared Supabase client and interact with the PostgREST API or invoke Edge Functions.
+**Last Updated:** August 2026
+
+Client-side API modules in `src/domains/*/api/`. All functions call the custom backend API, NOT Supabase directly.
 
 ## Base Configuration
 
 ```typescript
-// src/utils/supabase/client.tsx
-import { createClient } from '@supabase/supabase-js';
+// Backend API URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY, // JWT format required
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-    }
-  }
-);
+// All API calls go through the backend
+const response = await fetch(`${API_URL}/api/v1/events`, {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+});
 ```
 
-**Authentication**: All requests include the Supabase anon key via `apikey` header and a `Bearer` token from the active session. RLS policies on tables enforce per-user access.
+**Authentication**: All requests include a JWT token via `Authorization: Bearer <token>` header. Backend middleware validates the token and enforces authorization.
 
 ---
 
 ## Auth Module
 
-**File**: `src/utils/supabase/api/auth.ts`
+**File**: `src/domains/identity/api/auth.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `onAuthStateChange` | `callback: (event, session) => void` | `Subscription` | Subscribe to auth state changes (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED) |
-| `updateUserEmail` | `email: string` | `Promise<void>` | Updates the authenticated user's email (triggers confirmation) |
-| `deleteAccount` | none | `Promise<any>` | Invokes `delete-account` Edge Function; removes storage, auth user, and profile |
-| `signOut` | none | `Promise<void>` | Signs out the current user and clears the session |
+| `signIn` | `email: string, password: string` | `Promise<Session>` | Signs in user, returns JWT |
+| `signUp` | `email: string, password: string, name: string` | `Promise<Session>` | Creates account, returns JWT |
+| `signOut` | none | `Promise<void>` | Signs out current user |
+| `signInWithGoogle` | none | `Promise<void>` | Initiates Google OAuth flow |
+| `signInWithApple` | none | `Promise<void>` | Initiates Apple OAuth flow |
+| `signInWithMagicLink` | `email: string` | `Promise<void>` | Sends magic link email |
+| `refreshToken` | `refreshToken: string` | `Promise<Session>` | Refreshes access token |
+| `deleteAccount` | none | `Promise<void>` | Deletes user account |
 
 ```typescript
-import { onAuthStateChange, signOut, deleteAccount } from '@/utils/supabase/api';
+import { signIn, signUp, signOut } from '@/domains/identity/api';
 
-// Listen for auth changes
-const { data: { subscription } } = onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN') console.log('User:', session.user);
-  if (event === 'SIGNED_OUT') router.push('/login');
-});
+// Sign in
+const session = await signIn('user@example.com', 'password');
 
-// Delete account
-await deleteAccount();
+// Sign up
+const session = await signUp('user@example.com', 'password', 'John Doe');
+
+// Sign out
+await signOut();
 ```
 
 ---
 
 ## Profile Module
 
-**File**: `src/utils/supabase/api/profile.ts`
+**File**: `src/domains/identity/api/profile.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
 | `getProfile` | `userId: string` | `Promise<Profile>` | Fetches a single profile by ID |
-| `updateProfile` | `userId: string, updates: Partial<Profile>` | `Promise<Profile>` | Upserts profile fields; sanitizes empty strings to null; blocks `is_organizer`/`verified` changes |
+| `updateProfile` | `userId: string, updates: Partial<Profile>` | `Promise<Profile>` | Updates profile fields |
 | `checkUsernameUnique` | `username: string, currentUserId?: string` | `Promise<boolean>` | Returns true if username is not taken |
-| `becomeOrganizer` | `details: {full_name, username, organizer_type, location, bio, avatar_url, contact_email?}` | `Promise<any>` | RPC call to `become_organizer` — sets `is_organizer=true`, bypasses trigger |
-| `searchProfiles` | `query: string` | `Promise<Profile[]>` | Searches by `username` or `full_name` using `ILIKE`; max 10 results |
+| `becomeOrganizer` | `details: {...}` | `Promise<any>` | Sets `is_organizer=true` |
+| `searchProfiles` | `query: string` | `Promise<Profile[]>` | Searches by username or full_name |
 
 ```typescript
-import { getProfile, becomeOrganizer, searchProfiles } from '@/utils/supabase/api';
+import { getProfile, becomeOrganizer, searchProfiles } from '@/domains/identity/api';
 
 const profile = await getProfile('user-uuid');
 const results = await searchProfiles('john');
@@ -83,31 +84,31 @@ await becomeOrganizer({
 
 ## Events Module
 
-**File**: `src/utils/supabase/api/events.ts`
+**File**: `src/domains/events/api/events.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getEvents` | `options?: {limit?, includePast?}` | `Promise<Event[]>` | Lists upcoming events (excludes `isInstant`), default limit 100 |
-| `getOrganizerEvents` | `organizerId: string, options?: {includeInstant?}` | `Promise<Event[]>` | Events by organizer with ticket/save/post counts |
+| `getEvents` | `options?: {limit?, includePast?}` | `Promise<Event[]>` | Lists upcoming events |
+| `getOrganizerEvents` | `organizerId: string, options?: {includeInstant?}` | `Promise<Event[]>` | Events by organizer |
 | `getEventById` | `id: number` | `Promise<Event>` | Single event with organizer profile |
-| `getEventAttendees` | `eventId: number, limit?: number` | `Promise<Profile[]>` | Ticket holders (default 5) |
-| `createEvent` | `eventData: Omit<Event, 'id'|'created_at'|'updated_at'>` | `Promise<Event>` | Creates event; validates date, title (3-100 chars), category, ticket tiers |
-| `updateEvent` | `eventId: number, eventData: Partial<Event>` | `Promise<Event>` | Updates event fields with same validation |
-| `deleteEvent` | `id: number` | `Promise<void>` | RPC `delete_event_complete` (cascading delete); fallback to manual deletion; cleans storage |
-| `incrementEventView` | `eventId: number` | `Promise<void>` | RPC `increment_event_view` (non-critical) |
-| `getEventAnalytics` | `eventId: number` | `Promise<EventAnalytics>` | RPC `get_event_analytics` — views, trends, demographics, revenue |
-| `getLiveStreams` | none | `Promise<Event[]>` | Published events with `streaming.available=true, isLive=true` |
-| `getUpcomingStreams` | none | `Promise<Event[]>` | Published events with streaming available but not currently live |
-| `updateEventStreamingStatus` | `eventId: number, isLive: boolean` | `Promise<Event>` | Toggles `streaming.isLive`; sets timestamps; cleans stream chat on end |
-| `toggleLikeEvent` | `eventId: number, userId: string` | `Promise<boolean>` | Like/unlike event (returns true if liked) |
+| `getEventAttendees` | `eventId: number, limit?: number` | `Promise<Profile[]>` | Ticket holders |
+| `createEvent` | `eventData: Omit<Event, 'id'|'created_at'|'updated_at'>` | `Promise<Event>` | Creates event |
+| `updateEvent` | `eventId: number, eventData: Partial<Event>` | `Promise<Event>` | Updates event fields |
+| `deleteEvent` | `id: number` | `Promise<void>` | Deletes event and related data |
+| `incrementEventView` | `eventId: number` | `Promise<void>` | Increments view count |
+| `getEventAnalytics` | `eventId: number` | `Promise<EventAnalytics>` | Views, trends, revenue |
+| `getLiveStreams` | none | `Promise<Event[]>` | Published live events |
+| `getUpcomingStreams` | none | `Promise<Event[]>` | Upcoming streams |
+| `updateEventStreamingStatus` | `eventId: number, isLive: boolean` | `Promise<Event>` | Toggles streaming status |
+| `toggleLikeEvent` | `eventId: number, userId: string` | `Promise<boolean>` | Like/unlike event |
 | `getEventLikes` | `eventId: number` | `Promise<number>` | Total like count |
-| `hasUserLikedEvent` | `eventId: number, userId: string` | `Promise<boolean>` | Check if user has liked event |
-| `sendGift` | `eventId: amount: number, currency?: string` | `Promise<any>` | Invokes `send-gift` Edge Function; sends stream message |
-| `updateLiveViewerCount` | `eventId: number, delta: number` | `Promise<Event>` | Adjusts `streaming.liveViewers` by delta (floored at 0) |
-| `generateStreamKeys` | `eventId: number` | `Promise<{streamKey, ingestUrl, playbackUrl}>` | Invokes `cloudflare-stream-create` Edge Function |
+| `hasUserLikedEvent` | `eventId: number, userId: string` | `Promise<boolean>` | Check if user has liked |
+| `sendGift` | `eventId: number, amount: number, currency?: string` | `Promise<any>` | Sends gift to organizer |
+| `updateLiveViewerCount` | `eventId: number, delta: number` | `Promise<Event>` | Adjusts viewer count |
+| `generateStreamKeys` | `eventId: number` | `Promise<{streamKey, ingestUrl, playbackUrl}>` | Generates stream keys |
 
 ```typescript
-import { getEvents, createEvent, toggleLikeEvent } from '@/utils/supabase/api';
+import { getEvents, createEvent, toggleLikeEvent } from '@/domains/events/api';
 
 const events = await getEvents({ limit: 20, includePast: false });
 const newEvent = await createEvent({
@@ -129,38 +130,38 @@ await toggleLikeEvent(123, userId);
 
 ## Posts Module
 
-**File**: `src/utils/supabase/api/posts.ts`
+**File**: `src/domains/events/api/posts.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getPosts` | `options?: {currentUserId?, eventId?, authorId?, limit?, offset?}` | `Promise<ApiPost[]>` | Feed with likes/comments counts, is_liked, is_saved; filters blocked users |
-| `getProfilePostsGrid` | `options: {authorId, limit?, offset?}` | `Promise<ApiPost[]>` | Lightweight grid query for profile page |
-| `getPostById` | `postId: number, currentUserId?: string` | `Promise<ApiPost>` | Single post with like/save status |
-| `createPost` | `post: Omit<ApiPost, ...>` | `Promise<ApiPost>` | Requires text, images, or video; max 2000 chars |
-| `updatePostCaption` | `postId: number, userId: string, caption: string` | `Promise<ApiPost>` | Updates content (owner only) |
-| `deletePost` | `postId: number` | `Promise<void>` | Deletes post and its storage files |
-| `toggleLikePost` | `postId: number, userId: string` | `Promise<boolean>` | Like/unlike; triggers push + email notifications |
+| `getPosts` | `options?: {currentUserId?, eventId?, authorId?, limit?, offset?}` | `Promise<ApiPost[]>` | Feed with likes/comments |
+| `getProfilePostsGrid` | `options: {authorId, limit?, offset?}` | `Promise<ApiPost[]>` | Grid query for profile page |
+| `getPostById` | `postId: number, currentUserId?: string` | `Promise<ApiPost>` | Single post with status |
+| `createPost` | `post: Omit<ApiPost, ...>` | `Promise<ApiPost>` | Creates post |
+| `updatePostCaption` | `postId: number, userId: string, caption: string` | `Promise<ApiPost>` | Updates content |
+| `deletePost` | `postId: number` | `Promise<void>` | Deletes post and storage |
+| `toggleLikePost` | `postId: number, userId: string` | `Promise<boolean>` | Like/unlike |
 | `toggleSavePost` | `postId: number, userId: string` | `Promise<boolean>` | Bookmark/unbookmark |
-| `getPostComments` | `postId: number` | `Promise<PostComment[]>` | Comments with user profiles; filters blocked users |
-| `createPostComment` | `postId: number, userId: string, text: string, parentId?: number` | `Promise<PostComment>` | Max 500 chars; triggers notifications |
+| `getPostComments` | `postId: number` | `Promise<PostComment[]>` | Comments with profiles |
+| `createPostComment` | `postId: number, userId: string, text: string, parentId?: number` | `Promise<PostComment>` | Creates comment |
 | `toggleLikeComment` | `commentId: number, userId: string` | `Promise<boolean>` | Like/unlike comment |
-| `incrementPostView` | `postId: number` | `Promise<void>` | RPC `increment_post_view` (non-critical) |
+| `incrementPostView` | `postId: number` | `Promise<void>` | Increments view count |
 
 ---
 
 ## Tickets Module
 
-**File**: `src/utils/supabase/api/tickets.ts`
+**File**: `src/domains/tickets/api/tickets.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getUserTickets` | `userId: string` | `Promise<Ticket[]>` | All tickets with event details; ordered by purchase date desc |
-| `hasActiveVirtualTicket` | `userId: string, eventId: number` | `Promise<boolean>` | Checks for active Virtual ticket type |
-| `createTicket` | `ticket: Omit<Ticket, 'id'|'event'> & {transaction_id?}` | `Promise<Ticket>` | RPC `purchase_ticket`; requires completed transaction for paid tickets |
-| `scanTicket` | `ticketCode: string, eventId: number` | `Promise<any>` | RPC `scan_ticket`; validates and marks ticket as used |
+| `getUserTickets` | `userId: string` | `Promise<Ticket[]>` | All tickets with event details |
+| `hasActiveVirtualTicket` | `userId: string, eventId: number` | `Promise<boolean>` | Checks for active Virtual ticket |
+| `createTicket` | `ticket: Omit<Ticket, 'id'|'event'> & {transaction_id?}` | `Promise<Ticket>` | Purchases ticket |
+| `scanTicket` | `ticketCode: string, eventId: number` | `Promise<any>` | Validates and marks ticket as used |
 
 ```typescript
-import { createTicket, scanTicket, getUserTickets } from '@/utils/supabase/api';
+import { createTicket, scanTicket, getUserTickets } from '@/domains/tickets/api';
 
 const ticket = await createTicket({
   event_id: 42,
@@ -183,33 +184,33 @@ const result = await scanTicket('TIX-001', 42);
 
 ## Conversations Module
 
-**File**: `src/utils/supabase/api/conversations.ts`
+**File**: `src/domains/messaging/api/conversations.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getConversations` | `userId: string` | `Promise<Conversation[]>` | User's conversations with last message, unread count; filters blocked users |
-| `getMessages` | `conversationId: number` | `Promise<Message[]>` | Messages ordered chronologically; checks block status |
-| `sendMessage` | `conversationId: number, text: string, imageUrl?: string` | `Promise<Message>` | Max 5000 chars; validates blocks |
-| `startConversation` | `otherUserId: string` | `Promise<Conversation>` | Creates or returns existing conversation; checks blocks |
-| `deleteConversation` | `conversationId: number` | `Promise<void>` | Deletes conversation record |
+| `getConversations` | `userId: string` | `Promise<Conversation[]>` | User's conversations |
+| `getMessages` | `conversationId: number` | `Promise<Message[]>` | Messages chronologically |
+| `sendMessage` | `conversationId: number, text: string, imageUrl?: string` | `Promise<Message>` | Sends message |
+| `startConversation` | `otherUserId: string` | `Promise<Conversation>` | Creates or returns conversation |
+| `deleteConversation` | `conversationId: number` | `Promise<void>` | Deletes conversation |
 | `deleteMessage` | `messageId: number` | `Promise<void>` | Deletes a single message |
-| `markMessagesAsRead` | `conversationId: number, userId: string` | `Promise<void>` | Marks unread messages from others as read |
-| `markConversationAsUnread` | `conversationId: number, userId: string` | `Promise<boolean>` | Marks last message from other user as unread |
+| `markMessagesAsRead` | `conversationId: number, userId: string` | `Promise<void>` | Marks messages as read |
+| `markConversationAsUnread` | `conversationId: number, userId: string` | `Promise<boolean>` | Marks as unread |
 
 ---
 
 ## Follows Module
 
-**File**: `src/utils/supabase/api/follows.ts`
+**File**: `src/domains/social/api/follows.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getFollowedUserIds` | `userId: string` | `Promise<string[]>` | IDs of users this person follows |
+| `getFollowedUserIds` | `userId: string` | `Promise<string[]>` | IDs of followed users |
 | `checkIsFollowing` | `followerId, followingId: string` | `Promise<boolean>` | Check follow status |
-| `toggleFollow` | `followerId, followingId: string` | `Promise<boolean>` | Follow/unfollow; triggers push + email notifications |
+| `toggleFollow` | `followerId, followingId: string` | `Promise<boolean>` | Follow/unfollow |
 | `getFollowersCount` | `userId: string` | `Promise<number>` | Follower count |
 | `getFollowingCount` | `userId: string` | `Promise<number>` | Following count |
-| `followUser` / `unfollowUser` | `followerId, followingId: string` | `Promise<void>` | Direct follow/unfollow (no toggle) |
+| `followUser` / `unfollowUser` | `followerId, followingId: string` | `Promise<void>` | Direct follow/unfollow |
 | `isFollowing` | `followerId, followingId: string` | `Promise<boolean>` | Alias for checkIsFollowing |
 | `getFollowers` / `getFollowing` | `userId: string` | `Promise<Profile[]>` | Full profile lists |
 
@@ -217,116 +218,114 @@ const result = await scanTicket('TIX-001', 42);
 
 ## Stream Chat Module
 
-**File**: `src/utils/supabase/api/streamChat.ts`
+**File**: `src/domains/streaming/api/streamChat.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getStreamMessages` | `eventId: number` | `Promise<StreamMessage[]>` | Last 50 messages; filters blocked users |
+| `getStreamMessages` | `eventId: number` | `Promise<StreamMessage[]>` | Last 50 messages |
 | `sendStreamMessage` | `eventId: number, message: string` | `Promise<StreamMessage>` | Max 200 chars |
 
 ---
 
 ## Saved Module
 
-**File**: `src/utils/supabase/api/saved.ts`
+**File**: `src/domains/social/api/saved.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getSavedEvents` | `userId: string` | `Promise<Event[]>` | Saved events with `isSaved`/`hasReminder` flags |
-| `getSavedPosts` | `userId: string` | `Promise<ApiPost[]>` | Saved posts with like/comment counts |
+| `getSavedEvents` | `userId: string` | `Promise<Event[]>` | Saved events with flags |
+| `getSavedPosts` | `userId: string` | `Promise<ApiPost[]>` | Saved posts |
 | `toggleSaveEvent` | `eventId: number, userId: string` | `Promise<boolean>` | Bookmark/unbookmark event |
-| `toggleReminder` | `eventId: number, userId: string` | `Promise<boolean>` | Toggle reminder on saved event |
+| `toggleReminder` | `eventId: number, userId: string` | `Promise<boolean>` | Toggle reminder |
 
 ---
 
 ## Moderation Module
 
-**File**: `src/utils/supabase/api/moderation.ts`
+**File**: `src/domains/moderation/api/moderation.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getBlockedUserIds` | `userId: string` | `Promise<Set<string>>` | All user IDs blocked by or blocking this user |
-| `reportContent` | `{contentType, contentId, reason, details?, reportedUserId?}` | `Promise<Report \| null>` | Creates report; silently deduplicates (23505) |
-| `blockUser` | `blockedUserId: string` | `Promise<void>` | Blocks a user; prevents interaction |
+| `getBlockedUserIds` | `userId: string` | `Promise<Set<string>>` | All blocked user IDs |
+| `reportContent` | `{contentType, contentId, reason, details?, reportedUserId?}` | `Promise<Report \| null>` | Creates report |
+| `blockUser` | `blockedUserId: string` | `Promise<void>` | Blocks a user |
 | `unblockUser` | `blockedUserId: string` | `Promise<void>` | Removes block |
-| `assertUsersCanInteract` | `currentUserId, otherUserId: string` | `Promise<void>` | Throws if either user blocked the other |
-
-`ReportContentType` = `'post' | 'comment' | 'profile' | 'message' | 'event' | 'stream'`
+| `assertUsersCanInteract` | `currentUserId, otherUserId: string` | `Promise<void>` | Throws if blocked |
 
 ---
 
 ## Notifications Module
 
-**File**: `src/utils/supabase/api/notifications.ts`
+**File**: `src/domains/notifications/api/notifications.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getNotifications` | `userId: string` | `Promise<Notification[]>` | Aggregates follows, likes, comments, ticket sales, and event reminders; sorted by time |
-| `markNotificationsAsRead` | `userId: string` | `Promise<void>` | Updates `last_notification_read_at` on profile |
+| `getNotifications` | `userId: string` | `Promise<Notification[]>` | Aggregated notifications |
+| `markNotificationsAsRead` | `userId: string` | `Promise<void>` | Marks as read |
 
 ---
 
 ## Transactions Module
 
-**File**: `src/utils/supabase/api/transactions.ts`
+**File**: `src/domains/payments/api/transactions.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `createTransaction` | `{user_id, event_id, amount, currency, provider, status, type?, metadata?}` | `Promise<Transaction>` | Inserts payment record; merges `type` into metadata |
-| `waitForTransactionCompletion` | `transactionId: number, timeoutMs?: number` | `Promise<boolean>` | Polls + Realtime subscription; resolves true on success, false on fail/timeout (default 60s) |
+| `createTransaction` | `{user_id, event_id, amount, currency, provider, status, type?, metadata?}` | `Promise<Transaction>` | Creates payment record |
+| `waitForTransactionCompletion` | `transactionId: number, timeoutMs?: number` | `Promise<boolean>` | Polls for completion |
 
 ---
 
 ## Platform Module
 
-**File**: `src/utils/supabase/api/platform.ts`
+**File**: `src/domains/events/api/platform.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getOrganizerStats` | `userId: string` | `Promise<OrganizerStats>` | RPC `get_organizer_stats` — events, followers, views, tickets, revenue |
-| `getPlatformStats` | none | `Promise<{activeUsers, ticketsSold, eventsHosted}>` | Aggregate platform-wide counts |
+| `getOrganizerStats` | `userId: string` | `Promise<OrganizerStats>` | Events, followers, views |
+| `getPlatformStats` | none | `Promise<{activeUsers, ticketsSold, eventsHosted}>` | Platform-wide counts |
 
 ---
 
 ## Search Module
 
-**File**: `src/utils/supabase/api/search.ts`
+**File**: `src/domains/search/api/search.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getTrending` | none | `Promise<{events, people}>` | Top 5 events by views + top 5 verified profiles |
+| `getTrending` | none | `Promise<{events, people}>` | Top events and profiles |
 
 ---
 
 ## Streams Module
 
-**File**: `src/utils/supabase/api/streams.ts`
+**File**: `src/domains/streaming/api/streams.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getProfileStreamedVideos` | `userId: string` | `Promise<CloudflareStream[]>` | Merges Cloudflare Stream recordings with event-based stream records |
+| `getProfileStreamedVideos` | `userId: string` | `Promise<CloudflareStream[]>` | Stream recordings |
 
 ---
 
 ## User Media Module
 
-**File**: `src/utils/supabase/api/userMedia.ts`
+**File**: `src/domains/media/api/userMedia.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `getUserMedia` | `userId: string` | `Promise<UserMedia[]>` | Photos/videos for a user profile |
-| `incrementUserMediaView` | `mediaId: number` | `Promise<void>` | RPC `increment_media_view` |
+| `getUserMedia` | `userId: string` | `Promise<UserMedia[]>` | Photos/videos for profile |
+| `incrementUserMediaView` | `mediaId: number` | `Promise<void>` | Increments view count |
 
 ---
 
 ## Storage Module
 
-**File**: `src/utils/supabase/api/storage.ts`
+**File**: `src/domains/media/api/storage.ts`
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `uploadImage` | `file: File, bucket: 'events'\|'avatars'\|'posts', path?: string` | `Promise<string>` | Optimizes images; validates type/size (10MB img, 100MB video); retries 3x on network errors; returns public URL |
-| `deleteFile` | `bucket: 'events'\|'avatars'\|'posts', url: string` | `Promise<void>` | Extracts path from URL and removes from storage |
+| `uploadImage` | `file: File, bucket: 'events'\|'avatars'\|'posts', path?: string` | `Promise<string>` | Optimizes images; returns URL |
+| `deleteFile` | `bucket: 'events'\|'avatars'\|'posts', url: string` | `Promise<void>` | Removes from storage |
 
 **Allowed types**: JPG, PNG, WebP, GIF, MP4, WebM, MOV, M4V, 3GP, OGG
 
@@ -337,32 +336,36 @@ const result = await scanTicket('TIX-001', 42);
 All API functions follow this pattern:
 
 ```typescript
-const { data, error } = await supabase.from('table').select('*');
-if (error) throw error;
-return data;
-```
+const response = await fetch(`${API_URL}/api/v1/events`, {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+});
 
-Edge Function invocations have a double-check pattern:
+if (!response.ok) {
+  const error = await response.json();
+  throw new ApiError(error.message, response.status);
+}
 
-```typescript
-const { data, error } = await supabase.functions.invoke('function-name', { body });
-if (error) throw error;
-if (data?.error) throw new Error(data.error);
-return data;
+return response.json();
 ```
 
 **Common error codes**:
-- `23505` — Unique constraint violation (handled gracefully in follows, reports)
-- `42P01` — Missing table (handled in cloudflare_streams fallback)
-- `42883` — Undefined function (fallback in deleteEvent)
+- `401` — Unauthorized (token expired/invalid)
+- `403` — Forbidden (insufficient permissions)
+- `404` — Not found
+- `409` — Conflict (unique constraint violation)
+- `422` — Validation error
 
 ---
 
 ## Rate Limiting
 
-Supabase PostgREST does not impose client-side rate limits, but:
+Backend implements rate limiting on:
 
-- **RLS policies** enforce per-user access and prevent unauthorized writes
-- **Edge Functions** use idempotency keys for payment operations (`send-gift`, `wallet-ticket-payment`)
-- **RPC functions** use `FOR UPDATE` row locking for concurrent access (`purchase_ticket`, `scan_ticket`)
-- Client-side debounce is recommended for high-frequency calls like `incrementEventView` and `incrementPostView`
+- **Login/Register**: 5 requests per minute per IP
+- **Password Reset**: 3 requests per minute per email
+- **API General**: 100 requests per minute per user
+
+Client-side debounce is recommended for high-frequency calls like `incrementEventView` and `incrementPostView`.

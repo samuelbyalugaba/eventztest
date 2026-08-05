@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
-import { type Event, getEventAnalytics, generateStreamKeys, supabase, subscribeToStreamPresence } from '../../utils/supabase/api';
+import { type Event, getEventAnalytics, generateStreamKeys, supabase, subscribeToStreamPresence, updateEventStreamingStatus } from '../../utils/supabase/api';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { useIsMobile } from '../ui/use-mobile';
 import { useAgoraBroadcast } from '../../hooks/useAgoraBroadcast';
@@ -62,6 +62,21 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     chatMessages: messagesCountRef.current,
   }), [elapsedTime]);
 
+  // ── UI state (must be before useStreamPhase) ──
+  const [showSettings, setShowSettings] = useState(false);
+  const [isChatVisible, setIsChatVisible] = useState(true);
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'settings' | 'monetization' | 'analytics'>('settings');
+  const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>('webcam');
+  const [streamTitle, setStreamTitle] = useState(event.title || '');
+  const [streamCategory, setStreamCategory] = useState(event.category || 'General');
+  const [visibility, setVisibility] = useState<'public' | 'ticket' | 'followers'>((event.streaming as any)?.visibility || 'public');
+  const [monetizationEnabled, setMonetizationEnabled] = useState(false);
+  const [_analytics, setAnalytics] = useState<any | null>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [rtmpUrl, setRtmpUrl] = useState(event.streaming?.ingest_url || '');
+  const [streamKey, setStreamKey] = useState(event.streaming?.stream_key || '');
+  const [showKey, setShowKey] = useState(false);
+
   // ── Stream phase ──
   const {
     phase,
@@ -82,6 +97,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     elapsedTime,
     getEndStats,
     setStreamHealth,
+    streamMethod,
   });
 
   useEffect(() => {
@@ -139,20 +155,50 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   useEffect(() => { likesRef.current = likes; }, [likes]);
   useEffect(() => { messagesCountRef.current = messages.length; }, [messages.length]);
 
-  // ── UI state ──
-  const [showSettings, setShowSettings] = useState(false);
-  const [isChatVisible, setIsChatVisible] = useState(true);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'settings' | 'monetization' | 'analytics'>('settings');
-  const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>('webcam');
-  const [streamTitle, setStreamTitle] = useState(event.title || '');
-  const [streamCategory, setStreamCategory] = useState(event.category || 'General');
-  const [visibility, setVisibility] = useState<'public' | 'ticket' | 'followers'>((event.streaming as any)?.visibility || 'public');
-  const [monetizationEnabled, setMonetizationEnabled] = useState(false);
-  const [_analytics, setAnalytics] = useState<any | null>(null);
-  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
-  const [rtmpUrl, setRtmpUrl] = useState(event.streaming?.ingest_url || '');
-  const [streamKey, setStreamKey] = useState(event.streaming?.stream_key || '');
-  const [showKey, setShowKey] = useState(false);
+  // ── OBS status polling ──
+  const [obsConnected, setObsConnected] = useState(false);
+  const [obsStatus, setObsStatus] = useState<'waiting' | 'connected' | 'live'>('waiting');
+  
+  useEffect(() => {
+    if (streamMethod !== 'obs' || !isLive) return;
+    
+    let cancelled = false;
+    let pollInterval: ReturnType<typeof setInterval>;
+    
+    const checkObsStatus = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('cloudflare-stream-status', { body: { eventId: event.id } });
+        if (cancelled || error) return;
+        
+        const results = data?.results || [];
+        const eventResult = results.find((r: any) => r.eventId === event.id);
+        
+        if (eventResult?.state === 'connected' && eventResult?.isLive) {
+          setObsConnected(true);
+          setObsStatus('live');
+        } else if (eventResult?.state === 'connected') {
+          setObsConnected(true);
+          setObsStatus('connected');
+        } else {
+          setObsConnected(false);
+          setObsStatus('waiting');
+        }
+      } catch {
+        // Polling error, non-critical
+      }
+    };
+    
+    // Initial check
+    checkObsStatus();
+    
+    // Poll every 10 seconds
+    pollInterval = setInterval(checkObsStatus, 10000);
+    
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+    };
+  }, [streamMethod, isLive, event.id]);
 
   const virtualTicket = event.ticket_tiers?.find((tier) => tier.name.toLowerCase().includes('virtual'));
   const virtualPrice = (event.streaming as any)?.virtualPrice || virtualTicket?.price || null;
@@ -179,14 +225,29 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     if (streamMethod !== 'obs') return;
     let cancelled = false;
     const load = async () => {
+      // Use existing keys if already stored
+      const existingIngest = event.streaming?.ingest_url;
+      const existingKey = event.streaming?.stream_key;
+      if (existingIngest && existingKey && !cancelled) {
+        setRtmpUrl(existingIngest);
+        setStreamKey(existingKey);
+        return;
+      }
       try {
         const { ingestUrl: ingest, streamKey: key } = await generateStreamKeys(event.id);
         if (!cancelled) { setRtmpUrl(ingest || ''); setStreamKey(key || ''); }
-      } catch { toast.error('Failed to generate RTMP keys'); }
+      } catch (e: any) {
+        const msg = e?.message || 'Failed to generate RTMP keys';
+        if (msg.includes('not configured') || msg.includes('secrets')) {
+          toast.error('Cloudflare Stream not configured. Please set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_STREAM_TOKEN in Supabase Edge Function secrets.', { duration: 8000 });
+        } else {
+          toast.error(msg);
+        }
+      }
     };
     load();
     return () => { cancelled = true; };
-  }, [streamMethod, event.id]);
+  }, [streamMethod, event.id, event.streaming?.ingest_url, event.streaming?.stream_key]);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -210,6 +271,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
           streamTitle={streamTitle}
           streamCategory={streamCategory}
           visibility={visibility}
+          streamMethod={streamMethod}
           onToggleCamera={toggleCamera}
           onToggleCameraDevice={toggleCameraDevice}
           onToggleMic={toggleMic}
@@ -278,6 +340,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
         chatMessage={chatMessage}
         likesAnimation={likesAnimation}
         isChatVisible={isChatVisible}
+        streamMethod={streamMethod}
+        obsStatus={obsStatus}
         onToggleCamera={toggleCamera}
         onToggleCameraDevice={toggleCameraDevice}
         onToggleMic={toggleMic}

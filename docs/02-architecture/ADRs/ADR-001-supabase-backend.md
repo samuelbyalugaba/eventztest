@@ -1,7 +1,7 @@
-# ADR-001: Supabase as Backend
+# ADR-001: Hybrid Architecture — Supabase DB + Custom Backend
 
 **Status:** Accepted  
-**Date:** July 2026  
+**Date:** August 2026 (Updated from July 2026)  
 **Decision Maker:** Principal Engineer
 
 ---
@@ -12,36 +12,35 @@ Eventz needs a backend that provides authentication, database, storage, real-tim
 
 ## Decision
 
-Use **Supabase** as the Backend-as-a-Service (BaaS) platform.
+Use a **hybrid architecture** where Supabase provides managed database and storage services, while a custom Node.js/Express backend handles authentication, API logic, and real-time communication.
 
 ## Alternatives Considered
 
 | Alternative | Pros | Cons |
 |---|---|---|
-| **Custom Node.js/Express** | Full control, familiar stack | High setup cost, must build auth/storage/realtime |
-| **Firebase** | Mature, Google-backed | Vendor lock-in, NoSQL limitations, pricing at scale |
-| **AWS Amplify** | AWS ecosystem integration | Complex setup, steep learning curve |
-| **PocketBase** | Self-hosted, lightweight | Small community, limited scaling |
-| **Supabase** | PostgreSQL-based, open source, fast to build | BaaS limitations, vendor dependency |
+| **Pure Supabase BaaS** | Fast to build, minimal code | Limited auth control, Edge Function constraints |
+| **Pure Custom Backend** | Full control | High setup cost, must build auth/storage/realtime |
+| **Hybrid (Selected)** | Full control over auth/logic, managed DB | Slightly more complexity |
+| **Firebase** | Mature, Google-backed | Vendor lock-in, NoSQL limitations |
+| **AWS Amplify** | AWS ecosystem | Complex setup, steep learning curve |
 
 ## Consequences
 
 ### Positive
-- **Rapid development** — Auth, DB, Storage, Realtime work out of the box
-- **PostgreSQL** — Full relational database with SQL, not NoSQL
-- **RLS** — Row-level security built into the database
-- **Edge Functions** — Server-side logic without managing servers
-- **Open source** — Can self-host if needed
-- **Cost effective** — Generous free tier
+- **Full control over auth** — Custom JWT, OAuth, session management
+- **Full control over business logic** — No Edge Function constraints
+- **Managed database** — Supabase handles PostgreSQL operations
+- **Managed storage** — CDN, image optimization
+- **No vendor lock-in for backend** — Can migrate away from Supabase entirely
+- **Better security** — No direct client → DB access
 
 ### Negative
-- **Vendor dependency** — Tied to Supabase platform
-- **Edge Function limitations** — Deno runtime, cold starts, no persistent connections
-- **Realtime scalability** — Global subscriptions may not scale to 100K+ concurrent
-- **No caching layer** — Every query hits PostgreSQL directly
-- **Pricing at scale** — May become expensive at high usage
+- **More code to write** — Backend API routes, auth middleware
+- **More infrastructure to manage** — Railway deployment, Redis
+- **Real-time is harder** — WebSocket server instead of Supabase Realtime
+- **File uploads go through backend** — Proxy uploads or signed URLs
 
 ### Mitigation
-- Keep business logic in SQL functions (portable)
-- Abstract Supabase client behind API modules
-- Plan migration path for scale (see `TheArchitecture.md`)
+- Keep Supabase for DB + Storage (managed services)
+- Use Railway for backend (full Node.js, persistent connections)
+- Gradual migration with dual-auth transition period

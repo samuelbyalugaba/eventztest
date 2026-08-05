@@ -1,8 +1,8 @@
 # AI Development Instructions — Eventz
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Purpose:** Master instructions for AI coding assistants (OpenCode, Codex, Claude Code, Cursor)  
-**Last Updated:** July 2026
+**Last Updated:** August 2026
 
 ---
 
@@ -14,23 +14,33 @@ This document defines the rules, patterns, and constraints that every AI coding 
 
 ## 1. Architecture Principles (NEVER VIOLATE)
 
-### 1.1 Domain Boundaries
+### 1.1 Hybrid Architecture
+Eventz uses a **hybrid architecture**:
+- **Frontend**: React SPA + Vite (application) + Next.js (marketing)
+- **Backend**: Node.js/Express on Railway
+- **Database**: PostgreSQL on Supabase (managed)
+- **Storage**: Supabase Storage (managed)
+- **Cache**: Redis on Railway
+
+**Frontend talks to YOUR backend, NOT directly to Supabase.**
+
+### 1.2 Domain Boundaries
 - **NEVER** import from a domain you don't own
 - **NEVER** access another domain's database directly
 - **NEVER** put business logic in components — use hooks and services
 - **ALWAYS** communicate between domains via events or API calls
 
-### 1.2 Data Ownership
+### 1.3 Data Ownership
 - Each domain owns its data model
 - No shared databases between domains
 - Foreign keys between domains are forbidden — use events for synchronization
 
-### 1.3 API First
+### 1.4 API First
 - Every feature must have an API contract before implementation
-- APIs must be versioned
+- APIs must be versioned (`/api/v1/...`)
 - Breaking changes require a new version
 
-### 1.4 Security by Design
+### 1.5 Security by Design
 - Never store secrets in client-side code
 - Always validate input on both client and server
 - Always use parameterized queries
@@ -40,13 +50,13 @@ This document defines the rules, patterns, and constraints that every AI coding 
 
 ## 2. Project Structure
 
-### 2.1 Current Structure (Phase 0)
+### 2.1 Frontend Structure (React SPA)
 
 ```
 src/
 ├── domains/                    # Domain-driven organization
 │   ├── identity/               # Auth, profiles, users
-│   │   ├── api/                # API functions
+│   │   ├── api/                # API functions (calls backend)
 │   │   ├── components/         # Domain-specific components
 │   │   ├── hooks/              # Domain-specific hooks
 │   │   ├── types.ts            # Domain types
@@ -63,7 +73,7 @@ src/
 │   ├── moderation/             # Reports, blocks
 │   └── search/                 # Search, trending
 ├── shared/                     # Shared utilities
-│   ├── api/                    # Supabase client, query helpers
+│   ├── api/                    # HTTP client, API helpers
 │   ├── ui/                     # Shared UI components
 │   ├── utils/                  # Shared utilities
 │   ├── hooks/                  # Shared hooks
@@ -80,25 +90,54 @@ src/
 └── types.ts                    # Root types (legacy)
 ```
 
-### 2.2 Target Structure (Phase 1+)
+### 2.2 Backend Structure (Node.js/Express)
 
 ```
-platform/
-├── domains/
-│   ├── identity-service/       # Standalone identity microservice
-│   ├── event-service/          # Standalone event microservice
-│   ├── ticket-service/         # Standalone ticket microservice
-│   ├── payment-service/        # Standalone payment microservice
-│   ├── messaging-service/      # Standalone messaging microservice
-│   ├── notification-service/   # Standalone notification microservice
-│   ├── search-service/         # Standalone search microservice
-│   └── analytics-service/      # Standalone analytics microservice
-├── shared-contracts/           # API contracts, event schemas
-├── shared-libraries/           # Shared code across services
-├── infrastructure/             # Terraform, Kubernetes configs
-├── developer-tools/            # CLI tools, generators
-└── documentation/              # All docs
+backend/
+├── src/
+│   ├── domains/
+│   │   ├── identity/           # Auth, users, profiles
+│   │   │   ├── api/routes.ts   # Express routes
+│   │   │   ├── controllers/    # Request handlers
+│   │   │   ├── services/       # Business logic
+│   │   │   └── types.ts        # Domain types
+│   │   ├── events/             # Event CRUD, categories
+│   │   ├── tickets/            # Ticketing, scanning
+│   │   ├── messaging/          # Conversations, messages
+│   │   ├── payments/           # Wallet, transactions
+│   │   ├── notifications/      # Push, in-app
+│   │   ├── streaming/          # Live streaming, VOD
+│   │   ├── social/             # Follows, presence
+│   │   ├── media/              # File uploads
+│   │   ├── moderation/         # Reports, blocks
+│   │   └── feed/               # Content discovery
+│   ├── shared/
+│   │   ├── database/           # Knex.js connection
+│   │   ├── redis/              # Redis client
+│   │   └── middleware/         # Auth, error handling
+│   └── main.ts                 # Express entry point
+├── package.json
+├── tsconfig.json
+└── .env.example
 ```
+
+### 2.3 Supabase (Database + Storage Only)
+
+```
+supabase/
+├── migrations/                 # PostgreSQL migrations
+└── seed.sql                    # Seed data
+```
+
+**Note:** Supabase is used ONLY for:
+- PostgreSQL database (managed)
+- Storage buckets (events, avatars, posts)
+
+**NOT used for:**
+- Auth (custom backend handles this)
+- Edge Functions (migrated to backend)
+- Realtime (migrated to WebSocket)
+- Direct client queries (all through backend API)
 
 ---
 
@@ -211,26 +250,40 @@ export function useEvent(eventId: number) {
 }
 ```
 
-### 4.4 API Functions
+### 4.4 API Functions (Frontend)
 ```typescript
-// ALWAYS use the Supabase client from shared/api/client
+// ALWAYS call backend API, NOT Supabase directly
 // ALWAYS handle errors
-// NEVER expose raw Supabase errors to components
+// NEVER expose raw errors to components
 // ALWAYS validate input before calling API
 
 // GOOD
 export async function getEvents(options?: GetEventsOptions): Promise<Event[]> {
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .order('date', { ascending: true });
-  
-  if (error) throw new ApiError(error.message, error.code);
-  return data;
+  const response = await fetch('/api/v1/events?' + new URLSearchParams(options));
+  if (!response.ok) throw new ApiError(response.statusText, response.status);
+  return response.json();
 }
+
+// BAD — NEVER DO THIS
+import { supabase } from '../../shared/api/client';
+const { data, error } = await supabase.from('events').select('*');
 ```
 
-### 4.5 File Naming
+### 4.5 API Routes (Backend)
+```typescript
+// ALWAYS use Express Router
+// ALWAYS validate input with Zod
+// ALWAYS use parameterized queries
+// NEVER trust client input
+
+// GOOD
+router.get('/events', async (req, res) => {
+  const events = await db('events').select('*');
+  res.json({ data: events });
+});
+```
+
+### 4.6 File Naming
 ```
 Components:       PascalCase.tsx (EventCard.tsx)
 Hooks:            camelCase.ts (useEvent.ts)
@@ -244,7 +297,7 @@ Domain folders:   kebab-case (event-service/)
 
 ## 5. Dependency Rules
 
-### 5.1 Import Hierarchy
+### 5.1 Import Hierarchy (Frontend)
 ```
 domains/[specific] → shared → infrastructure → external
 ```
@@ -255,7 +308,16 @@ domains/[specific] → shared → infrastructure → external
 - `shared` CANNOT import from any domain
 - `infrastructure` CANNOT import from any domain
 
-### 5.2 Allowed Dependencies
+### 5.2 Import Hierarchy (Backend)
+```
+domains/[specific] → shared → external
+```
+
+- A domain CAN import from `shared`
+- A domain CANNOT import from another domain
+- `shared` CANNOT import from any domain
+
+### 5.3 Allowed Dependencies
 ```typescript
 // GOOD — Domain imports from shared
 import { supabase } from '../../shared/api/client';
@@ -265,7 +327,7 @@ import { Button } from '../../shared/ui/Button';
 import { getTickets } from '../../tickets/api/tickets'; // FORBIDDEN
 ```
 
-### 5.3 External Dependencies
+### 5.4 External Dependencies
 - Always check if a library already exists in the project before adding new ones
 - Prefer lightweight alternatives (date-fns over moment, zod over yup)
 - Never add UI frameworks (Material UI, Ant Design) — use Tailwind + Radix
@@ -350,7 +412,7 @@ DELETE /api/v1/events/:id       # Delete event
 ### 7.3 Authentication
 - All API calls require JWT token
 - Token passed via `Authorization: Bearer <token>` header
-- API Gateway validates token and forwards user context
+- Backend validates token and forwards user context
 
 ---
 
@@ -387,7 +449,7 @@ DELETE /api/v1/events/:id       # Delete event
 ### 9.2 Authorization
 - Always check permissions before operations
 - Never rely on client-side authorization
-- Always use RLS or middleware for API authorization
+- Always use backend middleware for API authorization
 - Never expose internal IDs to clients
 
 ### 9.3 Data Protection
@@ -511,3 +573,4 @@ A feature is "done" when:
 | Skipping tests | Technical debt | Always write tests |
 | No error handling | Poor UX | Always handle errors |
 | Ignoring performance | Poor UX | Always measure |
+| Calling Supabase directly from frontend | Security risk, bypasses auth | Always go through backend API |

@@ -5,7 +5,7 @@
 export { getUserTickets, hasActiveVirtualTicket, createTicket, scanTicket } from './api/tickets';
 
 // Types
-export type { Ticket } from './types';
+export type { Ticket } from './api/tickets';
 
 // Constants
 export const DOMAIN_NAME = 'tickets';

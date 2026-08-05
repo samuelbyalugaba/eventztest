@@ -18,7 +18,7 @@ export {
 } from './api/posts';
 
 // Types
-export type { ApiPost, PostComment, Post } from './types';
+export type { ApiPost, PostComment } from './api/posts';
 
 // Constants
 export const DOMAIN_NAME = 'feed';

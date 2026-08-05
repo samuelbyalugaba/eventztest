@@ -1,6 +1,6 @@
 # Deployment Architecture — Eventz
 
-**Last Updated:** July 2026
+**Last Updated:** August 2026
 
 ---
 
@@ -19,19 +19,28 @@
 └──────────────────────────┬──────────────────────────────┘
                            │
 ┌──────────────────────────┴──────────────────────────────┐
+│                      RAILWAY                            │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Custom Backend (Node.js/Express)                 │  │
+│  │  - Authentication (JWT, OAuth)                    │  │
+│  │  - API Routes (/api/v1/*)                         │  │
+│  │  - Business Logic                                 │  │
+│  │  - WebSocket (Real-time)                          │  │
+│  │  - Background Jobs                                │  │
+│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Redis (Caching, Sessions, Pub/Sub)               │  │
+│  └──────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+┌──────────────────────────┴──────────────────────────────┐
 │                      SUPABASE                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐             │
-│  │PostgreSQL│  │   Auth   │  │ Storage  │             │
-│  │ 14.5     │  │ (JWT)    │  │ (Images) │             │
-│  │ 30 tables│  │ OAuth    │  │ 3 buckets│             │
-│  │ 50 mig.  │  │ Email    │  │ Public   │             │
-│  └──────────┘  └──────────┘  └──────────┘             │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │ 15 Edge Functions (Deno runtime)                 │  │
-│  └──────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │ Realtime (WebSocket channels)                    │  │
-│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────┐  ┌──────────┐                            │
+│  │PostgreSQL│  │ Storage  │                            │
+│  │ 14.5     │  │ (Images) │                            │
+│  │ 28 tables│  │ 3 buckets│                            │
+│  │ 48 mig.  │  │ Public   │                            │
+│  └──────────┘  └──────────┘                            │
 │  Project ID: qxtqpbgtkymkshxzryzw                      │
 └──────────────────────────┬──────────────────────────────┘
                            │
@@ -66,40 +75,42 @@
 
 | Variable | Source | Purpose |
 |---|---|---|
-| `VITE_SUPABASE_URL` | Supabase Dashboard | Supabase project URL |
-| `VITE_SUPABASE_KEY` | Supabase Dashboard | Supabase anon/publishable key |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase Dashboard | Supabase publishable key |
-| `VITE_SUPABASE_PROJECT_ID` | Supabase Dashboard | Project reference ID |
+| `VITE_API_URL` | Railway | Backend API URL |
+| `VITE_WS_URL` | Railway | WebSocket URL |
 
-### Backend (Supabase Secrets)
+### Backend (Railway)
 
-| Secret | Purpose |
-|---|---|
-| `SERVICE_ROLE_KEY` | Elevated database access |
-| `RESEND_API_KEY` | Email delivery |
-| `EMAIL_FROM` | Sender address |
-| `AUTH_EMAIL_FROM` | Auth email sender |
-| `NTZS_API_KEY` | nTZS payment API |
-| `NTZS_SECRET` | nTZS authentication |
-| `NTZS_WEBHOOK_SECRET` | nTZS webhook verification |
-| `AGORA_APP_ID` | Agora application ID |
-| `AGORA_APP_CERTIFICATE` | Agora authentication |
-| `CLOUDFLARE_STREAM_TOKEN` | Cloudflare Stream API |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account |
-| `CLOUDFLARE_WEBHOOK_SECRET` | Cloudflare webhook verification |
-| `VAPID_PRIVATE_KEY` | Web Push authentication |
-| `VAPID_PUBLIC_KEY` | Web Push subscription |
+| Variable | Source | Purpose |
+|---|---|---|
+| `DATABASE_URL` | Supabase | PostgreSQL connection string |
+| `REDIS_URL` | Railway | Redis connection string |
+| `JWT_SECRET` | Railway | JWT signing secret |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase | Database access (bypass RLS) |
+| `SUPABASE_STORAGE_URL` | Supabase | Storage access |
+| `RESEND_API_KEY` | Resend | Email delivery |
+| `EMAIL_FROM` | Resend | Sender address |
+| `NTZS_API_KEY` | nTZS | Payment API |
+| `NTZS_SECRET` | nTZS | Authentication |
+| `NTZS_WEBHOOK_SECRET` | nTZS | Webhook verification |
+| `AGORA_APP_ID` | Agora | Application ID |
+| `AGORA_APP_CERTIFICATE` | Agora | Authentication |
+| `CLOUDFLARE_STREAM_TOKEN` | Cloudflare | Stream API |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare | Account |
+| `CLOUDFLARE_WEBHOOK_SECRET` | Cloudflare | Webhook verification |
+| `VAPID_PRIVATE_KEY` | Web Push | Authentication |
+| `VAPID_PUBLIC_KEY` | Web Push | Subscription |
 
 ---
 
 ## Deployment Flow
 
-1. **Push to `main`** triggers Vercel build
-2. **Vite build** produces static assets
-3. **Vercel Edge** adds security headers
-4. **CDN** serves static assets globally
-5. **Supabase** handles all API requests
-6. **Edge Functions** deploy via `supabase functions deploy`
+1. **Push to `main`** triggers Railway build (backend)
+2. **Push to `main`** triggers Vercel build (frontend)
+3. **Vite build** produces static assets
+4. **Vercel Edge** adds security headers
+5. **CDN** serves static assets globally
+6. **Railway** runs backend server
+7. **Backend** connects to Supabase PostgreSQL directly
 
 ---
 
@@ -132,8 +143,9 @@
 
 | Service | Free Tier | Estimated Monthly (10K users) |
 |---|---|---|
-| Vercel | 100GB bandwidth | $20-50 |
-| Supabase | 500MB DB, 1GB storage | $25-75 |
+| Vercel | 100GB bandwidth | $0-20 |
+| Railway | 500 hours | $5-20 |
+| Supabase | 500MB DB, 1GB storage | $0-25 |
 | Cloudflare Stream | 1000 min stored | $10-30 |
 | Agora | 10,000 min free | $5-20 |
 | Resend | 3,000 emails/mo | $5-15 |

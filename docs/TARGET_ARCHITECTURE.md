@@ -211,7 +211,67 @@ Analytics
 
 ## Backend Architecture
 
-Backend capabilities are separated by business domains instead of technical layers.
+### Hybrid Approach: Supabase DB + Custom Backend
+
+Eventz uses a **hybrid architecture** where Supabase provides managed database and storage services, while a custom Node.js/Express backend handles authentication, API logic, and real-time communication.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    FRONTEND                                  │
+│  ┌──────────┐  ┌──────────┐                                │
+│  │ Next.js  │  │React SPA │                                │
+│  │(Marketing)│ │(App)     │                                │
+│  └──────────┘  └──────────┘                                │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                    All API calls to
+                           │
+┌──────────────────────────┴──────────────────────────────────┐
+│  CUSTOM BACKEND (Railway)                                    │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Node.js/Express                                     │  │
+│  │  - Authentication (JWT, OAuth)                       │  │
+│  │  - API Routes (/api/v1/*)                            │  │
+│  │  - Business Logic                                    │  │
+│  │  - WebSocket (Real-time)                             │  │
+│  │  - Background Jobs                                   │  │
+│  └──────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                    Direct DB access
+                           │
+┌──────────────────────────┴──────────────────────────────────┐
+│  SUPABASE (Database + Storage only)                         │
+│  ┌──────────┐  ┌──────────┐                                │
+│  │PostgreSQL│  │ Storage  │                                │
+│  │(28 tables)│ │(avatars, │                                │
+│  │          │  │ events,  │                                │
+│  │          │  │ posts)   │                                │
+│  └──────────┘  └──────────┘                                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why This Hybrid Approach?
+
+| Concern | Supabase (DB + Storage) | Custom Backend (Railway) |
+|---|---|---|
+| Database | Managed PostgreSQL, connection pooling | Direct access via Knex.js |
+| Storage | CDN, image optimization, managed buckets | Signed URLs, proxy uploads |
+| Auth | Not used | Custom JWT, OAuth, session management |
+| API | Not used | Express.js routes, middleware |
+| Real-time | Not used | WebSocket server, Redis pub/sub |
+| Background jobs | Not used | BullMQ, cron jobs |
+
+### Benefits
+
+- **Full control over auth** — No Supabase Auth limitations
+- **Full control over business logic** — No Edge Function constraints
+- **No vendor lock-in for backend** — Can migrate away from Supabase entirely
+- **Simpler architecture** — One backend, one database
+- **Better security** — No direct client → DB access
+- **Managed database** — Supabase handles PostgreSQL operations
+
+### Backend Domains
 
 Each domain owns:
 
@@ -225,9 +285,8 @@ Each domain owns:
 
 Internal communication:
 
-- REST
-- gRPC
-- Kafka events
+- REST (external APIs)
+- Kafka events (async)
 
 **No domain accesses another domain's database directly.**
 
@@ -259,38 +318,38 @@ Each bounded context owns its own lifecycle and data.
 
 ## Data Architecture
 
-### PostgreSQL
-Primary transactional database. Stores users, events, organizers, orders, tickets, payments and relationships.
+### PostgreSQL (Supabase)
+Primary transactional database. Managed by Supabase with connection pooling. Stores users, events, organizers, orders, tickets, payments and relationships.
 
-### Redis
+### Redis (Railway)
 - Caching
 - Distributed locking
 - Session storage
 - Queues
 - Rate limiting
+- Pub/Sub for WebSocket
 
-### Kafka
+### Kafka (Future)
 - Event streaming
 - Integration
 - Asynchronous workflows
 
-### OpenSearch
+### OpenSearch (Future)
 - Full-text search
 - Filtering
 - Suggestions
 - Ranking
 
-### ClickHouse
+### ClickHouse (Future)
 - Analytics
 - Business intelligence
 - Operational reporting
 
-### Object Storage
-- Images
+### Object Storage (Supabase)
+- Images (events, avatars, posts buckets)
 - Videos
 - Attachments
-- Backups
-- Generated documents
+- CDN delivery
 
 ---
 
@@ -336,19 +395,33 @@ Events represent business facts:
 
 ## Authentication and Authorization
 
-### Authentication
-- Email/password
-- Google OAuth
-- Apple Sign-In
-- Phone (future)
-- Enterprise identity integration (future)
+### Authentication (Custom Backend)
+
+The custom backend handles all authentication, replacing Supabase Auth:
+
+- **Email/password** — bcrypt hashing, JWT tokens
+- **Google OAuth** — Authorization code + PKCE
+- **Apple Sign-In** — OAuth 2.0
+- **Phone** (future)
+- **Enterprise identity integration** (future)
 
 ### Authorization
-- RBAC (Role-Based Access Control)
-- Permission-based access
-- JWT tokens
-- Refresh tokens
-- ABAC (Attribute-Based) support (future)
+
+- **RBAC** (Role-Based Access Control)
+- **Permission-based access**
+- **JWT tokens** — Access + refresh tokens
+- **Application-level enforcement** — Backend middleware validates permissions
+- **ABAC** (Attribute-Based) support (future)
+
+### Security Model
+
+| Layer | Implementation |
+|---|---|
+| Transport | TLS everywhere |
+| Authentication | JWT with short-lived access tokens |
+| Authorization | Backend middleware + role checks |
+| Database | Direct access from backend (no RLS needed) |
+| API | Rate limiting, input validation |
 
 ---
 
@@ -373,16 +446,17 @@ Events represent business facts:
 
 ## Infrastructure
 
-| Component | Technology |
-|---|---|
-| Container Platform | Docker |
-| Orchestration | Kubernetes |
-| GitOps | Argo CD |
-| Infrastructure as Code | Terraform |
-| Package Management | Helm |
-| Ingress | Cloudflare |
-| Load Balancers | Managed Kubernetes |
-| DNS | Cloudflare |
+| Component | Technology | Platform |
+|---|---|---|
+| Frontend Hosting | Vercel | Vercel |
+| Backend Hosting | Railway | Railway |
+| Database | PostgreSQL | Supabase |
+| Object Storage | Storage buckets | Supabase |
+| Cache | Redis | Railway |
+| CDN | Cloudflare | Cloudflare |
+| DNS | Cloudflare | Cloudflare |
+| Container Platform | Docker | Railway |
+| CI/CD | GitHub Actions | GitHub |
 
 ---
 
@@ -517,41 +591,62 @@ Every architectural change requires:
 ## Repository Structure
 
 ```
-platform/
-├── domains/
-│   ├── identity-service/
-│   ├── event-service/
-│   ├── ticket-service/
-│   ├── payment-service/
-│   ├── messaging-service/
-│   ├── notification-service/
-│   ├── search-service/
-│   └── analytics-service/
-├── shared-contracts/
-├── shared-libraries/
-├── infrastructure/
-├── developer-tools/
-└── documentation/
+eventz-app/
+├── src/                          # Frontend (React SPA + Vite)
+│   ├── domains/                  # Domain-driven organization
+│   │   ├── identity/
+│   │   ├── events/
+│   │   ├── tickets/
+│   │   ├── messaging/
+│   │   ├── payments/
+│   │   ├── streaming/
+│   │   ├── notifications/
+│   │   ├── social/
+│   │   ├── media/
+│   │   ├── moderation/
+│   │   └── search/
+│   ├── shared/                   # Shared utilities
+│   ├── infrastructure/           # Infrastructure concerns
+│   └── ...
+├── backend/                      # Custom Backend (Node.js/Express)
+│   └── src/
+│       ├── domains/
+│       │   ├── identity/         # Auth, users, profiles
+│       │   ├── events/           # Event CRUD, categories
+│       │   ├── tickets/          # Ticketing, scanning
+│       │   ├── messaging/        # Conversations, messages
+│       │   ├── payments/         # Wallet, transactions
+│       │   ├── notifications/    # Push, in-app
+│       │   ├── streaming/        # Live streaming, VOD
+│       │   ├── social/           # Follows, presence
+│       │   ├── media/            # File uploads
+│       │   ├── moderation/       # Reports, blocks
+│       │   └── feed/             # Content discovery
+│       ├── shared/               # Shared utilities
+│       │   ├── database/         # Knex.js connection
+│       │   ├── redis/            # Redis client
+│       │   └── middleware/       # Auth, error handling
+│       └── main.ts               # Express entry point
+├── supabase/                     # Supabase migrations
+│   └── migrations/
+├── docs/                         # Documentation
+└── ...
 ```
 
-Each repository follows identical engineering standards, testing standards, security requirements and release processes.
+Each domain follows identical engineering standards, testing standards, security requirements and release processes.
 
 ---
 
 ## Future Architecture Evolution
 
-The platform is intentionally designed to support:
+The platform is designed to evolve from the hybrid approach:
 
-- Multi-region deployments
-- Multi-cloud capability
-- AI-powered personalization
-- Real-time collaboration
-- Large-scale analytics
-- Enterprise integrations
-- Marketplace capabilities
-- Global content delivery
-- High availability
-- Continuous platform evolution
+- **Phase 1**: Custom backend with Supabase DB + Storage (current)
+- **Phase 2**: Add Redis caching and background jobs
+- **Phase 3**: Add WebSocket server for real-time
+- **Phase 4**: Migrate Edge Functions to backend routes
+- **Phase 5**: Consider Kafka for event streaming (if needed)
+- **Phase 6**: Multi-region deployment (if needed)
 
 ---
 
@@ -559,10 +654,11 @@ The platform is intentionally designed to support:
 
 | Document | Purpose |
 |---|---|
-| [System Architecture](02-architecture/system-architecture.md) | Current state (Supabase BaaS) |
-| [Migration Plan](MIGRATION_PLAN.md) | Phased approach from current → target |
+| [System Architecture](02-architecture/system-architecture.md) | Current state and hybrid architecture |
+| [Migration Plan](MIGRATION_PLAN.md) | Phased approach to hybrid backend |
 | [Phase 1 Restructure](PHASE_1_RESTRUCTURE.md) | Immediate code organization |
 | [AI Instructions](AI_INSTRUCTIONS.md) | Rules for AI coding assistants |
+| [Deployment Architecture](02-architecture/deployment-architecture.md) | Railway + Vercel deployment |
 
 ---
 

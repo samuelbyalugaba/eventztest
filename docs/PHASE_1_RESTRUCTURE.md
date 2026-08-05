@@ -1,16 +1,28 @@
 # Phase 1 Restructure Guide — Eventz
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Status:** Active  
-**Last Updated:** July 2026
+**Last Updated:** August 2026
 
 ---
 
 ## Purpose
 
-This document provides the step-by-step guide for restructuring the Eventz codebase from its current flat structure into a domain-driven architecture while keeping Supabase as the backend.
+This document provides the step-by-step guide for restructuring the Eventz codebase from its current flat structure into a domain-driven architecture while keeping Supabase as the database and storage provider.
 
 **This is Phase 0 of the migration plan — no infrastructure changes, just code organization.**
+
+---
+
+## Architecture Context
+
+Eventz uses a **hybrid architecture**:
+- **Frontend**: React SPA + Vite (application) + Next.js (marketing)
+- **Backend**: Node.js/Express on Railway
+- **Database**: PostgreSQL on Supabase (managed)
+- **Storage**: Supabase Storage (managed)
+
+Frontend talks to the custom backend, NOT directly to Supabase.
 
 ---
 
