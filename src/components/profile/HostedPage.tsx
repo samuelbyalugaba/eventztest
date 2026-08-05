@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, PlaySquare, Search, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Calendar, PlaySquare, Search, X, MapPin } from 'lucide-react';
 import { BackButton } from '../ui/BackButton';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -133,10 +133,12 @@ export function HostedPage() {
   const backfillTriggered = useRef(false);
   useEffect(() => {
     if (backfillTriggered.current) return;
+    if (!targetUserId) return;
     if (streams.length === 0) return;
     const needsBackfill = streams.some((s) => !s.playback_url && s.uid?.startsWith('event-'));
     if (!needsBackfill) return;
     backfillTriggered.current = true;
+    const userId = targetUserId;
 
     (async () => {
       try {
@@ -148,7 +150,7 @@ export function HostedPage() {
           method: 'POST',
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        const refreshed = await getProfileStreamedVideos(targetUserId);
+        const refreshed = await getProfileStreamedVideos(userId);
         if (refreshed) setStreams(refreshed);
       } catch { /* ignore */ }
     })();
@@ -190,11 +192,38 @@ export function HostedPage() {
 
   const [selectedStream, setSelectedStream] = useState<CloudflareStream | null>(null);
 
+  const closePlayer = useCallback(() => setSelectedStream(null), []);
+
+  useEffect(() => {
+    if (!selectedStream) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePlayer();
+    };
+    document.addEventListener('keydown', handleKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = '';
+    };
+  }, [selectedStream, closePlayer]);
+
   const getStreamPlaybackUrl = (stream: CloudflareStream) => {
-    if (stream.playback_url) return stream.playback_url;
+    const extractUidFromHls = (url: string): string | null => {
+      const match = url.match(/videodelivery\.net\/([^/]+)/);
+      return match ? match[1] : null;
+    };
+
+    const toIframeUrl = (url: string): string => {
+      if (url.includes('iframe.videodelivery.net')) return url;
+      const uid = extractUidFromHls(url);
+      if (uid) return `https://iframe.videodelivery.net/${uid}`;
+      return url;
+    };
+
+    if (stream.playback_url) return toIframeUrl(stream.playback_url);
     const streaming = (stream.event as any)?.streaming;
-    if (streaming?.playback_url) return streaming.playback_url;
-    if (streaming?.recording_url) return streaming.recording_url;
+    if (streaming?.playback_url) return toIframeUrl(streaming.playback_url);
+    if (streaming?.recording_url) return toIframeUrl(streaming.recording_url);
     if (streaming?.recording_uid) return `https://iframe.videodelivery.net/${streaming.recording_uid}`;
     if (stream.uid && !stream.uid.startsWith('event-')) return `https://iframe.videodelivery.net/${stream.uid}`;
     return null;
@@ -313,30 +342,63 @@ export function HostedPage() {
 
       {selectedStream && (() => {
         const playbackUrl = getStreamPlaybackUrl(selectedStream);
+        const title = selectedStream.title || selectedStream.event?.title || 'Streamed video';
+        const dateStr = streamDateLabel(selectedStream.created_at);
+        const location = selectedStream.event?.location;
+
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setSelectedStream(null)}>
-            <div className="relative w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-50 flex flex-col bg-black"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+          >
+            {/* Top bar */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 bg-black/90 backdrop-blur-sm shrink-0">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-semibold text-white truncate">{title}</h2>
+                <div className="flex items-center gap-2 text-xs text-white/50">
+                  <Calendar className="h-3 w-3 shrink-0" />
+                  <span>{dateStr}</span>
+                  {location && (
+                    <>
+                      <span className="text-white/20">|</span>
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{location}</span>
+                    </>
+                  )}
+                </div>
+              </div>
               <button
                 onClick={() => setSelectedStream(null)}
-                className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 active:scale-95 transition"
+                aria-label="Close player"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
+            </div>
+
+            {/* Player */}
+            <div className="flex-1 flex items-center justify-center bg-black p-2 sm:p-4 min-h-0">
               {playbackUrl ? (
-                <div className="aspect-video overflow-hidden rounded-2xl bg-black">
+                <div className="w-full max-w-5xl aspect-video overflow-hidden rounded-lg bg-black shadow-2xl">
                   <iframe
                     src={playbackUrl}
-                    title={selectedStream.title || 'Streamed video'}
+                    title={title}
                     className="h-full w-full"
-                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
                     allowFullScreen
                   />
                 </div>
               ) : (
-                <div className="aspect-video flex flex-col items-center justify-center rounded-2xl bg-gray-900 text-center">
-                  <PlaySquare className="h-12 w-12 text-gray-500 mb-3" />
-                  <p className="text-white font-semibold">Recording not available</p>
-                  <p className="text-gray-400 text-sm mt-1">This stream does not have a playback URL yet.</p>
+                <div className="w-full max-w-5xl aspect-video flex flex-col items-center justify-center rounded-lg bg-gray-900 text-center px-6">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+                    <PlaySquare className="h-8 w-8 text-gray-500" />
+                  </div>
+                  <p className="text-white font-semibold text-lg">Recording not available</p>
+                  <p className="text-gray-400 text-sm mt-1.5 max-w-xs">
+                    This stream does not have a playback URL yet. It may still be processing.
+                  </p>
                 </div>
               )}
             </div>

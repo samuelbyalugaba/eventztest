@@ -13,6 +13,8 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const WEBHOOK_SECRET = Deno.env.get("CLOUDFLARE_STREAM_WEBHOOK_SECRET");
+const CF_ACCOUNT_ID = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
+const CF_STREAM_TOKEN = Deno.env.get("CLOUDFLARE_STREAM_TOKEN");
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -156,6 +158,57 @@ Deno.serve(async (req) => {
           raw_payload: payload,
           updated_at: new Date().toISOString(),
         }, { onConflict: "uid" });
+    }
+
+    // On disconnect, if no videoUid was provided, query Cloudflare API for the latest recording
+    if (isDisconnect && !videoUid && CF_ACCOUNT_ID && CF_STREAM_TOKEN) {
+      const inputUid = liveInputUid || String(streaming.cf_live_input_uid || "");
+      if (inputUid) {
+        try {
+          const cfRes = await fetch(
+            `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream?live_input=${inputUid}`,
+            { headers: { Authorization: `Bearer ${CF_STREAM_TOKEN}` } }
+          );
+          const cfJson = await cfRes.json().catch(() => null);
+          if (cfRes.ok && cfJson?.success && Array.isArray(cfJson.result)) {
+            const ready = cfJson.result
+              .filter((v: any) => v?.readyToStream === true || v?.status?.state === "ready")
+              .sort((a: any, b: any) => new Date(b.created || 0).getTime() - new Date(a.created || 0).getTime());
+            const latest = ready[0];
+            if (latest?.uid) {
+              const hls = latest.playback?.hls || `https://videodelivery.net/${latest.uid}/manifest/video.m3u8`;
+              // Update event with recording data
+              const recordingUpdate = {
+                ...updated,
+                replayAvailable: true,
+                recording_uid: latest.uid,
+                recording_url: hls,
+                playback_url: hls,
+                replay_thumbnail: latest.thumbnail || undefined,
+                recordingReadyAt: Date.now(),
+              };
+              await admin.from("events").update({ streaming: recordingUpdate }).eq("id", event.id);
+              // Upsert into cloudflare_streams
+              await admin.from("cloudflare_streams").upsert({
+                user_id: event.organizer_id,
+                event_id: event.id,
+                uid: latest.uid,
+                live_input_uid: inputUid,
+                title: latest.meta?.name || event.title || "Streamed video",
+                thumbnail_url: latest.thumbnail || event.image_url || null,
+                preview_url: latest.preview || null,
+                playback_url: hls,
+                duration: typeof latest.duration === "number" ? latest.duration : null,
+                status: latest.status?.state || "ready",
+                raw_payload: latest,
+                updated_at: new Date().toISOString(),
+              }, { onConflict: "uid" });
+            }
+          }
+        } catch (e) {
+          console.error("disconnect backfill error", e);
+        }
+      }
     }
 
     return new Response("ok", { status: 200 });
