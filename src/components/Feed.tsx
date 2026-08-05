@@ -56,7 +56,6 @@ export function Feed({
     hasMore,
     isLoadingMore,
     isLoading,
-    followingIds,
     notifications,
     notificationsLoading,
     handleLoadMore,

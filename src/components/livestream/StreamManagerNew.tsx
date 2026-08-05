@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
-import { type Event, getEventAnalytics, generateStreamKeys, supabase, subscribeToStreamPresence, updateEventStreamingStatus } from '../../utils/supabase/api';
+import { type Event, getEventAnalytics, generateStreamKeys, supabase, subscribeToStreamPresence } from '../../utils/supabase/api';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { useIsMobile } from '../ui/use-mobile';
 import { useAgoraBroadcast } from '../../hooks/useAgoraBroadcast';
@@ -156,7 +156,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   useEffect(() => { messagesCountRef.current = messages.length; }, [messages.length]);
 
   // ── OBS status polling ──
-  const [obsConnected, setObsConnected] = useState(false);
+  const [, setObsConnected] = useState(false);
   const [obsStatus, setObsStatus] = useState<'waiting' | 'connected' | 'live'>('waiting');
   
   useEffect(() => {

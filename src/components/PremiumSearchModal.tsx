@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
 import { searchProfiles, Profile, getTrending } from '../utils/supabase/api';
 import { extractCityName, normalizePlaceName, searchNominatim } from '../utils/nominatim';
-import { queryClient } from '../queryClient';
-import { queryKeys } from '../queryKeys';
 import {
   clearRecentEvents,
   LEGACY_RECENT_SEARCHES_KEY,

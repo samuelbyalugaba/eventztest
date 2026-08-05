@@ -167,7 +167,6 @@ export function DashboardPage() {
   const {
     organizerName,
     initials,
-    organizerEvents,
     rangedScans,
     giftTransactions,
     scopes,

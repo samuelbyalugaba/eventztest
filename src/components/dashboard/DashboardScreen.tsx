@@ -77,7 +77,6 @@ export function DashboardScreenView({
   detailScope,
   selectedGiftTransactions,
   detailGiftTransactions,
-  giftTransactions,
   transactions,
   onOpenScanner,
   onBack,

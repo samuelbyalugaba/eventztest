@@ -24,7 +24,7 @@ function eventToStreamRecord(event: Event, userId: string): CloudflareStream | n
   if (!streaming.available || streaming.isLive) return null;
 
   const streamTime = streaming.endedAt || streaming.lastRecordedAt || streaming.startedAt;
-  const hasPastStreamMetadata = Boolean(streamTime || streaming.playback_url || streaming.replayAvailable);
+  const hasPastStreamMetadata = Boolean(streamTime || streaming.playback_url || streaming.replayAvailable || streaming.cf_live_input_uid);
   if (!hasPastStreamMetadata) return null;
 
   const fallbackDate = new Date(`${event.date || ''} ${event.time || ''}`.trim()).getTime();
@@ -41,13 +41,13 @@ function eventToStreamRecord(event: Event, userId: string): CloudflareStream | n
     title: event.title || 'Streamed video',
     thumbnail_url: event.image_url || null,
     preview_url: null,
-    playback_url: streaming.replayAvailable ? streaming.playback_url || null : null,
+    playback_url: streaming.playback_url || null,
     duration: null,
     status: 'ended',
     created_at: createdAt,
     event,
     source: 'event',
-    has_recording: Boolean(streaming.replayAvailable && streaming.playback_url),
+    has_recording: true,
   };
 }
 

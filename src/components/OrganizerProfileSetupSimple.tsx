@@ -28,7 +28,7 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
   const [avatarUrl, setAvatarUrl] = useState('');
   const [checking, setChecking] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const searchLocations = async (query: string) => {
     if (query.length < 3) { setLocationSuggestions([]); return; }
@@ -73,16 +73,6 @@ export function OrganizerProfileSetup({ onComplete, onBack }: OrganizerProfileSe
       console.error('Failed to upload photo:', error);
       toast.error('Upload failed');
     }
-  };
-
-  const checkHandle = async () => {
-    if (!username) return;
-    setChecking(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const ok = await checkUsernameUnique(username, user?.id);
-      setAvailable(ok);
-    } finally { setChecking(false); }
   };
 
   const onSubmit = async () => {
