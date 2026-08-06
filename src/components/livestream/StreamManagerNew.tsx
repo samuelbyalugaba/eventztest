@@ -8,6 +8,7 @@ import { useStreamPhase } from '../../hooks/useStreamPhase';
 import { useStreamChat } from '../../hooks/useStreamChat';
 import { StreamEndedPanel } from './StreamEndedPanel';
 import { StreamSetupPanel } from './StreamSetupPanel';
+import { playLocalPreview } from './sessionUtils';
 import { StreamActiveOverlay } from './StreamActiveOverlay';
 import { StreamSettingsModal } from './StreamSettingsModal';
 import type { StreamStats } from './types';
@@ -33,6 +34,8 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     micEnabled,
     streamHealth,
     isClientReady,
+    availableCameras,
+    currentCameraIndex,
     setStreamHealth,
     toggleCamera,
     toggleMic,
@@ -109,11 +112,11 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     (async () => {
       try {
         localVideoTrack.stop();
-        if (!cancelled) await playLocalPreview(localVideoTrack, undefined, 'local-player');
+        if (!cancelled) await playLocalPreview(localVideoTrack, availableCameras[currentCameraIndex], 'local-player');
       } catch { /* preview container not mounted yet */ }
     })();
     return () => { cancelled = true; };
-  }, [localVideoTrack, phase, isLive, streamMethod]);
+  }, [localVideoTrack, phase, isLive, streamMethod, availableCameras, currentCameraIndex]);
 
 
 
