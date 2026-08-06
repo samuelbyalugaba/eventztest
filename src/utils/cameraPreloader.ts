@@ -16,3 +16,13 @@ export async function takePreloaded(): Promise<MediaStream | null> {
   pending = null
   return p ? await p : null
 }
+
+/** Stops and drops any camera stream held by the preloader so other consumers
+ *  (e.g. the livestream broadcaster) can open the device. */
+export function releasePreloadedCamera() {
+  const p = pending
+  pending = null
+  if (!p) return
+  void p.then((stream) => stream?.getTracks().forEach((t) => t.stop())).catch(() => {})
+}
+
