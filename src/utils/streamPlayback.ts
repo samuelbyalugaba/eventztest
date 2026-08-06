@@ -100,10 +100,45 @@ function buildIframeUrl(recordingUid: string, customerSubdomain: string | null):
 }
 
 /**
- * Returns the iframe URL for replay playback, or null if no valid recording exists.
+ * Returns a Cloudflare recording UID, or null when the stream is not backed by a
+ * Cloudflare recording (e.g. an Agora MP4 in Supabase Storage). This prevents
+ * building bogus `videodelivery.net` iframe URLs out of non-Cloudflare data.
+ */
+export function getCloudflareUid(stream: CloudflareStream): string | null {
+  const streaming = getEventStreaming(stream);
+  const urlCandidates = [
+    stream.playback_url,
+    stream.preview_url,
+    String(streaming?.playback_url || ""),
+    String(streaming?.recording_url || ""),
+  ];
+  for (const url of urlCandidates) {
+    if (url) {
+      const uid = extractStreamUid(url);
+      if (uid) return uid;
+    }
+  }
+
+  // An OBS/Cloudflare live stream (identified by a live input UID) stores its
+  // recording UID on the event streaming record or the stream row itself. Only
+  // trust these when a Cloudflare live input exists, since Agora rows reuse a
+  // non-CF `recording_uid`/`agora-<sid>` uid.
+  if (getLiveInputUid(stream)) {
+    if (streaming?.recording_uid) return String(streaming.recording_uid);
+    if (stream.uid && !stream.uid.startsWith("event-") && !stream.uid.startsWith("agora-")) {
+      return stream.uid;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns the iframe URL for replay playback, or null if no Cloudflare recording
+ * exists. Direct (non-Cloudflare) recordings are handled via the MP4/HLS path.
  */
 export function getReplayIframeUrl(stream: CloudflareStream): string | null {
-  const recordingUid = getRecordingUid(stream);
+  const recordingUid = getCloudflareUid(stream);
   if (!recordingUid) return null;
   const subdomain = getCustomerSubdomain(stream);
   return buildIframeUrl(recordingUid, subdomain);
@@ -150,7 +185,7 @@ export function streamHasReplay(stream: CloudflareStream): boolean {
 export function getReplayThumbnail(stream: CloudflareStream): string {
   if (stream.thumbnail_url) return stream.thumbnail_url;
 
-  const recordingUid = getRecordingUid(stream);
+  const recordingUid = getCloudflareUid(stream);
   if (recordingUid) {
     return `https://videodelivery.net/${recordingUid}/thumbnails/thumbnail.jpg`;
   }

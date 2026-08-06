@@ -23,8 +23,12 @@ function eventToStreamRecord(event: Event, userId: string): CloudflareStream | n
   const streaming: any = event.streaming || {};
   if (!streaming.available || streaming.isLive) return null;
 
+  const playbackUrl = streaming.playback_url || streaming.recording_url || null;
+  const hasCfdLiveInput = Boolean(streaming.cf_live_input_uid);
   const streamTime = streaming.endedAt || streaming.lastRecordedAt || streaming.startedAt;
-  const hasPastStreamMetadata = Boolean(streamTime || streaming.playback_url || streaming.replayAvailable || streaming.cf_live_input_uid);
+  const hasPastStreamMetadata = Boolean(
+    streamTime || playbackUrl || streaming.replayAvailable || hasCfdLiveInput
+  );
   if (!hasPastStreamMetadata) return null;
 
   const fallbackDate = new Date(`${event.date || ''} ${event.time || ''}`.trim()).getTime();
@@ -41,13 +45,15 @@ function eventToStreamRecord(event: Event, userId: string): CloudflareStream | n
     title: event.title || 'Streamed video',
     thumbnail_url: streaming.replay_thumbnail || event.image_url || null,
     preview_url: null,
-    playback_url: streaming.playback_url || streaming.recording_url || null,
+    playback_url: playbackUrl,
     duration: null,
     status: 'ended',
     created_at: createdAt,
     event,
     source: 'event',
-    has_recording: true,
+    // Only advertise a recording when there is actually something playable (or
+    // a Cloudflare live stream that may still be processing).
+    has_recording: Boolean(playbackUrl || hasCfdLiveInput),
   };
 }
 

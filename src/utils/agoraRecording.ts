@@ -19,9 +19,20 @@ async function invokeRecording(action: 'start' | 'stop', eventId: number | strin
 /**
  * Fire-and-forget start of Cloud Recording for a webcam stream.
  * Safe to call repeatedly; the edge function is idempotent.
+ * Returns the invocation promise so callers can optionally observe the outcome.
  */
 export const startAgoraRecording = (eventId: number | string) => {
-  void invokeRecording('start', eventId);
+  const promise = invokeRecording('start', eventId);
+  // Surface the result for debugging; failures are also stored on the event
+  // (`streaming.agoraRecording.error`) by the edge function.
+  void promise.then((data) => {
+    if (data?.success === true && data?.sid) {
+      console.log(`[agoraRecording] started for event ${eventId} (sid ${data.sid})`);
+    } else if (data?.error) {
+      console.error(`[agoraRecording] start for event ${eventId} returned: ${data.error}`);
+    }
+  });
+  return promise;
 };
 
 /**

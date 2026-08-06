@@ -92,7 +92,9 @@ async function agoraRequest(
   });
   const json: Record<string, any> = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(`Agora ${method} ${path} failed (${res.status}): ${JSON.stringify(json)}`);
+    throw new Error(
+      `Agora ${method} ${path} failed (${res.status}) for appId "${APP_ID}": ${JSON.stringify(json)}`,
+    );
   }
   return json;
 }
@@ -178,64 +180,85 @@ Deno.serve(async (req: Request) => {
 
       const { uidStr, uidInt } = newRecorderUid();
 
-      const acquire = await agoraRequest("POST", "/resourceid/acquire", {
-        cname: channelName,
-        uid: uidStr,
-        clientRequest: { resourceExpiredHour: 24 },
-      });
-      const resourceId = acquire?.resourceId;
-      if (!resourceId) throw new Error("acquire returned no resourceId");
+      try {
+        const acquire = await agoraRequest("POST", "/resourceid/acquire", {
+          cname: channelName,
+          uid: uidStr,
+          clientRequest: { resourceExpiredHour: 24 },
+        });
+        const resourceId = acquire?.resourceId;
+        if (!resourceId) throw new Error("acquire returned no resourceId");
 
-      const start = await agoraRequest("POST", `/resourceid/${resourceId}/mode/mix/start`, {
-        cname: channelName,
-        uid: uidStr,
-        clientRequest: {
-          token: recordingToken(channelName, uidInt),
-          storageConfig: {
-            vendor: 11,
-            region: 0,
-            bucket: S3_BUCKET,
-            accessKey: S3_ACCESS_KEY,
-            secretKey: S3_SECRET_KEY,
-            fileNamePrefix: ["recordings", `event${eventId}`],
-            extensionParams: { endpoint: S3_ENDPOINT },
-          },
-          recordingConfig: {
-            channelType: 0,
-            streamTypes: 2,
-            maxIdleTime: MAX_IDLE_TIME,
-            transcodingConfig: {
-              width: 1280,
-              height: 720,
-              fps: 30,
-              bitrate: 2000,
-              mixedVideoLayout: 1,
-              backgroundColor: "#000000",
+        const start = await agoraRequest("POST", `/resourceid/${resourceId}/mode/mix/start`, {
+          cname: channelName,
+          uid: uidStr,
+          clientRequest: {
+            token: recordingToken(channelName, uidInt),
+            storageConfig: {
+              vendor: 11,
+              region: 0,
+              bucket: S3_BUCKET,
+              accessKey: S3_ACCESS_KEY,
+              secretKey: S3_SECRET_KEY,
+              fileNamePrefix: ["recordings", `event${eventId}`],
+              extensionParams: { endpoint: S3_ENDPOINT },
             },
-          },
-          recordingFileConfig: { avFileType: ["mp4"] },
-        },
-      });
-      const sid = start?.sid;
-      if (!sid) throw new Error("start returned no sid");
-
-      await admin
-        .from("events")
-        .update({
-          streaming: {
-            ...streaming,
-            agoraRecording: {
-              resourceId,
-              sid,
-              uid: uidStr,
-              status: "recording",
-              startedAt: Date.now(),
+            recordingConfig: {
+              channelType: 0,
+              streamTypes: 2,
+              maxIdleTime: MAX_IDLE_TIME,
+              transcodingConfig: {
+                width: 1280,
+                height: 720,
+                fps: 30,
+                bitrate: 2000,
+                mixedVideoLayout: 1,
+                backgroundColor: "#000000",
+              },
             },
+            recordingFileConfig: { avFileType: ["mp4"] },
           },
-        })
-        .eq("id", eventId);
+        });
+        const sid = start?.sid;
+        if (!sid) throw new Error("start returned no sid");
 
-      return corsResponse({ success: true, resourceId, sid }, 200, req);
+        await admin
+          .from("events")
+          .update({
+            streaming: {
+              ...streaming,
+              agoraRecording: {
+                resourceId,
+                sid,
+                uid: uidStr,
+                status: "recording",
+                startedAt: Date.now(),
+              },
+            },
+          })
+          .eq("id", eventId);
+
+        return corsResponse({ success: true, resourceId, sid }, 200, req);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unknown error";
+        console.error("agora-cloud-recording start error", msg);
+        // Surface the failure on the event so it is visible instead of silent.
+        await admin
+          .from("events")
+          .update({
+            streaming: {
+              ...streaming,
+              agoraRecording: {
+                ...(streaming.agoraRecording || ({} as Record<string, any>)),
+                status: "error",
+                error: msg,
+                startedAt: Date.now(),
+              },
+            },
+          })
+          .eq("id", eventId);
+        return corsResponse({ success: false, error: msg }, 500, req);
+      }
     }
 
     if (!rec?.resourceId || !rec?.sid) {
@@ -266,10 +289,54 @@ Deno.serve(async (req: Request) => {
       console.warn("agora stop failed (likely already stopped):", e);
     }
 
-    const serverResponse = stopResponse?.serverResponse || {};
-    const fileList: Array<Record<string, any>> = Array.isArray(serverResponse.fileList)
+    let serverResponse = stopResponse?.serverResponse || {};
+    let fileList: Array<Record<string, any>> = Array.isArray(serverResponse.fileList)
       ? serverResponse.fileList
       : [];
+
+    // The MP4 may still be uploading to S3 when the synchronous stop returns
+    // (empty fileList). Poll `query` until the upload completes, then re-stop to
+    // fetch the final file list, so we don't miss the recording.
+    if (!fileList.some((f) => /\.mp4$/i.test(String(f.fileName || f.filename || "")))) {
+      const deadline = Date.now() + 60_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 3_000));
+        const queried = await agoraRequest(
+          "GET",
+          `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/mix/query`,
+        ).catch(() => ({}));
+        const sr = queried?.serverResponse || queried || ({} as Record<string, any>);
+        const uploaded = String(sr.uploadingStatus || "") === "uploaded";
+        const listed = Array.isArray(sr.fileList) &&
+          sr.fileList.some((f: any) => /\.mp4$/i.test(String(f.fileName || f.filename || "")));
+        if (uploaded || listed) {
+          if (listed) {
+            serverResponse = sr;
+            fileList = sr.fileList;
+          } else {
+            const retry = await agoraRequest(
+              "POST",
+              `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/mix/stop`,
+              {
+                cname: channelName,
+                uid: String(rec.uid || "0"),
+                clientRequest: { async_stop: false },
+              },
+            ).catch(() => ({}));
+            const retrySr = retry?.serverResponse || {};
+            if (Array.isArray(retrySr.fileList)) {
+              serverResponse = retrySr;
+              fileList = retrySr.fileList;
+            }
+          }
+          break;
+        }
+      }
+      if (!fileList.some((f) => /\.mp4$/i.test(String(f.fileName || f.filename || "")))) {
+        console.warn("agora recording upload not finalised within 60s; leaving marker for retry");
+      }
+    }
+
     const mp4File = fileList.find((f) => /\.mp4$/i.test(String(f.fileName || f.filename || "")));
     const fileName = String(mp4File?.fileName || mp4File?.filename || "");
     const fullPath = fileName ? `${prefixPath}/${fileName}` : null;
@@ -319,11 +386,21 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", eventId);
     } else {
-      // No file listed yet (async upload). Clear the in-flight marker.
-      const { agoraRecording: _dropped, ...rest } = streaming;
+      // No file listed yet (upload still in progress). Keep the in-flight marker
+      // (marked "stopping") so a later stop call can finalise the replay once the
+      // MP4 lands, instead of dropping the recording forever.
       await admin
         .from("events")
-        .update({ streaming: rest })
+        .update({
+          streaming: {
+            ...streaming,
+            agoraRecording: {
+              ...rec,
+              status: "stopping",
+              stopRequestedAt: Date.now(),
+            },
+          },
+        })
         .eq("id", eventId);
     }
 
