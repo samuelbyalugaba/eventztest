@@ -218,7 +218,8 @@ Deno.serve(async (req: Request) => {
                 backgroundColor: "#000000",
               },
             },
-            recordingFileConfig: { avFileType: ["mp4"] },
+            // Composite mode requires MP4 alongside HLS; ["mp4"] alone errors.
+            recordingFileConfig: { avFileType: ["hls", "mp4"] },
           },
         });
         const sid = start?.sid;
@@ -341,7 +342,15 @@ Deno.serve(async (req: Request) => {
 
     const mp4File = fileList.find((f) => /\.mp4$/i.test(String(f.fileName || f.filename || "")));
     const fileName = String(mp4File?.fileName || mp4File?.filename || "");
-    const fullPath = fileName ? `${prefixPath}/${fileName}` : null;
+    // Agora's fileName already carries the full object key (e.g.
+    // "recordings/event123/xxx.mp4"). Only prepend the prefix when missing, so we
+    // never build a doubled path like ".../recordings/event123/recordings/event123/...".
+    const key = fileName
+      ? fileName.startsWith(prefixPath) || fileName.startsWith(`${prefixPath}/`)
+        ? fileName
+        : `${prefixPath}/${fileName}`
+      : "";
+    const fullPath = key || null;
 
     let publicUrl: string | null = null;
     if (fullPath) {
