@@ -72,6 +72,8 @@ export function useAgoraBroadcast(initialIsLive = false, skipTracks = false) {
           toast.error(err?.message || 'Could not access camera/microphone');
         }
       }
+    };
+
 
     init();
     return () => { mounted = false; };
