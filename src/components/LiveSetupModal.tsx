@@ -1,10 +1,12 @@
-import { useEffect, useState, useRef, lazy, Suspense } from 'react';
-import { X, Radio, Calendar, MapPin, Tv, Image as ImageIcon } from 'lucide-react';
+import { useEffect, useState, useRef, lazy, Suspense, useCallback } from 'react';
+import { X, Radio, Calendar, MapPin, Tv, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { getOrganizerEvents, subscribeToEventStreaming, updateEventStreamingStatus, uploadImage } from '../utils/supabase/api';
 const StreamManager = lazy(() => import('./livestream/StreamManagerNew').then(m => ({ default: m.StreamManager })));
 import type { Event as ApiEvent } from '../utils/supabase/api';
+
+const STREAM_TIMEOUT_MS = 30_000;
 
 const StreamManagerFallback = () => (
   <div className="flex items-center justify-center h-[60vh]">
@@ -30,20 +32,53 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
   
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewUrlRef = useRef<string | null>(null);
+
+  const revokePreviewUrl = useCallback(() => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => { revokePreviewUrl(); };
+  }, [revokePreviewUrl]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setThumbnailPreview(null);
+      setImageUrl(null);
+      setIsUploadingThumbnail(false);
+      revokePreviewUrl();
+    }
+  }, [isOpen, revokePreviewUrl]);
 
   const handleThumbnailSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      setThumbnailPreview(URL.createObjectURL(file));
-      
-      // Upload immediately for preview URL usage
+
+      revokePreviewUrl();
+      const newPreviewUrl = URL.createObjectURL(file);
+      previewUrlRef.current = newPreviewUrl;
+      setThumbnailPreview(newPreviewUrl);
+      setImageUrl(null);
+
+      setIsUploadingThumbnail(true);
       try {
         const url = await uploadImage(file, 'events', 'event-covers');
         setImageUrl(url);
       } catch (error) {
         toast.error('Failed to upload thumbnail');
+        setThumbnailPreview(null);
+        revokePreviewUrl();
+      } finally {
+        setIsUploadingThumbnail(false);
       }
+
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -108,7 +143,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
         category,
       };
 
-      const { data, error } = await supabase
+      const insertPromise = supabase
         .from('events')
         .insert({
           title: finalTitle,
@@ -124,6 +159,13 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
         })
         .select('*')
         .single();
+
+      const { data, error } = await Promise.race([
+        insertPromise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Stream creation timed out. Check your connection and try again.')), STREAM_TIMEOUT_MS)
+        ),
+      ]);
 
       if (error) throw error;
 
@@ -218,22 +260,35 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                   {tab === 'instant' && (
                     <div className="px-4 py-4 space-y-4">
                   <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="relative w-full aspect-video h-48 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden group"
+                    onClick={() => !isUploadingThumbnail && fileInputRef.current?.click()}
+                    className={`relative w-full aspect-video h-48 bg-gray-100 rounded-xl border-2 border-dashed transition-colors overflow-hidden group ${isUploadingThumbnail ? 'border-primary/50 cursor-wait' : 'border-gray-300 cursor-pointer hover:bg-gray-50'}`}
                   >
                     {thumbnailPreview ? (
                       <>
                         <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <p className="text-white font-medium text-sm">Change Thumbnail</p>
-                        </div>
+                        {isUploadingThumbnail && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <Loader2 className="w-8 h-8 text-white animate-spin" />
+                          </div>
+                        )}
+                        {!isUploadingThumbnail && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p className="text-white font-medium text-sm">Change Thumbnail</p>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <>
                         <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-2">
-                          <ImageIcon className="w-6 h-6 text-gray-400" />
+                          {isUploadingThumbnail ? (
+                            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                          ) : (
+                            <ImageIcon className="w-6 h-6 text-gray-400" />
+                          )}
                         </div>
-                        <p className="text-gray-500 text-sm font-medium">Add Cover Image</p>
+                        <p className="text-gray-500 text-sm font-medium">
+                          {isUploadingThumbnail ? 'Uploading…' : 'Add Cover Image'}
+                        </p>
                         <p className="text-gray-400 text-xs">Recommended 16:9</p>
                       </>
                     )}
@@ -296,10 +351,10 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                   </div>
                   <button
                     onClick={createInstantEvent}
-                    disabled={isCreating}
-                    className={`w-full py-3 rounded-xl text-white font-semibold transition-all ${isCreating ? 'bg-primary/60' : 'bg-primary hover:bg-primary-dark'}`}
+                    disabled={isCreating || isUploadingThumbnail}
+                    className={`w-full py-3 rounded-xl text-white font-semibold transition-all ${isCreating || isUploadingThumbnail ? 'bg-primary/60 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark'}`}
                   >
-                    {isCreating ? 'Creating…' : 'Go Live'}
+                    {isCreating ? 'Creating…' : isUploadingThumbnail ? 'Uploading thumbnail…' : 'Go Live'}
                   </button>
                     </div>
                   )}

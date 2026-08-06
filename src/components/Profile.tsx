@@ -125,6 +125,20 @@ export function Profile({ onLogout, onCreateEvent, onEditEvent, onStartOrganizer
     }
   }, [userId]);
 
+  useEffect(() => {
+    if (!location.pathname.startsWith('/profile')) {
+      setShowSettingsModal(false);
+      setShowTicketViewer(false);
+      setSelectedEvent(null);
+      setShowLiveSetupModal(false);
+      setEventPendingDelete(null);
+      setShowTicketListModal(false);
+      setShowEventListModal(false);
+      setShowReportReason(false);
+      setIsSidebarOpen(false);
+    }
+  }, [location.pathname]);
+
   const profileImage = userProfile?.avatar_url;
   const displayName = userProfile?.full_name || 'User';
   const organizerCategory = userProfile?.organizer_type;

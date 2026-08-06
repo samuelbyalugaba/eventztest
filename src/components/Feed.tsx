@@ -90,7 +90,14 @@ export function Feed({
     handleRefreshNotifications,
     handleCloseShareModal,
     handleCloseComments,
+    closeAllModals,
   } = useFeedModals(setPosts, refreshNotifications);
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/feed')) {
+      closeAllModals();
+    }
+  }, [location.pathname, closeAllModals]);
 
   const { handlePostComment, handleLikeComment } = useFeedComments(
     selectedPost, setSelectedPost, currentUser, setPosts, playingVideo

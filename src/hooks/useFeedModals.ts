@@ -72,6 +72,18 @@ export function useFeedModals(
     setSelectedPostForComments(null);
   }, []);
 
+  const closeAllModals = useCallback(() => {
+    setSelectedPost(null);
+    setShowNotifications(false);
+    setShowComments(false);
+    setSelectedPostForComments(null);
+    setShowShareModal(false);
+    setShareModalData(null);
+    setPlayingVideo(null);
+    setFullScreenImage(null);
+    setPendingDeletePostId(null);
+  }, []);
+
   return {
     selectedPost,
     setSelectedPost,
@@ -104,5 +116,6 @@ export function useFeedModals(
     handleRefreshNotifications,
     handleCloseShareModal,
     handleCloseComments,
+    closeAllModals,
   };
 }

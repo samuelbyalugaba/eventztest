@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { EmptyState } from './ui/EmptyState';
 import { Filter, Video, Smartphone, Clock, Radio } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,6 +21,7 @@ const FEATURED_CATEGORIES = new Set([
 
 export function LiveFeed() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { liveStreams, upcomingStreams, isLoading } = useLiveFeedData();
 
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -29,6 +30,13 @@ export function LiveFeed() {
   const [showLocationFilter, setShowLocationFilter] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
   const [reminders, setReminders] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/live')) {
+      setShowFilters(false);
+      setShowLocationFilter(false);
+    }
+  }, [location.pathname]);
 
   const {
     recentLocationOptions,

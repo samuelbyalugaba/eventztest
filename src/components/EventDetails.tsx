@@ -97,6 +97,19 @@ export function EventDetails({ conversations: globalConversations, onStartConver
     }
   }, [selectedUser, navigate]);
 
+  useEffect(() => {
+    if (!location.pathname.startsWith('/event') && location.pathname !== '/events' && location.pathname !== '/') {
+      setShowFilters(false);
+      setShowMessages(false);
+      setShowTicketModal(false);
+      setShowPurchaseModal(false);
+      setShowSearchModal(false);
+      setShowMediaViewer(false);
+      setEventPendingDelete(null);
+      setSelectedEvent(null);
+    }
+  }, [location.pathname, setShowFilters, setShowMessages]);
+
   const closeSearchModal = () => {
     setShowSearchModal(false);
     const params = new URLSearchParams(location.search);

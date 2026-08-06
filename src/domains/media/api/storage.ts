@@ -1,5 +1,16 @@
 import { supabase } from '../../../shared/api/client';
 
+const UPLOAD_TIMEOUT_MS = 30_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Upload timed out after ${Math.round(ms / 1000)}s. Check your connection and try again.`)), ms)
+    ),
+  ]);
+}
+
 export const deleteFile = async (bucket: 'events' | 'avatars' | 'posts', url: string) => {
   try {
     const path = url.split(`${bucket}/`).pop();
@@ -110,13 +121,16 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       const forceArrayBuffer = isVideo && (isNativeLikeMobile || attempt > 1);
       const uploadBody = await getUploadBody(forceArrayBuffer);
-      const { error } = await supabase.storage
-        .from(targetBucket)
-        .upload(filePath, uploadBody, {
-          contentType,
-          cacheControl: '31536000',
-          upsert: false
-        });
+      const { error } = await withTimeout(
+        supabase.storage
+          .from(targetBucket)
+          .upload(filePath, uploadBody, {
+            contentType,
+            cacheControl: '31536000',
+            upsert: false
+          }),
+        UPLOAD_TIMEOUT_MS
+      );
 
       uploadError = error;
       if (!uploadError) break;

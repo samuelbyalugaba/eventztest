@@ -16,12 +16,11 @@ export function useChatMessages(conversationId: number, userId: string) {
   }, []);
 
   useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
     const prevOverscroll = document.documentElement.style.overscrollBehavior;
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overscrollBehavior = 'none';
     return () => {
-      document.body.style.overflow = prevOverflow;
+      document.body.style.overflow = '';
       document.documentElement.style.overscrollBehavior = prevOverscroll;
     };
   }, []);

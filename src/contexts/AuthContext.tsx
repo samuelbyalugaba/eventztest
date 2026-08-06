@@ -37,6 +37,8 @@ const buildUsernameCandidates = (seed: string) => {
   ];
 };
 
+let activeSessionCheck: Promise<void> | null = null;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -144,10 +146,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         syncProfileState(null);
       } finally {
         setIsLoading(false);
+        activeSessionCheck = null;
       }
     };
 
-    checkSession();
+    if (!activeSessionCheck) {
+      activeSessionCheck = checkSession();
+    } else {
+      setIsLoading(false);
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
