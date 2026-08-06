@@ -76,10 +76,10 @@ export const playLocalPreview = (
 // across devices. Agora will gracefully downscale on weak networks via its
 // internal adaptation when this is the target.
 export const HD_VIDEO_ENCODER_CONFIG = {
-  width: { min: 640, ideal: 1280, max: 1920 },
-  height: { min: 360, ideal: 720, max: 1080 },
-  frameRate: { min: 24, ideal: 30, max: 30 },
-  bitrateMin: 1500,
+  width: { min: 320, ideal: 1280, max: 1920 },
+  height: { min: 180, ideal: 720, max: 1080 },
+  frameRate: { min: 15, ideal: 30, max: 30 },
+  bitrateMin: 800,
   bitrateMax: 3000,
 } as const;
 

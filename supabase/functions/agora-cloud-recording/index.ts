@@ -42,6 +42,7 @@ const ALLOWED_ORIGINS = [
 const ALLOWED_ORIGIN_PATTERNS = [
   /^https:\/\/[a-z0-9-]+\.lovable\.app$/i,
   /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/i,
+  /^https:\/\/[a-z0-9-]+\.vercel\.app$/i,
   /^capacitor:\/\/localhost$/i,
   /^http:\/\/localhost(:\d+)?$/i,
 ];
