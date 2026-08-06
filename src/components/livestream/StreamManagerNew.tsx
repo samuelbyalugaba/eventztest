@@ -102,6 +102,21 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     streamMethod,
   });
 
+  // Re-attach the camera preview whenever the phase swaps the #local-player container.
+  useEffect(() => {
+    if (!localVideoTrack || streamMethod === 'obs') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        localVideoTrack.stop();
+        if (!cancelled) await playLocalPreview(localVideoTrack, undefined, 'local-player');
+      } catch { /* preview container not mounted yet */ }
+    })();
+    return () => { cancelled = true; };
+  }, [localVideoTrack, phase, isLive, streamMethod]);
+
+
+
   useEffect(() => {
     let cancelled = false;
     let channel: ReturnType<typeof subscribeToStreamPresence> | null = null;
