@@ -15,7 +15,7 @@ import {
 } from '../../utils/supabase/api';
 import { supabase } from '../../utils/supabase/client';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { streamHasReplay, getReplayIframeUrl, getReplayThumbnail } from '../../utils/streamPlayback';
+import { streamHasReplay, getStreamPlaybackUrl, getReplayThumbnail, isCloudflareIframeUrl } from '../../utils/streamPlayback';
 
 type HostedView = 'events' | 'streams';
 
@@ -195,8 +195,6 @@ export function HostedPage() {
     };
   }, [selectedStream, closePlayer]);
 
-  const getStreamPlaybackUrl = getReplayIframeUrl;
-
   return (
     <div className="min-h-screen bg-gray-50 pb-[calc(2rem+var(--eventz-safe-area-bottom))]">
       <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 pt-[var(--eventz-safe-area-top)]">
@@ -350,13 +348,26 @@ export function HostedPage() {
             <div className="flex-1 flex items-center justify-center bg-black p-2 sm:p-4 min-h-0">
               {playbackUrl ? (
                 <div className="w-full max-w-5xl aspect-video overflow-hidden rounded-lg bg-black shadow-2xl">
-                  <iframe
-                    src={playbackUrl}
-                    title={title}
-                    className="h-full w-full"
-                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
-                    allowFullScreen
-                  />
+                  {isCloudflareIframeUrl(playbackUrl) ? (
+                    <iframe
+                      src={playbackUrl}
+                      title={title}
+                      className="h-full w-full"
+                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video
+                      src={playbackUrl}
+                      title={title}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="h-full w-full object-contain"
+                    >
+                      <p className="p-4 text-center text-sm text-gray-400">Your browser does not support video playback.</p>
+                    </video>
+                  )}
                 </div>
               ) : (
                 <div className="w-full max-w-5xl aspect-video flex flex-col items-center justify-center rounded-lg bg-gray-900 text-center px-6">

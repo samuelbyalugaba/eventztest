@@ -110,11 +110,37 @@ export function getReplayIframeUrl(stream: CloudflareStream): string | null {
 }
 
 /**
+ * Returns true if the URL is one of our Cloudflare Stream iframe embeds
+ * (customer-subdomain `/iframe` or iframe.videodelivery.net). Direct MP4/HLS
+ * URLs should be rendered with a <video> element instead.
+ */
+export function isCloudflareIframeUrl(url: string): boolean {
+  return (
+    /iframe\.videodelivery\.net/i.test(url) ||
+    /(?:videodelivery\.net|cloudflarestream\.com)\/[^/]+\/iframe$/i.test(url) ||
+    /\.cloudflarestream\.com\/[^/]+\/iframe$/i.test(url)
+  );
+}
+
+/**
+ * Resolve a playable URL for a stream: Cloudflare iframe for OBS recordings,
+ * or a direct MP4/HLS URL (Supabase Storage recordings) otherwise.
+ */
+export function getStreamPlaybackUrl(stream: CloudflareStream): string | null {
+  const iframeUrl = getReplayIframeUrl(stream);
+  if (iframeUrl) return iframeUrl;
+
+  const streaming = getEventStreaming(stream);
+  const direct = stream.playback_url || String(streaming?.recording_url || '') || String(streaming?.playback_url || '');
+  return direct && /^https?:\/\//i.test(direct) ? direct : null;
+}
+
+/**
  * Returns true if the stream has a valid recording that can be played back.
  */
 export function streamHasReplay(stream: CloudflareStream): boolean {
   if (stream.has_recording === false) return false;
-  return getReplayIframeUrl(stream) !== null;
+  return getStreamPlaybackUrl(stream) !== null;
 }
 
 /**

@@ -4,6 +4,7 @@ import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from '
 import type { Event } from '../utils/supabase/api';
 import { deleteEvent } from '../utils/supabase/api';
 import { AGORA_APP_ID, getAgoraToken } from '../utils/agora';
+import { startAgoraRecording, stopAgoraRecording } from '../utils/agoraRecording';
 import type { StreamStats } from '../components/livestream/types';
 
 type StreamPhase = 'setup' | 'live' | 'ended';
@@ -41,12 +42,20 @@ export function useStreamPhase(event: Event, onUpdateStatus: (isLive: boolean) =
     clearStartTimers();
     if (deps.client.current) { try { await deps.client.current.leave(); } catch { /* ignore */ } }
     if (isLive) {
+      const recordingDone = stopAgoraRecording(event.id);
       setEndStats(deps.getEndStats());
       setIsLive(false);
       setPhase('ended');
       deps.setStreamHealth('offline');
       try { await Promise.resolve(onUpdateStatus(false)); } catch { /* ignore */ }
       if (opts?.showToast) toast.info('Stream ended');
+      if (isInstantStream && opts?.deleteInstant) {
+        // Give the recording a head start before the event is deleted so the
+        // replay row survives in cloudflare_streams even after the event row goes.
+        try {
+          await Promise.race([recordingDone, new Promise((resolve) => setTimeout(resolve, 10_000))]);
+        } catch { /* ignore */ }
+      }
     }
     if (isInstantStream && opts?.deleteInstant) {
       try { await deleteEvent(event.id); } catch { /* ignore */ }
@@ -125,6 +134,7 @@ export function useStreamPhase(event: Event, onUpdateStatus: (isLive: boolean) =
               setPhase('live');
               deps.setStreamHealth('good');
               await Promise.resolve(onUpdateStatus(true));
+              startAgoraRecording(event.id);
               toast.success("You are now LIVE");
             } catch (e: any) { toast.error(`Failed: ${e.message}`); setIsStarting(false); }
           }, 3000);

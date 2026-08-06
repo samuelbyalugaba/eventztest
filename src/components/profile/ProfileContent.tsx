@@ -5,7 +5,7 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { EventCard } from '../EventCard';
 import type { ProfileTab } from './ProfileTabs';
 import type { ApiPost, Ticket, Event as AppEvent, CloudflareStream } from '../../utils/supabase/api';
-import { getReplayIframeUrl, streamHasReplay } from '../../utils/streamPlayback';
+import { getStreamPlaybackUrl, streamHasReplay, isCloudflareIframeUrl } from '../../utils/streamPlayback';
 
 interface ProfileContentProps {
   activeTab: ProfileTab;
@@ -134,8 +134,8 @@ function formatDuration(totalSeconds?: number | null) {
   return `${minutes}:${seconds}`;
 }
 
-function getStreamPlaybackUrl(stream: CloudflareStream) {
-  return getReplayIframeUrl(stream) || `https://iframe.videodelivery.net/${stream.uid}`;
+function getPlaybackUrl(stream: CloudflareStream) {
+  return getStreamPlaybackUrl(stream);
 }
 
 function hasPlayableRecording(stream: CloudflareStream) {
@@ -171,13 +171,29 @@ function StreamedTab({ isLoading, streams }: { isLoading: boolean; streams: Clou
           <article key={stream.id} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <div className="aspect-video bg-black">
               {canPlay ? (
-                <iframe
-                  src={getStreamPlaybackUrl(stream)}
-                  title={stream.title || 'Streamed video'}
-                  className="w-full h-full"
-                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                  allowFullScreen
-                />
+                (() => {
+                  const playbackUrl = getPlaybackUrl(stream);
+                  if (!playbackUrl) return null;
+                  return isCloudflareIframeUrl(playbackUrl) ? (
+                    <iframe
+                      src={playbackUrl}
+                      title={stream.title || 'Streamed video'}
+                      className="w-full h-full"
+                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video
+                      src={playbackUrl}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="w-full h-full object-contain"
+                    >
+                      <p className="p-4 text-center text-sm text-gray-400">Your browser does not support video playback.</p>
+                    </video>
+                  );
+                })()
               ) : (
                 <div className="relative h-full w-full overflow-hidden">
                   <ImageWithFallback
