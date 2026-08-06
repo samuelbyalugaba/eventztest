@@ -357,7 +357,13 @@ a.icon-circle-button,
   border-top-color: var(--primary);
   border-right-color: rgba(138, 43, 226, 0.3);
   border-radius: 9999px;
-  animation: bottom-search-spin 3s linear infinite;
+  transition: opacity 0.2s ease;
+  opacity: 0.55;
+}
+
+.bottom-search-link:hover .bottom-search-orb::before {
+  animation: bottom-search-spin 1.2s linear infinite;
+  opacity: 1;
 }
 
 .bottom-search-orb::after {
