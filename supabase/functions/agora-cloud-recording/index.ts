@@ -285,6 +285,7 @@ Deno.serve(async (req: Request) => {
 
     // ---- stop ----
     let stopResponse: Record<string, any> = {};
+    let workerGone = false; // 404 "failed to find worker" = already auto-stopped
     try {
       stopResponse = await agoraRequest(
         "POST",
@@ -296,7 +297,13 @@ Deno.serve(async (req: Request) => {
         },
       );
     } catch (e) {
-      console.warn("agora stop failed (likely already stopped):", e);
+      const msg = e instanceof Error ? e.message : "";
+      // The recorder worker already terminated (idle-expired or double stop). A
+      // dead worker can never yield a file list, so there is no point polling it.
+      workerGone = msg.includes("(404)");
+      console.warn(workerGone
+        ? "agora worker already gone on stop (no further closeout possible)"
+        : "agora stop failed (likely already stopped):", msg);
     }
 
     let serverResponse = stopResponse?.serverResponse || {};
@@ -305,12 +312,16 @@ Deno.serve(async (req: Request) => {
       : [];
 
     // The MP4 may still be uploading to S3 when the synchronous stop returns
-    // (empty fileList). Poll `query` until the upload completes, then re-stop to
-    // fetch the final file list, so we don't miss the recording.
-    if (!fileList.some((f) => /\.mp4$/i.test(String(f.fileName || f.filename || "")))) {
-      const deadline = Date.now() + 60_000;
+    // (empty fileList). Poll `query` briefly until the upload completes, then
+    // re-stop to fetch the final file list — but only while a worker could
+    // still be producing output. If the worker is already gone, skip polling.
+    const mp4Present = () =>
+      fileList.some((f) => /\.mp4$/i.test(String(f.fileName || f.filename || ""))) ||
+      fileList.some((f) => /\.mp4$/i.test(String(f.sliceType || f.mediaType || f.fileType || "")));
+    if (!workerGone && !mp4Present()) {
+      const deadline = Date.now() + 20_000;
       while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 3_000));
+        await new Promise((r) => setTimeout(r, 2_000));
         const queried = await agoraRequest(
           "GET",
           `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/mix/query`,
@@ -342,8 +353,11 @@ Deno.serve(async (req: Request) => {
           break;
         }
       }
-      if (!fileList.some((f) => /\.mp4$/i.test(String(f.fileName || f.filename || "")))) {
-        console.warn("agora recording upload not finalised within 60s; leaving marker for retry");
+      if (!mp4Present()) {
+        // No file within the window — either a genuinely short/empty recording
+        // produced nothing, or the upload is held up. Don't block on a dead
+        // worker; mark the event ended without a replay instead.
+        console.warn("agora recording produced no MP4; finalising as ended without replay");
       }
     }
 
@@ -395,6 +409,7 @@ Deno.serve(async (req: Request) => {
           streaming: {
             ...rest,
             isLive: false,
+            endedAt: new Date().toISOString(),
             replayAvailable: true,
             has_recording: true,
             recording_uid: String(rec.sid),
@@ -404,17 +419,24 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", eventId);
     } else {
-      // No file listed yet (upload still in progress). Keep the in-flight marker
-      // (marked "stopping") so a later stop call can finalise the replay once the
-      // MP4 lands, instead of dropping the recording forever.
+      // No MP4 was produced (short/empty recording, or the worker already died
+      // before closeout). Finalise the event as ended WITHOUT replay. Critically
+      // we do NOT echo back `streaming` (captured at request start, when isLive
+      // was still true) — doing so would resurrect live state after the host
+      // stopped the stream. The agoraRecording marker is dropped so a stale
+      // resourceId/sid can't be reused by a later stop call.
       await admin
         .from("events")
         .update({
           streaming: {
             ...streaming,
+            isLive: false,
+            endedAt: new Date().toISOString(),
+            replayAvailable: false,
+            has_recording: false,
             agoraRecording: {
               ...rec,
-              status: "stopping",
+              status: "ended",
               stopRequestedAt: Date.now(),
             },
           },

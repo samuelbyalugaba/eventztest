@@ -34,35 +34,30 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const previewUrlRef = useRef<string | null>(null);
 
-  const revokePreviewUrl = useCallback(() => {
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current);
-      previewUrlRef.current = null;
-    }
-  }, []);
-
+  // Revoke a preview blob URL only after React has committed it away from an
+  // <img> (i.e. after `thumbnailPreview` changes to something else). Revoking in
+  // the same tick as clearing the preview leaves the still-mounted <img> pointing
+  // at a dead blob URL -> ERR_FILE_NOT_FOUND.
   useEffect(() => {
-    return () => { revokePreviewUrl(); };
-  }, [revokePreviewUrl]);
+    const url = thumbnailPreview;
+    if (!url || !url.startsWith('blob:')) return;
+    return () => URL.revokeObjectURL(url);
+  }, [thumbnailPreview]);
 
   useEffect(() => {
     if (!isOpen) {
       setThumbnailPreview(null);
       setImageUrl(null);
       setIsUploadingThumbnail(false);
-      revokePreviewUrl();
     }
-  }, [isOpen, revokePreviewUrl]);
+  }, [isOpen]);
 
   const handleThumbnailSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
 
-      revokePreviewUrl();
       const newPreviewUrl = URL.createObjectURL(file);
-      previewUrlRef.current = newPreviewUrl;
       setThumbnailPreview(newPreviewUrl);
       setImageUrl(null);
 
@@ -73,7 +68,6 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
       } catch (error) {
         toast.error('Failed to upload thumbnail');
         setThumbnailPreview(null);
-        revokePreviewUrl();
       } finally {
         setIsUploadingThumbnail(false);
       }
@@ -82,19 +76,20 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
     }
   };
 
+  const refreshEvents = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    try {
+      const list = await getOrganizerEvents(user.id, { includeInstant: true });
+      setEvents(list || []);
+    } catch (e) {
+    }
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      try {
-        const list = await getOrganizerEvents(user.id, { includeInstant: true });
-        setEvents(list || []);
-      } catch (e) {
-      }
-    };
-    load();
-  }, [isOpen]);
+    refreshEvents();
+  }, [isOpen, refreshEvents]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -420,11 +415,14 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                 onClose={() => {
                   setSelectedEvent(null);
                   onClose();
+                  refreshEvents();
                 }}
                 onUpdateStatus={async (isLive) => {
                   try {
                     await updateEventStreamingStatus(selectedEvent.id, isLive);
                   } catch (e) {
+                  } finally {
+                    refreshEvents();
                   }
                 }}
               />
