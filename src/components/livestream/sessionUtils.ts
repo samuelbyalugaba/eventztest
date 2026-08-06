@@ -89,14 +89,31 @@ export const initializeLocalTracks = async () => {
   const AgoraRTC = await loadAgoraRTC();
   const cameras = getPreferredCameraPair(await AgoraRTC.getCameras());
   const cameraId = cameras[0]?.deviceId;
-  const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
-    { encoderConfig: HD_AUDIO_ENCODER_CONFIG, AEC: true, ANS: true, AGC: true },
-    {
-      ...(cameraId ? { cameraId } : {}),
-      encoderConfig: HD_VIDEO_ENCODER_CONFIG,
-      optimizationMode: 'motion',
-    }
-  );
+
+  const videoOptions = {
+    encoderConfig: HD_VIDEO_ENCODER_CONFIG,
+    optimizationMode: 'motion',
+  } as const;
+
+  const createTracks = async (videoConfig: object) => {
+    const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+      { encoderConfig: HD_AUDIO_ENCODER_CONFIG, AEC: true, ANS: true, AGC: true },
+      videoConfig
+    );
+    return { audioTrack, videoTrack };
+  };
+
+  let audioTrack: IMicrophoneAudioTrack;
+  let videoTrack: ICameraVideoTrack;
+  try {
+    ({ audioTrack, videoTrack } = await createTracks(cameraId ? { cameraId, ...videoOptions } : videoOptions));
+  } catch {
+    // The enumerated camera may be stale or busy and never start (getUserMedia
+    // AbortError). Retry with the browser's default device instead of failing
+    // the whole session.
+    ({ audioTrack, videoTrack } = await createTracks(videoOptions));
+  }
+
   return {
     cameras,
     audioTrack,
