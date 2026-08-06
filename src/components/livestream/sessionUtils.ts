@@ -87,6 +87,12 @@ export const HD_AUDIO_ENCODER_CONFIG = 'music_standard' as const; // 48kHz, ~40k
 
 export const initializeLocalTracks = async () => {
   const AgoraRTC = await loadAgoraRTC();
+
+  // A camera stream may still be held by the post composer preloader (or an
+  // earlier session). Release it, otherwise getUserMedia aborts with
+  // "Timeout starting video source" on devices that only allow one consumer.
+  releasePreloadedCamera();
+
   const cameras = getPreferredCameraPair(await AgoraRTC.getCameras());
   const cameraId = cameras[0]?.deviceId;
 
@@ -95,32 +101,52 @@ export const initializeLocalTracks = async () => {
     optimizationMode: 'motion',
   } as const;
 
+  const sdVideoOptions = {
+    encoderConfig: { width: 640, height: 360, frameRate: 24, bitrateMin: 300, bitrateMax: 1000 },
+  } as const;
+
+  const audioOptions = { encoderConfig: HD_AUDIO_ENCODER_CONFIG, AEC: true, ANS: true, AGC: true } as const;
+
   const createTracks = async (videoConfig: object) => {
-    const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
-      { encoderConfig: HD_AUDIO_ENCODER_CONFIG, AEC: true, ANS: true, AGC: true },
-      videoConfig
-    );
+    const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(audioOptions, videoConfig);
     return { audioTrack, videoTrack };
   };
 
-  let audioTrack: IMicrophoneAudioTrack;
-  let videoTrack: ICameraVideoTrack;
-  try {
-    ({ audioTrack, videoTrack } = await createTracks(cameraId ? { cameraId, ...videoOptions } : videoOptions));
-  } catch {
-    // The enumerated camera may be stale or busy and never start (getUserMedia
-    // AbortError). Retry with the browser's default device instead of failing
-    // the whole session.
-    ({ audioTrack, videoTrack } = await createTracks(videoOptions));
+  // Try progressively simpler constraints: some devices/browsers fail on a
+  // specific deviceId or on HD, but succeed with defaults or SD.
+  const attempts: Array<() => Promise<{ audioTrack: IMicrophoneAudioTrack; videoTrack: ICameraVideoTrack }>> = [
+    ...(cameraId ? [() => createTracks({ cameraId, ...videoOptions })] : []),
+    () => createTracks(videoOptions),
+    () => createTracks(sdVideoOptions),
+    async () => {
+      // Last resort: create the tracks separately so a slow camera doesn't
+      // abort the microphone as well.
+      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack(audioOptions);
+      try {
+        const videoTrack = await AgoraRTC.createCameraVideoTrack(sdVideoOptions);
+        return { audioTrack, videoTrack };
+      } catch (err) {
+        audioTrack.close();
+        throw err;
+      }
+    },
+  ];
+
+  let lastError: unknown;
+  for (const attempt of attempts) {
+    try {
+      const { audioTrack, videoTrack } = await attempt();
+      return { cameras, audioTrack, videoTrack, initialCamera: cameras[0] };
+    } catch (err) {
+      lastError = err;
+      // Give the OS a moment to release the device before retrying.
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
   }
 
-  return {
-    cameras,
-    audioTrack,
-    videoTrack,
-    initialCamera: cameras[0],
-  };
+  throw lastError instanceof Error ? lastError : new Error('Could not access camera/microphone');
 };
+
 
 export const switchLocalCamera = async ({
   localVideoTrack,
