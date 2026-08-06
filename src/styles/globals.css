@@ -361,9 +361,13 @@ a.icon-circle-button,
   opacity: 0.55;
 }
 
-.bottom-search-link:hover .bottom-search-orb::before {
-  animation: bottom-search-spin 1.2s linear infinite;
-  opacity: 1;
+/* Only spin on devices that truly have hover; touch keeps sticky :hover after a
+   tap, which would leave the orb rotating forever. */
+@media (hover: hover) {
+  .bottom-search-link:hover .bottom-search-orb::before {
+    animation: bottom-search-spin 1.2s linear infinite;
+    opacity: 1;
+  }
 }
 
 .bottom-search-orb::after {
