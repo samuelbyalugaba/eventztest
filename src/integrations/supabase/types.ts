@@ -230,6 +230,112 @@ export type Database = {
           },
         ]
       }
+      email_deliveries: {
+        Row: {
+          category: string
+          created_at: string
+          error: string | null
+          id: string
+          metadata: Json
+          provider: string
+          provider_message_id: string | null
+          provider_response: Json
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          subject: string
+          template: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          metadata?: Json
+          provider?: string
+          provider_message_id?: string | null
+          provider_response?: Json
+          recipient_email: string
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          metadata?: Json
+          provider?: string
+          provider_message_id?: string | null
+          provider_response?: Json
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_preferences: {
+        Row: {
+          created_at: string
+          event_reminders: boolean
+          marketing: boolean
+          product_updates: boolean
+          security: boolean
+          social_notifications: boolean
+          transactional: boolean
+          unsubscribed_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_reminders?: boolean
+          marketing?: boolean
+          product_updates?: boolean
+          security?: boolean
+          social_notifications?: boolean
+          transactional?: boolean
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_reminders?: boolean
+          marketing?: boolean
+          product_updates?: boolean
+          security?: boolean
+          social_notifications?: boolean
+          transactional?: boolean
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_likes: {
         Row: {
           created_at: string
