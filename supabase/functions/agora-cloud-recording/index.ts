@@ -191,14 +191,33 @@ Deno.serve(async (req: Request) => {
         const resourceId = acquire?.resourceId;
         if (!resourceId) throw new Error("acquire returned no resourceId");
 
-        // Individual mode records each stream without transcoding, so the output
-        // MP4 keeps the source's native resolution and orientation (portrait in ->
-        // portrait out). No transcodingConfig/canvas is applied here.
-        const start = await agoraRequest("POST", `/resourceid/${resourceId}/mode/individual/start`, {
+        // Composite (mix) mode transcodes all streams to a fixed canvas and
+        // produces a single playable MP4 (plus HLS). The canvas size is supplied
+        // by the client so it matches the recorder's current screen orientation.
+        const orientation = String(body.orientation || 'portrait');
+        const isLandscape = orientation === 'landscape';
+        const canvasW = isLandscape ? 1280 : 720;
+        const canvasH = isLandscape ? 720 : 1280;
+        const start = await agoraRequest("POST", `/resourceid/${resourceId}/mode/mix/start`, {
           cname: channelName,
           uid: uidStr,
           clientRequest: {
             token: recordingToken(channelName, uidInt),
+            recordingConfig: {
+              maxIdleTime: MAX_IDLE_TIME,
+              streamTypes: 2,
+              streamMode: "default",
+              channelType: 0,
+              videoStreamType: 0,
+              avFileType: ["hls", "mp4"],
+            },
+            transcodingConfig: {
+              width: canvasW,
+              height: canvasH,
+              videoBitrate: isLandscape ? 4500 : 2500,
+              videoFps: 30,
+              audioProfile: "standard",
+            },
             storageConfig: {
               vendor: 11,
               region: 0,
@@ -208,14 +227,6 @@ Deno.serve(async (req: Request) => {
               fileNamePrefix: ["recordings", `event${eventId}`],
               extensionParams: { endpoint: S3_ENDPOINT },
             },
-            streamConfig: {
-              channelType: 0,
-              streamTypes: 2,
-              maxIdleTime: MAX_IDLE_TIME,
-            },
-            // Note: in composite mode MP4 must be paired with HLS; ["mp4"] alone
-            // errors. Keep both to be safe across modes.
-            recordingFileConfig: { avFileType: ["hls", "mp4"] },
           },
         });
         const sid = start?.sid;
@@ -267,7 +278,7 @@ Deno.serve(async (req: Request) => {
     if (action === "status") {
       const queried = await agoraRequest(
         "GET",
-        `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/individual/query`,
+        `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/mix/query`,
       ).catch(() => ({}));
       return corsResponse({ status: queried?.serverResponse || queried, sid: rec.sid }, 200, req);
     }
@@ -277,7 +288,7 @@ Deno.serve(async (req: Request) => {
     try {
       stopResponse = await agoraRequest(
         "POST",
-        `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/individual/stop`,
+        `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/mix/stop`,
         {
           cname: channelName,
           uid: String(rec.uid || "0"),
@@ -302,7 +313,7 @@ Deno.serve(async (req: Request) => {
         await new Promise((r) => setTimeout(r, 3_000));
         const queried = await agoraRequest(
           "GET",
-          `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/individual/query`,
+          `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/mix/query`,
         ).catch(() => ({}));
         const sr = queried?.serverResponse || queried || ({} as Record<string, any>);
         const uploaded = String(sr.uploadingStatus || "") === "uploaded";
@@ -315,7 +326,7 @@ Deno.serve(async (req: Request) => {
           } else {
             const retry = await agoraRequest(
               "POST",
-              `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/individual/stop`,
+              `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/mix/stop`,
               {
                 cname: channelName,
                 uid: String(rec.uid || "0"),

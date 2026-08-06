@@ -1,9 +1,13 @@
 import { supabase } from './supabase/client';
 
-async function invokeRecording(action: 'start' | 'stop', eventId: number | string) {
+async function invokeRecording(
+  action: 'start' | 'stop',
+  eventId: number | string,
+  orientation?: 'portrait' | 'landscape',
+) {
   try {
     const { data, error } = await supabase.functions.invoke('agora-cloud-recording', {
-      body: { action, eventId },
+      body: { action, eventId, orientation },
     });
     if (error) {
       console.error(`[agoraRecording] ${action} failed`, error);
@@ -21,8 +25,8 @@ async function invokeRecording(action: 'start' | 'stop', eventId: number | strin
  * Safe to call repeatedly; the edge function is idempotent.
  * Returns the invocation promise so callers can optionally observe the outcome.
  */
-export const startAgoraRecording = (eventId: number | string) => {
-  const promise = invokeRecording('start', eventId);
+export const startAgoraRecording = (eventId: number | string, orientation?: 'portrait' | 'landscape') => {
+  const promise = invokeRecording('start', eventId, orientation);
   // Surface the result for debugging; failures are also stored on the event
   // (`streaming.agoraRecording.error`) by the edge function.
   void promise.then((data) => {

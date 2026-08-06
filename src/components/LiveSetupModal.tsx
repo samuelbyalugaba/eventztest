@@ -261,11 +261,11 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                     <div className="px-4 py-4 space-y-4">
                   <div 
                     onClick={() => !isUploadingThumbnail && fileInputRef.current?.click()}
-                    className={`relative w-full aspect-video h-48 bg-gray-100 rounded-xl border-2 border-dashed transition-colors overflow-hidden group ${isUploadingThumbnail ? 'border-primary/50 cursor-wait' : 'border-gray-300 cursor-pointer hover:bg-gray-50'}`}
+                    className={`relative w-full min-h-48 bg-gray-100 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-colors overflow-hidden group ${isUploadingThumbnail ? 'border-primary/50 cursor-wait' : 'border-gray-300 cursor-pointer hover:bg-gray-50'}`}
                   >
                     {thumbnailPreview ? (
                       <>
-                        <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+                        <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-48 object-contain" />
                         {isUploadingThumbnail && (
                           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                             <Loader2 className="w-8 h-8 text-white animate-spin" />
@@ -289,7 +289,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
                         <p className="text-gray-500 text-sm font-medium">
                           {isUploadingThumbnail ? 'Uploading…' : 'Add Cover Image'}
                         </p>
-                        <p className="text-gray-400 text-xs">Recommended 16:9</p>
+                        <p className="text-gray-400 text-xs">Any aspect ratio supported</p>
                       </>
                     )}
                     <input 

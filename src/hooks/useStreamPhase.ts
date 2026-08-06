@@ -31,6 +31,11 @@ export function useStreamPhase(event: Event, onUpdateStatus: (isLive: boolean) =
 
   const isInstantStream = Boolean((event.streaming as any)?.isInstant);
 
+  const detectOrientation = (): 'portrait' | 'landscape' => {
+    if (typeof window === 'undefined') return 'portrait';
+    return window.innerHeight >= window.innerWidth ? 'portrait' : 'landscape';
+  };
+
   const clearStartTimers = () => {
     if (countdownIntervalRef.current) { window.clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
     if (startTimeoutRef.current) { window.clearTimeout(startTimeoutRef.current); startTimeoutRef.current = null; }
@@ -134,7 +139,7 @@ export function useStreamPhase(event: Event, onUpdateStatus: (isLive: boolean) =
               setPhase('live');
               deps.setStreamHealth('good');
               await Promise.resolve(onUpdateStatus(true));
-              startAgoraRecording(event.id);
+              startAgoraRecording(event.id, detectOrientation());
               toast.success("You are now LIVE");
             } catch (e: any) { toast.error(`Failed: ${e.message}`); setIsStarting(false); }
           }, 3000);

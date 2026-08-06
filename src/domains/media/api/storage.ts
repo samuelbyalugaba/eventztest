@@ -2,6 +2,13 @@ import { supabase } from '../../../shared/api/client';
 
 const UPLOAD_TIMEOUT_MS = 30_000;
 
+const randomId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+};
+
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
@@ -51,6 +58,8 @@ export const uploadImage = async (
     qt: 'video/quicktime',
     m4v: 'video/x-m4v',
     hevc: 'video/hevc',
+    heic: 'image/heic',
+    heif: 'image/heif',
     '3gp': 'video/3gpp',
     '3gpp': 'video/3gpp',
   };
@@ -66,6 +75,8 @@ export const uploadImage = async (
     'video/x-m4v': 'm4v',
     'video/hevc': 'hevc',
     'video/heif': 'heif',
+    'image/heic': 'heic',
+    'image/heif': 'heif',
     'video/3gpp': '3gp',
   };
   const allowedTypes = new Set([
@@ -73,6 +84,8 @@ export const uploadImage = async (
     'image/png',
     'image/webp',
     'image/gif',
+    'image/heic',
+    'image/heif',
     'video/mp4',
     'video/webm',
     'video/ogg',
@@ -107,7 +120,7 @@ export const uploadImage = async (
   }
 
   const optimizedFileExt = (getFileExtension(optimizedFile.name) || fileExt || extensionByContentType[contentType] || 'bin').toLowerCase();
-  const fileName = `${crypto.randomUUID()}_${Date.now()}.${optimizedFileExt}`;
+  const fileName = `${randomId()}_${Date.now()}.${optimizedFileExt}`;
   const filePath = path ? `${path}/${fileName}` : fileName;
   const isNativeLikeMobile =
     typeof window !== 'undefined' &&
