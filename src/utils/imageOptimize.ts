@@ -25,64 +25,64 @@ export async function resizeImage(
     format = 'image/jpeg',
   } = options;
 
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
+  // Decode off the main thread (createImageBitmap) so a large photo doesn't
+  // freeze the UI; only the resized draw + encode below touch the main thread.
+  let source: ImageBitmap | HTMLImageElement;
+  try {
+    if (typeof createImageBitmap === 'undefined') throw new Error('createImageBitmap unsupported');
+    source = await createImageBitmap(file);
+  } catch {
+    // Fallback: keep decoding on the main thread via an <img> element.
+    source = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load image'));
+      };
+      img.src = url;
+    });
+  }
 
-    img.onload = () => {
-      URL.revokeObjectURL(url);
+  let { width, height } = source;
 
-      let { width, height } = img;
+  // Skip resize if already smaller
+  if (width <= maxWidth && height <= maxHeight) {
+    (source as ImageBitmap).close?.();
+    return file;
+  }
 
-      // Skip resize if already smaller
-      if (width <= maxWidth && height <= maxHeight) {
-        resolve(file);
-        return;
-      }
+  // Calculate new dimensions maintaining aspect ratio
+  const ratio = Math.min(maxWidth / width, maxHeight / height);
+  width = Math.round(width * ratio);
+  height = Math.round(height * ratio);
 
-      // Calculate new dimensions maintaining aspect ratio
-      const ratio = Math.min(maxWidth / width, maxHeight / height);
-      width = Math.round(width * ratio);
-      height = Math.round(height * ratio);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
 
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    (source as ImageBitmap).close?.();
+    throw new Error('Canvas context not available');
+  }
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Canvas context not available'));
-        return;
-      }
+  // Use high-quality image smoothing
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(source, 0, 0, width, height);
+  (source as ImageBitmap).close?.();
 
-      // Use high-quality image smoothing
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, width, height);
+  const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, format, quality));
+  if (!blob) throw new Error('Failed to create blob');
 
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error('Failed to create blob'));
-            return;
-          }
-
-          const ext = format === 'image/webp' ? '.webp' : '.jpg';
-          const newName = file.name.replace(/\.[^.]+$/, ext);
-          resolve(new File([blob], newName, { type: format }));
-        },
-        format,
-        quality
-      );
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
-    };
-
-    img.src = url;
-  });
+  const ext = format === 'image/webp' ? '.webp' : '.jpg';
+  const newName = file.name.replace(/\.[^.]+$/, ext);
+  return new File([blob], newName, { type: format });
 }
 
 /**
