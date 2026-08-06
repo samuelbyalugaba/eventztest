@@ -69,9 +69,6 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
   const [showSettings, setShowSettings] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(true);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'settings' | 'monetization' | 'analytics'>('settings');
-  const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>(
-    (event.streaming?.ingest_url || event.streaming?.stream_key) ? 'obs' : 'webcam'
-  );
   const [streamTitle, setStreamTitle] = useState(event.title || '');
   const [streamCategory, setStreamCategory] = useState(event.category || 'General');
   const [visibility, setVisibility] = useState<'public' | 'ticket' | 'followers'>((event.streaming as any)?.visibility || 'public');
