@@ -62,10 +62,17 @@ export function useAgoraBroadcast(initialIsLive = false, skipTracks = false) {
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
         playLocalPreview(videoTrack, initialCamera, 'local-player');
-      } catch {
-        toast.error('Could not access camera/microphone');
+      } catch (err: any) {
+        const name = err?.name || err?.code || '';
+        if (/NotAllowedError|PERMISSION_DENIED/i.test(String(name))) {
+          toast.error('Camera/microphone permission denied. Allow access in your browser settings.');
+        } else if (/NotReadableError|AbortError|Timeout/i.test(String(err?.message || name))) {
+          toast.error('Camera is busy. Close other apps or tabs using it, then try again.');
+        } else {
+          toast.error(err?.message || 'Could not access camera/microphone');
+        }
       }
-    };
+
     init();
     return () => { mounted = false; };
   }, []);
