@@ -68,7 +68,7 @@ export function LiveSetupModal({ isOpen, onClose }: LiveSetupModalProps) {
 
       setIsUploadingThumbnail(true);
       try {
-        const url = await uploadImage(file, 'events', 'event-covers');
+        const url = await uploadImage(file, 'events', 'event-covers', { optimize: false });
         setImageUrl(url);
       } catch (error) {
         toast.error('Failed to upload thumbnail');

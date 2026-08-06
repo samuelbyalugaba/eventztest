@@ -26,7 +26,12 @@ export const deleteFile = async (bucket: 'events' | 'avatars' | 'posts', url: st
   }
 };
 
-export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'posts', path?: string) => {
+export const uploadImage = async (
+  file: File,
+  bucket: 'events' | 'avatars' | 'posts',
+  path?: string,
+  options?: { optimize?: boolean }
+) => {
   const getFileExtension = (name: string) => {
     const dotIndex = name.lastIndexOf('.');
     return dotIndex > 0 && dotIndex < name.length - 1 ? name.slice(dotIndex + 1).toLowerCase() : '';
@@ -88,7 +93,9 @@ export const uploadImage = async (file: File, bucket: 'events' | 'avatars' | 'po
   const isVideo = contentType.startsWith('video/');
   const uploadFile = !isVideo && file.type !== contentType ? new File([file], file.name, { type: contentType }) : file;
   let optimizedFile = uploadFile;
-  if (!isVideo) {
+  // Optimization (off-main-thread resize/encode) is optional so consumers like
+  // thumbnails can upload the raw file and avoid the extra processing cost.
+  if (!isVideo && options?.optimize !== false) {
     const { optimizeForUpload } = await import('../../../utils/imageOptimize');
     optimizedFile = await optimizeForUpload(uploadFile);
   }
