@@ -1,6 +1,6 @@
 import { supabase } from './supabase/client';
 
-export const AGORA_APP_ID = 'f5ff5998cbc248459a3c536a9997b970';
+export const AGORA_APP_ID = '25459b06b8e441ecb7a10a47779d02ef';
 
 // Don't export a global client instance to avoid memory leaks
 // export const client: IAgoraRTCClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
