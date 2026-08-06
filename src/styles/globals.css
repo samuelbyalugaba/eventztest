@@ -357,17 +357,7 @@ a.icon-circle-button,
   border-top-color: var(--primary);
   border-right-color: rgba(138, 43, 226, 0.3);
   border-radius: 9999px;
-  transition: opacity 0.2s ease;
-  opacity: 0.55;
-}
-
-/* Only spin on devices that truly have hover; touch keeps sticky :hover after a
-   tap, which would leave the orb rotating forever. */
-@media (hover: hover) {
-  .bottom-search-link:hover .bottom-search-orb::before {
-    animation: bottom-search-spin 1.2s linear infinite;
-    opacity: 1;
-  }
+  animation: bottom-search-spin 3s linear infinite;
 }
 
 .bottom-search-orb::after {
