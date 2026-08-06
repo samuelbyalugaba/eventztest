@@ -21,8 +21,10 @@ interface StreamManagerProps {
 export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerProps) {
   const isMobile = useIsMobile();
 
+  // ── Streaming method (webcam by default; OBS keys can exist without using OBS) ──
+  const [streamMethod, setStreamMethod] = useState<'webcam' | 'obs'>('webcam');
+
   // ── Agora / broadcast ──
-  const isObsDefault = Boolean(event.streaming?.ingest_url || event.streaming?.stream_key);
   const {
     client,
     localAudioTrack,
@@ -35,7 +37,7 @@ export function StreamManager({ event, onClose, onUpdateStatus }: StreamManagerP
     toggleCamera,
     toggleMic,
     toggleCameraDevice,
-  } = useAgoraBroadcast(event.streaming?.isLive || false, isObsDefault);
+  } = useAgoraBroadcast(event.streaming?.isLive || false, streamMethod === 'obs');
 
   // ── Metrics (viewer count, revenue, timer) ──
   const [viewerCount, setViewerCount] = useState(event.streaming?.liveViewers || 0);
