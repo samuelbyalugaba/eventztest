@@ -1,4 +1,6 @@
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
+import { releasePreloadedCamera } from '../../utils/cameraPreloader';
+
 
 type AgoraRTCFactory = typeof import('agora-rtc-sdk-ng').default;
 
