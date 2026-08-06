@@ -62,11 +62,24 @@ export const formatStreamElapsedTime = (seconds: number) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const playLocalPreview = (
+const waitForElement = async (elementId: string, timeoutMs = 6000) => {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const el = document.getElementById(elementId);
+    if (el) return el;
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+  }
+  return null;
+};
+
+export const playLocalPreview = async (
   videoTrack: ICameraVideoTrack,
   camera: MediaDeviceInfo | undefined,
   elementId = 'local-player'
 ) => {
+  // The preview container may mount a tick after the tracks are ready.
+  const container = await waitForElement(elementId);
+  if (!container) return;
   const isBack = camera ? /(back|rear|environment)/i.test(camera.label || '') : false;
   videoTrack.play(elementId, { fit: 'cover', mirror: !isBack });
   const video = document.getElementById(elementId)?.querySelector('video') as HTMLVideoElement | null;
@@ -172,7 +185,7 @@ export const switchLocalCamera = async ({
 
   await localVideoTrack.setDevice(nextCamera.deviceId);
   localVideoTrack.stop();
-  playLocalPreview(localVideoTrack, nextCamera, elementId);
+  await playLocalPreview(localVideoTrack, nextCamera, elementId);
 
   return {
     cameras,

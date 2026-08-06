@@ -51,7 +51,14 @@ export function useAgoraBroadcast(initialIsLive = false, skipTracks = false) {
   }, [isClientReady]);
 
   useEffect(() => {
-    if (skipTracks) return;
+    if (skipTracks) {
+      tracksRef.current.audio?.close();
+      tracksRef.current.video?.close();
+      tracksRef.current = { audio: null, video: null };
+      setLocalAudioTrack(null);
+      setLocalVideoTrack(null);
+      return;
+    }
     let mounted = true;
     const init = async () => {
       try {
@@ -61,7 +68,9 @@ export function useAgoraBroadcast(initialIsLive = false, skipTracks = false) {
         tracksRef.current = { audio: audioTrack, video: videoTrack };
         setLocalAudioTrack(audioTrack);
         setLocalVideoTrack(videoTrack);
-        playLocalPreview(videoTrack, initialCamera, 'local-player');
+        setCameraEnabled(true);
+        setMicEnabled(true);
+        await playLocalPreview(videoTrack, initialCamera, 'local-player');
       } catch (err: any) {
         const name = err?.name || err?.code || '';
         if (/NotAllowedError|PERMISSION_DENIED/i.test(String(name))) {
@@ -77,7 +86,7 @@ export function useAgoraBroadcast(initialIsLive = false, skipTracks = false) {
 
     init();
     return () => { mounted = false; };
-  }, []);
+  }, [skipTracks]);
 
   useEffect(() => {
     return () => {
