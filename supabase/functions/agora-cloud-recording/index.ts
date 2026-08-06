@@ -75,7 +75,9 @@ function corsOptionsResponse(req?: Request): Response {
   return new Response("ok", { headers: getCorsHeaders(req) });
 }
 
-const AGORA_API_BASE = `https://api.agora.io/v1/apps/${APP_ID}/cloud_recording`;
+// Cloud Recording RESTful API moved to api.sd-rtn.com, and the acquire endpoint
+// no longer carries the /resourceid/ path segment. Other endpoints keep it.
+const AGORA_API_BASE = `https://api.sd-rtn.com/v1/apps/${APP_ID}/cloud_recording`;
 const MAX_IDLE_TIME = 120; // seconds before Agora auto-stops the recording
 const TOKEN_EXPIRY = 86400; // recording token valid for 24h
 
@@ -181,7 +183,7 @@ Deno.serve(async (req: Request) => {
       const { uidStr, uidInt } = newRecorderUid();
 
       try {
-        const acquire = await agoraRequest("POST", "/resourceid/acquire", {
+        const acquire = await agoraRequest("POST", "/acquire", {
           cname: channelName,
           uid: uidStr,
           clientRequest: { resourceExpiredHour: 24 },
