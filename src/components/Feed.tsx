@@ -61,7 +61,7 @@ export function Feed({
     handleLoadMore,
     refreshNotifications,
     setNotifications,
-  } = useFeedData();
+  } = useFeedData(isPaused);
 
   const {
     selectedPost,

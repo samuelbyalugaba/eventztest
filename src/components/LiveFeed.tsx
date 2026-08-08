@@ -19,10 +19,10 @@ const FEATURED_CATEGORIES = new Set([
   'religion',
 ]);
 
-export function LiveFeed() {
+export function LiveFeed({ isPaused = false }: { isPaused?: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { liveStreams, upcomingStreams, isLoading } = useLiveFeedData();
+  const { liveStreams, upcomingStreams, isLoading } = useLiveFeedData(!isPaused);
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');

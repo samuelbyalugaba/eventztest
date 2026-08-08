@@ -48,15 +48,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const storeIsOrganizer = useProfileStore(s => s.isOrganizer);
   const hasOrganizerProfile = storeProfile ? (storeProfile.is_organizer || !!storeProfile.organizer_type) : false;
 
-  const syncProfileState = (data: any | null) => {
+  const syncProfileState = useCallback((data: any | null) => {
     if (data) {
       useProfileStore.getState().setProfile(data);
     } else {
       useProfileStore.getState().clear();
     }
-  };
+  }, []);
 
-  const ensureProfile = async (sessionUser: SupabaseUser) => {
+  const ensureProfile = useCallback(async (sessionUser: SupabaseUser) => {
     try {
       const existing = await getProfile(sessionUser.id);
       if (existing) {
@@ -100,24 +100,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (_error) {
       return null;
     }
-  };
+  }, [syncProfileState]);
 
-  const prefetchDashboardData = async (sessionUser: SupabaseUser) => {
+  const prefetchDashboardData = useCallback(async (sessionUser: SupabaseUser) => {
     await prefetchUserStats(sessionUser.id, sessionUser.email || '');
-  };
+  }, []);
 
-  const startProfileBootstrap = (sessionUser: SupabaseUser) => {
+  const startProfileBootstrap = useCallback((sessionUser: SupabaseUser) => {
     void ensureProfile(sessionUser);
     void prefetchDashboardData(sessionUser);
-  };
+  }, [ensureProfile, prefetchDashboardData]);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const data = await getProfile(userId);
       syncProfileState(data || null);
     } catch (error) {
     }
-  };
+  }, [syncProfileState]);
 
   useEffect(() => {
     const checkSession = async () => {

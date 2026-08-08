@@ -100,7 +100,7 @@ export default function KeepAliveTabs({
         {shouldMountLiveTab && (
           <RouteErrorBoundary>
             <Suspense fallback={<LivePageSkeleton />}>
-              <LiveFeed />
+              <LiveFeed isPaused={!isLiveTab || !!backgroundLocation} />
             </Suspense>
           </RouteErrorBoundary>
         )}

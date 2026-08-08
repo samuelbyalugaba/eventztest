@@ -58,7 +58,7 @@ export const removeUserPostsFromFeedCache = (userId: string) => {
   );
 };
 
-export function useFeedData() {
+export function useFeedData(isPaused = false) {
   const { user: authUser, profile: authProfile } = useAuth();
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -132,9 +132,9 @@ export function useFeedData() {
     }
   }, [sentinelInView, hasMore, isLoadingMore, handleLoadMore]);
 
-  const feedQueryKey = queryKeys.feed.firstPage(authUser?.id);
   const setPosts: React.Dispatch<React.SetStateAction<Post[]>> = useCallback((updater) => {
-    queryClient.setQueryData(feedQueryKey, (old: unknown) => {
+    const key = queryKeys.feed.firstPage(authUser?.id);
+    queryClient.setQueryData(key, (old: unknown) => {
       if (!old || typeof old !== 'object') return old;
       const data = old as { pages: Array<{ posts: Post[]; count: number }>; pageParams: unknown[] };
       if (!Array.isArray(data.pages)) return old;
@@ -152,7 +152,7 @@ export function useFeedData() {
         }),
       };
     });
-  }, [feedQueryKey, queryClient]);
+  }, [authUser?.id, queryClient]);
 
   const refreshNotifications = useCallback(async (options?: { silent?: boolean }) => {
     if (!authUser?.id) {
@@ -178,7 +178,7 @@ export function useFeedData() {
   }, [authUser?.id]);
 
   useEffect(() => {
-    if (!authUser?.id) return;
+    if (!authUser?.id || isPaused) return;
 
     void refreshNotifications();
     const interval = window.setInterval(() => {
@@ -187,7 +187,7 @@ export function useFeedData() {
     return () => {
       window.clearInterval(interval);
     };
-  }, [authUser?.id, refreshNotifications]);
+  }, [authUser?.id, refreshNotifications, isPaused]);
 
   return {
     posts,

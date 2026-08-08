@@ -145,9 +145,11 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       return;
     }
     let channel: any;
+    let cancelled = false;
     (async () => {
       try {
         const friends = await getMutualFollows(currentUser.id);
+        if (cancelled) return;
         channel = subscribeToOnlineUsers(currentUser.id, (onlineIds: any[]) => {
           const online = friends.filter((f: any) => onlineIds.includes(f.id));
           setOnlineFriends(online.map((f: any) => ({
@@ -156,7 +158,10 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
         });
       } catch { /* Failed to setup presence; non-critical */ }
     })();
-    return () => { if (channel) channel.unsubscribe(); };
+    return () => {
+      cancelled = true;
+      if (channel) channel.unsubscribe();
+    };
   }, [isAuthenticated, currentUser]);
 
   const handleStartConversation = useCallback(async (user: StartConversationUser): Promise<Conversation | null> => {

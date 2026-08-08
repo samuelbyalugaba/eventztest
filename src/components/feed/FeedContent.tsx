@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { PostCard } from '../PostCard';
@@ -23,6 +24,60 @@ interface FeedContentProps {
   onViewPost: (post: Post, startTime?: number, isMuted?: boolean) => void;
   onViewComments: (post: Post) => void;
 }
+
+const MemoizedPostCard = memo(function MemoizedPostCard({
+  post,
+  currentUserId,
+  isPaused,
+  onProfileClick,
+  onLike,
+  onSave,
+  onShare,
+  onMessage,
+  onUserBlocked,
+  onDelete,
+  onEditCaption,
+  onViewPost,
+  onViewComments,
+}: {
+  post: Post;
+  currentUserId?: string | null;
+  isPaused?: boolean;
+  onProfileClick: (user: any, e?: React.MouseEvent) => void;
+  onLike: (id: number) => Promise<void>;
+  onSave: (id: number) => Promise<void>;
+  onShare: (post: Post) => Promise<void>;
+  onMessage: (user: any) => void;
+  onUserBlocked: (userId: string) => void;
+  onDelete: (postId: number) => Promise<void>;
+  onEditCaption: (postId: number, caption: string) => Promise<void>;
+  onViewPost: (post: Post, startTime?: number, isMuted?: boolean) => void;
+  onViewComments: (post: Post) => void;
+}) {
+  const handleViewPost = useCallback(
+    (startTime?: number, isMuted?: boolean) => onViewPost(post, startTime, isMuted),
+    [post, onViewPost],
+  );
+  const handleViewComments = useCallback(() => onViewComments(post), [post, onViewComments]);
+
+  return (
+    <PostCard
+      post={post}
+      currentUserId={currentUserId}
+      onLike={onLike}
+      onSave={onSave}
+      onShare={onShare}
+      onProfileClick={onProfileClick}
+      onMessage={onMessage}
+      onUserBlocked={onUserBlocked}
+      onDelete={onDelete}
+      onEditCaption={onEditCaption}
+      onViewPost={handleViewPost}
+      onViewComments={handleViewComments}
+      isPaused={isPaused}
+    />
+  );
+});
 
 export function FeedContent({
   isLoading,
@@ -65,19 +120,19 @@ export function FeedContent({
                   opacity: isRestoringScroll ? 1 : undefined,
                 }}
               >
-                <PostCard
+                <MemoizedPostCard
                   post={post}
                   currentUserId={currentUserId}
-                  onLike={(id) => onLike(id)}
-                  onSave={(id) => onSave(id)}
-                  onShare={(p) => onShare(p)}
-                  onProfileClick={(user) => onProfileClick(user)}
-                  onMessage={(user) => onMessage(user)}
+                  onProfileClick={onProfileClick}
+                  onLike={onLike}
+                  onSave={onSave}
+                  onShare={onShare}
+                  onMessage={onMessage}
                   onUserBlocked={onUserBlocked}
                   onDelete={onDelete}
                   onEditCaption={onEditCaption}
-                  onViewPost={(startTime, isMuted) => onViewPost(post, startTime, isMuted)}
-                  onViewComments={() => onViewComments(post)}
+                  onViewPost={onViewPost}
+                  onViewComments={onViewComments}
                   isPaused={isPaused}
                 />
               </div>

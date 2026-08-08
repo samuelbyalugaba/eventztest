@@ -54,6 +54,10 @@ export function useCamera(onMediaCaptured?: () => void) {
   useEffect(() => {
     startCamera(facingMode);
     return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
