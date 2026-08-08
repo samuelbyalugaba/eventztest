@@ -203,21 +203,6 @@ Deno.serve(async (req: Request) => {
           uid: uidStr,
           clientRequest: {
             token: recordingToken(channelName, uidInt),
-            recordingConfig: {
-              maxIdleTime: MAX_IDLE_TIME,
-              streamTypes: 2,
-              streamMode: "default",
-              channelType: 0,
-              videoStreamType: 0,
-              avFileType: ["hls", "mp4"],
-            },
-            transcodingConfig: {
-              width: canvasW,
-              height: canvasH,
-              videoBitrate: isLandscape ? 4500 : 2500,
-              videoFps: 30,
-              audioProfile: "standard",
-            },
             storageConfig: {
               vendor: 11,
               region: 0,
@@ -226,6 +211,28 @@ Deno.serve(async (req: Request) => {
               secretKey: S3_SECRET_KEY,
               fileNamePrefix: ["recordings", `event${eventId}`],
               extensionParams: { endpoint: S3_ENDPOINT },
+            },
+            // Composite (mix) mode: `transcodingConfig` MUST be nested inside
+            // `recordingConfig` and `avFileType` lives in `recordingFileConfig`.
+            // Putting avFileType inside recordingConfig (or moving transcodingConfig
+            // to the top level) makes Agora write only HLS and never finalize the MP4.
+            recordingConfig: {
+              channelType: 0,
+              streamTypes: 2,
+              maxIdleTime: MAX_IDLE_TIME,
+              transcodingConfig: {
+                width: canvasW,
+                height: canvasH,
+                fps: 30,
+                bitrate: isLandscape ? 4500 : 2500,
+                mixedVideoLayout: 1,
+                backgroundColor: "#000000",
+              },
+            },
+            // Composite requires MP4 alongside HLS; ["mp4"] alone errors.
+            recordingFileConfig: {
+              avFileType: ["hls", "mp4"],
+              videoStreamType: 0,
             },
           },
         });
@@ -319,12 +326,14 @@ Deno.serve(async (req: Request) => {
       fileList.some((f) => /\.mp4$/i.test(String(f.fileName || f.filename || ""))) ||
       fileList.some((f) => /\.mp4$/i.test(String(f.sliceType || f.mediaType || f.fileType || "")));
     if (!workerGone && !mp4Present()) {
-      const deadline = Date.now() + 20_000;
+      const deadline = Date.now() + 60_000;
       while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 2_000));
+        await new Promise((r) => setTimeout(r, 5_000));
         const queried = await agoraRequest(
           "GET",
           `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/mix/query`,
+          // A short query is fine even if the worker is mid-finalization — the
+          // recorded state (uploading/stopped) is what we need.
         ).catch(() => ({}));
         const sr = queried?.serverResponse || queried || ({} as Record<string, any>);
         const uploaded = String(sr.uploadingStatus || "") === "uploaded";
@@ -354,10 +363,32 @@ Deno.serve(async (req: Request) => {
         }
       }
       if (!mp4Present()) {
-        // No file within the window — either a genuinely short/empty recording
-        // produced nothing, or the upload is held up. Don't block on a dead
-        // worker; mark the event ended without a replay instead.
-        console.warn("agora recording produced no MP4; finalising as ended without replay");
+        // Give the recorder one final synchronous stop to flush any last-write
+        // MP4 that completed after the last query, before declaring "no replay".
+        try {
+          const finalStop = await agoraRequest(
+            "POST",
+            `/resourceid/${rec.resourceId}/sid/${rec.sid}/mode/mix/stop`,
+            {
+              cname: channelName,
+              uid: String(rec.uid || "0"),
+              clientRequest: { async_stop: false },
+            },
+          );
+          const fsr = finalStop?.serverResponse || finalStop || {};
+          if (Array.isArray(fsr.fileList)) {
+            serverResponse = fsr;
+            fileList = fsr.fileList;
+          }
+        } catch { /* ignore — worker already gone */ }
+
+        if (!mp4Present()) {
+          // No MP4 within the window — either a genuinely short/empty recording,
+          // or the worker auto-stopped before finalizing. HLS (.ts) may still be
+          // present in storage, but without a finalized MP4 we can't offer a
+          // playable replay, so mark the event ended without one.
+          console.warn("agora recording produced no MP4; finalising as ended without replay");
+        }
       }
     }
 
