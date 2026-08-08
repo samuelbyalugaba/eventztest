@@ -90,7 +90,7 @@ export {
 } from '../../../domains/streaming/api/streamChat';
 
 export type { CloudflareStream } from '../../../domains/streaming/api/streams';
-export { getProfileStreamedVideos } from '../../../domains/streaming/api/streams';
+export { getProfileStreamedVideos, getStreamDownloadUrl, deleteStreamRecord } from '../../../domains/streaming/api/streams';
 
 // Payments Domain
 export { createTransaction, waitForTransactionCompletion } from '../../../domains/payments/api/transactions';

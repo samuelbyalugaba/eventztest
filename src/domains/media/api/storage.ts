@@ -18,9 +18,13 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-export const deleteFile = async (bucket: 'events' | 'avatars' | 'posts', url: string) => {
+export const deleteFile = async (bucket: 'events' | 'avatars' | 'posts' | 'recordings', url: string) => {
   try {
-    const path = url.split(`${bucket}/`).pop();
+    // Path is everything after the public bucket segment, e.g.
+    // ".../object/public/recordings/recordings/eventX/f.mp4" → "recordings/eventX/f.mp4".
+    const marker = `/object/public/${bucket}/`;
+    const idx = url.indexOf(marker);
+    const path = idx !== -1 ? url.slice(idx + marker.length).split('?')[0] : url.split(`${bucket}/`).pop();
     if (!path) return;
 
     const { error } = await supabase.storage

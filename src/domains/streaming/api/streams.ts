@@ -1,5 +1,6 @@
 import { supabase } from '../../../shared/api/client';
 import type { Event } from '../../events/api/events';
+import { deleteFile } from '../../media/api/storage';
 
 export type CloudflareStream = {
   id: number;
@@ -118,4 +119,74 @@ export const getProfileStreamedVideos = async (userId: string) => {
     const bTime = new Date(b.created_at || 0).getTime();
     return bTime - aTime;
   });
+};
+
+/**
+ * Returns a direct (non-Cloudflare-embed) playback URL for a stream, or null when
+ * the recording is a Cloudflare iframe embed (which can't be downloaded as a file).
+ * Agora recordings are MP4/HLS objects in Supabase Storage, so they download fine.
+ */
+export const getStreamDownloadUrl = (stream: CloudflareStream): string | null => {
+  const candidates = [
+    stream.playback_url,
+    (stream.event as any)?.streaming?.recording_url,
+    (stream.event as any)?.streaming?.playback_url,
+  ];
+  for (const url of candidates) {
+    if (typeof url === 'string' && /^https?:\/\//i.test(url) && !/iframe\.videodelivery\.net/i.test(url) && !/\.cloudflarestream\.com\/[^/]+\/iframe$/i.test(url)) {
+      return url;
+    }
+  }
+  return null;
+};
+
+/**
+ * Removes a stream recording for the owner:
+ * - deletes the `cloudflare_streams` row (when it's a real DB row),
+ * - removes the MP4 object from Supabase Storage when it's an Agora recording,
+ * - clears the linked event's recording metadata so the synthetic event-derived
+ *   record can't resurface in the hosted list.
+ * The event itself is preserved — only the recording is removed.
+ */
+export const deleteStreamRecord = async (stream: CloudflareStream) => {
+  const downloadUrl = getStreamDownloadUrl(stream);
+  const isAgoraStorage = Boolean(downloadUrl && /\/storage\/v1\/object\/public\//i.test(downloadUrl));
+  if (isAgoraStorage && downloadUrl) {
+    try { await deleteFile('recordings', downloadUrl); } catch { /* best-effort */ }
+  }
+
+  const eventId = stream.event_id ?? (stream.event as any)?.id;
+
+  if (stream.id > 0) {
+    try {
+      await supabase.from('cloudflare_streams').delete().eq('id', stream.id);
+    } catch { /* best-effort */ }
+  }
+
+  if (eventId) {
+    try {
+      const { data: evt } = await supabase
+        .from('events')
+        .select('id, streaming')
+        .eq('id', eventId)
+        .single();
+      if (evt) {
+        const streaming = (evt.streaming || {}) as Record<string, any>;
+        const { recording_url, playback_url, recording_uid, replayAvailable, has_recording, agoraRecording, ...rest } = streaming;
+        await supabase
+          .from('events')
+          .update({
+            streaming: {
+              ...rest,
+              replayAvailable: false,
+              has_recording: false,
+              recording_uid: null,
+              recording_url: null,
+              playback_url: null,
+            },
+          })
+          .eq('id', eventId);
+      }
+    } catch { /* best-effort */ }
+  }
 };

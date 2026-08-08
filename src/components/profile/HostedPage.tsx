@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, PlaySquare, Search, X, MapPin } from 'lucide-react';
+import { Calendar, PlaySquare, Search, X, MapPin, Download, Trash2 } from 'lucide-react';
 import { BackButton } from '../ui/BackButton';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -9,6 +9,8 @@ import {
   getOrganizerEvents,
   getProfile,
   getProfileStreamedVideos,
+  getStreamDownloadUrl,
+  deleteStreamRecord,
   type CloudflareStream,
   type Event as AppEvent,
   type Profile,
@@ -180,7 +182,47 @@ export function HostedPage() {
 
   const [selectedStream, setSelectedStream] = useState<CloudflareStream | null>(null);
 
+  const isOwner = Boolean(user && targetUserId && user.id === targetUserId);
+
+  const [deleteConfirmStream, setDeleteConfirmStream] = useState<CloudflareStream | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const closePlayer = useCallback(() => setSelectedStream(null), []);
+
+  const handleDownload = useCallback(() => {
+    if (!selectedStream) return;
+    const url = getStreamDownloadUrl(selectedStream);
+    if (!url) {
+      toast.info('This recording is only available for streaming, not download.');
+      return;
+    }
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${selectedStream.title || 'stream'}${/\.mp4$/i.test(url) ? '.mp4' : ''}`;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+  }, [selectedStream]);
+
+  const handleDeleteStream = useCallback(async () => {
+    const stream = deleteConfirmStream;
+    if (!stream) return;
+    setIsDeleting(true);
+    try {
+      await deleteStreamRecord(stream);
+      setStreams((prev) => prev.filter((s) => s.uid !== stream.uid && s.id !== stream.id));
+      if (selectedStream?.uid === stream.uid || selectedStream?.id === stream.id) {
+        setSelectedStream(null);
+      }
+      toast.success('Stream recording deleted');
+    } catch (error) {
+      toast.error('Failed to delete stream recording');
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmStream(null);
+    }
+  }, [deleteConfirmStream, selectedStream]);
 
   useEffect(() => {
     if (!selectedStream) return;
@@ -344,6 +386,26 @@ export function HostedPage() {
               </button>
             </div>
 
+            {isOwner && (
+              <div className="flex items-center justify-end gap-2 px-4 pb-3 shrink-0">
+                <button
+                  onClick={handleDownload}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/20 active:scale-95 transition"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download
+                </button>
+                <button
+                  onClick={() => setDeleteConfirmStream(selectedStream)}
+                  disabled={isDeleting}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-red-500/20 px-3 text-xs font-semibold text-red-300 hover:bg-red-500/30 active:scale-95 transition disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+              </div>
+            )}
+
             {/* Player */}
             <div className="flex-1 flex items-center justify-center bg-black p-2 sm:p-4 min-h-0">
               {playbackUrl ? (
@@ -384,6 +446,36 @@ export function HostedPage() {
           </div>
         );
       })()}
+
+      {deleteConfirmStream && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-red-50">
+              <Trash2 className="h-5 w-5 text-red-600" />
+            </div>
+            <h3 className="text-base font-bold text-gray-950">Delete this recording?</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              The recording will be removed from storage and this hosted list. The associated event will be kept.
+            </p>
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => !isDeleting && setDeleteConfirmStream(null)}
+                disabled={isDeleting}
+                className="h-10 flex-1 rounded-xl border border-gray-200 px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 active:scale-[0.98] transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteStream}
+                disabled={isDeleting}
+                className="h-10 flex-1 rounded-xl bg-red-600 px-3 text-sm font-semibold text-white hover:bg-red-700 active:scale-[0.98] transition disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
